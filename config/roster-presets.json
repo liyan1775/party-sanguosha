@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "engineCandidate": "v1.11.6",
+  "presets": [
+    {
+      "id": "beginner",
+      "name": "新手档",
+      "completePacks": ["standard"],
+      "packGroups": {},
+      "additionalCharacters": []
+    },
+    {
+      "id": "advanced",
+      "name": "进阶档",
+      "completePacks": ["refresh"],
+      "packGroups": {
+        "shenhua": ["shenhua_yin", "shenhua_lei"]
+      },
+      "additionalCharacters": [
+        "shen_guanyu",
+        "shen_lvmeng",
+        "shen_zhouyu",
+        "shen_zhugeliang",
+        "shen_caocao",
+        "shen_lvbu",
+        "shen_zhaoyun",
+        "shen_simayi",
+        "shen_liubei",
+        "shen_luxun",
+        "shen_ganning",
+        "shen_zhangliao"
+      ]
+    }
+  ]
+}
