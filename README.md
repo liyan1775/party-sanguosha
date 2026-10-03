@@ -46,7 +46,7 @@ BIND_HOST=0.0.0.0
 # PUBLIC_URL=http://192.168.1.100:3000
 ```
 
-显式设置 `PUBLIC_URL` 时必须与真实网卡、端口一致，启动器不会自动改用其他端口。手机无法连接时，检查同一 Wi-Fi、二维码地址、Windows 防火墙的专用网络访问权限、路由器客户端隔离。微信打不开可复制链接到系统浏览器排查；真机微信尚未验收。
+显式设置 `PUBLIC_URL` 时必须与真实网卡、端口一致，启动器不会自动改用其他端口。手机无法连接时，检查同一 Wi-Fi、二维码地址、Windows 防火墙的专用网络访问权限、路由器客户端隔离。微信打不开可复制链接到系统浏览器排查。用户已于 2026-10-04 在 Android 微信中实测扫码进入主页和玩家开房，其他真机流程仍待验收。
 
 ## 开发与检查
 
@@ -98,6 +98,8 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/launch.ps1 -Acti
 
 ## 无名杀来源
 
-上游为 [libnoname/noname](https://github.com/libnoname/noname)。已校验 v1.11.6 核心包用于研究，固定版本与 SHA-256 在 `config/noname-candidate.json`。当前候选尚未运行验证，也未公开作为游戏资源。
+上游为 [libnoname/noname](https://github.com/libnoname/noname)。已校验 v1.11.6 核心包，固定版本与 SHA-256 在 `config/noname-candidate.json`。独立验证程序已通过局域网 HTTP 单将对局：一玩家 + 原生 AI、两个独立玩家页面均选将后托管至结算，电脑不占席位。它尚未接入大厅，也未通过私有信息与真机游戏验收。
+
+开发者可按 [引擎验证说明](packages/noname-adapter/lab/README.md) 执行 `npm run engine:prepare` 和 `npm run engine:verify`。当前双击启动和扫码页面仍是 v0.2.0 大厅原型。
 
 第三方来源与许可证见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。

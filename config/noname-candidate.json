@@ -1,12 +1,23 @@
 {
-  "status": "research-only",
+  "status": "isolated-runtime-lab",
   "repository": "https://github.com/libnoname/noname",
   "tag": "v1.11.6",
   "commit": "2367607e246d21aae168dba15c01151ee0651f30",
-  "checkedOn": "2026-10-03",
+  "checkedOn": "2026-10-04",
   "coreArchive": {
     "url": "https://github.com/libnoname/noname/releases/download/v1.11.6/noname.core.zip",
     "sha256": "d35538c702f5acc4a18be805a0f15d2639613dbe0805bf62e4d574db5bbb869e"
   },
-  "runtimeVerified": false
+  "runtimeVerified": false,
+  "labVerification": {
+    "verifiedOn": "2026-10-04",
+    "scope": "standard-pack single-general duel; human selects then native auto plays",
+    "lanHttp": true,
+    "computerOccupiesSeat": false,
+    "oneHumanAndNativeAi": true,
+    "twoIndependentHumanClients": true,
+    "lobbyIntegrated": false,
+    "privateInformationVerified": false,
+    "mobileWeChatGameVerified": false
+  }
 }

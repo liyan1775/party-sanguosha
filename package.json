@@ -13,6 +13,9 @@
     "typecheck": "tsc --noEmit",
     "test": "tsx --test tests/*.test.ts",
     "test:browser": "npm run build && playwright test",
+    "engine:prepare": "node --use-env-proxy scripts/prepare-noname-lab.mjs",
+    "engine:lab": "node packages/noname-adapter/lab/serve.mjs",
+    "engine:verify": "node scripts/verify-noname-lab.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "check": "npm run typecheck && npm test && npm run build && npm run format:check"
@@ -27,6 +30,7 @@
     "esbuild": "0.28.2",
     "prettier": "3.9.9",
     "tsx": "4.23.15",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "ws": "8.22.0"
   }
 }

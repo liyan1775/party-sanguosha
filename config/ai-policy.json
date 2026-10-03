@@ -9,5 +9,5 @@
   "automaticallyReady": true,
   "ownerMustBeHuman": true,
   "runtimeVerified": false,
-  "note": "当前仅实现 AI 席位及适配器契约。接入时使用原生完整决策，不把 difficulty 的对人类态度误当智力。"
+  "note": "大厅仅实现 AI 席位及适配器契约；独立标准单挑验证程序已执行原生决策和完整结算，尚未集成到大厅或验证四模式。不得把 difficulty 的对人类态度误当智力。"
 }
