@@ -2,12 +2,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createPartyServer } from '../apps/server/src/server.js';
 import { fileURLToPath } from 'node:url';
+import type { TestContext } from 'node:test';
 
-test('HTTP 权限、邀请、请求校验与文件隔离', async (t) => {
-  const secret = 'test-host-capability-with-sufficient-length';
+async function fixture(t: TestContext) {
   const party = createPartyServer({
     port: 0,
-    hostSecret: secret,
     webRoot: fileURLToPath(new URL('../apps/web/', import.meta.url)),
     publicUrl: 'http://192.168.1.100:3000',
   });
@@ -26,72 +25,137 @@ test('HTTP 权限、邀请、请求校验与文件隔离', async (t) => {
       headers: { 'Content-Type': 'application/json', cookie, ...(origin ? { origin } : {}) },
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),
     });
+  const create = async (nickname: string) => {
+    const response = await request('/api/rooms', 'POST', { nickname });
+    assert.equal(response.status, 201);
+    assert.match(response.headers.get('set-cookie')!, /HttpOnly; SameSite=Strict/);
+    return {
+      cookie: response.headers.get('set-cookie')!.split(';')[0]!,
+      data: await response.json(),
+    };
+  };
+  return { party, base, request, create };
+}
 
-  const info = await (await request('/api/info')).json();
-  assert.equal(JSON.stringify(info).includes(secret), false);
-  assert.equal(info.room.engine.ready, false);
-  assert.equal((await request('/api/room', 'PUT', {})).status, 403);
-  assert.equal((await request('/api/room/start', 'POST')).status, 403);
-  assert.equal((await request('/api/host-session', 'POST', { secret: 'wrong' })).status, 403);
-  const login = await request('/api/host-session', 'POST', { secret });
-  const hostCookie = login.headers.get('set-cookie')!.split(';')[0]!;
-  assert.match(login.headers.get('set-cookie')!, /HttpOnly/);
+test('HTTP：玩家创建房间、房主参赛、跨房间权限隔离与 AI 管理', async (t) => {
+  const { party, request, create } = await fixture(t);
+  const initial = await (await request('/api/info')).json();
+  assert.equal(initial.rooms.length, 0);
+  assert.equal(initial.homeUrls[0], 'http://192.168.1.100:3000/');
+  assert.equal(initial.engine.ready, false);
+  assert.equal(JSON.stringify(initial).includes(party.controlToken), false);
+  const owner = await create('赵云');
+  const other = await create('小乔');
+  const roomPath = `/api/rooms/${owner.data.room.code}`;
+  assert.equal(owner.data.room.ownerId, owner.data.playerId);
+  assert.equal(owner.data.room.players.length, 1);
+  assert.equal(owner.data.room.players[0].kind, 'human');
+  const join = await request(`${roomPath}/players`, 'POST', { nickname: '关羽' });
+  const friendCookie = join.headers.get('set-cookie')!.split(';')[0]!;
+  const friend = await join.json();
+  for (const cookie of ['', friendCookie, other.cookie]) {
+    assert.equal((await request(roomPath, 'PUT', {}, cookie)).status, 403);
+    assert.equal((await request(`${roomPath}/bots`, 'POST', { count: 1 }, cookie)).status, 403);
+    assert.equal((await request(`${roomPath}/start`, 'POST', undefined, cookie)).status, 403);
+    assert.equal(
+      (await request(`${roomPath}/players/${friend.playerId}`, 'DELETE', undefined, cookie)).status,
+      403,
+    );
+  }
+  assert.equal(
+    (await request('/api/rooms', 'POST', { nickname: '赵云' }, owner.cookie)).status,
+    409,
+  );
   assert.equal(
     (
       await request(
-        '/api/room',
+        `/api/rooms/${other.data.room.code}/players`,
+        'POST',
+        { nickname: '赵云' },
+        owner.cookie,
+      )
+    ).status,
+    409,
+  );
+  assert.equal(
+    (
+      await request(
+        roomPath,
         'PUT',
-        { mode: 'duel', playerCount: 2, generalPreset: 'advanced', extensions: [] },
-        hostCookie,
+        { mode: 'identity', playerCount: 8, generalPreset: 'advanced', extensions: [] },
+        owner.cookie,
       )
     ).status,
     200,
   );
+  assert.equal((await request(`${roomPath}/bots`, 'POST', { count: 6 }, owner.cookie)).status, 200);
+  assert.equal((await request(`${roomPath}/players`, 'POST', { nickname: '张飞' })).status, 409);
+  assert.equal((await request(`${roomPath}/bots`, 'POST', { count: 1 }, owner.cookie)).status, 409);
+  assert.equal((await request(`${roomPath}/start`, 'POST', undefined, owner.cookie)).status, 503);
   assert.equal(
-    (await request('/api/room', 'PUT', {}, hostCookie, 'http://other-site.invalid')).status,
+    (await request(roomPath, 'PUT', {}, owner.cookie, 'http://other-site.invalid')).status,
     403,
   );
-  assert.equal((await request('/api/room/start', 'POST', undefined, hostCookie)).status, 503);
+  assert.equal((await request(`${roomPath}/me/ready`, 'PUT', { ready: true })).status, 401);
+  const room = party.lobby.get(owner.data.room.code).snapshot();
+  const bot = room.players.find((player) => player.kind === 'bot')!;
   assert.equal(
-    (await request('/api/players', 'POST', { code: 'OLD123', nickname: '赵云' })).status,
-    404,
-  );
-  assert.equal(
-    (await request('/api/players', 'POST', { code: party.room.code, nickname: '赵云' })).status,
-    201,
+    (await request(`${roomPath}/players/${bot.id}`, 'DELETE', undefined, owner.cookie)).status,
+    200,
   );
   assert.equal(
-    (await request('/api/players', 'POST', { code: party.room.code, nickname: '关羽' })).status,
-    201,
+    (await request(`${roomPath}/players/${friend.playerId}`, 'DELETE', undefined, owner.cookie))
+      .status,
+    200,
   );
+  assert.deepEqual(await (await request('/api/me', 'GET', undefined, friendCookie)).json(), {
+    playerId: null,
+    roomCode: null,
+  });
+  assert.equal((await request(`${roomPath}/bots`, 'POST', { count: 1 }, friendCookie)).status, 403);
+  assert.equal(party.lobby.get(other.data.room.code).snapshot().players.length, 1);
+  assert.equal(JSON.stringify(room).includes(owner.cookie.slice('party_player='.length)), false);
+});
+
+test('HTTP：主页二维码、所有成员的房间二维码、邀请失效与本机控制文件隔离', async (t) => {
+  const { party, base, request, create } = await fixture(t);
+  const owner = await create('赵云');
+  const roomPath = `/api/rooms/${owner.data.room.code}`;
+  const joined = await request(`${roomPath}/players`, 'POST', { nickname: '关羽' });
+  const friendCookie = joined.headers.get('set-cookie')!.split(';')[0]!;
+  const data = await joined.json();
+  const homeQr = await request(
+    `/api/qr.svg?url=${encodeURIComponent('http://192.168.1.100:3000/')}`,
+  );
+  assert.equal(homeQr.status, 200);
+  const qrPath = `/api/qr.svg?room=${data.room.code}&url=${encodeURIComponent(data.joinUrls[0])}`;
+  for (const cookie of [owner.cookie, friendCookie]) {
+    const response = await request(qrPath, 'GET', undefined, cookie);
+    assert.equal(response.status, 200);
+    assert.match(await response.text(), /<svg/);
+  }
+  assert.equal((await request(qrPath)).status, 403);
   assert.equal(
-    (await request('/api/players', 'POST', { code: party.room.code, nickname: '张飞' })).status,
-    409,
+    (await request(`/api/qr.svg?url=${encodeURIComponent(base + '/server#secret')}`)).status,
+    400,
   );
-  assert.equal((await request('/api/me/ready', 'PUT', { ready: true })).status, 401);
-  const badJson = await fetch(base + '/api/players', { method: 'POST', body: '{bad' });
-  assert.equal(badJson.status, 400);
-  const largeBody = await request('/api/players', 'POST', { nickname: 'x'.repeat(5000) });
-  assert.equal(largeBody.status, 413);
-  const qr = await request(
-    `/api/qr.svg?url=${encodeURIComponent(info.joinUrls[0])}`,
-    'GET',
-    undefined,
-    hostCookie,
-  );
-  assert.equal(qr.status, 200);
-  assert.match(await qr.text(), /<svg/);
   assert.equal(
     (
       await request(
-        `/api/qr.svg?url=${encodeURIComponent(base + '/host#' + secret)}`,
+        `/api/qr.svg?room=${data.room.code}&url=${encodeURIComponent('https://other-site.invalid/')}`,
         'GET',
         undefined,
-        hostCookie,
+        friendCookie,
       )
     ).status,
     400,
   );
+  assert.equal(
+    (await request('/api/rooms/OLD123/players', 'POST', { nickname: '赵云' })).status,
+    404,
+  );
+  assert.equal((await request('/api/shutdown', 'POST')).status, 403);
+  assert.equal((await request('/api/host-session', 'POST', { secret: 'old-secret' })).status, 404);
   for (const route of [
     '/.env',
     '/.runtime/session.json',
@@ -100,4 +164,35 @@ test('HTTP 权限、邀请、请求校验与文件隔离', async (t) => {
   ])
     assert.equal((await request(route)).status, 404);
   assert.equal((await request('/')).status, 200);
+  assert.equal((await request('/server')).status, 200);
+  const migrated = await fetch(base + '/host', { redirect: 'manual' });
+  assert.equal(migrated.status, 302);
+  assert.equal(migrated.headers.get('location'), '/server');
+  assert.equal((await fetch(base + '/api/rooms', { method: 'POST', body: '{bad' })).status, 400);
+  assert.equal((await request('/api/rooms', 'POST', { nickname: 'x'.repeat(5000) })).status, 413);
+  await request(`${roomPath}/me`, 'DELETE', undefined, owner.cookie);
+  assert.equal(party.lobby.get(data.room.code).snapshot().ownerId, data.playerId);
+  assert.equal((await request(qrPath, 'GET', undefined, owner.cookie)).status, 403);
+  await request(`${roomPath}/me`, 'DELETE', undefined, friendCookie);
+  assert.equal((await request(roomPath)).status, 404);
+  assert.equal((await request(qrPath, 'GET', undefined, friendCookie)).status, 404);
+});
+
+test('HTTP：只有持有当前实例本机控制凭据才能停止服务', async (t) => {
+  const { party, base } = await fixture(t);
+  const health = await (await fetch(base + '/api/health')).json();
+  assert.equal(health.app, 'party-sanguosha');
+  assert.equal(health.instanceId, party.instanceId);
+  assert.equal(JSON.stringify(health).includes(party.controlToken), false);
+  const rejected = await fetch(base + '/api/shutdown', {
+    method: 'POST',
+    headers: { 'X-Party-Control': 'wrong-token' },
+  });
+  assert.equal(rejected.status, 403);
+  const stopped = await fetch(base + '/api/shutdown', {
+    method: 'POST',
+    headers: { 'X-Party-Control': party.controlToken },
+  });
+  assert.equal(stopped.status, 200);
+  assert.equal(party.server.listening, false);
 });

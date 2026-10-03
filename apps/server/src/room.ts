@@ -11,10 +11,9 @@ import {
 } from '../../../packages/shared/src/contracts.js';
 import { AppError } from './errors.js';
 
-interface Player extends PlayerView {
-  token: string;
-  connections: number;
-}
+type Human = PlayerView & { kind: 'human'; token: string; connections: number };
+type Bot = PlayerView & { kind: 'bot' };
+type Seat = Human | Bot;
 
 export class RoomStore {
   readonly code = randomBytes(3).toString('hex').toUpperCase();
@@ -26,8 +25,9 @@ export class RoomStore {
     generalPreset: 'beginner',
     extensions: [],
   };
-  private readonly players = new Map<string, Player>();
-  private hostConnections = 0;
+  private ownerId: string | null = null;
+  private botSequence = 0;
+  private readonly players = new Map<string, Seat>();
   private readonly listeners = new Set<(room: RoomView) => void>();
 
   constructor(
@@ -41,13 +41,8 @@ export class RoomStore {
       revision: this.revision,
       phase: this.phase,
       settings: { ...this.settings, extensions: [...this.settings.extensions] },
-      players: [...this.players.values()].map(({ id, nickname, ready, online }) => ({
-        id,
-        nickname,
-        ready,
-        online,
-      })),
-      hostOnline: this.hostConnections > 0,
+      players: [...this.players.values()].map((player) => this.publicPlayer(player)),
+      ownerId: this.ownerId,
       engine: this.engine.status(),
     };
   }
@@ -58,65 +53,92 @@ export class RoomStore {
   }
 
   session(token?: string): PlayerView | undefined {
-    const player = token ? this.players.get(token) : undefined;
-    return (
-      player && {
-        id: player.id,
-        nickname: player.nickname,
-        ready: player.ready,
-        online: player.online,
-      }
-    );
+    const player = this.human(token);
+    return player && this.publicPlayer(player);
   }
 
-  join(code: unknown, nickname: unknown, token?: string): { token: string; playerId: string } {
-    this.checkCode(code);
+  join(nickname: unknown, token?: string): { token: string; playerId: string } {
     this.assertWaiting();
     if (typeof nickname !== 'string') throw new AppError(400, 'INVALID_NICKNAME', '请填写昵称。');
     const cleanName = nickname.normalize('NFC').trim();
-    if (!cleanName || [...cleanName].length > 16 || /[\p{Cc}\p{Cf}]/u.test(cleanName)) {
+    if (!cleanName || [...cleanName].length > 16 || /[\p{Cc}\p{Cf}]/u.test(cleanName))
       throw new AppError(400, 'INVALID_NICKNAME', '昵称需要 1–16 个字，不能包含控制字符。');
-    }
-    const existing = token && this.players.get(token);
+    const existing = this.human(token);
     if (existing) {
       existing.nickname = cleanName;
       this.changed();
       return { token: existing.token, playerId: existing.id };
     }
     if (this.players.size >= this.settings.playerCount)
-      throw new AppError(409, 'ROOM_FULL', '房间已满，请联系房主调整人数。');
-    const newToken = randomBytes(24).toString('base64url');
-    const player: Player = {
+      throw new AppError(409, 'ROOM_FULL', '房间已满，请联系房主调整人数或移除一个 AI。');
+    const player: Human = {
       id: randomUUID(),
-      token: newToken,
+      token: randomBytes(24).toString('base64url'),
+      kind: 'human',
       nickname: cleanName,
       ready: false,
       online: false,
       connections: 0,
     };
-    this.players.set(newToken, player);
+    this.players.set(player.id, player);
+    this.ownerId ??= player.id;
+    this.resetReady();
     this.changed();
-    return { token: newToken, playerId: player.id };
+    return { token: player.token, playerId: player.id };
   }
 
   leave(token?: string): void {
     this.assertWaiting();
-    if (!token || !this.players.delete(token))
-      throw new AppError(401, 'PLAYER_REQUIRED', '请先加入房间。');
+    const player = this.human(token);
+    if (!player) throw new AppError(401, 'PLAYER_REQUIRED', '请先加入房间。');
+    this.players.delete(player.id);
+    if (player.id === this.ownerId) {
+      // 显式离开才交接房主；短暂断线或刷新保留原房主身份。
+      const successor = [...this.players.values()].find((seat) => seat.kind === 'human');
+      this.ownerId = successor?.id ?? null;
+      if (!successor) {
+        this.players.clear();
+        this.phase = 'closed';
+      }
+    }
+    this.resetReady();
     this.changed();
   }
 
-  removePlayer(id: string): void {
+  removePlayer(id: string, ownerToken?: string): void {
+    this.requireOwner(ownerToken);
     this.assertWaiting();
-    const player = [...this.players.values()].find((entry) => entry.id === id);
-    if (!player) throw new AppError(404, 'PLAYER_NOT_FOUND', '这位玩家已离开。');
-    this.players.delete(player.token);
+    if (id === this.ownerId)
+      throw new AppError(400, 'OWNER_CANNOT_KICK_SELF', '请使用离开房间，房主会交接给下一位玩家。');
+    if (!this.players.delete(id)) throw new AppError(404, 'PLAYER_NOT_FOUND', '这个座位已移除。');
+    this.resetReady();
+    this.changed();
+  }
+
+  addBots(count: unknown, ownerToken?: string): void {
+    this.requireOwner(ownerToken);
+    this.assertWaiting();
+    if (!Number.isInteger(count) || (count as number) < 1 || (count as number) > 7)
+      throw new AppError(400, 'INVALID_BOT_COUNT', '请选择要添加的 AI 数量。');
+    if (this.players.size + (count as number) > this.settings.playerCount)
+      throw new AppError(409, 'ROOM_FULL', '空位不足，请减少 AI 数量或调整总人数。');
+    for (let index = 0; index < (count as number); index++) {
+      const bot: Bot = {
+        id: randomUUID(),
+        nickname: `AI ${String(++this.botSequence).padStart(2, '0')}`,
+        kind: 'bot',
+        ready: true,
+        online: true,
+      };
+      this.players.set(bot.id, bot);
+    }
+    this.resetReady();
     this.changed();
   }
 
   setReady(token: string | undefined, ready: unknown): void {
     this.assertWaiting();
-    const player = token && this.players.get(token);
+    const player = this.human(token);
     if (!player) throw new AppError(401, 'PLAYER_REQUIRED', '请先加入房间。');
     if (typeof ready !== 'boolean') throw new AppError(400, 'INVALID_READY', '准备状态无效。');
     if (!player.online) throw new AppError(409, 'PLAYER_OFFLINE', '连接还未恢复，请稍后再试。');
@@ -124,7 +146,8 @@ export class RoomStore {
     this.changed();
   }
 
-  updateSettings(input: unknown): void {
+  updateSettings(input: unknown, ownerToken?: string): void {
+    this.requireOwner(ownerToken);
     this.assertWaiting();
     if (!input || typeof input !== 'object')
       throw new AppError(400, 'INVALID_SETTINGS', '房间设置无效。');
@@ -135,12 +158,10 @@ export class RoomStore {
       !Number.isInteger(body.playerCount) ||
       (body.playerCount as number) < mode.minPlayers ||
       (body.playerCount as number) > mode.maxPlayers
-    ) {
+    )
       throw new AppError(400, 'INVALID_MODE', '模式或人数不符合要求。');
-    }
-    if (!Array.isArray(body.extensions) || body.extensions.some((id) => typeof id !== 'string')) {
+    if (!Array.isArray(body.extensions) || body.extensions.some((id) => typeof id !== 'string'))
       throw new AppError(400, 'INVALID_EXTENSIONS', '扩展包设置无效。');
-    }
     const extensions = [...new Set(body.extensions as string[])];
     if (!GENERAL_PRESETS.some((preset) => preset.id === body.generalPreset))
       throw new AppError(400, 'INVALID_PRESET', '请选择新手档或进阶档。');
@@ -149,11 +170,11 @@ export class RoomStore {
         (id) =>
           !this.catalog.some((pack) => pack.id === id && pack.supportedModes.includes(mode.id)),
       )
-    ) {
+    )
       throw new AppError(400, 'UNSUPPORTED_EXTENSION', '存在尚未验证或不支持当前模式的扩展包。');
-    }
-    if (this.players.size > (body.playerCount as number))
-      throw new AppError(409, 'TOO_MANY_PLAYERS', '请先移出多余玩家，再减少人数。');
+    const humans = [...this.players.values()].filter((player) => player.kind === 'human');
+    if (humans.length > (body.playerCount as number))
+      throw new AppError(409, 'TOO_MANY_PLAYERS', '请先移出多余真人玩家，再减少人数。');
     const next: RoomSettings = {
       mode: mode.id,
       playerCount: body.playerCount as number,
@@ -162,69 +183,91 @@ export class RoomStore {
     };
     if (JSON.stringify(next) === JSON.stringify(this.settings)) return;
     this.settings = next;
-    for (const player of this.players.values()) player.ready = false;
+    // 缩小房间只裁掉多余 AI，绝不自动移出真人。
+    for (const bot of [...this.players.values()].reverse()) {
+      if (this.players.size <= next.playerCount) break;
+      if (bot.kind === 'bot') this.players.delete(bot.id);
+    }
+    this.resetReady();
     this.changed();
   }
 
-  async start(): Promise<void> {
+  async start(ownerToken?: string): Promise<void> {
+    this.requireOwner(ownerToken);
     this.assertWaiting();
     if (!this.engine.status().ready)
       throw new AppError(503, 'ENGINE_NOT_READY', this.engine.status().message);
-    if (this.hostConnections === 0)
-      throw new AppError(409, 'HOST_OFFLINE', '请保持电脑主控页面开启。');
     if (
       this.players.size !== this.settings.playerCount ||
       [...this.players.values()].some((player) => !player.online || !player.ready)
-    ) {
-      throw new AppError(409, 'PLAYERS_NOT_READY', '需要人数齐全且所有玩家在线、已准备。');
-    }
+    )
+      throw new AppError(409, 'PLAYERS_NOT_READY', '需要人数齐全且所有真人在线、已准备。');
     this.phase = 'starting';
     this.changed();
     try {
       await this.engine.start({
         roomCode: this.code,
+        ownerPlayerId: this.ownerId!,
         settings: structuredClone(this.settings),
-        playerIds: [...this.players.values()].map((player) => player.id),
+        seats: [...this.players.values()].map(({ id, nickname, kind }) => ({ id, nickname, kind })),
+        aiPolicy: 'strongest-native',
       });
       this.phase = 'playing';
       this.changed();
     } catch {
       this.phase = 'waiting';
       this.changed();
-      throw new AppError(503, 'ENGINE_START_FAILED', '对局启动失败，房间已恢复，请检查电脑主控。');
+      throw new AppError(
+        503,
+        'ENGINE_START_FAILED',
+        '对局启动失败，房间已恢复，请查看电脑服务状态。',
+      );
     }
   }
 
-  connect(token?: string, host = false): () => void {
+  connect(token?: string): () => void {
     let closed = false;
-    const player = token && this.players.get(token);
+    const player = this.human(token);
     if (player) {
       player.connections++;
       player.online = true;
+      this.changed();
     }
-    if (host) this.hostConnections++;
-    if (player || host) this.changed();
     return () => {
       if (closed) return;
       closed = true;
-      if (player) {
-        player.connections = Math.max(0, player.connections - 1);
-        player.online = player.connections > 0;
-        if (!player.online) player.ready = false;
-      }
-      if (host) this.hostConnections = Math.max(0, this.hostConnections - 1);
-      if (player || host) this.changed();
+      if (!player || this.players.get(player.id) !== player) return;
+      player.connections = Math.max(0, player.connections - 1);
+      player.online = player.connections > 0;
+      if (!player.online) player.ready = false;
+      this.changed();
     };
   }
 
-  checkCode(code: unknown): void {
-    if (code !== this.code)
-      throw new AppError(404, 'ROOM_NOT_FOUND', '邀请已失效，请扫描电脑上的新二维码。');
+  private human(token?: string): Human | undefined {
+    return token
+      ? [...this.players.values()].find(
+          (seat): seat is Human => seat.kind === 'human' && seat.token === token,
+        )
+      : undefined;
+  }
+
+  private publicPlayer({ id, nickname, kind, ready, online }: Seat): PlayerView {
+    return { id, nickname, kind, ready, online };
+  }
+
+  private requireOwner(token?: string): void {
+    if (!this.ownerId || this.human(token)?.id !== this.ownerId)
+      throw new AppError(403, 'OWNER_REQUIRED', '只有本房间的玩家房主可以进行这项操作。');
+  }
+
+  private resetReady(): void {
+    for (const player of this.players.values()) player.ready = player.kind === 'bot';
   }
 
   private assertWaiting(): void {
     if (this.phase !== 'waiting')
-      throw new AppError(409, 'ROOM_LOCKED', '对局已开始启动，暂时不能修改房间。');
+      throw new AppError(409, 'ROOM_LOCKED', '房间已关闭或对局正在启动，暂时不能修改。');
   }
 
   private changed(): void {

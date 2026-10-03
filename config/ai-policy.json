@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "status": "requirements-not-runtime-config",
+  "controller": "noname-native",
+  "strength": "strongest-available",
+  "showDifficultySelector": false,
+  "supportedModes": ["identity", "doudizhu", "versus", "duel"],
+  "minimumHumanPlayers": 1,
+  "automaticallyReady": true,
+  "ownerMustBeHuman": true,
+  "runtimeVerified": false,
+  "note": "当前仅实现 AI 席位及适配器契约。接入时使用原生完整决策，不把 difficulty 的对人类态度误当智力。"
+}

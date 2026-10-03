@@ -1,23 +1,24 @@
-import { timingSafeEqual, randomBytes } from 'node:crypto';
+import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import QRCode from 'qrcode';
-import type {
-  ExtensionInfo,
-  ServerInfo,
-  SessionView,
+import {
+  APP_ID,
+  APP_VERSION,
+  type ExtensionInfo,
+  type RoomInfo,
+  type ServerInfo,
 } from '../../../packages/shared/src/contracts.js';
 import type { EngineAdapter } from '../../../packages/noname-adapter/src/index.js';
 import { NonameAdapter } from '../../../packages/noname-adapter/src/index.js';
 import { AppError } from './errors.js';
-import { findJoinUrls } from './network.js';
-import { RoomStore } from './room.js';
+import { findHomeUrls, findJoinUrls } from './network.js';
+import { LobbyStore } from './lobby.js';
 
 interface ServerOptions {
   webRoot: string;
   port: number;
-  hostSecret?: string;
   publicUrl?: string;
   adapter?: EngineAdapter;
   extensions?: ExtensionInfo[];
@@ -32,11 +33,11 @@ function cookies(request: IncomingMessage): Record<string, string> {
   );
 }
 
-function matches(secret: unknown, expected: string): boolean {
-  if (typeof secret !== 'string') return false;
-  const supplied = Buffer.from(secret);
+function matches(supplied: unknown, expected: string): boolean {
+  if (typeof supplied !== 'string') return false;
+  const value = Buffer.from(supplied);
   const known = Buffer.from(expected);
-  return supplied.length === known.length && timingSafeEqual(supplied, known);
+  return value.length === known.length && timingSafeEqual(value, known);
 }
 
 function json(response: ServerResponse, status: number, body: unknown): void {
@@ -65,18 +66,15 @@ async function readBody(request: IncomingMessage): Promise<Record<string, unknow
 }
 
 export function createPartyServer(options: ServerOptions) {
-  const hostSecret = options.hostSecret ?? randomBytes(32).toString('base64url');
-  const hostSession = randomBytes(32).toString('base64url');
+  const instanceId = randomBytes(16).toString('hex');
+  // 仅供本机双击停止脚本使用，不赋予任何玩家房主权限，也不进入公开 API。
+  const controlToken = randomBytes(32).toString('base64url');
   const extensions = options.extensions ?? [];
-  const room = new RoomStore(options.adapter ?? new NonameAdapter(), extensions);
+  const engine = options.adapter ?? new NonameAdapter();
+  const lobby = new LobbyStore(engine, extensions);
   const eventStreams = new Set<ServerResponse>();
-  const cookie = (name: string, value: string, expiry = 86400) =>
-    `${name}=${value}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${expiry}`;
-  const isHost = (request: IncomingMessage) => matches(cookies(request).party_host, hostSession);
-  const requireHost = (request: IncomingMessage) => {
-    if (!isHost(request))
-      throw new AppError(403, 'HOST_REQUIRED', '只有电脑房主可以进行这项操作。');
-  };
+  const playerCookie = (value: string, expiry = 86400) =>
+    `party_player=${value}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${expiry}`;
 
   const server = createServer((request, response) => {
     response.setHeader('X-Content-Type-Options', 'nosniff');
@@ -94,7 +92,7 @@ export function createPartyServer(options: ServerOptions) {
       const known =
         error instanceof AppError
           ? error
-          : new AppError(500, 'INTERNAL_ERROR', '服务遇到问题，请查看电脑终端。');
+          : new AppError(500, 'INTERNAL_ERROR', '服务遇到问题，请查看电脑上的服务日志。');
       if (!(error instanceof AppError)) console.error(error);
       json(response, known.status, { error: { code: known.code, message: known.message } });
     });
@@ -102,113 +100,189 @@ export function createPartyServer(options: ServerOptions) {
   server.requestTimeout = 15000;
   server.headersTimeout = 15000;
 
+  const closeStreams = () => {
+    for (const stream of eventStreams) stream.end();
+  };
+  const stop = () => {
+    closeStreams();
+    server.close();
+    server.closeIdleConnections();
+  };
+
+  function stream<T>(
+    response: ServerResponse,
+    name: string,
+    subscribe: (send: (data: T) => void) => () => void,
+    snapshot: () => T,
+    connect: () => () => void = () => () => {},
+  ): void {
+    response.writeHead(200, {
+      'Content-Type': 'text/event-stream; charset=utf-8',
+      'Cache-Control': 'no-store',
+      Connection: 'keep-alive',
+      'X-Accel-Buffering': 'no',
+    });
+    response.flushHeaders();
+    eventStreams.add(response);
+    const send = (data: T) => {
+      if (!response.destroyed && !response.writableEnded) {
+        response.write(`event: ${name}\ndata: ${JSON.stringify(data)}\n\n`);
+        if (name === 'room' && (data as { phase?: string }).phase === 'closed') response.end();
+      }
+    };
+    const unsubscribe = subscribe(send);
+    const disconnect = connect();
+    send(snapshot());
+    const heartbeat = setInterval(() => {
+      if (!response.destroyed && !response.writableEnded) response.write(': heartbeat\n\n');
+    }, 10000);
+    response.once('close', () => {
+      clearInterval(heartbeat);
+      unsubscribe();
+      disconnect();
+      eventStreams.delete(response);
+    });
+  }
+
   async function handle(request: IncomingMessage, response: ServerResponse): Promise<void> {
     const url = new URL(request.url ?? '/', 'http://localhost');
     const route = `${request.method} ${url.pathname}`;
     if (!['GET', 'HEAD'].includes(request.method ?? '') && request.headers.origin) {
-      if (new URL(request.headers.origin).host !== request.headers.host)
-        throw new AppError(403, 'INVALID_ORIGIN', '请从本机房间页面操作。');
+      let validOrigin = false;
+      try {
+        validOrigin = new URL(request.headers.origin).host === request.headers.host;
+      } catch {
+        /* 拒绝无效 Origin。 */
+      }
+      if (!validOrigin) throw new AppError(403, 'INVALID_ORIGIN', '请从本机房间页面操作。');
     }
     const playerToken = cookies(request).party_player;
     const address = server.address();
     const actualPort = typeof address === 'object' && address ? address.port : options.port;
-    const joinUrls = findJoinUrls(actualPort, room.code, options.publicUrl);
+    const homeUrls = findHomeUrls(actualPort, options.publicUrl);
+    const roomInfo = (code: string): RoomInfo => ({
+      room: lobby.get(code).snapshot(),
+      joinUrls: findJoinUrls(actualPort, code, options.publicUrl),
+    });
 
     if (route === 'GET /api/health') {
-      json(response, 200, { ok: true, engineReady: room.snapshot().engine.ready });
+      json(response, 200, {
+        app: APP_ID,
+        version: APP_VERSION,
+        instanceId,
+        ok: true,
+        engineReady: engine.status().ready,
+      });
+      return;
+    }
+    if (route === 'POST /api/shutdown') {
+      if (
+        !['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(request.socket.remoteAddress ?? '') ||
+        !matches(request.headers['x-party-control'], controlToken)
+      )
+        throw new AppError(403, 'LOCAL_CONTROL_REQUIRED', '请在服务器电脑上双击停止脚本。');
+      response.once('finish', stop);
+      json(response, 200, { ok: true });
       return;
     }
     if (route === 'GET /api/info') {
-      const info: ServerInfo = { version: '0.1.0', joinUrls, room: room.snapshot(), extensions };
+      const info: ServerInfo = {
+        version: APP_VERSION,
+        homeUrls,
+        rooms: lobby.list(),
+        extensions,
+        engine: engine.status(),
+      };
       json(response, 200, info);
       return;
     }
     if (route === 'GET /api/me') {
-      const session: SessionView = {
-        host: isHost(request),
-        playerId: room.session(playerToken)?.id ?? null,
-      };
-      json(response, 200, session);
+      json(response, 200, lobby.session(playerToken));
       return;
     }
-    if (route === 'POST /api/host-session') {
-      const body = await readBody(request);
-      if (!matches(body.secret, hostSecret))
-        throw new AppError(403, 'INVALID_HOST_KEY', '请使用电脑终端显示的房主链接进入。');
-      response.setHeader('Set-Cookie', cookie('party_host', hostSession));
-      json(response, 200, { ok: true });
-      return;
-    }
-    if (route === 'POST /api/players') {
-      const body = await readBody(request);
-      const player = room.join(body.code, body.nickname, playerToken);
-      response.setHeader('Set-Cookie', cookie('party_player', player.token));
-      json(response, 201, { playerId: player.playerId });
-      return;
-    }
-    if (route === 'DELETE /api/me') {
-      room.leave(playerToken);
-      response.setHeader('Set-Cookie', cookie('party_player', '', 0));
-      json(response, 200, { ok: true });
-      return;
-    }
-    if (route === 'PUT /api/me/ready') {
-      const body = await readBody(request);
-      room.setReady(playerToken, body.ready);
-      json(response, 200, { ok: true });
-      return;
-    }
-    if (route === 'PUT /api/room') {
-      requireHost(request);
-      room.updateSettings(await readBody(request));
-      json(response, 200, room.snapshot());
-      return;
-    }
-    if (route === 'POST /api/room/start') {
-      requireHost(request);
-      await room.start();
-      json(response, 200, room.snapshot());
-      return;
-    }
-    if (request.method === 'DELETE' && /^\/api\/players\/[\w-]+$/.test(url.pathname)) {
-      requireHost(request);
-      room.removePlayer(url.pathname.split('/').at(-1)!);
-      json(response, 200, { ok: true });
+    if (route === 'POST /api/rooms') {
+      const created = lobby.create((await readBody(request)).nickname, playerToken);
+      response.setHeader('Set-Cookie', playerCookie(created.token));
+      json(response, 201, { ...roomInfo(created.room.code), playerId: created.playerId });
       return;
     }
     if (route === 'GET /api/events') {
-      room.checkCode(url.searchParams.get('room'));
-      response.writeHead(200, {
-        'Content-Type': 'text/event-stream; charset=utf-8',
-        'Cache-Control': 'no-store',
-        Connection: 'keep-alive',
-        'X-Accel-Buffering': 'no',
-      });
-      response.flushHeaders();
-      eventStreams.add(response);
-      const send = (snapshot: unknown) => {
-        if (!response.destroyed && !response.writableEnded)
-          response.write(`event: room\ndata: ${JSON.stringify(snapshot)}\n\n`);
-      };
-      const unsubscribe = room.subscribe(send);
-      const disconnect = room.connect(playerToken, isHost(request));
-      send(room.snapshot());
-      const heartbeat = setInterval(() => {
-        if (!response.destroyed) response.write(': heartbeat\n\n');
-      }, 10000);
-      const cleanup = () => {
-        clearInterval(heartbeat);
-        unsubscribe();
-        disconnect();
-        eventStreams.delete(response);
-      };
-      response.once('close', cleanup);
+      stream(
+        response,
+        'lobby',
+        (send) => lobby.subscribe(send),
+        () => lobby.list(),
+      );
       return;
     }
+
+    const roomRoute =
+      /^\/api\/rooms\/([A-F0-9]{6})(?:\/(players(?:\/[\w-]+)?|me(?:\/ready)?|start|bots|events))?$/.exec(
+        url.pathname,
+      );
+    if (roomRoute) {
+      const code = roomRoute[1]!;
+      const room = lobby.get(code);
+      const operation = `${request.method} ${roomRoute[2] ?? ''}`;
+      switch (operation) {
+        case 'GET ':
+          json(response, 200, roomInfo(code));
+          return;
+        case 'POST players': {
+          const joined = lobby.join(code, (await readBody(request)).nickname, playerToken);
+          response.setHeader('Set-Cookie', playerCookie(joined.token));
+          json(response, 201, { ...roomInfo(code), playerId: joined.playerId });
+          return;
+        }
+        case 'DELETE me':
+          room.leave(playerToken);
+          response.setHeader('Set-Cookie', playerCookie('', 0));
+          json(response, 200, { ok: true });
+          return;
+        case 'PUT me/ready':
+          room.setReady(playerToken, (await readBody(request)).ready);
+          json(response, 200, room.snapshot());
+          return;
+        case 'PUT ':
+          room.updateSettings(await readBody(request), playerToken);
+          json(response, 200, room.snapshot());
+          return;
+        case 'POST start':
+          await room.start(playerToken);
+          json(response, 200, room.snapshot());
+          return;
+        case 'POST bots':
+          room.addBots((await readBody(request)).count, playerToken);
+          json(response, 200, room.snapshot());
+          return;
+        case 'GET events':
+          stream(
+            response,
+            'room',
+            (send) => room.subscribe(send),
+            () => room.snapshot(),
+            () => room.connect(playerToken),
+          );
+          return;
+      }
+      if (request.method === 'DELETE' && roomRoute[2]?.startsWith('players/')) {
+        room.removePlayer(roomRoute[2].slice('players/'.length), playerToken);
+        json(response, 200, room.snapshot());
+        return;
+      }
+    }
+
     if (route === 'GET /api/qr.svg') {
-      requireHost(request);
+      const code = url.searchParams.get('room');
+      let allowed = homeUrls;
+      if (code) {
+        const room = lobby.get(code);
+        if (!room.session(playerToken))
+          throw new AppError(403, 'MEMBER_REQUIRED', '入座后可以展示本房间的邀请二维码。');
+        allowed = roomInfo(code).joinUrls;
+      }
       const target = url.searchParams.get('url');
-      if (!target || !joinUrls.includes(target))
+      if (!target || !allowed.includes(target))
         throw new AppError(400, 'INVALID_QR_TARGET', '请选择电脑所在的局域网地址。');
       const svg = await QRCode.toString(target, {
         type: 'svg',
@@ -220,13 +294,19 @@ export function createPartyServer(options: ServerOptions) {
       response.end(svg);
       return;
     }
+    // 旧原型电脑入口迁移到服务页，不再兑换任何房主权限。
+    if (route === 'GET /host') {
+      response.writeHead(302, { Location: '/server' });
+      response.end();
+      return;
+    }
     const assets: Record<string, { file: string; mime: string }> = {
       '/assets/app.js': { file: 'app.js', mime: 'text/javascript; charset=utf-8' },
       '/assets/style.css': { file: 'style.css', mime: 'text/css; charset=utf-8' },
     };
     const asset =
       assets[url.pathname] ??
-      (/^\/(host|join\/[A-F0-9]{6})?$/.test(url.pathname)
+      (/^\/(server|join\/[A-F0-9]{6})?$/.test(url.pathname)
         ? { file: 'index.html', mime: 'text/html; charset=utf-8' }
         : undefined);
     if (asset && ['GET', 'HEAD'].includes(request.method ?? '')) {
@@ -238,12 +318,5 @@ export function createPartyServer(options: ServerOptions) {
     throw new AppError(404, 'NOT_FOUND', '页面不存在。');
   }
 
-  return {
-    server,
-    room,
-    hostSecret,
-    closeStreams: () => {
-      for (const stream of eventStreams) stream.end();
-    },
-  };
+  return { server, lobby, instanceId, controlToken, closeStreams, stop };
 }

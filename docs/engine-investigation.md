@@ -39,10 +39,20 @@ d35538c702f5acc4a18be805a0f15d2639613dbe0805bf62e4d574db5bbb869e
 
 本次尚未运行真实无名杀多人对局，也未进行微信真机测试。候选版本的 `runtimeVerified` 保持 `false`。
 
+## 玩家房主与 AI 补位补充
+
+产品已明确：电脑只提供服务，手机玩家创建房间成为参赛房主。源码中的规则 host 与产品房主必须分开处理；不能因为上游默认由 host 占位，就重新赋予电脑房主或参赛身份。
+
+用户要求复用最强可用的无名杀内置 AI、不提供智力选项。已检查候选核心包的 `noname/library/index.js` 与 `noname/get/index.js`：配置 `difficulty` 显示为「AI 对人类态度」，`easy/normal/hard` 对应友好/一般/仇视；不是智力档位。`ai_strategy` 是内奸对阵营的策略，亦不能解释为通用智能等级。原始配置见 [上游 library 配置](https://github.com/libnoname/noname/blob/v1.11.6/apps/core/noname/library/index.js)。
+
+在已检查的配置中，未发现可直接等同于“最聪明”的统一档位。原生选择事件具有 `ai1/ai2`、`processAI` 与自动处理路径，具体由技能和模式提供评估函数；见 [事件内容](https://github.com/libnoname/noname/blob/v1.11.6/apps/core/noname/library/element/content.ts)。接入时应使用完整原生决策路径；若所选版本另有明确智能优化开关，验证后固定开启，不能仅设 `difficulty: hard` 就声称完成要求。
+
+当前 `config/ai-policy.json` 和适配契约固定 `strongest-native`，这是产品策略标识，不是上游原生配置键。大厅可管理真人/AI 混合席位，但未执行引擎 AI。接入验收应包括一真人 + AI 的单挑，以及 5/8 席身份局混合对局，验证自动选将、出牌、技能、胜负和手机断线恢复。
+
 ## 接入验证顺序
 
 1. 用一个最小验证程序从局域网 HTTP 地址加载核心及所需资源，记录错误与外部网络请求。
-2. 两个独立浏览器会话完成单武将单挑：电脑不占席位，手机双方选将、出牌、结束对局。
+2. 先用一真人 + 原生 AI 完成单武将单挑，再用两个独立真人会话验证同样流程：电脑不占席位，玩家房主也参赛。
 3. 失败则比较仍维护的公开 tag，或创建最小、可审查、可重复应用的适配补丁；记录选择理由。
 4. 通过后选定运行版本，落地下载/校验/预编译脚本和来源声明，再接入 `NonameAdapter`。
 5. 验证斗地主、2v2、5–8 人身份，严格检查两档选将池；随后做 Android/iPhone 微信验收。

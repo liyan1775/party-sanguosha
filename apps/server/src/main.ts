@@ -1,13 +1,13 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile, rename } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
-import type { ExtensionInfo } from '../../../packages/shared/src/contracts.js';
+import { APP_ID, APP_VERSION, type ExtensionInfo } from '../../../packages/shared/src/contracts.js';
 import { createPartyServer } from './server.js';
-import { findJoinUrls } from './network.js';
+import { findHomeUrls, isLoopbackPortOccupied } from './network.js';
 
 const root = fileURLToPath(new URL('../../../', import.meta.url));
-const port = Number(process.env.PORT ?? 3000);
-if (!Number.isInteger(port) || port < 1 || port > 65535)
+const preferredPort = Number(process.env.PORT ?? 3000);
+if (!Number.isInteger(preferredPort) || preferredPort < 1 || preferredPort > 65535)
   throw new Error('PORT 需要是 1–65535 之间的端口。');
 const publicUrl = process.env.PUBLIC_URL;
 const extensions = JSON.parse(
@@ -15,33 +15,60 @@ const extensions = JSON.parse(
 ) as ExtensionInfo[];
 if (!Array.isArray(extensions) || extensions.length !== 0)
   throw new Error('扩展接入尚未完成，config/extensions.json 当前应保持空列表。');
-// 在监听端口前验证显式的对外地址，避免运行一个无法扫码访问的实例。
-findJoinUrls(port, '000000', publicUrl);
+findHomeUrls(preferredPort, publicUrl);
 const party = createPartyServer({
   webRoot: path.join(root, 'dist/web'),
-  port,
+  port: preferredPort,
   ...(publicUrl ? { publicUrl } : {}),
   extensions,
 });
-await new Promise<void>((resolve, reject) => {
-  party.server.once('error', reject);
-  party.server.listen(port, process.env.BIND_HOST ?? '0.0.0.0', resolve);
-}).catch((error: NodeJS.ErrnoException) => {
-  if (error.code === 'EADDRINUSE') throw new Error(`端口 ${port} 已被占用，请修改 PORT。`);
-  throw error;
-});
-const hostUrl = `http://127.0.0.1:${port}/host#${party.hostSecret}`;
-const joinUrls = findJoinUrls(port, party.room.code, publicUrl);
+let port = preferredPort;
+while (true) {
+  try {
+    if (await isLoopbackPortOccupied(port))
+      throw Object.assign(new Error('Loopback port occupied'), { code: 'EADDRINUSE' });
+    await new Promise<void>((resolve, reject) => {
+      const onError = (error: Error) => {
+        party.server.off('listening', onListening);
+        reject(error);
+      };
+      const onListening = () => {
+        party.server.off('error', onError);
+        resolve();
+      };
+      party.server.once('error', onError);
+      party.server.once('listening', onListening);
+      party.server.listen(port, process.env.BIND_HOST ?? '0.0.0.0');
+    });
+    break;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'EADDRINUSE') throw error;
+    if (
+      process.env.PARTY_AUTO_PORT === '1' &&
+      !publicUrl &&
+      port < Math.min(65535, preferredPort + 20)
+    ) {
+      console.log(`端口 ${port} 被其他程序使用，尝试下一个端口。`);
+      port++;
+    } else throw new Error(`端口 ${port} 已被占用，请修改 .env 中的 PORT。没有终止其他程序。`);
+  }
+}
+const serverUrl = `http://127.0.0.1:${port}/server`;
+const homeUrls = findHomeUrls(port, publicUrl);
 const runtime = path.join(root, '.runtime');
 await mkdir(runtime, { recursive: true });
+const temporarySession = path.join(runtime, `session-${process.pid}.json`);
 await writeFile(
-  path.join(runtime, 'session.json'),
+  temporarySession,
   JSON.stringify(
     {
+      app: APP_ID,
+      version: APP_VERSION,
+      instanceId: party.instanceId,
+      controlToken: party.controlToken,
       pid: process.pid,
-      hostUrl,
-      joinUrls,
-      roomCode: party.room.code,
+      serverUrl,
+      homeUrls,
       startedAt: new Date().toISOString(),
     },
     null,
@@ -49,13 +76,9 @@ await writeFile(
   ) + '\n',
   { mode: 0o600 },
 );
+await rename(temporarySession, path.join(runtime, 'session.json'));
 console.log(
-  `\n聚会三国杀 · 扫码房间 v0.1.0\n电脑房主：${hostUrl}\n${joinUrls.length ? joinUrls.map((url) => `玩家入口：${url}`).join('\n') : '尚未检测到局域网 IPv4 地址，请连接 Wi-Fi 或开启电脑热点。'}\n当前可测试扫码入座与准备，无名杀对局尚未接入。\n`,
+  `\n聚会三国杀 v${APP_VERSION}\n电脑服务页：${serverUrl}\n${homeUrls.length ? homeUrls.map((url) => `玩家主页：${url}`).join('\n') : '尚未检测到局域网 IPv4 地址，请连接 Wi-Fi 或开启电脑热点。'}\n玩家扫码进入主页后自行建房，电脑不占席位。\n当前可测试大厅与 AI 席位，无名杀对局及 AI 出牌尚未接入。\n`,
 );
-const stop = () => {
-  party.closeStreams();
-  party.server.close();
-  party.server.closeIdleConnections();
-};
-process.once('SIGINT', stop);
-process.once('SIGTERM', stop);
+process.once('SIGINT', party.stop);
+process.once('SIGTERM', party.stop);

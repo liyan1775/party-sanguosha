@@ -1,3 +1,6 @@
+export const APP_ID = 'party-sanguosha';
+export const APP_VERSION = '0.2.0';
+
 export const MODES = [
   {
     id: 'identity',
@@ -55,6 +58,7 @@ export interface RoomSettings {
 export interface PlayerView {
   id: string;
   nickname: string;
+  kind: 'human' | 'bot';
   ready: boolean;
   online: boolean;
 }
@@ -68,23 +72,43 @@ export interface EngineStatus {
 export interface RoomView {
   code: string;
   revision: number;
-  phase: 'waiting' | 'starting' | 'playing';
+  phase: 'waiting' | 'starting' | 'playing' | 'closed';
   settings: RoomSettings;
   players: PlayerView[];
-  hostOnline: boolean;
+  ownerId: string | null;
   engine: EngineStatus;
+}
+
+export interface RoomSummary {
+  code: string;
+  ownerNickname: string;
+  mode: ModeId;
+  playerCount: number;
+  humanCount: number;
+  botCount: number;
+  phase: RoomView['phase'];
 }
 
 export interface ServerInfo {
   version: string;
-  joinUrls: string[];
-  room: RoomView;
+  homeUrls: string[];
+  rooms: RoomSummary[];
   extensions: ExtensionInfo[];
+  engine: EngineStatus;
+}
+
+export interface RoomInfo {
+  room: RoomView;
+  joinUrls: string[];
 }
 
 export interface SessionView {
-  host: boolean;
   playerId: string | null;
+  roomCode: string | null;
+}
+
+export interface MembershipResult extends RoomInfo {
+  playerId: string;
 }
 
 export interface ApiError {

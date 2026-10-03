@@ -128,11 +128,170 @@ h1 {
   margin: 0;
   line-height: 1.8;
 }
-.table-layout {
+.server-grid {
   display: grid;
-  grid-template-columns: 290px 1fr 320px;
+  grid-template-columns: 360px minmax(0, 1fr);
+  align-items: start;
+  gap: 24px;
+}
+.server-details {
+  display: grid;
+  gap: 24px;
+}
+.steps {
+  margin: 28px 0;
+  padding-left: 24px;
+}
+.steps li {
+  padding-left: 8px;
+  margin-bottom: 28px;
+  color: var(--green);
+}
+.steps strong {
+  font-size: 16px;
+}
+.steps p {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.8;
+  margin: 8px 0;
+}
+.room-grid {
+  display: grid;
+  grid-template-columns: 360px minmax(0, 1fr);
   align-items: start;
   gap: 20px;
+}
+.room-layout .settings-panel {
+  grid-column: 1 / -1;
+}
+.settings-panel summary {
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 600;
+  min-height: 24px;
+}
+.settings-panel summary small {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 400;
+  margin-left: 16px;
+}
+.settings-body {
+  padding-top: 24px;
+}
+.settings-body .mode-grid {
+  grid-template-columns: repeat(4, 1fr);
+}
+.bot-controls {
+  margin: 16px 0 22px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.bot-controls .hint {
+  width: 100%;
+  margin-top: 4px;
+}
+.seat-count {
+  margin-top: -10px;
+  margin-bottom: 16px;
+}
+.seat.bot .avatar {
+  background: #eee7d6;
+  color: #88703e;
+}
+.room-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.room-list-item {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 0;
+  border-bottom: 1px solid var(--line);
+}
+.room-list-item:first-child {
+  padding-top: 0;
+}
+.room-list-item:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+.room-list-item strong {
+  font-size: 15px;
+  overflow-wrap: anywhere;
+}
+.room-list-item p {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.8;
+  margin: 8px 0 0;
+}
+.room-link {
+  white-space: nowrap;
+  font-size: 12px;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+.empty-rooms {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.8;
+  text-align: center;
+  margin: 30px 0;
+}
+.current-room .button {
+  display: block;
+  margin-top: 22px;
+  text-align: center;
+  text-decoration: none;
+}
+.home-layout > .panel {
+  margin-bottom: 20px;
+}
+dialog {
+  background: #fdfcf8;
+  color: #273831;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 24px;
+  width: 400px;
+  max-width: calc(100% - 32px);
+  max-height: calc(100vh - 32px);
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  box-shadow: 0 18px 80px #12221830;
+}
+dialog::backdrop {
+  background: #15281c77;
+}
+dialog .qr-frame {
+  max-width: 280px;
+  margin: 0 auto;
+}
+dialog .room-code {
+  padding: 0 0 12px;
+}
+.close-dialog {
+  background: transparent;
+  border: 0;
+  font-size: 26px;
+  color: var(--muted);
+  width: 44px;
+  height: 44px;
+}
+#share-button,
+#owner-start {
+  margin-top: 12px;
+}
+.error-page .button {
+  display: inline-block;
+  margin: 4px;
+  text-decoration: none;
 }
 .panel {
   border: 1px solid var(--line);
@@ -326,7 +485,8 @@ input {
   gap: 12px;
 }
 .field-row label,
-#join-form label {
+#join-form label,
+#create-form label {
   display: block;
   font-size: 12px;
 }
@@ -436,10 +596,6 @@ footer {
   max-width: 700px;
   padding: 24px;
 }
-.player-layout .table-layout {
-  grid-template-columns: 1fr;
-  gap: 16px;
-}
 .player-layout .intro {
   padding: 30px 0;
 }
@@ -466,14 +622,17 @@ footer {
   font-size: 12px;
   color: var(--green);
 }
-#join-form {
+#join-form,
+#create-form {
   margin-top: 24px;
 }
-#join-form input {
+#join-form input,
+#create-form input {
   margin-top: 10px;
   font-size: 16px;
 }
-#join-form .button {
+#join-form .button,
+#create-form .button {
   margin-top: 22px;
 }
 .my-seat-label {
@@ -498,19 +657,6 @@ footer {
   color: var(--muted);
   line-height: 1.8;
   margin: 24px 0;
-}
-@media (max-width: 1100px) {
-  .table-layout {
-    grid-template-columns: 270px 1fr;
-  }
-  .players-panel {
-    grid-column: 1 / -1;
-  }
-  .host-layout .players {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    column-gap: 32px;
-  }
 }
 @media (max-width: 640px) {
   #app,
@@ -541,8 +687,15 @@ footer {
   .intro {
     padding: 28px 0;
   }
-  .table-layout {
+  .server-grid,
+  .room-grid {
     grid-template-columns: 1fr;
+  }
+  .settings-body .mode-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .room-list-item .button {
+    padding: 10px;
   }
   .panel {
     padding: 22px;
@@ -550,9 +703,6 @@ footer {
   .qr-frame {
     max-width: 260px;
     margin: 0 auto;
-  }
-  .host-layout .players {
-    display: flex;
   }
   .game-summary {
     padding: 17px;
