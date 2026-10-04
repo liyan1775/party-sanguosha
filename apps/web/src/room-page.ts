@@ -33,6 +33,7 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
   let matchId: string | null = null;
   let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
   let reconnectAttempt = 0;
+  let horizontalTable = sessionStorage.getItem('party_table_view') !== 'portrait';
   const roomPath = `/api/rooms/${room.code}`;
 
   frame(
@@ -41,7 +42,7 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
     '人到齐，就开局。',
     '房主也是桌上的一位玩家。每位入座的朋友都可以分享房间邀请。',
     `
-    <section id="match-panel" class="match-panel" hidden><div class="match-toolbar"><strong id="match-label">正在选将</strong><button id="match-share" class="button secondary" type="button">房间二维码</button><button id="rematch-button" class="button primary" type="button" hidden>回到房间，准备下一局</button><span id="finished-hint" hidden>请等房主返回房间</span></div><div id="game-frame-container"></div></section>
+    <section id="match-panel" class="match-panel" hidden><div class="match-toolbar"><strong id="match-label">正在选将</strong><span id="orientation-hint" class="orientation-hint" hidden>请横着握手机</span><button id="match-orientation" class="button secondary" type="button" hidden>竖屏显示</button><button id="match-share" class="button secondary" type="button">房间二维码</button><button id="rematch-button" class="button primary" type="button" hidden>回到房间，准备下一局</button><span id="finished-hint" hidden>请等房主返回房间</span></div><div id="game-frame-container"></div></section>
     <div class="room-grid">
       <section class="panel welcome-panel"><div class="panel-heading"><h2>这一桌</h2><span class="tag" id="player-room-code"></span></div><div class="game-summary"><span id="summary-mode" class="summary-mode"></span><span id="summary-details"></span></div><p id="summary-preset" class="hint"></p>
         <div id="other-room" class="message" hidden>你已经在另一间房，请先回去离开。<a id="other-room-link" href="/">返回原房间</a></div>
@@ -56,6 +57,23 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
 
   const owner = () => session.roomCode === room.code && session.playerId === room.ownerId;
   const refresh = () => renderRoom(room);
+  function resizeTable(): void {
+    const panel = element('#match-panel');
+    const portrait = window.innerWidth < window.innerHeight;
+    const rotated = portrait && horizontalTable;
+    panel.classList.toggle('rotated-table', rotated);
+    panel.style.setProperty('--table-width', `${window.innerHeight}px`);
+    panel.style.setProperty('--table-height', `${window.innerWidth}px`);
+    element('#match-orientation').hidden = !portrait;
+    element('#match-orientation').textContent = horizontalTable ? '竖屏显示' : '横屏牌桌';
+    element('#orientation-hint').hidden = !rotated;
+  }
+  element('#match-orientation').addEventListener('click', () => {
+    horizontalTable = !horizontalTable;
+    sessionStorage.setItem('party_table_view', horizontalTable ? 'landscape' : 'portrait');
+    resizeTable();
+  });
+  window.addEventListener('resize', resizeTable);
   function reconnectGame(): void {
     if (reconnectTimer || !matchId || !['starting', 'playing'].includes(room.phase)) return;
     element('#match-label').textContent = '连接中断，正在恢复原座位…';
@@ -145,6 +163,8 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
     );
     element('#match-panel').hidden = !inMatch;
     app.classList.toggle('in-match', inMatch);
+    document.body.classList.toggle('playing-match', inMatch);
+    resizeTable();
     element('#match-label').textContent =
       room.phase === 'finished'
         ? '本局已结束'

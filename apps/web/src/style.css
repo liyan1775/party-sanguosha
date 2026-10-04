@@ -742,12 +742,30 @@ footer {
 }
 .match-toolbar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
   padding: 6px 12px;
   min-height: 46px;
   color: #fff;
   background: #172520;
+}
+.playing-match {
+  overflow: hidden;
+}
+.match-panel.rotated-table {
+  inset: auto;
+  left: 50%;
+  top: 50%;
+  width: var(--table-width);
+  height: var(--table-height);
+  transform: translate(-50%, -50%) rotate(90deg);
+  transform-origin: center;
+}
+.orientation-hint {
+  color: #d7c48e;
+  font-size: 12px;
+  white-space: nowrap;
 }
 .match-toolbar strong {
   margin-right: auto;

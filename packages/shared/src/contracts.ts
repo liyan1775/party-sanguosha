@@ -1,5 +1,5 @@
 export const APP_ID = 'party-sanguosha';
-export const APP_VERSION = '0.3.0';
+export const APP_VERSION = '0.3.1';
 
 export const MODES = [
   {

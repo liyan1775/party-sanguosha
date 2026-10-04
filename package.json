@@ -1,6 +1,6 @@
 {
   "name": "party-sanguosha",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "private": true,
   "type": "module",
   "engines": {
@@ -16,7 +16,8 @@
     "engine:prepare": "node --use-env-proxy scripts/prepare-noname-lab.mjs",
     "engine:lab": "node packages/noname-adapter/lab/serve.mjs",
     "engine:verify": "node scripts/verify-noname-lab.mjs",
-    "engine:verify:rooms": "npm run build && node --import tsx scripts/verify-native-runtime.mjs",
+    "engine:check-definitions": "node scripts/check-native-definitions.mjs",
+    "engine:verify:rooms": "npm run build && npm run engine:check-definitions && node --import tsx scripts/verify-native-runtime.mjs",
     "package:windows": "node --use-env-proxy scripts/package-windows.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",

@@ -35,6 +35,17 @@ export async function playOneAction(frames, worker) {
   );
   for (let attempt = 0; attempt < 100; attempt++) {
     for (const frame of frames) {
+      // A general may ask about an optional preparation skill before its first
+      // playable card. Decline it through the real UI, then continue the turn.
+      const eventName = await frame.evaluate(() => partyEngine._status.event?.name);
+      if (eventName === 'chooseBool') {
+        const cancel = frame
+          .locator('.control > div')
+          .filter({ hasText: /^取消$/ })
+          .first();
+        if (await cancel.isVisible()) await cancel.tap();
+        continue;
+      }
       const selectable = frame
         .locator(
           '.handcards .card.selectable, .handcards1 .card.selectable, .handcards2 .card.selectable',

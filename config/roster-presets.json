@@ -7,7 +7,11 @@
       "name": "新手档",
       "completePacks": ["standard"],
       "packGroups": {},
-      "additionalCharacters": []
+      "additionalCharacters": [],
+      "definitionPacks": {
+        "characters": ["standard", "refresh", "sp"],
+        "cards": ["standard"]
+      }
     },
     {
       "id": "advanced",
@@ -29,7 +33,11 @@
         "shen_luxun",
         "shen_ganning",
         "shen_zhangliao"
-      ]
+      ],
+      "definitionPacks": {
+        "characters": ["standard", "shenhua", "extra", "yijiang", "refresh", "sp", "tw"],
+        "cards": ["standard", "extra", "zhulu"]
+      }
     }
   ]
 }

@@ -8,10 +8,12 @@
 - 电脑 `/server` 每 2 秒查询仅回环可用的任务，创建隔离 iframe；宿主 cookie 仅回环、HttpOnly，不赋予房主权限。
 - 玩家 `/join/房号` 保留大厅 SSE，选将/对局 iframe 按房间 cookie 取得本人身份；不能指定别人的玩家 ID 或使用其他房间。
 - `bootstrap.js` 启动已编译 JS，普通 LAN HTTP 无需 Service Worker/HTTPS；配置与扩展由电脑提供。
+- 入口先显示分阶段载入提示；动态导入失败可手动重试，默认两分钟载入检查不清空存储。package.js 仅枚举该武将档需要的定义包；共享技能依赖见 roster-presets.json 的 definitionPacks，不扩大选将或牌堆。
 - `mode.js` 适配座位、身份、选将、武将档与发牌，复用上游牌、技能、回合、死亡、AI 和胜负；规则宿主是脱离参赛数组的 Player 视点。
 - `privacy.js` 在原生 Client.send 序列化期间设置接收者，保留自己的牌、已公开牌、技能授权可知的牌；暗牌只发送 ID/占位值，提前编码的事件父链和原始元组也再次过滤。身份局 getState/重连快照过滤未公开身份。
 - `relay.js` 入站物理卡牌只按现有 ID 解析，忽略客户端提供的牌名/点数/花色；`controls.js` 用 textContent 渲染昵称并关闭原生房间管理/更新/牌堆入口。
 - 固定画布采用 overflow:clip，避免浏览器选将时滚动整个画布导致头像/手牌裁切；手牌与弹窗保留各自的滚动。自动化检查手机横屏中所有参赛头像位于可视范围。
+- 微信竖屏默认旋转外层横向牌桌；方向按钮和尺寸变化保留 iframe。公开出牌在离开手牌前按事件材料识别，ordering 中的观星继续私有；占位牌以牌背显示。
 
 状态：`waiting → starting → playing → finished → waiting`。选将发牌后才确认 playing；启动失败或宿主丢失返回等待，真人重新准备。结算后房主回房，释放旧 worker、重新生成 match，保留房间码/座位。停止服务器不保存当前对局。
 
@@ -33,6 +35,12 @@ npm run engine:verify:rooms
 可选环境变量：`ENGINE_VERIFY_MODES=duel,identity,doudizhu,versus`、`ENGINE_VERIFY_IDENTITY_SEATS=8`、`ENGINE_VERIFY_HUMANS=2`、`ENGINE_VERIFY_RECONNECT=1`（刷新）或 `socket`（自动恢复）、`ENGINE_VERIFY_MANUAL=1`、`ENGINE_VERIFY_SECOND_ROUND=1`。后两项分别触屏选牌/目标/确认并验证规则端历史、在原房间重新完成第二局。`ENGINE_VERIFY_EXISTING_URL` 可指定已运行的发行包局域网地址，脚本不会停止该实例。独立验证用随机端口，不占当前聚会服务。
 
 `ENGINE_VERIFY_GOD_FIXTURE=1` 仅用于定向神将势力选择回归：浏览器测试路由将候选限制为神赵云、神吕布，配合 `ENGINE_VERIFY_PRESET=advanced` 与 `ENGINE_VERIFY_MODES=duel` 使用。它不改变产品配置，也不替代完整 156 将白名单验证。结果文件按参数区分，记录验证时间和参数。
+
+v0.3.1 默认模拟 Android 微信 UA，仍由桌面 Edge 执行；`ENGINE_VERIFY_USER_AGENT` 可替换该合成 UA。`ENGINE_VERIFY_PORTRAIT=1` 使用 390×844 窗口，检查横向牌桌/竖屏切换不换 iframe，并继续真实触屏操作。`ENGINE_VERIFY_SLOW_START=1` 将手机 CSS 响应延迟 12 秒，确保实际跨过原生十秒阈值；`ENGINE_VERIFY_RETRY_START=1` 中断首次核心模块下载，点击真实重试按钮后完成对局。两项支持与四模式组合。
+
+`ENGINE_VERIFY_JUDGE_FIXTURE=1` 配合 `ENGINE_VERIFY_MODES=duel`、`ENGINE_VERIFY_HUMANS=2` 使用：测试路由限定甄姬/司马懿，执行原生洛神判定和鬼才改判，不改变产品配置或牌堆。检查发送的牌名/花色/点数，以及两端实际复制牌面的遮盖类与花色点数；新手档测试，不与神将 fixture 同时使用。
+
+脚本观察实际原生出牌/响应及判定广播，检查对手打出的牌不含占位元组；另用真实原生卡牌做序列化上下文探针，验证观星排序区对旁观者隐藏、对获授权玩家可见。判定牌从 player.judging 与 event.result.card 识别；event.card 不是翻出的结果牌。对手手牌检查尊重原生 knowers（例如洛神公开获得的牌），不能把所有对手手牌都当作未知牌。静态定义检查是 `engine:verify:rooms` 的前置步骤，也可单独执行 `npm run engine:check-definitions`。
 
 输出 `.runtime/native-runtime`；不提交私人牌值/运行凭据。默认选将后启用上游托管至结算，没有合成伤害、牌或胜者。桌面 Edge 手机视口与真机微信分别记录，不混作验收。
 

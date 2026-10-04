@@ -111,3 +111,17 @@ SSE 连接数支持同一玩家多个标签，最后一个连接断开标记离�
 `/engine/core` 只读映射固定引擎根目录，拒绝越界、写入和工作区文件；绝对模块路径与旧文件接口在响应中改到引擎命名空间，上游磁盘源码不改。原生事件需要 eval 与动态样式，宽松 CSP 只用于引擎路径，主大厅保留严格 CSP。所有资源同源，普通局域网 HTTP 不运行 TypeScript/Service Worker 入口。
 
 `privacy.js` 在接收方序列化上下文中过滤暗牌值、身份与重连快照，并再次检查提前编码的事件父链与原始卡牌元组。公开牌和原生技能允许知晓的牌保留；仅 UI 遮盖不是权限边界。新增技能私有 storage、恶意决策全面合法性、防作弊和并发容量不能由这次基础验证推导为已完成。
+
+## ADR-009：微信启动、公开牌和屏幕方向
+
+状态：v0.3.1 已实现；真机反馈继续记录在 handoff.md。
+
+上游 boot 默认十秒后触发 reset，并枚举 package.js 中所有武将/卡牌包，即使配置只启用标准包。局域网冷加载与手机解析可能超过该时间。适配启动入口先显示状态，再动态导入引擎；使用两分钟载入上限和手动重试，覆盖原生重置回调，禁止自动清空存储/循环刷新。引擎载入成功后关闭检查，不把选将等待时间算作载入超时。
+
+package.js 载入后按 `config/roster-presets.json` 的 definitionPacks 收窄枚举。启用武将与标准牌堆仍由 completePacks/packGroups/additionalCharacters 和 config.characters/cards 决定；定义依赖不扩展选将。标准包的李典、甘夫人等会使用 refresh/sp 的共享技能；进阶还需要 standard/yijiang/tw 与 extra/zhulu 卡牌定义。`check-native-definitions.mjs` 用 TypeScript AST 检查允许武将的静态技能、继承、技能添加与造牌引用，不执行上游模块；动态引用和所有技能路径仍需要游戏回归。
+
+原生 `$throw` 动画在物理牌离开手牌前广播。过滤必须识别当前事件链中已经声明的 useCard/respond/discard/showCards 材料与判定牌，仅公开这些牌。ordering 区也承载私人观星，不能整体设为公开。未知牌仍只发送占位值，客户端显示牌背，公开元组到达后恢复同 ID 的真实牌面。
+
+判定翻出的结果牌位于 `event.player.judging`，判定结束后通过 `event.result.card` 传给回调；`event.card` 可能是接受判定的延时锦囊，不能用于判断结果牌是否公开。定向回归用原生洛神/鬼才覆盖翻牌与改判，同时检查发送元组和客户端复制后的实际牌面。
+
+微信竖屏下通过外层 match-panel 的旋转给 iframe 提供横向尺寸，保留原生触屏事件与弹窗；桌面/正常横屏保持自然方向。按钮可切回竖屏，偏好保存在 sessionStorage。方向变化只调整几何，不重建 iframe 或刷新当前游戏；回归同时检查真实触屏动作和同席位重连。

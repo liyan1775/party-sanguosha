@@ -5,6 +5,14 @@ import { lib, get, _status } from 'noname';
 export function installPrivacy() {
   lib.card.party_unknown = { type: 'unknown', enable: false, fullskin: false };
   lib.translate.party_unknown = '未知牌';
+  const initCard = lib.element.Card.prototype.init;
+  lib.element.Card.prototype.init = function (...args) {
+    const concealed = this.classList.contains('party-concealed');
+    const result = initCard.apply(this, args);
+    if (this.name === 'party_unknown') this.classList.add('party-concealed', 'infohidden');
+    else if (concealed) this.classList.remove('party-concealed', 'infohidden');
+    return result;
+  };
   let receiver;
   let addressedTo;
   const send = lib.element.Client.prototype.send;
@@ -31,6 +39,27 @@ export function installPrivacy() {
     if (!receiver || _status.over) return true;
     const position = get.position(card, true);
     if (card.isKnownBy(receiver) || ['e', 'j', 'd'].includes(position)) return true;
+    // Native use/respond animation is broadcast BEFORE moving the physical
+    // materials out of the hand. Reveal that declared card, not its whole hand.
+    // Ordering ('o') is also used by private 观星, so it is not globally public.
+    let event = get.event();
+    const seen = new Set();
+    for (let depth = 0; event && depth < 32 && !seen.has(event); depth++) {
+      seen.add(event);
+      if (
+        ['useCard', 'respond', 'discard', 'showCards'].includes(event.name) &&
+        event.cards?.includes(card)
+      )
+        return true;
+      // The flipped result is in player.judging, not event.card (the delayed
+      // trick being judged). After judging.shift(), callbacks use result.card.
+      if (
+        event.name === 'judge' &&
+        (event.player?.judging?.includes(card) || event.result?.card === card)
+      )
+        return true;
+      event = event.getParent?.();
+    }
     const owner = get.owner(card);
     // Private choices such as 观星 explicitly send unowned cards to their actor.
     // This does not permit that actor to see another player's concealed hand.
