@@ -4,11 +4,6 @@
   "purpose": "Standard-pack LAN runtime lab only; not the full game distribution",
   "assets": [
     {
-      "path": "LICENSE",
-      "bytes": 35147,
-      "gitBlobSha": "94a9ed024d3859793618152ea559a168bbcbb5e2"
-    },
-    {
       "path": "image/background/ol_bg.jpg",
       "bytes": 95213,
       "gitBlobSha": "6282549f64f6719da59fc61776d7184f5f8d1b7f"
@@ -184,11 +179,6 @@
       "gitBlobSha": "c535c476f44fe12c44a81a154dea61123e05680f"
     },
     {
-      "path": "image/card/dagongche.png",
-      "bytes": 18745,
-      "gitBlobSha": "e103f143d468363e80915dbf413d85390332b076"
-    },
-    {
       "path": "image/card/dagongche_attack.png",
       "bytes": 22010,
       "gitBlobSha": "da387b5677538b6aabca9228b4d93acd1236d52f"
@@ -197,6 +187,11 @@
       "path": "image/card/dagongche_defend.png",
       "bytes": 22895,
       "gitBlobSha": "254ef544c932cf7d8ab9199b1f605ef985d4b435"
+    },
+    {
+      "path": "image/card/dagongche.png",
+      "bytes": 18745,
+      "gitBlobSha": "e103f143d468363e80915dbf413d85390332b076"
     },
     {
       "path": "image/card/dajunyajing.png",
@@ -219,16 +214,6 @@
       "gitBlobSha": "5f4b58e86e4bca3dad414c587d8c8c36d65e673d"
     },
     {
-      "path": "image/card/db_atk1.jpg",
-      "bytes": 33327,
-      "gitBlobSha": "56f7f3658f85f6dd30c3fc64bb8e555fcde02741"
-    },
-    {
-      "path": "image/card/db_atk1_克敌先机.png",
-      "bytes": 88761,
-      "gitBlobSha": "814530dc1f1605c1b673d23939c1c9f67397c082"
-    },
-    {
       "path": "image/card/db_atk1_出阵迎战.jpg",
       "bytes": 32091,
       "gitBlobSha": "11490dfec2dd98852c839e8802165d1056fd9448"
@@ -244,19 +229,14 @@
       "gitBlobSha": "707ed8e3380c99437a472bf506a49c4182aa8013"
     },
     {
-      "path": "image/card/db_atk2.jpg",
-      "bytes": 28466,
-      "gitBlobSha": "915f3bc124085def5932dc7f200e618ab3d4d429"
+      "path": "image/card/db_atk1_克敌先机.png",
+      "bytes": 88761,
+      "gitBlobSha": "814530dc1f1605c1b673d23939c1c9f67397c082"
     },
     {
-      "path": "image/card/db_atk2_归顺.jpg",
-      "bytes": 31089,
-      "gitBlobSha": "d8a3b97f74a63c97fd676e85fff4353a29e0ea8a"
-    },
-    {
-      "path": "image/card/db_atk2_拱卫中军.jpg",
-      "bytes": 32707,
-      "gitBlobSha": "79e4521f30083c6e4c59795833e6ede018a4d2ec"
+      "path": "image/card/db_atk1.jpg",
+      "bytes": 33327,
+      "gitBlobSha": "56f7f3658f85f6dd30c3fc64bb8e555fcde02741"
     },
     {
       "path": "image/card/db_atk2_洞若观火.png",
@@ -264,24 +244,24 @@
       "gitBlobSha": "d3e330ad4b1cbd321590f0fb55e3e1317956d5b6"
     },
     {
+      "path": "image/card/db_atk2_拱卫中军.jpg",
+      "bytes": 32707,
+      "gitBlobSha": "79e4521f30083c6e4c59795833e6ede018a4d2ec"
+    },
+    {
+      "path": "image/card/db_atk2_归顺.jpg",
+      "bytes": 31089,
+      "gitBlobSha": "d8a3b97f74a63c97fd676e85fff4353a29e0ea8a"
+    },
+    {
       "path": "image/card/db_atk2_突出重围.jpg",
       "bytes": 28839,
       "gitBlobSha": "76c73a75b626591360abd21cd68d8f302cc516a2"
     },
     {
-      "path": "image/card/db_def1.jpg",
-      "bytes": 32130,
-      "gitBlobSha": "7b9f338472d9e31c47132ba55e7209891e31a2c4"
-    },
-    {
-      "path": "image/card/db_def1_围城断粮.jpg",
-      "bytes": 31569,
-      "gitBlobSha": "a24b04c09e1ee10c77d98deedb922558db4b2d72"
-    },
-    {
-      "path": "image/card/db_def1_直取敌营.jpg",
-      "bytes": 31110,
-      "gitBlobSha": "bb23a176a57f3497347861bf448257f5420ffccb"
+      "path": "image/card/db_atk2.jpg",
+      "bytes": 28466,
+      "gitBlobSha": "915f3bc124085def5932dc7f200e618ab3d4d429"
     },
     {
       "path": "image/card/db_def1_金蝉脱壳.png",
@@ -289,19 +269,34 @@
       "gitBlobSha": "1709afa39afdb0efd26cef2480ffe9017a7ceec8"
     },
     {
+      "path": "image/card/db_def1_围城断粮.jpg",
+      "bytes": 31569,
+      "gitBlobSha": "a24b04c09e1ee10c77d98deedb922558db4b2d72"
+    },
+    {
       "path": "image/card/db_def1_镇压.jpg",
       "bytes": 28519,
       "gitBlobSha": "7739b9fd7c5733d75b690d6c22325c740209e6ee"
     },
     {
-      "path": "image/card/db_def2.jpg",
-      "bytes": 23830,
-      "gitBlobSha": "9fe42c9adb28fa9ec3112c636a0f830b92ea6ac4"
+      "path": "image/card/db_def1_直取敌营.jpg",
+      "bytes": 31110,
+      "gitBlobSha": "bb23a176a57f3497347861bf448257f5420ffccb"
+    },
+    {
+      "path": "image/card/db_def1.jpg",
+      "bytes": 32130,
+      "gitBlobSha": "7b9f338472d9e31c47132ba55e7209891e31a2c4"
     },
     {
       "path": "image/card/db_def2_安抚.jpg",
       "bytes": 29123,
       "gitBlobSha": "447af99bea1b1b5822be53a8a9fd121d0ec493e1"
+    },
+    {
+      "path": "image/card/db_def2_擂鼓进军.jpg",
+      "bytes": 32571,
+      "gitBlobSha": "32c4c8369168531ff0680de063d2079a6ce323e7"
     },
     {
       "path": "image/card/db_def2_弃履狂奔.png",
@@ -314,9 +309,9 @@
       "gitBlobSha": "8e72e1df4f4e6fb1da843211d870fc7e257bc415"
     },
     {
-      "path": "image/card/db_def2_擂鼓进军.jpg",
-      "bytes": 32571,
-      "gitBlobSha": "32c4c8369168531ff0680de063d2079a6ce323e7"
+      "path": "image/card/db_def2.jpg",
+      "bytes": 23830,
+      "gitBlobSha": "9fe42c9adb28fa9ec3112c636a0f830b92ea6ac4"
     },
     {
       "path": "image/card/diaohulishan.png",
@@ -904,14 +899,14 @@
       "gitBlobSha": "8c24d0ee5bb824e2d423198f002b749bce0d63f4"
     },
     {
-      "path": "image/card/muniu.png",
-      "bytes": 20200,
-      "gitBlobSha": "5fbfe7a542addda08035b86d5dabe84d09bdc948"
-    },
-    {
       "path": "image/card/muniu_small.png",
       "bytes": 6689,
       "gitBlobSha": "5c71285c44996b2b880a1097a3f4d6fe063a20ca"
+    },
+    {
+      "path": "image/card/muniu.png",
+      "bytes": 20200,
+      "gitBlobSha": "5fbfe7a542addda08035b86d5dabe84d09bdc948"
     },
     {
       "path": "image/card/nanman.png",
@@ -1139,14 +1134,14 @@
       "gitBlobSha": "846c1871b8f643036b2f5d55e05bd6a47c15830b"
     },
     {
-      "path": "image/card/sex_male.png",
-      "bytes": 9539,
-      "gitBlobSha": "b8c5b42d2187f5124997a1aab843e761e09c10c3"
-    },
-    {
       "path": "image/card/sex_male_castrated.png",
       "bytes": 9424,
       "gitBlobSha": "71c6c3d5ce3bd70f3b981559a2a920cc5d2192b8"
+    },
+    {
+      "path": "image/card/sex_male.png",
+      "bytes": 9539,
+      "gitBlobSha": "b8c5b42d2187f5124997a1aab843e761e09c10c3"
     },
     {
       "path": "image/card/sex_none.png",
@@ -1319,14 +1314,14 @@
       "gitBlobSha": "aa13c73ce21eaedd860d6bb16d4c4fd9ba354c3e"
     },
     {
-      "path": "image/card/tiesuo.png",
-      "bytes": 28963,
-      "gitBlobSha": "79f16bae794385141c685fcd757a6785d48cfccb"
-    },
-    {
       "path": "image/card/tiesuo_mark.png",
       "bytes": 18223,
       "gitBlobSha": "bae5c1ef319675a9b7d37d8d25625e399c33e81d"
+    },
+    {
+      "path": "image/card/tiesuo.png",
+      "bytes": 28963,
+      "gitBlobSha": "79f16bae794385141c685fcd757a6785d48cfccb"
     },
     {
       "path": "image/card/tongque.png",
@@ -1464,14 +1459,14 @@
       "gitBlobSha": "a7845747775a77dc3e9b84683717fcc0c6ec4994"
     },
     {
-      "path": "image/card/xuanjian.png",
-      "bytes": 19575,
-      "gitBlobSha": "90f90a94833b40430544be331fa1eb3206f24720"
-    },
-    {
       "path": "image/card/xuanjian_card.png",
       "bytes": 9303,
       "gitBlobSha": "019000434fad05df95da99e2eab96c6182bbe65a"
+    },
+    {
+      "path": "image/card/xuanjian.png",
+      "bytes": 19575,
+      "gitBlobSha": "90f90a94833b40430544be331fa1eb3206f24720"
     },
     {
       "path": "image/card/xumou_jsrg.jpg",
@@ -1544,14 +1539,14 @@
       "gitBlobSha": "d367e90dc8ab71a7b95cf069d6c8f82b0efabf23"
     },
     {
-      "path": "image/card/yiwu_click.png",
-      "bytes": 12114,
-      "gitBlobSha": "9ce95ec2996153de6f0d8561966e81af42032855"
-    },
-    {
       "path": "image/card/yiwu_click_chosen.png",
       "bytes": 8025,
       "gitBlobSha": "9efbcae1b2ef3bde890794f694d46e2023c00dca"
+    },
+    {
+      "path": "image/card/yiwu_click.png",
+      "bytes": 12114,
+      "gitBlobSha": "9ce95ec2996153de6f0d8561966e81af42032855"
     },
     {
       "path": "image/card/yiwu_female.png",
@@ -1734,9 +1729,49 @@
       "gitBlobSha": "107e90095d0073f4e2fda72bb35a18981b179db6"
     },
     {
+      "path": "image/character/caoren.jpg",
+      "bytes": 180412,
+      "gitBlobSha": "d6a25c29ac2862acdc89e8b11ca274b846a1d238"
+    },
+    {
+      "path": "image/character/chendao.jpg",
+      "bytes": 274247,
+      "gitBlobSha": "6eefff7bc7f9cf9606945789a3d2fb0462140aa1"
+    },
+    {
       "path": "image/character/daqiao.jpg",
       "bytes": 177924,
       "gitBlobSha": "2a04a887d0a607f379f67f39dea977afc12cd14f"
+    },
+    {
+      "path": "image/character/dc_bulianshi.jpg",
+      "bytes": 172499,
+      "gitBlobSha": "5400b9d2623ff75f99ecc003b46bc842126bd318"
+    },
+    {
+      "path": "image/character/dc_caozhi.jpg",
+      "bytes": 141890,
+      "gitBlobSha": "ab57b0b697ee909b3a69c67874b4fc4bc3aadc90"
+    },
+    {
+      "path": "image/character/dc_chenqun.jpg",
+      "bytes": 138214,
+      "gitBlobSha": "84bbecb27262bff801915826c0974e75fde184cd"
+    },
+    {
+      "path": "image/character/dc_gongsunzan.jpg",
+      "bytes": 145297,
+      "gitBlobSha": "bc54f56398c629cc1d0ee137d01ce874cd47ec8c"
+    },
+    {
+      "path": "image/character/dc_liru.jpg",
+      "bytes": 113432,
+      "gitBlobSha": "0e66b6abcccd5fddac9297b02d369241d4de6ba0"
+    },
+    {
+      "path": "image/character/dc_xushu.jpg",
+      "bytes": 184414,
+      "gitBlobSha": "63f183645eb6fd7c201c2bb36a365ac611809f00"
     },
     {
       "path": "image/character/default_silhouette_double.jpg",
@@ -1774,6 +1809,11 @@
       "gitBlobSha": "4567d39bc2d7e51b86d44d2138c91b962f314544"
     },
     {
+      "path": "image/character/guanqiujian.jpg",
+      "bytes": 267855,
+      "gitBlobSha": "a56ac4d992c9e3c8ef4bb19b6018173877799092"
+    },
+    {
       "path": "image/character/guanyu.jpg",
       "bytes": 232039,
       "gitBlobSha": "7d6af7369f9f1f355af87a6d90cbb1a732225e8f"
@@ -1787,6 +1827,11 @@
       "path": "image/character/gz_yuejin.jpg",
       "bytes": 221768,
       "gitBlobSha": "41f3512d609555194668cd6d2a818bc0c2cc5ab7"
+    },
+    {
+      "path": "image/character/haozhao.jpg",
+      "bytes": 248202,
+      "gitBlobSha": "f219981cdce7dc60ed9f968894b057f0c50e8534"
     },
     {
       "path": "image/character/huanggai.jpg",
@@ -1809,9 +1854,24 @@
       "gitBlobSha": "43e3d5226cb217852bc4a84b933051609004ca1b"
     },
     {
+      "path": "image/character/kuailiangkuaiyue.jpg",
+      "bytes": 176831,
+      "gitBlobSha": "82a3f45fc320ce6e65144b83579c94f7dd3aac2d"
+    },
+    {
       "path": "image/character/liubei.jpg",
       "bytes": 194418,
       "gitBlobSha": "8a8fd3c268830f6f93f00281d6b7c915ba24f9cb"
+    },
+    {
+      "path": "image/character/luji.jpg",
+      "bytes": 248830,
+      "gitBlobSha": "b00d63f45d0b21950fd605be0d27bb5fab2eaf2d"
+    },
+    {
+      "path": "image/character/lukang.jpg",
+      "bytes": 285129,
+      "gitBlobSha": "31f6bb440c740bef426982ec07701d743ee6f2b3"
     },
     {
       "path": "image/character/luxun.jpg",
@@ -1834,14 +1894,619 @@
       "gitBlobSha": "9b483475846b98a39b341e4ca56cb90b1540d15e"
     },
     {
+      "path": "image/character/ol_caiwenji.jpg",
+      "bytes": 158279,
+      "gitBlobSha": "d9c860e648b9cf381208fe5646e380af714f6e49"
+    },
+    {
+      "path": "image/character/ol_dengai.jpg",
+      "bytes": 169989,
+      "gitBlobSha": "5afa0286491059a3996f19eeb9501ea4cf8f1733"
+    },
+    {
+      "path": "image/character/ol_dianwei.jpg",
+      "bytes": 145360,
+      "gitBlobSha": "d03f08e68911190474f282ad8baa97ade52a927b"
+    },
+    {
+      "path": "image/character/ol_dongzhuo.jpg",
+      "bytes": 135362,
+      "gitBlobSha": "1f3eccf70e8928e0953b00503f7954e162f19312"
+    },
+    {
+      "path": "image/character/ol_huangzhong.jpg",
+      "bytes": 146825,
+      "gitBlobSha": "a744bf01f32fcaebdb3a9dc67297d238ab63f145"
+    },
+    {
+      "path": "image/character/ol_jiangwei.jpg",
+      "bytes": 158881,
+      "gitBlobSha": "0ed6b5a4a83e75a0c8d41a5dad9a55b3215e0dfc"
+    },
+    {
+      "path": "image/character/ol_liushan.jpg",
+      "bytes": 182142,
+      "gitBlobSha": "8c967f4d180b4189703e57be3d3269881be685b9"
+    },
+    {
+      "path": "image/character/ol_lusu.jpg",
+      "bytes": 140954,
+      "gitBlobSha": "17bcdbea1f4c4ab8db50153eb52d2db6f7515ccb"
+    },
+    {
+      "path": "image/character/ol_pangde.jpg",
+      "bytes": 250764,
+      "gitBlobSha": "0b509ddb5682d0ab602bd1cb9823bbf066b1b200"
+    },
+    {
+      "path": "image/character/ol_pangtong.jpg",
+      "bytes": 267717,
+      "gitBlobSha": "05f7418112ce6824bb6a98d9e4433e1381a32e29"
+    },
+    {
+      "path": "image/character/ol_sp_zhugeliang.jpg",
+      "bytes": 286953,
+      "gitBlobSha": "f2694e4709d88e714978b4123217ad1b35be55b3"
+    },
+    {
+      "path": "image/character/ol_sunjian.jpg",
+      "bytes": 203537,
+      "gitBlobSha": "5e99503725bdc28e0d4a60b1331b50c0dd1cfca1"
+    },
+    {
+      "path": "image/character/ol_weiyan.jpg",
+      "bytes": 247850,
+      "gitBlobSha": "c1c0921b5e432dc6e5a1a8c22f17ebcf7ccdf6fc"
+    },
+    {
+      "path": "image/character/ol_xiahouyuan.jpg",
+      "bytes": 284846,
+      "gitBlobSha": "a30f50e0de8a8e1fb93f5c1592f5371968ca3b57"
+    },
+    {
+      "path": "image/character/ol_xiaoqiao.jpg",
+      "bytes": 222316,
+      "gitBlobSha": "1b52d1333af822a3842b13f1b5e396c9da143a26"
+    },
+    {
+      "path": "image/character/ol_xuhuang.jpg",
+      "bytes": 144649,
+      "gitBlobSha": "bddaf1ca4e6da7eca42573bcc0833ac95abdfd90"
+    },
+    {
+      "path": "image/character/ol_xunyu.jpg",
+      "bytes": 140559,
+      "gitBlobSha": "271417a971c2c6599f96008b50660dd99cf8c03c"
+    },
+    {
+      "path": "image/character/ol_yanwen.jpg",
+      "bytes": 152573,
+      "gitBlobSha": "cf466874961038e6766b6d73e23b30cdebb733b2"
+    },
+    {
+      "path": "image/character/ol_yuanshao.jpg",
+      "bytes": 172486,
+      "gitBlobSha": "1bbb34494104279f25023331ad88746c19a981f8"
+    },
+    {
+      "path": "image/character/ol_zhangzhang.jpg",
+      "bytes": 121614,
+      "gitBlobSha": "43bc1a45d5e1ce9c514f147951638b1200348ee6"
+    },
+    {
+      "path": "image/character/ol_zhurong.jpg",
+      "bytes": 178434,
+      "gitBlobSha": "295115307214e5645e8a210924d719b9a9d12d2b"
+    },
+    {
       "path": "image/character/old_re_lidian.jpg",
       "bytes": 35076,
       "gitBlobSha": "56498ca86f266f314a86cea579c06db3de9a7d44"
     },
     {
+      "path": "image/character/re_caifuren.jpg",
+      "bytes": 166798,
+      "gitBlobSha": "5540a56ebf69844b8567b69f667c6c3d219c2fbf"
+    },
+    {
+      "path": "image/character/re_caiyong.jpg",
+      "bytes": 119789,
+      "gitBlobSha": "6443c630589ad7104873afa9eac894134a6f2cd2"
+    },
+    {
+      "path": "image/character/re_caocao.jpg",
+      "bytes": 212394,
+      "gitBlobSha": "489400ef9f2a7ecc07bbe1348cac673997222ab5"
+    },
+    {
+      "path": "image/character/re_caochong.jpg",
+      "bytes": 182169,
+      "gitBlobSha": "3cf4a6c7fb8ab2df87b547787ee1d0c636290971"
+    },
+    {
+      "path": "image/character/re_caopi.jpg",
+      "bytes": 234223,
+      "gitBlobSha": "c37adf8a3442cde60c5ab4e3406619d5b6af4ec0"
+    },
+    {
+      "path": "image/character/re_caorui.jpg",
+      "bytes": 145698,
+      "gitBlobSha": "9833bf444f2ef88351380811ff5f003e02d578e6"
+    },
+    {
+      "path": "image/character/re_caoxiu.jpg",
+      "bytes": 182326,
+      "gitBlobSha": "c6f6cc5a607b22f5524d80ac534cf3198cc59ccf"
+    },
+    {
+      "path": "image/character/re_caozhang.jpg",
+      "bytes": 210507,
+      "gitBlobSha": "237b6178fcb28e4a2d0cfb1b0eb3ccd08866ea43"
+    },
+    {
+      "path": "image/character/re_caozhen.jpg",
+      "bytes": 135286,
+      "gitBlobSha": "1be92ac5138f509724b9c026e6cd8a2d2e12bc09"
+    },
+    {
+      "path": "image/character/re_chengong.jpg",
+      "bytes": 116575,
+      "gitBlobSha": "dcf7b25e1ef813b6443f8e822eef351a08e5e5f8"
+    },
+    {
+      "path": "image/character/re_chengpu.jpg",
+      "bytes": 280229,
+      "gitBlobSha": "92e5652404f1d728e980c9a55554acf5154cc7cc"
+    },
+    {
+      "path": "image/character/re_daqiao.jpg",
+      "bytes": 239064,
+      "gitBlobSha": "df03f06736616b9de5a55408576d62b2f8038977"
+    },
+    {
+      "path": "image/character/re_diaochan.jpg",
+      "bytes": 189938,
+      "gitBlobSha": "5d053fdcd9dec082756e6366ddecccdb848b0611"
+    },
+    {
+      "path": "image/character/re_duji.jpg",
+      "bytes": 136182,
+      "gitBlobSha": "24acd4127f43056ee41fe1e95d983501c128ac28"
+    },
+    {
+      "path": "image/character/re_fazheng.jpg",
+      "bytes": 146473,
+      "gitBlobSha": "d02bcb8bd68aa66502b32825ab18875e0ffb9ae9"
+    },
+    {
+      "path": "image/character/re_fuhuanghou.jpg",
+      "bytes": 143393,
+      "gitBlobSha": "79e10b7ae9bb7e7d7922af13e222c4c9514c1893"
+    },
+    {
+      "path": "image/character/re_ganning.jpg",
+      "bytes": 198932,
+      "gitBlobSha": "52978e09cd6dcf01e802ea60bb162f1f985b1fad"
+    },
+    {
+      "path": "image/character/re_gongsunyuan.jpg",
+      "bytes": 103863,
+      "gitBlobSha": "1f8b8e87c6e0774a4c2be0cf353661432a4a9a08"
+    },
+    {
+      "path": "image/character/re_gongsunzan.jpg",
+      "bytes": 240037,
+      "gitBlobSha": "7d4ab644e5457ecda33e008f3a0eb314515135a6"
+    },
+    {
+      "path": "image/character/re_guanping.jpg",
+      "bytes": 163863,
+      "gitBlobSha": "601f33e6c569380d201f7a57c04ad9996edbfceb"
+    },
+    {
+      "path": "image/character/re_guanyu.jpg",
+      "bytes": 189395,
+      "gitBlobSha": "73b748f2dddba0835c4040a4daaa95ac0b91eddf"
+    },
+    {
+      "path": "image/character/re_guanzhang.jpg",
+      "bytes": 176480,
+      "gitBlobSha": "e2f94b326a528cb4b0c24dd7554856154bccbeba"
+    },
+    {
+      "path": "image/character/re_guohuai.jpg",
+      "bytes": 197010,
+      "gitBlobSha": "09b9bc2e8229212bd3b85eb27caeedc14b928ccb"
+    },
+    {
+      "path": "image/character/re_guohuanghou.jpg",
+      "bytes": 199886,
+      "gitBlobSha": "89d94222483d3c92d9bf434da74a8fe8b3db11e2"
+    },
+    {
+      "path": "image/character/re_guojia.jpg",
+      "bytes": 206581,
+      "gitBlobSha": "7c7ddb2cf8436c7b036073e9a046fe5be584488a"
+    },
+    {
+      "path": "image/character/re_guotufengji.jpg",
+      "bytes": 175045,
+      "gitBlobSha": "052b2fe1fea4cfb084df6c98c59fa1e4b1cb1fbc"
+    },
+    {
+      "path": "image/character/re_guyong.jpg",
+      "bytes": 157245,
+      "gitBlobSha": "c6b3c791509d4ea73ad821a93325302ad8305bc8"
+    },
+    {
+      "path": "image/character/re_hanhaoshihuan.jpg",
+      "bytes": 142432,
+      "gitBlobSha": "17ef5ee9917e7290eab5330500b02bab8d65c280"
+    },
+    {
+      "path": "image/character/re_huanggai.jpg",
+      "bytes": 243480,
+      "gitBlobSha": "3280732cb89c668f3354eb4cbef7dc5cd2c514e5"
+    },
+    {
+      "path": "image/character/re_huangyueying.jpg",
+      "bytes": 208444,
+      "gitBlobSha": "04444455bec253c18b0ed2c7f72914098e6bf123"
+    },
+    {
+      "path": "image/character/re_huatuo.jpg",
+      "bytes": 247142,
+      "gitBlobSha": "ee9d9b0832b9139b517111097de1568aeb9a9d59"
+    },
+    {
+      "path": "image/character/re_huaxiong.jpg",
+      "bytes": 199563,
+      "gitBlobSha": "76f6c1ec363b46e4ce551ccf4ede6f58b48992c9"
+    },
+    {
+      "path": "image/character/re_jianyong.jpg",
+      "bytes": 175355,
+      "gitBlobSha": "fd87d71ca4592e47dd4e48a2283c8c156e68930f"
+    },
+    {
+      "path": "image/character/re_jiaxu.jpg",
+      "bytes": 156969,
+      "gitBlobSha": "3acc58eea2cf1d242dea90e80915badf6336d841"
+    },
+    {
+      "path": "image/character/re_jsp_huangyueying.jpg",
+      "bytes": 156069,
+      "gitBlobSha": "37bd7fc70ab494bb4f661f1180296e0be15c562f"
+    },
+    {
+      "path": "image/character/re_jushou.jpg",
+      "bytes": 121030,
+      "gitBlobSha": "166f06b50a356815b0c970d4f7d8fa894691c31e"
+    },
+    {
+      "path": "image/character/re_liaohua.jpg",
+      "bytes": 167025,
+      "gitBlobSha": "c424df4ce9e2a67322cf488806d8936a853ac8c6"
+    },
+    {
+      "path": "image/character/re_lidian.jpg",
+      "bytes": 287069,
+      "gitBlobSha": "35e00009f3288a04a1711d5591b7d0abb05e8775"
+    },
+    {
+      "path": "image/character/re_liubei.jpg",
+      "bytes": 172481,
+      "gitBlobSha": "9514c2f9b35e68831beaf34f4147361d2155fcf9"
+    },
+    {
+      "path": "image/character/re_liuchen.jpg",
+      "bytes": 160183,
+      "gitBlobSha": "87586058947d348fd6eb09ca88b38886cbbd0838"
+    },
+    {
+      "path": "image/character/re_liufeng.jpg",
+      "bytes": 158059,
+      "gitBlobSha": "7351b4520383b19659a54f48872bd4741a73eaf9"
+    },
+    {
+      "path": "image/character/re_luxun.jpg",
+      "bytes": 257342,
+      "gitBlobSha": "1ad0f07dfb2d1f0d62b7fdff6191569af15d7e8f"
+    },
+    {
+      "path": "image/character/re_lvbu.jpg",
+      "bytes": 215114,
+      "gitBlobSha": "202331417a3154b5d8a68a50ce39170ee8a5ad28"
+    },
+    {
+      "path": "image/character/re_lvmeng.jpg",
+      "bytes": 183288,
+      "gitBlobSha": "ac80b303b9be412b8702e3979866eda8080498ec"
+    },
+    {
+      "path": "image/character/re_machao.jpg",
+      "bytes": 233807,
+      "gitBlobSha": "550381511c4bdc48859def2c3ac3773028a57a59"
+    },
+    {
+      "path": "image/character/re_madai.jpg",
+      "bytes": 141342,
+      "gitBlobSha": "39e5568a90d322aa9b24788c3bb71390a0dcf56c"
+    },
+    {
+      "path": "image/character/re_manchong.jpg",
+      "bytes": 149104,
+      "gitBlobSha": "52fc78e7121ccd661af2fd70c125f4e78155e408"
+    },
+    {
+      "path": "image/character/re_masu.jpg",
+      "bytes": 174229,
+      "gitBlobSha": "fa255f5cf9c1dd838814a80a84c46ce1ea73d6b5"
+    },
+    {
+      "path": "image/character/re_mazhong.jpg",
+      "bytes": 144615,
+      "gitBlobSha": "fd621a7de3dddbd1e00748a6a1c0f72f23625ba6"
+    },
+    {
+      "path": "image/character/re_menghuo.jpg",
+      "bytes": 210913,
+      "gitBlobSha": "545df46c37969a2d8598bc3c8a240641d10fb9c5"
+    },
+    {
+      "path": "image/character/re_panzhangmazhong.jpg",
+      "bytes": 109316,
+      "gitBlobSha": "5d852f73570cc88ce38ad9cc3ec66aa4caef1423"
+    },
+    {
+      "path": "image/character/re_quancong.jpg",
+      "bytes": 209863,
+      "gitBlobSha": "0bd013b60b4ae14d02ebe87b22f1ff17a8394dbb"
+    },
+    {
+      "path": "image/character/re_simayi.jpg",
+      "bytes": 237928,
+      "gitBlobSha": "7dc4315fb621d741c9645fffa59d2feea4ecc8c0"
+    },
+    {
+      "path": "image/character/re_sp_taishici.jpg",
+      "bytes": 132091,
+      "gitBlobSha": "7aa58e0f8b0c4d93fd40c6fa6be6f68c00623060"
+    },
+    {
+      "path": "image/character/re_sunce.jpg",
+      "bytes": 214127,
+      "gitBlobSha": "e2dab767adf1d645cb779cd182b5947e790e75b8"
+    },
+    {
+      "path": "image/character/re_sundeng.jpg",
+      "bytes": 120827,
+      "gitBlobSha": "8dc4b278ef204d945bb9d26dfd0f12380b3271b6"
+    },
+    {
+      "path": "image/character/re_sunluban.jpg",
+      "bytes": 205437,
+      "gitBlobSha": "b57c512cbab99b74348c7d588ad567b062d88242"
+    },
+    {
+      "path": "image/character/re_sunquan.jpg",
+      "bytes": 200286,
+      "gitBlobSha": "d79cb376a8ff6e8c7fe30cbfe210e4a08405b4a6"
+    },
+    {
+      "path": "image/character/re_sunshangxiang.jpg",
+      "bytes": 202412,
+      "gitBlobSha": "7edd2257e6af4170f860383b23f981490d5c3cd8"
+    },
+    {
+      "path": "image/character/re_sunxiu.jpg",
+      "bytes": 178445,
+      "gitBlobSha": "e3a4fd210a67b46d7d73a3533c8b91358caba4c9"
+    },
+    {
+      "path": "image/character/re_taishici.jpg",
+      "bytes": 312030,
+      "gitBlobSha": "c090b280512925bdd31c1a0b2760cd510547020d"
+    },
+    {
+      "path": "image/character/re_wangyi.jpg",
+      "bytes": 186395,
+      "gitBlobSha": "e9fec962326de6dccb4d2478d15cd3c1f3fcae77"
+    },
+    {
+      "path": "image/character/re_wenpin.jpg",
+      "bytes": 120847,
+      "gitBlobSha": "2182acaf7578a0302fe2d2a9b0272391b5bf04b3"
+    },
+    {
+      "path": "image/character/re_wuyi.jpg",
+      "bytes": 209470,
+      "gitBlobSha": "28b6e608ee19355140fe1a3f8f3b7caea5c3e401"
+    },
+    {
+      "path": "image/character/re_xiahoudun.jpg",
+      "bytes": 208895,
+      "gitBlobSha": "85b75ae9bfc0794d6575739092b304be75bd3243"
+    },
+    {
+      "path": "image/character/re_xiahoushi.jpg",
+      "bytes": 214665,
+      "gitBlobSha": "eb890f51857c4602ec58eaf86ff21d3298157500"
+    },
+    {
+      "path": "image/character/re_xunyou.jpg",
+      "bytes": 152289,
+      "gitBlobSha": "9f8724be25ac0d4af7ec994286be9b3906c12c1e"
+    },
+    {
+      "path": "image/character/re_xushu.jpg",
+      "bytes": 282160,
+      "gitBlobSha": "3610fd9bfcb5e7a58be95ed87d05739dbfb55af9"
+    },
+    {
+      "path": "image/character/re_xuzhu.jpg",
+      "bytes": 202104,
+      "gitBlobSha": "72ae7e51db01f2bdea321e333b72c974859c2c0b"
+    },
+    {
       "path": "image/character/re_yuanshu.jpg",
       "bytes": 127767,
       "gitBlobSha": "2c31b9ede4aad3450d435c90760aa9ecd01e5702"
+    },
+    {
+      "path": "image/character/re_zhangchunhua.jpg",
+      "bytes": 142206,
+      "gitBlobSha": "267819bc92ae70b9520db6ed07838ab1f60d16d0"
+    },
+    {
+      "path": "image/character/re_zhangfei.jpg",
+      "bytes": 206479,
+      "gitBlobSha": "9bc587ef1840db5a22cfae4fa6c684be05f4edb3"
+    },
+    {
+      "path": "image/character/re_zhanghe.jpg",
+      "bytes": 134014,
+      "gitBlobSha": "9d85f2642164e718c8ececb1ecd0449670196bb9"
+    },
+    {
+      "path": "image/character/re_zhangjiao.jpg",
+      "bytes": 137112,
+      "gitBlobSha": "e4b132a6ac340f9dd03c10d8d03cdaa12cf1db05"
+    },
+    {
+      "path": "image/character/re_zhangliao.jpg",
+      "bytes": 257752,
+      "gitBlobSha": "7bdc570905a482986d8b794bb259b3addc1badd3"
+    },
+    {
+      "path": "image/character/re_zhangsong.jpg",
+      "bytes": 133638,
+      "gitBlobSha": "ce815d7e2dcaac27a6cb7a1a04cbd0f2dfb74ba0"
+    },
+    {
+      "path": "image/character/re_zhangyi.jpg",
+      "bytes": 219306,
+      "gitBlobSha": "cf379486dfa8d2b4544e7afeb48b3508eae083e6"
+    },
+    {
+      "path": "image/character/re_zhaoyun.jpg",
+      "bytes": 223154,
+      "gitBlobSha": "ab231ad706eee6816f1ba1e5a57d092c2b1d3c04"
+    },
+    {
+      "path": "image/character/re_zhenji.jpg",
+      "bytes": 212423,
+      "gitBlobSha": "c9d1982680ef9126c87748cbc5b9e64cd313f603"
+    },
+    {
+      "path": "image/character/re_zhongyao.jpg",
+      "bytes": 164269,
+      "gitBlobSha": "ac0705eb5bf17ae0bb4c072d917a550e175937b4"
+    },
+    {
+      "path": "image/character/re_zhoucang.jpg",
+      "bytes": 120383,
+      "gitBlobSha": "266272dc7dcfcac774d12fdbc3166a0ff6d3f3f8"
+    },
+    {
+      "path": "image/character/re_zhouyu.jpg",
+      "bytes": 245481,
+      "gitBlobSha": "2de7b4837b9a0ab5bf8683626f525df5c28d39b2"
+    },
+    {
+      "path": "image/character/re_zhugedan.jpg",
+      "bytes": 140269,
+      "gitBlobSha": "057bb4567982765f0e863053d5467519e1e74fb7"
+    },
+    {
+      "path": "image/character/re_zhugeliang.jpg",
+      "bytes": 214039,
+      "gitBlobSha": "0ebb83a8601ff18edbc7d0245aecec7943c8d80c"
+    },
+    {
+      "path": "image/character/re_zhuhuan.jpg",
+      "bytes": 114612,
+      "gitBlobSha": "95007b3e7130210298062ec3c7635324df30fdc5"
+    },
+    {
+      "path": "image/character/re_zhuran.jpg",
+      "bytes": 167082,
+      "gitBlobSha": "84e13717999a4c97340d4690dccbc13fcc54f146"
+    },
+    {
+      "path": "image/character/re_zhuzhi.jpg",
+      "bytes": 117519,
+      "gitBlobSha": "3735aa7794faceb2b96d0cc5f829f9e696cb351e"
+    },
+    {
+      "path": "image/character/re_zuoci.jpg",
+      "bytes": 203214,
+      "gitBlobSha": "8381cf8c39c4e43191e4d5e58301495149497113"
+    },
+    {
+      "path": "image/character/shen_caocao.jpg",
+      "bytes": 259883,
+      "gitBlobSha": "46ad93efb529ac122c5db39c2777a0773201df11"
+    },
+    {
+      "path": "image/character/shen_ganning.jpg",
+      "bytes": 189549,
+      "gitBlobSha": "1f58b2c203de00db9da93c302de1075cdd010233"
+    },
+    {
+      "path": "image/character/shen_guanyu.jpg",
+      "bytes": 190223,
+      "gitBlobSha": "ddf70723ff18fbc19e673dc48bdc91f181e3e1ca"
+    },
+    {
+      "path": "image/character/shen_liubei.jpg",
+      "bytes": 351189,
+      "gitBlobSha": "0484cf2a7f2a30a9eca87f18987c7e7d2550ac5c"
+    },
+    {
+      "path": "image/character/shen_luxun.jpg",
+      "bytes": 292377,
+      "gitBlobSha": "b2c16eeaac37e3ac1a057472fbad532c93c08225"
+    },
+    {
+      "path": "image/character/shen_lvbu.jpg",
+      "bytes": 315373,
+      "gitBlobSha": "8634d4706e16216371d8f51f7ebc1aba38e3dab1"
+    },
+    {
+      "path": "image/character/shen_lvmeng.jpg",
+      "bytes": 253929,
+      "gitBlobSha": "07a060333e609ba42370f8e4a487437018543976"
+    },
+    {
+      "path": "image/character/shen_simayi.jpg",
+      "bytes": 209351,
+      "gitBlobSha": "ae00c6a4619ed5cb227be0001c945686a7725da1"
+    },
+    {
+      "path": "image/character/shen_zhangliao.jpg",
+      "bytes": 174020,
+      "gitBlobSha": "ae4fd719c20f2027bd03fb8f2366ae349d748435"
+    },
+    {
+      "path": "image/character/shen_zhaoyun.jpg",
+      "bytes": 217743,
+      "gitBlobSha": "0c93692b9e8bf10affa9ee8182d988ee4b684d1e"
+    },
+    {
+      "path": "image/character/shen_zhouyu.jpg",
+      "bytes": 234154,
+      "gitBlobSha": "567a0447dfac51ec41b959a8d8bbc7b0eaa920c9"
+    },
+    {
+      "path": "image/character/shen_zhugeliang.jpg",
+      "bytes": 149371,
+      "gitBlobSha": "780a79fcdd1e888bab05597a35d0a4fb8375a2ec"
+    },
+    {
+      "path": "image/character/simalang.jpg",
+      "bytes": 219129,
+      "gitBlobSha": "fe8ac195f41d80412bbd432b4a72d2de25710c81"
     },
     {
       "path": "image/character/simayi.jpg",
@@ -1854,6 +2519,11 @@
       "gitBlobSha": "5c70f89043ceea190591b33d23f604ac46537368"
     },
     {
+      "path": "image/character/sunliang.jpg",
+      "bytes": 282174,
+      "gitBlobSha": "f50d806edd4883008622f0610e99148c0e617eab"
+    },
+    {
       "path": "image/character/sunquan.jpg",
       "bytes": 186557,
       "gitBlobSha": "dc7993af105c557d6e7275c03f3568ec2630dd34"
@@ -1862,6 +2532,16 @@
       "path": "image/character/sunshangxiang.jpg",
       "bytes": 175150,
       "gitBlobSha": "b4199ba70e1a7b5eef2d775e7bca3bfbe1ff6412"
+    },
+    {
+      "path": "image/character/wangji.jpg",
+      "bytes": 197019,
+      "gitBlobSha": "c183a1076b2d6a9f4f752c582ea133386185ddcb"
+    },
+    {
+      "path": "image/character/wangping.jpg",
+      "bytes": 271736,
+      "gitBlobSha": "0e2299dfbdf5619513b412e86793112d11b4cffc"
     },
     {
       "path": "image/character/xf_yiji.jpg",
@@ -1874,9 +2554,79 @@
       "gitBlobSha": "0eede1682a02ab768e51aa49827fd4d7cc73f40a"
     },
     {
+      "path": "image/character/xin_gaoshun.jpg",
+      "bytes": 141021,
+      "gitBlobSha": "bf2cf4f8fd4f30464356647a06b6a330f6547eed"
+    },
+    {
+      "path": "image/character/xin_handang.jpg",
+      "bytes": 144755,
+      "gitBlobSha": "c9e579290003b60e1f20411ff523bb261fb9bd22"
+    },
+    {
+      "path": "image/character/xin_lingtong.jpg",
+      "bytes": 97954,
+      "gitBlobSha": "1564cf4b65a2ec163320e74c7d5172312d8ccbb0"
+    },
+    {
+      "path": "image/character/xin_liubiao.jpg",
+      "bytes": 104969,
+      "gitBlobSha": "e7ff9d56e30746964fb0ffe48afcebb36dc9b94c"
+    },
+    {
+      "path": "image/character/xin_wuguotai.jpg",
+      "bytes": 172730,
+      "gitBlobSha": "fa2cdfdf089bf50fe84ca863df3488fd6cfba4c7"
+    },
+    {
+      "path": "image/character/xin_xusheng.jpg",
+      "bytes": 232267,
+      "gitBlobSha": "8a392caa3d42445b23e4b49a7b8d0412c60ad682"
+    },
+    {
+      "path": "image/character/xin_yufan.jpg",
+      "bytes": 139210,
+      "gitBlobSha": "f0fc338d3fd40badff414e2d0fe4df63727deeb0"
+    },
+    {
+      "path": "image/character/xin_yuji.jpg",
+      "bytes": 185663,
+      "gitBlobSha": "2bf02d650d38fb3e27b442be738769b2ac6da361"
+    },
+    {
+      "path": "image/character/xin_zhonghui.jpg",
+      "bytes": 134071,
+      "gitBlobSha": "a6a7991d3ef96eae8ede74a152afc49c444312ba"
+    },
+    {
+      "path": "image/character/xuyou.jpg",
+      "bytes": 262862,
+      "gitBlobSha": "0643f05bc45bc546688bfd2a1b838791dc89932e"
+    },
+    {
       "path": "image/character/xuzhu.jpg",
       "bytes": 168468,
       "gitBlobSha": "692e25765e67352e4ecd7d7a95e5e9019e33ff22"
+    },
+    {
+      "path": "image/character/yanyan.jpg",
+      "bytes": 207891,
+      "gitBlobSha": "325caa21e76eeedd46dbf3ee56b113316171f018"
+    },
+    {
+      "path": "image/character/yl_luzhi.jpg",
+      "bytes": 271752,
+      "gitBlobSha": "537bbf0bbf53f726954ec0933c72d06c03f9a858"
+    },
+    {
+      "path": "image/character/yl_yuanshu.jpg",
+      "bytes": 199880,
+      "gitBlobSha": "446c8dbc7b9f1ebcf2287ef0294fb737367aab9f"
+    },
+    {
+      "path": "image/character/yujin_yujin.jpg",
+      "bytes": 211853,
+      "gitBlobSha": "900905aeaf4572c9835439ece61bff761d9c3fb8"
     },
     {
       "path": "image/character/zhangfei.jpg",
@@ -1884,9 +2634,19 @@
       "gitBlobSha": "dc3278f1f433b4c046ad36427d421cbc37109cb8"
     },
     {
+      "path": "image/character/zhangliang.jpg",
+      "bytes": 225020,
+      "gitBlobSha": "2910c1ba9ffcbac5a3bb06cd5be1fa9d2db4b012"
+    },
+    {
       "path": "image/character/zhangliao.jpg",
       "bytes": 154918,
       "gitBlobSha": "46c96edd17091c9da57c031378f79787f6dba59c"
+    },
+    {
+      "path": "image/character/zhangxiu.jpg",
+      "bytes": 237738,
+      "gitBlobSha": "f29e90415f112a372f3669ec77318b06a5ac2252"
     },
     {
       "path": "image/character/zhaoyun.jpg",
@@ -1899,6 +2659,16 @@
       "gitBlobSha": "017755749a638b7fba69ef04d15030277377d108"
     },
     {
+      "path": "image/character/zhoufei.jpg",
+      "bytes": 285626,
+      "gitBlobSha": "fd56633cd72a376c53941fd1f08ecff53f233592"
+    },
+    {
+      "path": "image/character/zhoutai.jpg",
+      "bytes": 207971,
+      "gitBlobSha": "3a2f84290e51cbe6c43c3cd7f2b49b10b2d09297"
+    },
+    {
       "path": "image/character/zhouyu.jpg",
       "bytes": 197449,
       "gitBlobSha": "6a369e6eff44a21f71b8ebf1ef165192ba205aaa"
@@ -1907,6 +2677,20 @@
       "path": "image/character/zhugeliang.jpg",
       "bytes": 175982,
       "gitBlobSha": "5f98e1a5cbd3253fca6a286ecc54186a15167ce1"
+    },
+    {
+      "path": "image/character/zhugezhan.jpg",
+      "bytes": 257435,
+      "gitBlobSha": "7c21f787b093a366ba25bc3870bf73f8de94c71b"
+    },
+    {
+      "path": "LICENSE",
+      "bytes": 35147,
+      "gitBlobSha": "94a9ed024d3859793618152ea559a168bbcbb5e2"
     }
-  ]
+  ],
+  "portraitAliases": {
+    "xin_zhangliang": "image/character/zhangliang.jpg",
+    "re_simalang": "image/character/simalang.jpg"
+  }
 }

@@ -33,13 +33,26 @@ export class RoomStore {
   constructor(
     private readonly engine: EngineAdapter,
     private readonly catalog: ExtensionInfo[] = [],
-  ) {}
+  ) {
+    const unsubscribe = engine.subscribe?.((event) => {
+      if (event.type === 'status') this.changed();
+      else if (event.roomCode === this.code && ['starting', 'playing'].includes(this.phase)) {
+        this.phase = event.type === 'ended' ? 'finished' : 'waiting';
+        if (event.type === 'failed') this.resetReady();
+        this.changed();
+      }
+    });
+    this.subscribe((room) => {
+      if (room.phase === 'closed') unsubscribe?.();
+    });
+  }
 
   snapshot(): RoomView {
     return {
       code: this.code,
       revision: this.revision,
       phase: this.phase,
+      matchId: this.engine.matchId?.(this.code) ?? null,
       settings: { ...this.settings, extensions: [...this.settings.extensions] },
       players: [...this.players.values()].map((player) => this.publicPlayer(player)),
       ownerId: this.ownerId,
@@ -99,6 +112,7 @@ export class RoomStore {
       if (!successor) {
         this.players.clear();
         this.phase = 'closed';
+        this.engine.release?.(this.code);
       }
     }
     this.resetReady();
@@ -203,16 +217,17 @@ export class RoomStore {
     )
       throw new AppError(409, 'PLAYERS_NOT_READY', '需要人数齐全且所有真人在线、已准备。');
     this.phase = 'starting';
-    this.changed();
     try {
-      await this.engine.start({
+      const starting = this.engine.start({
         roomCode: this.code,
         ownerPlayerId: this.ownerId!,
         settings: structuredClone(this.settings),
         seats: [...this.players.values()].map(({ id, nickname, kind }) => ({ id, nickname, kind })),
         aiPolicy: 'strongest-native',
       });
-      this.phase = 'playing';
+      this.changed();
+      await starting;
+      if (this.phase === 'starting') this.phase = 'playing';
       this.changed();
     } catch {
       this.phase = 'waiting';
@@ -223,6 +238,16 @@ export class RoomStore {
         '对局启动失败，房间已恢复，请查看电脑服务状态。',
       );
     }
+  }
+
+  returnToWaiting(ownerToken?: string): void {
+    this.requireOwner(ownerToken);
+    if (this.phase !== 'finished')
+      throw new AppError(409, 'MATCH_NOT_FINISHED', '请等这一局结束后再返回房间。');
+    this.engine.release?.(this.code);
+    this.phase = 'waiting';
+    this.resetReady();
+    this.changed();
   }
 
   connect(token?: string): () => void {

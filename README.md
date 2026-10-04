@@ -2,7 +2,7 @@
 
 为线下聚会准备的三国杀网页项目：电脑提供局域网服务，朋友连接同一个 Wi-Fi，用微信扫码进入主页；玩家自己建房，在手机上充当房主并参加对局。
 
-**当前 v0.2.0 是可运行的大厅原型，尚不能进行真实三国杀对局。** 可创建房间、分享邀请、管理 AI 席位与准备；无名杀对局、技能、AI 出牌尚未接入，开始按钮保持关闭。
+**当前 v0.3.0 已接入无名杀真实对局。** 支持经典身份局、斗地主、2v2、单武将单挑，两档武将和原生 AI；电脑不占席位，真人在手机选将和操作。已通过桌面浏览器模拟手机的完整对局验证；Android 微信此前验证到扫码建房，真实手机游戏仍需验收。
 
 ## 聚会时如何启动
 
@@ -12,11 +12,11 @@
 2. 一位玩家填写昵称，点击「创建房间并入座」。这位玩家成为房主，也是参赛者。
 3. 房主在手机上选择模式、总席位、武将档和扩展。人数不足时可逐个添加 AI，或一键补满空位。
 4. 每位已入座玩家都能点击「展示房间二维码」；朋友扫描后直接进入本房间，填写昵称入座。
-5. 真人准备后由玩家房主开局。电脑整局保持运行、页面开启并避免休眠。
+5. 真人准备后由玩家房主开局，在手机选将和操作，建议横屏。电脑整局保持运行、页面开启并避免休眠。
 
 聚会结束时，双击 **「停止聚会三国杀.cmd」**。关闭浏览器标签本身不会停止后台服务。停止会清空当前大厅，重启后需要重新创建房间。
 
-当前源码版需要已经安装 **Node.js 24.x**。启动器可自动安装本项目依赖，首次准备需要联网；依赖准备好后大厅不访问外部服务。包含 Node 和完整无名杀资源的可携带发行包尚未制作。
+源码版需要 **Node.js 24.x**，启动器会准备依赖、固定版本引擎与资源，首次需要联网。Windows x64 离线发行包包含 Node、引擎、两档武将图片及许可证，解压后双击即可启动，无需安装依赖。当前音频关闭，对局期间不访问外网。
 
 服务信息、启动日志位于 `.runtime/`。启动默认使用 3000 端口；如果被其他程序占用，双击启动会尝试后续端口，不终止其他程序。以自动打开的服务页或 `.runtime/session.json` 中的 `serverUrl` 为准；本工作区 `.env` 当前使用 3001。
 
@@ -27,7 +27,9 @@
 - 手机房间 `/join/房号`：入座、准备、取消准备、离开、任意成员展示本房间邀请二维码。
 - 玩家房主：模式、武将档、移人、AI 逐个添加/补满/移除与开局权限。
 - 身份局 5–8 席、三国杀斗地主 3 席、2v2 4 席、单武将单挑 2 席；**总席位包含真人和 AI**。
-- AI 自动准备，不提供智力选项；将使用无名杀最强可用原生决策，真实执行仍待接入。
+- AI 自动准备，执行完整原生决策，不提供智力选项。
+- 手机自动进入原生选将和对局界面，自己的手牌可见、对手暗手牌值经过过滤；未公开身份按接收玩家过滤。
+- 同一浏览器刷新恢复原座位；结算后房主点击「回到房间，准备下一局」，真人重新准备。
 - 刷新保留席位与房主身份；房主主动离开交接给下一位真人，最后真人离开关闭房间。
 - 玩法或席位变化后真人重新准备；缩小房间只自动移除多余 AI，真人超额会拒绝修改。
 
@@ -57,6 +59,8 @@ npm run check
 ```
 
 `npm start` 构建并以前台方式启动，终端显示电脑服务页和玩家主页地址，`Ctrl+C` 停止。开发者可用 `npm run dev` 监视服务端变化；网页源文件变化后执行 `npm run build` 再刷新。重启服务会清空大厅。
+
+离线包也包含源码、测试与检查配置。接续开发时安装完整 Node.js 24、运行 `npm ci` 后使用 `npm start`；发行包双击入口直接运行 `dist`，不会自动编译修改过的源码。需要改用源码启动器时移走 `portable.json`。
 
 `check` 包括类型、领域/HTTP 测试、构建与格式检查。修改大厅流程或页面后运行浏览器测试：
 
@@ -88,7 +92,8 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/launch.ps1 -Acti
 | `apps/server/src`                                            | 大厅、各房间、会话、局域网 HTTP/SSE     |
 | `apps/web/src`                                               | 电脑页、主页、房间页、共享 UI 与二维码  |
 | `packages/shared/src`                                        | 跨端协议、模式和武将档                  |
-| `packages/noname-adapter/src`                                | 对局与原生 AI 的适配边界，目前未接入    |
+| `packages/noname-adapter/src`                                | 对局生命周期、认证 WebSocket 与资源分发 |
+| `packages/noname-adapter/runtime`                            | 原生启动、模式适配、私有信息、菜单边界  |
 | `scripts`、根目录 `.cmd`                                     | 构建、Windows 启停及实例检查            |
 | `config`                                                     | 引擎候选、模式要求、AI 要求、武将白名单 |
 | [extensions/README.md](extensions/README.md)                 | 扩展开发入口                            |
@@ -98,8 +103,8 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/launch.ps1 -Acti
 
 ## 无名杀来源
 
-上游为 [libnoname/noname](https://github.com/libnoname/noname)。已校验 v1.11.6 核心包，固定版本与 SHA-256 在 `config/noname-candidate.json`。独立验证程序已通过局域网 HTTP 单将对局：一玩家 + 原生 AI、两个独立玩家页面均选将后托管至结算，电脑不占席位。它尚未接入大厅，也未通过私有信息与真机游戏验收。
+上游为 [libnoname/noname](https://github.com/libnoname/noname)，固定 v1.11.6 与 commit，核心包 SHA-256 在 `config/noname-candidate.json`。两档武将图片按固定 Git blob 校验；上游代码保存在 `.local`，正式适配集中在独立包内。标准包采用该版本的完整标准包（33 将），进阶档 156 将（128 界限突破、阴雷各 8 将、指定 12 神将）。
 
-开发者可按 [引擎验证说明](packages/noname-adapter/lab/README.md) 执行 `npm run engine:prepare` 和 `npm run engine:verify`。当前双击启动和扫码页面仍是 v0.2.0 大厅原型。
+开发者执行 `npm run engine:prepare` 准备资源，`npm run engine:verify:rooms` 验证大厅中的四模式完整对局。详细参数、私有信息边界、打包方法见 [正式适配说明](packages/noname-adapter/runtime/README.md)。`npm run package:windows` 在 `.runtime/releases` 生成离线包和 SHA-256；不会包含 `.env`、运行凭据、个人房间或日志。
 
 第三方来源与许可证见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。

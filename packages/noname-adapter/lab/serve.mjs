@@ -136,9 +136,13 @@ export async function startEngineLab({ host = '127.0.0.1', port = 0, humanCount 
             ? resolve(labRoot, 'bootstrap.js')
             : url.pathname === '/party-relay.js'
               ? resolve(labRoot, 'relay.js')
-              : ['/mode/party_duel_lab.js', '/mode/party_duel_lab/index.js'].includes(url.pathname)
-                ? resolve(labRoot, 'duel-mode.js')
-                : engineFile(decodeURIComponent(url.pathname));
+              : url.pathname === '/party-privacy.js'
+                ? resolve(labRoot, '../runtime/privacy.js')
+                : ['/mode/party_duel_lab.js', '/mode/party_duel_lab/index.js'].includes(
+                      url.pathname,
+                    )
+                  ? resolve(labRoot, 'duel-mode.js')
+                  : engineFile(decodeURIComponent(url.pathname));
       const bytes = await readFile(path);
       response.writeHead(200, {
         'Content-Type': types[extname(path)] ?? 'application/octet-stream',

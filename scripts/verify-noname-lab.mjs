@@ -91,16 +91,20 @@ async function scenario(humanCount) {
         `human-${index + 1}`,
       );
     }
-    // Capture counts only: a stock client currently carries opponents' hidden
-    // card values. This is a known integration gap, never a privacy-pass claim.
+    // The adapter preserves card IDs/counts but strips concealed values.
     const visibility = await phones[0].evaluate(() => {
       const { game } = partyEngineLab;
       const opponent = game.players.find((player) => player !== game.me);
       return {
         opponentCards: opponent.countCards('h'),
-        serializedOpponentValues: opponent.getCards('h').filter((card) => !!card.name).length,
+        serializedOpponentValues: opponent
+          .getCards('h')
+          .filter(
+            (card) => card.name !== 'party_unknown' || card.suit !== 'none' || card.number !== 0,
+          ).length,
       };
     });
+    assert.equal(visibility.serializedOpponentValues, 0);
     console.log(
       `${humanCount} human + ${2 - humanCount} native AI: native character choice and start confirmed`,
     );

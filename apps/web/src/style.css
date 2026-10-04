@@ -711,3 +711,61 @@ footer {
     font-size: 18px;
   }
 }
+/* The rule worker stays laid out, so native UI/event code has usable geometry. */
+.engine-worker {
+  position: fixed;
+  left: -2000px;
+  top: 0;
+  width: 1200px;
+  height: 800px;
+  border: 0;
+  pointer-events: none;
+}
+.match-panel[hidden] {
+  display: none;
+}
+.in-match .room-grid,
+.in-match > header {
+  display: none;
+}
+.in-match {
+  max-width: none;
+  padding: 0;
+}
+.match-panel {
+  position: fixed;
+  inset: 0;
+  background: #172520;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+}
+.match-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  min-height: 46px;
+  color: #fff;
+  background: #172520;
+}
+.match-toolbar strong {
+  margin-right: auto;
+  font-size: 13px;
+}
+.match-toolbar .button {
+  padding: 6px 10px;
+  min-height: 32px;
+  font-size: 12px;
+  width: auto;
+}
+#game-frame-container {
+  flex: 1;
+  min-height: 0;
+}
+#game-frame {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}

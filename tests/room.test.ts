@@ -2,7 +2,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { createServer } from 'node:net';
-import type { EngineAdapter, MatchSetup } from '../packages/noname-adapter/src/index.js';
+import type {
+  EngineAdapter,
+  EngineEvent,
+  MatchSetup,
+} from '../packages/noname-adapter/src/index.js';
 import { NonameAdapter } from '../packages/noname-adapter/src/index.js';
 import { RoomStore } from '../apps/server/src/room.js';
 import { LobbyStore } from '../apps/server/src/lobby.js';
@@ -301,6 +305,49 @@ test('进阶档只开放阴、雷分组和指定的 12 神将', async () => {
   assert.equal(new Set(advanced.additionalCharacters).size, 12);
   assert.equal(advanced.completePacks.includes('extra'), false);
   assert.equal(advanced.completePacks.includes('shenhua'), false);
+});
+
+test('原生结束后只有房主能回房，释放旧局并重置真人准备，保留席位再次开始', async () => {
+  let notify: (event: EngineEvent) => void = () => {};
+  let released = '',
+    starts = 0;
+  const adapter: EngineAdapter = {
+    status: () => ({ id: 'noname', ready: true, message: 'test engine' }),
+    start: async () => {
+      starts++;
+    },
+    subscribe: (listener) => {
+      notify = listener;
+      return () => {};
+    },
+    release: (code) => {
+      released = code;
+    },
+  };
+  const { room, owner } = ownedRoom(adapter);
+  room.updateSettings(
+    { mode: 'duel', playerCount: 2, generalPreset: 'beginner', extensions: [] },
+    owner.token,
+  );
+  const friend = room.join('朋友');
+  room.connect(owner.token);
+  room.connect(friend.token);
+  room.setReady(owner.token, true);
+  room.setReady(friend.token, true);
+  await room.start(owner.token);
+  assert.throws(() => room.returnToWaiting(owner.token), code('MATCH_NOT_FINISHED'));
+  notify({ type: 'ended', roomCode: room.code });
+  assert.equal(room.snapshot().phase, 'finished');
+  assert.throws(() => room.returnToWaiting(friend.token), code('OWNER_REQUIRED'));
+  room.returnToWaiting(owner.token);
+  assert.equal(released, room.code);
+  assert.equal(room.snapshot().phase, 'waiting');
+  assert.equal(room.snapshot().players.length, 2);
+  assert(room.snapshot().players.every((player) => !player.ready));
+  room.setReady(owner.token, true);
+  room.setReady(friend.token, true);
+  await room.start(owner.token);
+  assert.equal(starts, 2);
 });
 
 test('电脑主页地址与玩家直达房间地址分开，拒绝回环地址和带额外内容的地址', () => {

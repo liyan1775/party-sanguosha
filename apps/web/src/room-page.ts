@@ -30,6 +30,9 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
   let draftMode: ModeId = room.settings.mode;
   let wasOwner = false;
   let qrBound = false;
+  let matchId: string | null = null;
+  let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
+  let reconnectAttempt = 0;
   const roomPath = `/api/rooms/${room.code}`;
 
   frame(
@@ -38,13 +41,14 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
     '人到齐，就开局。',
     '房主也是桌上的一位玩家。每位入座的朋友都可以分享房间邀请。',
     `
+    <section id="match-panel" class="match-panel" hidden><div class="match-toolbar"><strong id="match-label">正在选将</strong><button id="match-share" class="button secondary" type="button">房间二维码</button><button id="rematch-button" class="button primary" type="button" hidden>回到房间，准备下一局</button><span id="finished-hint" hidden>请等房主返回房间</span></div><div id="game-frame-container"></div></section>
     <div class="room-grid">
       <section class="panel welcome-panel"><div class="panel-heading"><h2>这一桌</h2><span class="tag" id="player-room-code"></span></div><div class="game-summary"><span id="summary-mode" class="summary-mode"></span><span id="summary-details"></span></div><p id="summary-preset" class="hint"></p>
         <div id="other-room" class="message" hidden>你已经在另一间房，请先回去离开。<a id="other-room-link" href="/">返回原房间</a></div>
         <form id="join-form"><label for="nickname">怎么称呼你</label><input id="nickname" name="nickname" placeholder="输入昵称，朋友才认得你" autocomplete="nickname" maxlength="32" required /><p class="hint">昵称 1–16 个字，无需注册账号。</p><button id="join-button" class="button primary full-width" type="submit">入座</button></form>
         <div id="my-seat" hidden><p class="my-seat-label" id="my-role"></p><h3 id="my-nickname"></h3><button id="ready-button" class="button primary full-width" type="button">我准备好了</button><button id="share-button" class="button secondary full-width" type="button">展示房间二维码</button><div id="owner-start" hidden><button id="start-button" class="button primary full-width" type="button" disabled>开始对局</button></div><button id="leave-button" class="button text-button full-width" type="button">离开房间</button><p id="owner-leave-hint" class="hint" hidden>离开后房主交接给下一位真人；最后一位真人离开会关闭房间。</p></div>
       </section>
-      <section class="panel players-panel"><div class="panel-heading"><h2>等朋友到齐</h2><span id="player-counter" class="tag muted"></span></div><p id="seat-count" class="hint seat-count"></p><div id="bot-controls" class="bot-controls" hidden><button id="add-bot" class="button secondary" type="button">添加 1 个 AI</button><button id="fill-bots" class="button subtle" type="button">用 AI 补满空位</button><p class="hint">AI 自动准备。对局接入后使用无名杀内置 AI，固定使用最强可用决策，不提供智力选项。</p></div><ul id="players" class="players"></ul><p id="waiting-text" class="waiting-text"></p><p id="owner-status" class="hint"></p><p id="engine-status" class="hint engine-status"></p></section>
+      <section class="panel players-panel"><div class="panel-heading"><h2>等朋友到齐</h2><span id="player-counter" class="tag muted"></span></div><p id="seat-count" class="hint seat-count"></p><div id="bot-controls" class="bot-controls" hidden><button id="add-bot" class="button secondary" type="button">添加 1 个 AI</button><button id="fill-bots" class="button subtle" type="button">用 AI 补满空位</button><p class="hint">AI 自动准备，使用无名杀完整原生决策。</p></div><ul id="players" class="players"></ul><p id="waiting-text" class="waiting-text"></p><p id="owner-status" class="hint"></p><p id="engine-status" class="hint engine-status"></p></section>
       <details id="settings-panel" class="panel settings-panel" hidden><summary><span>房主设置</span><small>玩法 · 武将 · 扩展</small></summary><div class="settings-body"><div class="mode-grid">${MODES.map((mode) => `<button type="button" class="mode-card" data-mode="${mode.id}" aria-pressed="false"><span class="mode-mark">${mode.id === 'identity' ? '主' : mode.id === 'doudizhu' ? '地' : mode.id === 'versus' ? '盟' : '决'}</span><strong>${mode.name}</strong><small>${mode.minPlayers === mode.maxPlayers ? mode.minPlayers : '5–8'} 席</small></button>`).join('')}</div><p id="mode-description" class="mode-description"></p><div class="field-row"><label for="player-count">总席位（含 AI）<select id="player-count"></select></label><label for="general-preset">武将范围<select id="general-preset">${GENERAL_PRESETS.map((preset) => `<option value="${preset.id}">${preset.name}</option>`).join('')}</select></label></div><p id="preset-description" class="hint"></p><div class="extensions"><h3>扩展包</h3><p class="hint">暂无已接入的扩展包</p></div><button id="save-settings" class="button secondary full-width" type="button">保存房间设置</button><p id="settings-state" class="hint"></p></div></details>
     </div>
     <dialog id="share-dialog" aria-labelledby="share-title"><div class="panel-heading"><h2 id="share-title">扫码直接进入本房间</h2><button id="close-share" class="close-dialog" type="button" aria-label="关闭房间二维码">×</button></div><p class="room-code">房间 <strong>${room.code}</strong></p>${qrMarkup('本房间邀请二维码', '微信扫一扫 · 直接进入这张牌桌')}</dialog>`,
@@ -52,6 +56,43 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
 
   const owner = () => session.roomCode === room.code && session.playerId === room.ownerId;
   const refresh = () => renderRoom(room);
+  function reconnectGame(): void {
+    if (reconnectTimer || !matchId || !['starting', 'playing'].includes(room.phase)) return;
+    element('#match-label').textContent = '连接中断，正在恢复原座位…';
+    reconnectTimer = setTimeout(
+      () => {
+        reconnectTimer = undefined;
+        void api<RoomInfo>(roomPath)
+          .then((info) => {
+            renderRoom(info.room);
+            const frame = document.querySelector<HTMLIFrameElement>('#game-frame');
+            if (
+              frame &&
+              matchId === info.room.matchId &&
+              ['starting', 'playing'].includes(info.room.phase)
+            )
+              frame.src = `/engine/player/${matchId}`;
+          })
+          .catch(reconnectGame);
+      },
+      Math.min(5000, 1000 * ++reconnectAttempt),
+    );
+  }
+  window.addEventListener('message', (event) => {
+    const frame = document.querySelector<HTMLIFrameElement>('#game-frame');
+    if (
+      event.origin !== location.origin ||
+      event.source !== frame?.contentWindow ||
+      event.data?.matchId !== matchId
+    )
+      return;
+    if (event.data.type === 'party-disconnected') reconnectGame();
+    if (event.data.type === 'party-connected') {
+      reconnectAttempt = 0;
+      refresh();
+    }
+  });
+  window.addEventListener('pagehide', () => clearTimeout(reconnectTimer), { once: true });
 
   function setDraftMode(modeId: ModeId, count: number): void {
     draftMode = modeId;
@@ -99,6 +140,32 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
     }
     const isOwner = owner();
     const waiting = room.phase === 'waiting';
+    const inMatch = Boolean(
+      me && room.matchId && ['starting', 'playing', 'finished'].includes(room.phase),
+    );
+    element('#match-panel').hidden = !inMatch;
+    app.classList.toggle('in-match', inMatch);
+    element('#match-label').textContent =
+      room.phase === 'finished'
+        ? '本局已结束'
+        : room.phase === 'starting'
+          ? '正在选将'
+          : `${findMode(room.settings.mode)!.name} · ${room.code}`;
+    element('#rematch-button').hidden = room.phase !== 'finished' || !isOwner;
+    element('#finished-hint').hidden = room.phase !== 'finished' || isOwner;
+    if (inMatch && room.matchId !== matchId) {
+      const frame = document.createElement('iframe');
+      frame.id = 'game-frame';
+      frame.title = '三国杀对局';
+      frame.src = `/engine/player/${room.matchId}`;
+      element('#game-frame-container').replaceChildren(frame);
+      matchId = room.matchId;
+    } else if (!inMatch && matchId) {
+      clearTimeout(reconnectTimer);
+      reconnectTimer = undefined;
+      element('#game-frame-container').replaceChildren();
+      matchId = null;
+    }
     if (isOwner !== wasOwner) {
       settingsDirty = false;
       if (isOwner) element<HTMLDetailsElement>('#settings-panel').open = true;
@@ -297,6 +364,16 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
   );
   element('#share-button').addEventListener('click', () =>
     element<HTMLDialogElement>('#share-dialog').showModal(),
+  );
+  element('#match-share').addEventListener('click', () =>
+    element<HTMLDialogElement>('#share-dialog').showModal(),
+  );
+  action(
+    element('#rematch-button'),
+    async () => {
+      renderRoom(await api<RoomView>(`${roomPath}/rematch`, 'POST', {}));
+    },
+    refresh,
   );
   element('#close-share').addEventListener('click', () =>
     element<HTMLDialogElement>('#share-dialog').close(),

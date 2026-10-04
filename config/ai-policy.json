@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "status": "requirements-not-runtime-config",
+  "status": "native-runtime-verified",
   "controller": "noname-native",
   "strength": "strongest-available",
   "showDifficultySelector": false,
@@ -8,6 +8,6 @@
   "minimumHumanPlayers": 1,
   "automaticallyReady": true,
   "ownerMustBeHuman": true,
-  "runtimeVerified": false,
-  "note": "大厅仅实现 AI 席位及适配器契约；独立标准单挑验证程序已执行原生决策和完整结算，尚未集成到大厅或验证四模式。不得把 difficulty 的对人类态度误当智力。"
+  "runtimeVerified": true,
+  "note": "四模式和两档武将均已通过大厅原生托管至结算；AI 席位直接走上游完整事件决策，没有另造随机机器人。所检查版本没有统一智力档位，保留完整原生决策，不把 difficulty 的对人类态度误当智力。"
 }

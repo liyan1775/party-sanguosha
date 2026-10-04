@@ -4,8 +4,9 @@ import path from 'node:path';
 import { APP_ID, APP_VERSION, type ExtensionInfo } from '../../../packages/shared/src/contracts.js';
 import { createPartyServer } from './server.js';
 import { findHomeUrls, isLoopbackPortOccupied } from './network.js';
+import { NativeNonameService } from '../../../packages/noname-adapter/src/service.js';
 
-const root = fileURLToPath(new URL('../../../', import.meta.url));
+const root = process.env.PARTY_PROJECT_ROOT ?? fileURLToPath(new URL('../../../', import.meta.url));
 const preferredPort = Number(process.env.PORT ?? 3000);
 if (!Number.isInteger(preferredPort) || preferredPort < 1 || preferredPort > 65535)
   throw new Error('PORT 需要是 1–65535 之间的端口。');
@@ -21,6 +22,7 @@ const party = createPartyServer({
   port: preferredPort,
   ...(publicUrl ? { publicUrl } : {}),
   extensions,
+  adapter: new NativeNonameService(root),
 });
 let port = preferredPort;
 while (true) {
@@ -78,7 +80,7 @@ await writeFile(
 );
 await rename(temporarySession, path.join(runtime, 'session.json'));
 console.log(
-  `\n聚会三国杀 v${APP_VERSION}\n电脑服务页：${serverUrl}\n${homeUrls.length ? homeUrls.map((url) => `玩家主页：${url}`).join('\n') : '尚未检测到局域网 IPv4 地址，请连接 Wi-Fi 或开启电脑热点。'}\n玩家扫码进入主页后自行建房，电脑不占席位。\n当前可测试大厅与 AI 席位，无名杀对局及 AI 出牌尚未接入。\n`,
+  `\n聚会三国杀 v${APP_VERSION}\n电脑服务页：${serverUrl}\n${homeUrls.length ? homeUrls.map((url) => `玩家主页：${url}`).join('\n') : '尚未检测到局域网 IPv4 地址，请连接 Wi-Fi 或开启电脑热点。'}\n玩家扫码进入主页后自行建房，电脑不占席位。\n保持电脑服务页开启，由手机房主开始对局。\n`,
 );
 process.once('SIGINT', party.stop);
 process.once('SIGTERM', party.stop);

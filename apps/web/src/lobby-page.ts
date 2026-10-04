@@ -7,6 +7,7 @@ import {
 } from '../../../packages/shared/src/contracts.js';
 import { action, api, connection, element, frame, perform, watchEvents } from './ui.js';
 import { bindQr, qrMarkup } from './qr.js';
+import { startEngineSupervisor } from './engine-supervisor.js';
 
 function roomList(rooms: RoomSummary[], serverPage: boolean): void {
   const list = element('#room-list');
@@ -52,6 +53,7 @@ export function showServerPage(info: ServerInfo): void {
     bindQr((await api<ServerInfo>('/api/info')).homeUrls);
   });
   watchEvents('/api/events', 'lobby', (rooms) => roomList(rooms as RoomSummary[], true));
+  startEngineSupervisor();
 }
 
 export function showHomePage(info: ServerInfo, session: SessionView): void {

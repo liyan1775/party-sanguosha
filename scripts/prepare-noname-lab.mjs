@@ -58,6 +58,10 @@ if (!extracted) {
   );
 }
 
+const build = JSON.parse(await readFile(resolve(engineRoot, 'game/build-info.json'), 'utf8'));
+if (build.commit !== candidate.commit)
+  throw new Error('Extracted core build does not match the pinned commit');
+
 function blobHash(bytes) {
   return createHash('sha1').update(`blob ${bytes.length}\0`).update(bytes).digest('hex');
 }

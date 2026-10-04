@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "status": "requirements-not-runtime-config",
+  "status": "runtime-invariants",
   "seatCountIncludesAI": true,
   "identity": { "players": [5, 6, 7, 8], "variant": "classic" },
   "doudizhu": {
@@ -22,6 +22,7 @@
     "players": 2,
     "generalsPerPlayer": 1,
     "replacementGenerals": false,
-    "candidateEngineMode": null
+    "candidateEngineMode": "single",
+    "candidateEngineVariant": "dianjiang"
   }
 }

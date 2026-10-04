@@ -33,7 +33,7 @@ export function frame(
     <section class="intro"><p class="eyebrow">${eyebrow}</p><h1>${title}</h1><p>${subtitle}</p></section>
     <div id="message" class="message" role="alert" hidden></div>
     ${body}
-    <footer>大厅原型 v${APP_VERSION} · 可建房、邀请与设置 AI 席位，真实对局及 AI 出牌尚未开放</footer>`;
+    <footer>聚会三国杀 v${APP_VERSION} · 扫码开房 · AI 补位 · 手机对局</footer>`;
 }
 
 export function message(text: string, success = false): void {

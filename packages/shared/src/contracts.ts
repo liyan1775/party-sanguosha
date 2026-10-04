@@ -1,5 +1,5 @@
 export const APP_ID = 'party-sanguosha';
-export const APP_VERSION = '0.2.0';
+export const APP_VERSION = '0.3.0';
 
 export const MODES = [
   {
@@ -72,7 +72,8 @@ export interface EngineStatus {
 export interface RoomView {
   code: string;
   revision: number;
-  phase: 'waiting' | 'starting' | 'playing' | 'closed';
+  phase: 'waiting' | 'starting' | 'playing' | 'finished' | 'closed';
+  matchId: string | null;
   settings: RoomSettings;
   players: PlayerView[];
   ownerId: string | null;

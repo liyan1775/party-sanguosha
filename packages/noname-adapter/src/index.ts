@@ -13,7 +13,12 @@ export interface MatchSetup {
 export interface EngineAdapter {
   status(): EngineStatus;
   start(setup: MatchSetup): Promise<void>;
+  matchId?(roomCode: string): string | null;
+  subscribe?(listener: (event: EngineEvent) => void): () => void;
+  release?(roomCode: string): void;
 }
+
+export type EngineEvent = { type: 'status' } | { type: 'ended' | 'failed'; roomCode: string };
 
 export class NonameAdapter implements EngineAdapter {
   status(): EngineStatus {

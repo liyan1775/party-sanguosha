@@ -4,6 +4,7 @@
 import { lib, game, ui, get, _status } from 'noname';
 import singleMode from '/mode/single.js';
 import { connectRuleHost } from '/party-relay.js';
+import { installPrivacy } from '/party-privacy.js';
 
 export const type = 'mode';
 export default function () {
@@ -44,6 +45,7 @@ export default function () {
     // no counterpart on phones and therefore must not broadcast a player timer.
     game.me.hideTimer = () => {};
     game.me.showTimer = () => {};
+    installPrivacy();
     game.getVideoName = () => ['聚会单挑验证', '单武将'];
     game.addRecord = () => {};
     const connected = new Promise((resolve) => {

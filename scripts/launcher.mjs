@@ -12,6 +12,9 @@ const sessionFile = path.join(runtime, 'session.json');
 const lockFile = path.join(runtime, 'launcher.lock');
 const pkg = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8'));
 const noBrowser = process.argv.includes('--no-browser');
+const portable = await readFile(path.join(root, 'portable.json'), 'utf8')
+  .then(JSON.parse)
+  .catch(() => null);
 
 async function runningSession(checkVersion = true) {
   try {
@@ -106,6 +109,14 @@ async function runNode(args) {
 }
 
 async function prepare() {
+  if (portable) {
+    if (portable.version !== pkg.version)
+      throw new Error('发行包版本不匹配，请重新解压完整发行包。');
+    await readFile(path.join(root, 'dist/server/main.js'));
+    await readFile(path.join(root, 'dist/web/index.html'));
+    console.log('离线发行包已就绪。');
+    return;
+  }
   const lockHash = createHash('sha256')
     .update(await readFile(path.join(root, 'package-lock.json')))
     .digest('hex');
@@ -131,6 +142,8 @@ async function prepare() {
   await writeFile(stampFile, lockHash + '\n');
   console.log('正在准备页面……');
   await runNode([path.join(root, 'scripts/build.mjs')]);
+  console.log('正在检查无名杀资源，首次准备需要联网……');
+  await runNode(['--use-env-proxy', path.join(root, 'scripts/prepare-noname-lab.mjs')]);
 }
 
 async function start() {
@@ -150,17 +163,13 @@ async function start() {
       await prepare();
       const stdout = openSync(path.join(runtime, 'server.log'), 'a');
       const stderr = openSync(path.join(runtime, 'server-error.log'), 'a');
-      const child = spawn(
-        process.execPath,
-        ['--env-file-if-exists=.env', '--import', 'tsx', 'apps/server/src/main.ts'],
-        {
-          cwd: root,
-          detached: true,
-          windowsHide: true,
-          stdio: ['ignore', stdout, stderr],
-          env: { ...process.env, PARTY_AUTO_PORT: '1' },
-        },
-      );
+      const child = spawn(process.execPath, ['--env-file-if-exists=.env', 'dist/server/main.js'], {
+        cwd: root,
+        detached: true,
+        windowsHide: true,
+        stdio: ['ignore', stdout, stderr],
+        env: { ...process.env, PARTY_AUTO_PORT: '1', PARTY_PROJECT_ROOT: root },
+      });
       closeSync(stdout);
       closeSync(stderr);
       let startupError;

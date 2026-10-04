@@ -12,6 +12,7 @@ import {
 } from '../../../packages/shared/src/contracts.js';
 import type { EngineAdapter } from '../../../packages/noname-adapter/src/index.js';
 import { NonameAdapter } from '../../../packages/noname-adapter/src/index.js';
+import { NativeNonameService } from '../../../packages/noname-adapter/src/service.js';
 import { AppError } from './errors.js';
 import { findHomeUrls, findJoinUrls } from './network.js';
 import { LobbyStore } from './lobby.js';
@@ -82,7 +83,7 @@ export function createPartyServer(options: ServerOptions) {
     response.setHeader('Cross-Origin-Resource-Policy', 'same-origin');
     response.setHeader(
       'Content-Security-Policy',
-      "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'",
+      "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; frame-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'",
     );
     void handle(request, response).catch((error: unknown) => {
       if (response.headersSent) {
@@ -99,11 +100,20 @@ export function createPartyServer(options: ServerOptions) {
   });
   server.requestTimeout = 15000;
   server.headersTimeout = 15000;
+  if (engine instanceof NativeNonameService)
+    engine.attach(server, (code, token) => {
+      try {
+        return lobby.get(code).session(token);
+      } catch {
+        return undefined;
+      }
+    });
 
   const closeStreams = () => {
     for (const stream of eventStreams) stream.end();
   };
   const stop = () => {
+    if (engine instanceof NativeNonameService) engine.close();
     closeStreams();
     server.close();
     server.closeIdleConnections();
@@ -157,6 +167,7 @@ export function createPartyServer(options: ServerOptions) {
       if (!validOrigin) throw new AppError(403, 'INVALID_ORIGIN', '请从本机房间页面操作。');
     }
     const playerToken = cookies(request).party_player;
+    if (engine instanceof NativeNonameService && (await engine.handle(request, response))) return;
     const address = server.address();
     const actualPort = typeof address === 'object' && address ? address.port : options.port;
     const homeUrls = findHomeUrls(actualPort, options.publicUrl);
@@ -217,7 +228,7 @@ export function createPartyServer(options: ServerOptions) {
     }
 
     const roomRoute =
-      /^\/api\/rooms\/([A-F0-9]{6})(?:\/(players(?:\/[\w-]+)?|me(?:\/ready)?|start|bots|events))?$/.exec(
+      /^\/api\/rooms\/([A-F0-9]{6})(?:\/(players(?:\/[\w-]+)?|me(?:\/ready)?|start|rematch|bots|events))?$/.exec(
         url.pathname,
       );
     if (roomRoute) {
@@ -249,6 +260,10 @@ export function createPartyServer(options: ServerOptions) {
           return;
         case 'POST start':
           await room.start(playerToken);
+          json(response, 200, room.snapshot());
+          return;
+        case 'POST rematch':
+          room.returnToWaiting(playerToken);
           json(response, 200, room.snapshot());
           return;
         case 'POST bots':

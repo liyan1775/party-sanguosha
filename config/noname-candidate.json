@@ -1,5 +1,5 @@
 {
-  "status": "isolated-runtime-lab",
+  "status": "integrated-runtime-preview",
   "repository": "https://github.com/libnoname/noname",
   "tag": "v1.11.6",
   "commit": "2367607e246d21aae168dba15c01151ee0651f30",
@@ -8,7 +8,21 @@
     "url": "https://github.com/libnoname/noname/releases/download/v1.11.6/noname.core.zip",
     "sha256": "d35538c702f5acc4a18be805a0f15d2639613dbe0805bf62e4d574db5bbb869e"
   },
-  "runtimeVerified": false,
+  "runtimeVerified": true,
+  "runtimeVerification": {
+    "verifiedOn": "2026-10-04",
+    "browser": "Windows Microsoft Edge, mobile viewport",
+    "modes": ["identity", "doudizhu", "versus", "duel"],
+    "presets": ["beginner", "advanced"],
+    "identitySeatCountsVerified": [5, 6, 7, 8],
+    "manualTouchAction": true,
+    "computerOccupiesSeat": false,
+    "hiddenHandValuesFiltered": true,
+    "hiddenIdentityFiltered": true,
+    "sameSessionRefresh": true,
+    "rematch": true,
+    "mobileWeChatGameVerified": false
+  },
   "labVerification": {
     "verifiedOn": "2026-10-04",
     "scope": "standard-pack single-general duel; human selects then native auto plays",

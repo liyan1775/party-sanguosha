@@ -37,7 +37,7 @@ d35538c702f5acc4a18be805a0f15d2639613dbe0805bf62e4d574db5bbb869e
 - 上游 `single` 的 `normal` 含阵亡换将；`dianjiang` 一名武将阵亡即结算。独立验证复用后者的死亡和原生规则，另做电脑不参赛与联机席位启动。
 - 任意扩展不保证浏览器可用或支持联机。依赖 Node 文件系统、本地客户端 API 或私有资源的扩展需适配。
 
-基础运行已在独立验证程序中通过；大厅对局尚未集成，微信游戏尚未验收。候选版本的 `runtimeVerified` 保持 `false` 表示正式适配未通过，`labVerification` 单独记录已通过范围。
+以下研究记录保留最初独立验证时的发现。v0.3.0 已正式集成大厅，四模式/两档已运行验证，`runtimeVerified` 为 true；具体范围见 `runtimeVerification` 与 `runtime-validation.md`。微信真机完整游戏尚未验收。
 
 ## 玩家房主与 AI 补位补充
 
@@ -47,7 +47,7 @@ d35538c702f5acc4a18be805a0f15d2639613dbe0805bf62e4d574db5bbb869e
 
 在已检查的配置中，未发现可直接等同于“最聪明”的统一档位。原生选择事件具有 `ai1/ai2`、`processAI` 与自动处理路径，具体由技能和模式提供评估函数；见 [事件内容](https://github.com/libnoname/noname/blob/v1.11.6/apps/core/noname/library/element/content.ts)。接入时应使用完整原生决策路径；若所选版本另有明确智能优化开关，验证后固定开启，不能仅设 `difficulty: hard` 就声称完成要求。
 
-当前 `config/ai-policy.json` 和适配契约固定 `strongest-native`，这是产品策略标识，不是上游原生配置键。大厅可管理真人/AI 混合席位，但未执行引擎 AI；独立单挑验证已执行原生选择、技能、出牌和阵亡结算，没有设置 `difficulty: hard`。接入验收还应覆盖 5/8 席身份局混合对局和手机断线恢复。
+当前 `config/ai-policy.json` 和适配契约固定 `strongest-native`，这是产品策略标识，不是上游原生配置键。正式大厅已执行原生选择、技能、出牌和阵亡结算，包含 5/8 席混合 AI、两档四模式与同会话刷新，没有设置 `difficulty: hard`。
 
 ## 2026-10-04 独立运行结果
 
@@ -61,7 +61,7 @@ d35538c702f5acc4a18be805a0f15d2639613dbe0805bf62e4d574db5bbb869e
 - 原生客户端控制消息包含设置、开局和牌堆等请求。产品接入必须验证 cookie 和动作白名单，不能直接沿用测试角色参数授权。
 - 验证程序仍有原生普通菜单，尚未落实两档白名单、房间隔离、重连、结算回房和再次开局。
 
-因此主大厅的 `NonameAdapter.ready` 不变；测试转发服务默认只监听回环，不随双击启动器启用。具体复现和文件职责见 [验证说明](../packages/noname-adapter/lab/README.md)。
+上述缺口已在正式 `NativeNonameService` 与 `runtime` 中处理；手牌过滤、认证通道、白名单、菜单、重连和回房不依赖实验服务。实验转发仍默认回环，不随启动器开放，见 [验证说明](../packages/noname-adapter/lab/README.md)。
 
 ## 接入验证顺序
 
