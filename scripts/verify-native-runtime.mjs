@@ -45,11 +45,12 @@ const lan = Object.values(networkInterfaces())
       /^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(address.address),
   )?.address;
 assert(lan, 'LAN IPv4 is required');
-const origin =
+const origin = new URL(
   process.env.ENGINE_VERIFY_PLAYER_URL ??
-  process.env.ENGINE_VERIFY_EXISTING_URL ??
-  (gateway ? `http://127.0.0.1:${gateway.server.address().port}` : undefined) ??
-  `http://${lan}:${port}`;
+    process.env.ENGINE_VERIFY_EXISTING_URL ??
+    (gateway ? `http://127.0.0.1:${gateway.server.address().port}` : undefined) ??
+    `http://${lan}:${port}`,
+).origin;
 const browser = await chromium.launch({
   channel: process.env.E2E_BROWSER_CHANNEL ?? 'msedge',
   args: ['--disable-background-timer-throttling', '--disable-renderer-backgrounding'],

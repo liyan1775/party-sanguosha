@@ -134,7 +134,7 @@ export function managePublicEntry(options: {
             `http://127.0.0.1:${ingressPort}`,
             '--no-autoupdate',
             '--protocol',
-            attempt === 1 ? 'quic' : 'http2',
+            ['auto', 'http2', 'quic'][attempt]!,
             '--edge-ip-version',
             '4',
             '--metrics',
