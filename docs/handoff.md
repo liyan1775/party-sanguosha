@@ -18,7 +18,7 @@ v0.4.0 默认双击启动自动建立临时公网入口，各自 Wi-Fi/流量可
 
 本次 Android 微信关闭 Wi-Fi、用流量扫码开单挑并正常出牌，已由用户确认。首次反馈进入超过一分钟、图片/血条/声音延迟；适配改用设备字体、取消大字体包注册，血条由 CSS 绘制，六个基本牌音效在启动时低优先级预热。用户随后真机复测：不到 20 秒进入牌桌，约再等 10 秒出现带图片选将，开局即有素材与语音、体验接近本地；公网操作延迟明显高于局域网，保留为实际限制。没有改变规则、私有信息或原生 AI。
 
-本地 Git，未创建远程仓库、账号或托管游戏服务器。Node.js 24、TypeScript、HTTP/SSE/轮询/DOM、esbuild、qrcode、ws；资源全部同源。新增 Cloudflare Quick Tunnel 临时转发，固定 cloudflared 2026.9.3 与官方 SHA-256，`.local/connector` 缓存，Apache-2.0 原始许可证在 notices。完整 Windows 包包含 Node、联网组件、固定引擎、图片、音频、源码和许可证；电脑规则宿主保持静音。
+公开源码仓库 [liyan1775/party-sanguosha](https://github.com/liyan1775/party-sanguosha) 的 `main` 已发布 v0.4.2 文件树。本次 Git HTTPS 连接失败，经 GitHub API 上传并核对文件树；远端提交链尚未与本机 `main` 对齐，后续常规推送前需先同步历史。未创建托管游戏服务器。Node.js 24、TypeScript、HTTP/SSE/轮询/DOM、esbuild、qrcode、ws；资源全部同源。新增 Cloudflare Quick Tunnel 临时转发，固定 cloudflared 2026.9.3 与官方 SHA-256，`.local/connector` 缓存，Apache-2.0 原始许可证在 notices。完整 Windows 包包含 Node、联网组件、固定引擎、图片、音频、源码和许可证；电脑规则宿主保持静音。
 
 ## 已确定的产品约束
 
