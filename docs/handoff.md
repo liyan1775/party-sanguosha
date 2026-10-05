@@ -14,6 +14,8 @@ v0.5.1 根据用户的新约束默认同时提供 LAN 与临时公网。旧默�
 
 最后确认正式实例零房间后，使用项目自带 `scripts/launcher.mjs --stop` / 启动器重启，载入最终 v0.5.1 初始化修复。仅结束本目录实例，默认浏览器重新打开；`http://127.0.0.1:3001/server`，LAN `http://192.168.124.19:3001/`。2026-10-05T23:44:56Z 核对公网 ready、两码实际可见、引擎在线、LAN 主页可打开且零房间，结果 `.runtime/live-hybrid-entry-final.json` / `.runtime/previews/live-hybrid-console-final.png`；重启生成新临时公网地址，后续短暂中断仍保留该地址。
 
+v0.5.1 实现提交 `4d3ee09` 已常规推送到原仓库 main，[Project checks](https://github.com/liyan1775/party-sanguosha/actions/runs/37390393697) 的 Ubuntu / Windows 均 success；没有强推。上传继续使用已有 Windows 系统代理，仅本次 Git 命令设置，未改变持久配置。
+
 本轮下一项：用户以 v0.5.1 两码混合四局域网/一外网复测，记录公网 RTC 是否成功、牌桌 RTT 与实际出牌等待；公网中断时 LAN 继续扫码和操作。动态技能隐私、多模式完整真机、并发容量、扩展与特殊观战公开标记仍待覆盖。联网优化不得使 LAN 玩家依赖隧道或缩小既有可用性。旧完整发行 ZIP 尚未重打包。
 
 此前 v0.5.0 根据 iPhone 微信、玩家与电脑分属两家 Wi-Fi、牌桌显示 RTT 超过 1000ms 的反馈升级。公共 STUN 尝试加密跨网络 RTC，保留局域网候选，无媒体权限、账号或 TURN/收费中继，失败继续公网，30 秒后可重试。公网有确认的持续推送、HTTP 和 RTC 共用 PollChannel、序号、动作去重及原隐私/物理牌保护；修复接管时 deadline 未暴露 abort 的漏点。跨家庭 iPhone 的实际降低幅度未验收，不能把同机 RTT 当作公网结果。
@@ -48,7 +50,7 @@ v0.4.0 默认双击启动自动建立临时公网入口，各自 Wi-Fi/流量可
 
 本次 Android 微信关闭 Wi-Fi、用流量扫码开单挑并正常出牌，已由用户确认。首次反馈进入超过一分钟、图片/血条/声音延迟；适配改用设备字体、取消大字体包注册，血条由 CSS 绘制，六个基本牌音效在启动时低优先级预热。用户随后真机复测：不到 20 秒进入牌桌，约再等 10 秒出现带图片选将，开局即有素材与语音、体验接近本地；公网操作延迟明显高于局域网，保留为实际限制。没有改变规则、私有信息或原生 AI。
 
-公开源码仓库 [liyan1775/party-sanguosha](https://github.com/liyan1775/party-sanguosha) 的 `main` 已发布 v0.5.0；此前 v0.4.2 经 API 上传产生的独立提交链已与本机历史对齐，保留双方提交且未强推。未创建托管游戏服务器。Node.js 24、TypeScript、HTTP/SSE/轮询/DOM、esbuild、qrcode、ws；资源全部同源。Cloudflare Quick Tunnel 临时转发固定 cloudflared 2026.9.3 与官方 SHA-256，`.local/connector` 缓存，Apache-2.0 原始许可证在 notices。完整 Windows 包包含 Node、联网组件、固定引擎、图片、音频、源码和许可证；电脑规则宿主保持静音，旧发行包仍为 v0.4.0。
+公开源码仓库 [liyan1775/party-sanguosha](https://github.com/liyan1775/party-sanguosha) 的 `main` 已发布 v0.5.1；此前 v0.4.2 经 API 上传产生的独立提交链已与本机历史对齐，保留双方提交且未强推。未创建托管游戏服务器。Node.js 24、TypeScript、HTTP/SSE/轮询/DOM、esbuild、qrcode、ws；资源全部同源。Cloudflare Quick Tunnel 临时转发固定 cloudflared 2026.9.3 与官方 SHA-256，`.local/connector` 缓存，Apache-2.0 原始许可证在 notices。完整 Windows 包包含 Node、联网组件、固定引擎、图片、音频、源码和许可证；电脑规则宿主保持静音，旧发行包仍为 v0.4.0。
 
 ## 已确定的产品约束
 
