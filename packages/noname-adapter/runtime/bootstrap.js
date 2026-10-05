@@ -8,9 +8,45 @@ const detail = document.querySelector('#loading-detail');
 const retry = document.querySelector('#loading-retry');
 const beganAt = performance.now();
 let failed = false;
+let stageNumber = 0;
+let stageMessage = '正在准备对局…';
+let resourceCount = 0;
+let resourceBytes = 0;
+const stages = ['setup', 'modules', 'filesystem', 'boot', 'packs', 'ready'];
+function publishProgress() {
+  const seconds = Math.floor((performance.now() - beganAt) / 1000);
+  const count = `第 ${stageNumber} / 6 步 · 已载入 ${resourceCount} 项资源 · ${(resourceBytes / 1024 / 1024).toFixed(1)} MB · ${seconds} 秒`;
+  document.querySelector('#loading-count').textContent = count;
+  document.querySelector('#loading-progress').value = stageNumber;
+  if (role === 'player')
+    parent.postMessage(
+      {
+        type: 'party-loading',
+        matchId: id,
+        step: stageNumber,
+        message: stageMessage,
+        detail: count,
+        failed,
+      },
+      location.origin,
+    );
+}
+const resourceObserver = new PerformanceObserver((list) => {
+  for (const entry of list.getEntries()) {
+    resourceCount++;
+    resourceBytes += entry.encodedBodySize || entry.decodedBodySize || 0;
+  }
+  if (!proof.booted) publishProgress();
+});
+resourceObserver.observe({ type: 'resource', buffered: true });
+const progressTimer = setInterval(publishProgress, 1000);
 function progress(stage, message) {
   proof.loading.push({ stage, elapsedMs: Math.round(performance.now() - beganAt) });
-  if (!failed) status.textContent = message;
+  if (!failed) {
+    status.textContent = stageMessage = message;
+    stageNumber = stages.indexOf(stage) + 1;
+    publishProgress();
+  }
 }
 const fail = (error) => {
   if (proof.errors.length < 10) proof.errors.push(String(error?.stack ?? error));
@@ -22,6 +58,9 @@ const fail = (error) => {
   status.textContent = '对局未能载入';
   detail.textContent = `${error?.message ?? String(error)}\n重试会保留房间和座位。`;
   retry.hidden = false;
+  clearInterval(progressTimer);
+  resourceObserver.disconnect();
+  publishProgress();
   globalThis.partyEngine?.signal?.('failed');
 };
 retry.addEventListener('click', () => location.reload());
@@ -31,7 +70,15 @@ const deadline = setTimeout(
   () => fail(new Error('载入超过两分钟，请检查 Wi-Fi 和电脑服务页后重试。')),
   120000,
 );
-window.addEventListener('pagehide', () => clearTimeout(deadline), { once: true });
+window.addEventListener(
+  'pagehide',
+  () => {
+    clearTimeout(deadline);
+    clearInterval(progressTimer);
+    resourceObserver.disconnect();
+  },
+  { once: true },
+);
 window.addEventListener('error', (event) => fail(event.error ?? event.message));
 window.addEventListener('unhandledrejection', (event) => fail(event.reason));
 
@@ -40,28 +87,54 @@ try {
   const response = await fetch(`/engine/setup/${id}?role=${role}`);
   if (!response.ok) throw new Error('你的对局座位已失效，请返回房间。');
   const setup = await response.json();
+  if (role === 'worker' && setup.serverVersion && parent !== window) {
+    const pageVersion = parent.document
+      .querySelector('footer')
+      ?.textContent?.match(/聚会三国杀 v([\d.]+)/)?.[1];
+    const active = [...parent.document.querySelectorAll('.engine-worker')].some((frame) => {
+      const state = frame.contentWindow?.partyEngine?.proof;
+      return state?.started && !state.ended;
+    });
+    if (pageVersion && pageVersion !== setup.serverVersion && !active) {
+      // A service restart can leave its old supervisor tab alive. Refresh it
+      // before connecting a rule worker, so the new LAN receiver is installed.
+      clearTimeout(deadline);
+      clearInterval(progressTimer);
+      resourceObserver.disconnect();
+      parent.location.reload();
+      await new Promise(() => {});
+    }
+  }
+  globalThis.partyAssetBase = setup.assetBase ?? '/engine/core/';
   progress('modules', '正在载入游戏引擎，首次进入可能需要稍等…');
   // Dynamic imports keep the initial status and retry UI alive even when the
   // module graph fails to download or the browser lacks required features.
-  const { lib, game, get, ui, ai, _status } = await import('noname');
+  const engine = await import('noname');
+  const { lib, game, get, ui, ai, _status } = engine;
+  // Keep already running older services usable until the next full stop/start.
+  const { browserReady, boot, device, loadBuildInfo } = engine.browserReady
+    ? engine
+    : await Promise.all([
+        import('/engine/core/noname/init/browser.js'),
+        import('/engine/core/noname/init/index.js'),
+        import('/engine/core/noname/util/index.js'),
+        import('/engine/core/noname/util/meta.js'),
+      ]).then(([browser, init, util, meta]) => ({
+        browserReady: browser.default,
+        boot: init.boot,
+        device: util.device,
+        loadBuildInfo: meta.loadBuildInfo,
+      }));
   globalThis.partyEngine = { lib, game, get, ui, ai, _status, setup, proof };
-  const [
-    { default: browserReady },
-    { boot },
-    { device },
-    { loadBuildInfo },
-    { installPrivacy },
-    { installControls },
-  ] = await Promise.all([
-    import('/engine/core/noname/init/browser.js'),
-    import('/engine/core/noname/init/index.js'),
-    import('/engine/core/noname/util/index.js'),
-    import('/engine/core/noname/util/meta.js'),
-    import('./privacy.js'),
-    import('./controls.js'),
-  ]);
+  const [{ installPrivacy }, { installControls }, { installAudio }, { installPrompts }] =
+    await Promise.all([
+      import('./privacy.js'),
+      import('./controls.js'),
+      setup.audioFiles ? import('./audio.js') : Promise.resolve({ installAudio: () => {} }),
+      setup.choicePrompts ? import('./prompts.js') : Promise.resolve({ installPrompts: () => {} }),
+    ]);
   if (failed) throw new Error('载入已中断，请重试。');
-  lib.assetURL = '/engine/core/';
+  lib.assetURL = setup.assetBase ?? '/engine/core/';
   lib.device = device;
   lib.configprefix = `party_match_${id}_`;
   localStorage.setItem(`${lib.configprefix}directstart`, 'true');
@@ -90,16 +163,29 @@ try {
     phonelayout: true,
     compatible: false,
     background_music: 'music_off',
-    background_audio: false,
-    background_speak: false,
+    background_audio: role === 'player',
+    background_speak: role === 'player',
+    volumn_audio: 6,
     animation: false,
     low_performance: true,
-    game_speed: 'fast',
-    sync_speed: false,
+    game_speed: setup.settings.generalPreset === 'beginner' ? 'slow' : 'fast',
+    duration: setup.settings.generalPreset === 'beginner' ? 1000 : 500,
+    sync_speed: true,
+    swipe: false,
+    swipe_up: 'off',
+    swipe_down: 'off',
+    swipe_left: 'off',
+    swipe_right: 'off',
     show_disclaimer: false,
     new_tutorial: true,
     video: '0',
     card_style: 'default',
+    hp_style: 'default',
+    name_font: 'default',
+    identity_font: 'default',
+    cardtext_font: 'default',
+    global_font: 'default',
+    card_font: 'default',
     version: '1.11.6',
     auto_confirm: true,
     identity_mode: 'normal',
@@ -156,6 +242,10 @@ try {
       );
       catalog.mode = { [mode]: catalog.mode[mode] };
       catalog.play = {};
+      // The native Chinese font alone is 7.5 MiB and competes with the
+      // first portraits, health and audio on mobile data. Use device fonts;
+      // keep native suit glyphs without registering the large font packs.
+      catalog.font = {};
       catalog.submode = { [mode]: catalog.submode[mode] ?? {} };
       progress('packs', '正在准备本房间的武将和卡牌…');
     }
@@ -166,6 +256,8 @@ try {
   lib.buildInfo = await loadBuildInfo();
   installPrivacy();
   installControls();
+  installAudio();
+  installPrompts();
   // A rule worker has no participating viewpoint, and always uses native AI
   // for AI seats. Human clients make their choices in the upstream interface.
   _status.auto = role === 'worker';
@@ -178,9 +270,12 @@ try {
   await boot();
   if (failed) throw new Error('载入已中断，请重试。');
   proof.booted = true;
+  globalThis.partyEngine.audio?.warm();
   progress('ready', '对局已载入');
   clearTimeout(deadline);
   clearTimeout(window.resetGameTimeout);
+  clearInterval(progressTimer);
+  resourceObserver.disconnect();
   loading.hidden = true;
   if (role === 'player')
     parent.postMessage({ type: 'party-connected', matchId: id }, location.origin);

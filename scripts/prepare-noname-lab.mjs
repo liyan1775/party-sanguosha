@@ -74,7 +74,9 @@ await Promise.all(
       const entry = manifest.assets[next++];
       // The committed manifest contains upstream-relative assets only.
       if (
-        !/^(?:image\/(?:card|character|background)\/[^/]+\.(?:png|jpg)|LICENSE)$/.test(entry.path)
+        !/^(?:image\/(?:card|character|background)\/[^/]+\.(?:png|jpg)|audio\/(?:skill|die|effect|card\/(?:male|female))\/[\w.-]+\.mp3|LICENSE)$/.test(
+          entry.path,
+        )
       ) {
         throw new Error('Invalid asset manifest path');
       }

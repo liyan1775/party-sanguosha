@@ -11,11 +11,13 @@ async function withLobby(
     base: string;
     page: (desktop?: boolean) => Promise<Page>;
   }) => Promise<void>,
+  internet = false,
 ) {
   const party = createPartyServer({
     port: 0,
     webRoot: fileURLToPath(new URL('../../dist/web/', import.meta.url)),
     publicUrl: 'http://192.168.1.100:3000',
+    entryMode: internet ? 'internet' : 'lan',
   });
   await new Promise<void>((resolve) => party.server.listen(0, '127.0.0.1', resolve));
   const address = party.server.address();
@@ -34,6 +36,11 @@ async function withLobby(
           hasTouch: !desktop,
         });
         contexts.push(context);
+        if (internet)
+          await context.addInitScript(() => {
+            Object.defineProperty(AbortSignal, 'any', { value: undefined });
+            Object.defineProperty(AbortSignal, 'timeout', { value: undefined });
+          });
         const page = await context.newPage();
         page.on('pageerror', (error) => errors.push(error.message));
         return page;
@@ -161,6 +168,54 @@ test('电脑只展示主页码，手机建房参赛，任意成员展示直达�
   });
 });
 
+test('跨网络电脑页等待验证才显示码，手机通过 HTTP 更新准备与房主交接，断网时收码', async ({
+  browser,
+}) => {
+  await withLobby(
+    browser,
+    async ({ party, base, page }) => {
+      const computer = await page(true);
+      await computer.goto(base + '/server');
+      await expect(computer.locator('#qr')).toBeHidden();
+      await expect(computer.locator('#entry-status')).toContainText('正在准备');
+      const publicUrl = 'https://browser-party.trycloudflare.com/';
+      party.setInternetEntry('ready', '跨网络可扫码', publicUrl);
+      await expect(computer.locator('#join-url')).toHaveValue(publicUrl);
+      await checkQr(computer);
+      await expect(computer.locator('#network-address')).toBeHidden();
+      const owner = await page();
+      const code = await createRoom(owner, base, '公网房主');
+      const friend = await page();
+      await joinRoom(friend, base, code, '其他网络朋友');
+      await friend.locator('#ready-button').click();
+      await expect(owner.locator('#players')).toContainText('已准备');
+      await friend.locator('#share-button').click();
+      expect(await checkQr(friend, code)).toBe(new URL(`/join/${code}`, publicUrl).href);
+      await expect(friend.locator('#save-qr')).toHaveAttribute('href', /\/api\/qr\.png/);
+      await friend.locator('#close-share').click();
+      await owner.locator('#leave-button').click();
+      await expect(friend.locator('#my-role')).toHaveText('你是房主，也参加这一局');
+      party.setInternetEntry('unavailable', '公网连接中断');
+      await expect(computer.locator('#qr')).toBeHidden();
+      await expect(computer.locator('#join-url')).toHaveValue('');
+      await friend.locator('#share-button').click();
+      await expect(friend.locator('#qr')).toBeHidden();
+      await expect(friend.locator('#qr-placeholder')).toHaveText('公网连接中断');
+      await friend.locator('#close-share').click();
+      party.setInternetEntry('ready', '原入口恢复', publicUrl);
+      await expect(computer.locator('#join-url')).toHaveValue(publicUrl);
+      await friend.reload();
+      await expect(friend.locator('#my-role')).toHaveText('你是房主，也参加这一局');
+      await expect(friend.locator('#ready-button')).toBeEnabled();
+      const popup = await page();
+      await popup.goto(`${base}/join/${code}`);
+      await friend.locator('#leave-button').click();
+      await expect(popup.locator('#connection')).toHaveText('房间已关闭');
+    },
+    true,
+  );
+});
+
 test('手机房主为 5/8 席补 AI、修改玩法裁掉多余 AI，真人准备与权限受约束', async ({ browser }) => {
   await withLobby(browser, async ({ party, base, page }) => {
     const owner = await page();
@@ -230,5 +285,44 @@ test('房主离开由真人接任，两间房独立，空房关闭后旧邀请�
     await expect(owner.getByText('暂时没找到牌桌')).toBeVisible();
     await owner.getByRole('link', { name: '返回主页', exact: true }).click();
     await expect(owner.getByRole('button', { name: '创建房间并入座' })).toBeVisible();
+  });
+});
+
+test('局外图鉴可查看两档技能、筛选和搜索，保持成员在线与房主设置', async ({ browser }) => {
+  await withLobby(browser, async ({ party, base, page }) => {
+    const phone = await page();
+    await phone.goto(base + '/');
+    await phone.getByRole('button', { name: '武将图鉴 · 查看技能' }).click();
+    await expect(phone.locator('#guide-count')).toHaveText('显示 33 / 33 位武将');
+    await phone.getByLabel('查找武将或技能').fill('龙胆');
+    await expect(phone.locator('.guide-entry')).toHaveCount(1);
+    await phone.locator('.guide-entry summary').click();
+    await expect(phone.locator('.guide-entry dd')).toContainText('将【杀】当做【闪】');
+    await phone.getByRole('button', { name: '关闭武将图鉴' }).click();
+    const code = await createRoom(phone, base, '图鉴房主');
+    await phone.getByLabel('武将范围').selectOption('advanced');
+    await phone.getByRole('button', { name: '保存房间设置' }).click();
+    const member = await page();
+    await joinRoom(member, base, code, '学技能');
+    await member.getByRole('button', { name: '武将图鉴 · 查看技能' }).click();
+    await expect(member.locator('#guide-count')).toHaveText('显示 156 / 156 位武将');
+    await member.getByLabel('势力', { exact: true }).selectOption('shen');
+    await expect(member.locator('#guide-count')).toHaveText('显示 12 / 156 位武将');
+    await member.getByLabel('查找武将或技能').fill('不存在的武将');
+    await expect(member.locator('#guide-count')).toContainText('没有找到');
+    expect(
+      party.lobby
+        .get(code)
+        .snapshot()
+        .players.every((player) => player.online),
+    ).toBe(true);
+    expect(party.lobby.get(code).snapshot().settings.generalPreset).toBe('advanced');
+    await member.screenshot({ path: '.runtime/previews/general-guide-search.png' });
+    await member.getByLabel('查找武将或技能').fill('神吕布');
+    await member.locator('.guide-entry summary').click();
+    await expect(member.locator('.guide-entry dl')).toContainText('无双（关联技能）');
+    await member.screenshot({ path: '.runtime/previews/general-guide.png' });
+    await member.getByRole('button', { name: '关闭武将图鉴' }).click();
+    await expect(member.getByRole('button', { name: '我准备好了' })).toBeEnabled();
   });
 });

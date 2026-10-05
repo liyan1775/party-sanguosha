@@ -10,10 +10,13 @@ async function initialize(): Promise<void> {
     api<ServerInfo>('/api/info'),
     api<SessionView>('/api/me'),
   ]);
+  info.entry ??= { mode: 'lan', status: 'ready', message: '手机连接同一 Wi-Fi 或电脑热点后扫码。' };
   if (location.pathname === '/server') showServerPage(info);
   else if (location.pathname.startsWith('/join/')) {
     const code = location.pathname.split('/').at(-1)!;
-    showRoomPage(await api<RoomInfo>(`/api/rooms/${code}`), session);
+    const room = await api<RoomInfo>(`/api/rooms/${code}`);
+    room.entry ??= info.entry;
+    showRoomPage(room, session);
   } else showHomePage(info, session);
 }
 
@@ -24,7 +27,7 @@ void initialize().catch((error: unknown) => {
   heading.textContent = '暂时没找到牌桌';
   const text = document.createElement('p');
   text.textContent =
-    error instanceof Error ? error.message : '无法连接电脑，请确认连接了同一个 Wi-Fi。';
+    error instanceof Error ? error.message : '连接暂时不可用，请确认手机联网，电脑仍在运行。';
   const retry = document.createElement('button');
   retry.className = 'button primary';
   retry.textContent = '重新连接';

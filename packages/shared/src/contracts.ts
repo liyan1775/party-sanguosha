@@ -1,5 +1,5 @@
 export const APP_ID = 'party-sanguosha';
-export const APP_VERSION = '0.3.1';
+export const APP_VERSION = '0.4.2';
 
 export const MODES = [
   {
@@ -67,6 +67,7 @@ export interface EngineStatus {
   id: 'noname';
   ready: boolean;
   message: string;
+  preload?: boolean;
 }
 
 export interface RoomView {
@@ -96,11 +97,19 @@ export interface ServerInfo {
   rooms: RoomSummary[];
   extensions: ExtensionInfo[];
   engine: EngineStatus;
+  entry: EntryInfo;
+}
+
+export interface EntryInfo {
+  mode: 'lan' | 'internet';
+  status: 'starting' | 'ready' | 'unavailable';
+  message: string;
 }
 
 export interface RoomInfo {
   room: RoomView;
   joinUrls: string[];
+  entry: EntryInfo;
 }
 
 export interface SessionView {

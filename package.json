@@ -1,6 +1,6 @@
 {
   "name": "party-sanguosha",
-  "version": "0.3.1",
+  "version": "0.4.2",
   "private": true,
   "type": "module",
   "engines": {
@@ -8,8 +8,8 @@
   },
   "scripts": {
     "build": "node scripts/build.mjs",
-    "start": "npm run build && node --env-file-if-exists=.env --import tsx apps/server/src/main.ts",
-    "dev": "npm run build && node --env-file-if-exists=.env --watch --import tsx apps/server/src/main.ts",
+    "start": "npm run build && node --use-env-proxy --env-file-if-exists=.env --import tsx apps/server/src/main.ts",
+    "dev": "npm run build && node --use-env-proxy --env-file-if-exists=.env --watch --import tsx apps/server/src/main.ts",
     "typecheck": "tsc --noEmit",
     "test": "tsx --test tests/*.test.ts",
     "test:browser": "npm run build && playwright test",
@@ -17,6 +17,8 @@
     "engine:lab": "node packages/noname-adapter/lab/serve.mjs",
     "engine:verify": "node scripts/verify-noname-lab.mjs",
     "engine:check-definitions": "node scripts/check-native-definitions.mjs",
+    "engine:update-catalog": "node scripts/update-general-catalog.mjs",
+    "engine:update-audio": "node scripts/update-native-audio.mjs",
     "engine:verify:rooms": "npm run build && npm run engine:check-definitions && node --import tsx scripts/verify-native-runtime.mjs",
     "package:windows": "node --use-env-proxy scripts/package-windows.mjs",
     "format": "prettier --write .",
@@ -34,6 +36,7 @@
     "@types/ws": "8.18.1",
     "esbuild": "0.28.2",
     "prettier": "3.9.9",
+    "sharp": "0.35.5",
     "tsx": "4.23.15",
     "typescript": "5.9.3"
   }

@@ -54,8 +54,15 @@ function identities(mode, count) {
 }
 async function start() {
   const { setup, proof } = globalThis.partyEngine;
+  // Native loadConfig resets duration to 500; apply the room's pace afterwards
+  // on both the rule worker and phones, without changing any AI decisions.
+  lib.config.duration = setup.settings.generalPreset === 'beginner' ? 1000 : 500;
   for (const [name, path] of Object.entries(setup.portraitAliases))
     if (lib.character[name]) lib.character[name].img = path;
+  for (const [name, path] of Object.entries(setup.mobilePortraits ?? {}))
+    // Native avatar backgrounds prepend assetURL even inside their fallback
+    // array, so use a path relative to the versioned core directory.
+    if (lib.character[name]) lib.character[name].img = path.replace('/engine/', '../../');
   const allowed = new Set(roster(setup));
   proof.roster = [...allowed];
   // This also keeps transformation/AI candidate lists inside the room's preset.
@@ -64,7 +71,11 @@ async function start() {
   lib.init.onfree();
   if (setup.role !== 'worker') {
     const scheme = location.protocol === 'https:' ? 'wss:' : 'ws:';
-    game.connect(`${scheme}//${location.host}/engine/socket/${setup.id}/player`);
+    const playerUrl = `${scheme}//${location.host}/engine/socket/${setup.id}/player`;
+    if (setup.playerPolling) {
+      const { connectPlayer } = await import('./player-transport.js');
+      connectPlayer(game, playerUrl);
+    } else game.connect(playerUrl);
     const close = game.ws.onclose;
     game.ws.onclose = function (event) {
       close.call(this, event);
@@ -300,6 +311,46 @@ async function start() {
 export function adaptMode(mode) {
   mode.startBefore = () => {};
   mode.start = start;
+  if (mode.name === 'identity') {
+    const dieAfter = mode.element.player.dieAfter;
+    mode.element.player.dieAfter = function (...args) {
+      // Upstream assumes every client already holds the hidden identity. Our
+      // clients only receive it when it becomes public, so assign it explicitly
+      // before the native reveal and refresh the earlier death animation label.
+      game.broadcast(
+        function (player, identity) {
+          player.identity = identity;
+          player.setIdentity(identity);
+          if (player.node.dieidentity)
+            player.node.dieidentity.textContent = get.translation(`${identity}2`);
+          else player.$dieAfter();
+        },
+        this,
+        this.identity,
+      );
+      return dieAfter.apply(this, args);
+    };
+    mode.game.partyShowIdentityBase = mode.game.showIdentity;
+    mode.game.showIdentity = function (...args) {
+      if (globalThis.partyEngine.setup.role === 'worker')
+        game.broadcast(
+          function (identities) {
+            for (const [id, identity] of identities) {
+              const player = lib.playerOL[id];
+              player.identity = identity;
+              player.identityShown = true;
+              player.ai.shown = 1;
+              player.setIdentity(identity);
+              player.node.identity.classList.remove('guessing');
+            }
+          },
+          [...game.players, ...game.dead].map((player) => [player.playerid, player.identity]),
+        );
+      // This wrapper can itself be sent by native broadcastAll. Use a game
+      // property, not a closure variable that is absent on the receiving phone.
+      return game.partyShowIdentityBase.apply(this, args);
+    };
+  }
   if (mode.name === 'single')
     mode.game.checkResult = function () {
       if (game.players.length === 1) game.over();

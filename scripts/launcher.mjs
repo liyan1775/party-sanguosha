@@ -12,6 +12,7 @@ const sessionFile = path.join(runtime, 'session.json');
 const lockFile = path.join(runtime, 'launcher.lock');
 const pkg = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8'));
 const noBrowser = process.argv.includes('--no-browser');
+const entryMode = process.argv.includes('--lan') ? 'lan' : 'internet';
 const portable = await readFile(path.join(root, 'portable.json'), 'utf8')
   .then(JSON.parse)
   .catch(() => null);
@@ -140,15 +141,31 @@ async function prepare() {
     await runNode([npm, 'ci', '--no-audit', '--no-fund']);
   }
   await writeFile(stampFile, lockHash + '\n');
-  console.log('正在准备页面……');
-  await runNode([path.join(root, 'scripts/build.mjs')]);
   console.log('正在检查无名杀资源，首次准备需要联网……');
   await runNode(['--use-env-proxy', path.join(root, 'scripts/prepare-noname-lab.mjs')]);
+  console.log('正在准备页面与快速载入引擎……');
+  await runNode([path.join(root, 'scripts/build.mjs')]);
 }
 
 async function start() {
   let session = await runningSession();
   if (session) {
+    if (session.entryMode !== entryMode)
+      throw new Error(
+        '本目录已有另一种连接方式在运行。结束牌桌后先双击停止，再打开需要的启动入口。',
+      );
+    if (entryMode === 'internet') {
+      const origin = new URL(session.serverUrl).origin;
+      const info = await (
+        await fetch(`${origin}/api/info`, { signal: AbortSignal.timeout(3000) })
+      ).json();
+      if (info.entry?.status === 'unavailable')
+        await fetch(`${origin}/api/internet/retry`, {
+          method: 'POST',
+          headers: { 'X-Party-Control': session.controlToken },
+          signal: AbortSignal.timeout(3000),
+        });
+    }
     console.log('服务已在运行，打开电脑二维码页面。');
     await openBrowser(session.serverUrl);
     console.log(session.serverUrl);
@@ -157,19 +174,35 @@ async function start() {
   const release = await acquireLock();
   try {
     session = await runningSession();
+    if (session && session.entryMode !== entryMode)
+      throw new Error(
+        '本目录已有另一种连接方式在运行。结束牌桌后先双击停止，再打开需要的启动入口。',
+      );
     if (!session) {
       if (await runningSession(false))
         throw new Error('旧版本服务仍在运行。请先双击停止，再双击启动以加载新版本。');
       await prepare();
       const stdout = openSync(path.join(runtime, 'server.log'), 'a');
       const stderr = openSync(path.join(runtime, 'server-error.log'), 'a');
-      const child = spawn(process.execPath, ['--env-file-if-exists=.env', 'dist/server/main.js'], {
-        cwd: root,
-        detached: true,
-        windowsHide: true,
-        stdio: ['ignore', stdout, stderr],
-        env: { ...process.env, PARTY_AUTO_PORT: '1', PARTY_PROJECT_ROOT: root },
-      });
+      const child = spawn(
+        process.execPath,
+        ['--use-env-proxy', '--env-file-if-exists=.env', 'dist/server/main.js'],
+        {
+          cwd: root,
+          detached: true,
+          windowsHide: true,
+          stdio: ['ignore', stdout, stderr],
+          env: {
+            ...process.env,
+            PARTY_AUTO_PORT: '1',
+            PARTY_PROJECT_ROOT: root,
+            PARTY_NETWORK: entryMode,
+            NO_PROXY: [process.env.NO_PROXY, 'localhost', '127.0.0.1', '::1']
+              .filter(Boolean)
+              .join(','),
+          },
+        },
+      );
       closeSync(stdout);
       closeSync(stderr);
       let startupError;
@@ -196,7 +229,11 @@ async function start() {
         throw error;
       }
     }
-    console.log('服务已启动。手机连接同一 Wi-Fi，扫描电脑上的主页二维码。');
+    console.log(
+      entryMode === 'internet'
+        ? '服务已启动，正在自动准备跨网络二维码。手机可用 Wi-Fi 或流量，无需设置网络。'
+        : '局域网服务已启动。手机连接同一 Wi-Fi，扫描电脑上的主页二维码。',
+    );
     console.log(session.serverUrl);
     await openBrowser(session.serverUrl);
   } finally {

@@ -771,6 +771,16 @@ footer {
   margin-right: auto;
   font-size: 13px;
 }
+.match-network {
+  flex-shrink: 0;
+  color: #c5d3cb;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.match-network.slow-network {
+  color: #efd091;
+}
 .match-toolbar .button {
   padding: 6px 10px;
   min-height: 32px;
@@ -778,8 +788,124 @@ footer {
   width: auto;
 }
 #game-frame-container {
+  position: relative;
   flex: 1;
   min-height: 0;
+}
+#game-frame-mount {
+  width: 100%;
+  height: 100%;
+}
+.match-loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 18px;
+  padding: 24px;
+  color: #faf7ee;
+  background: #172723;
+  text-align: center;
+}
+.match-loading progress {
+  width: min(80%, 400px);
+  accent-color: #d9bd7e;
+}
+.match-loading p {
+  color: #d0dcd5;
+  font-size: 14px;
+}
+.general-guide {
+  width: min(900px, calc(100% - 24px));
+  max-height: 92dvh;
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  color: inherit;
+  background: #f5f2e9;
+}
+.general-guide::backdrop {
+  background: #17252099;
+}
+.general-guide h2 {
+  margin: 0;
+}
+.guide-filters {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.guide-search {
+  grid-column: 1 / -1;
+}
+.guide-list {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  align-items: start;
+}
+.guide-entry {
+  background: #fffcf5;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.guide-entry summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  cursor: pointer;
+}
+.guide-entry summary::-webkit-details-marker {
+  display: none;
+}
+.guide-entry img {
+  object-fit: cover;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+.guide-entry summary div {
+  min-width: 0;
+}
+.guide-entry strong,
+.guide-entry small,
+.guide-entry span {
+  display: block;
+}
+.guide-entry small {
+  color: var(--muted);
+  margin: 4px 0;
+}
+.guide-entry span {
+  font-size: 12px;
+  color: var(--green);
+  line-height: 1.6;
+}
+.guide-entry dl {
+  margin: 0;
+  padding: 4px 16px 16px;
+}
+.guide-entry dt {
+  font-weight: 650;
+  color: var(--red);
+  margin-top: 12px;
+}
+.guide-entry dd {
+  margin: 6px 0 0;
+  font-size: 14px;
+  line-height: 1.8;
+  white-space: pre-line;
+}
+@media (max-width: 640px) {
+  .general-guide {
+    padding: 18px;
+  }
+  .guide-list {
+    grid-template-columns: 1fr;
+  }
 }
 #game-frame {
   display: block;

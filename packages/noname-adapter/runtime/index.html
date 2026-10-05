@@ -38,6 +38,14 @@
         overflow-wrap: anywhere;
         color: #d0dcd5;
       }
+      #loading-progress {
+        width: min(80vw, 400px);
+        accent-color: #d9bd7e;
+      }
+      #loading-count {
+        color: #d0dcd5;
+        font-size: 14px;
+      }
       #loading-retry {
         padding: 10px 24px;
         border: 0;
@@ -46,6 +54,34 @@
         color: #172723;
         font: inherit;
         cursor: pointer;
+      }
+      #window,
+      #window .name,
+      #window .identity,
+      #window .card,
+      #window .hp,
+      #window .control {
+        font-family: system-ui, 'Microsoft YaHei', sans-serif !important;
+      }
+      /* Health must be visible before any optional skin image arrives. */
+      .hp:not(.text):not(.actcount):not(.treasure):not([data-condition='hidden']) > div {
+        background-image: none !important;
+        background-color: #419e35 !important;
+        border: 1px solid #173b15 !important;
+        border-radius: 50% !important;
+      }
+      .hp[data-condition='mid']:not(.text) > div:not(.lost):not(.shield) {
+        background-color: #cfab24 !important;
+      }
+      .hp[data-condition='low']:not(.text) > div:not(.lost):not(.shield) {
+        background-color: #c73838 !important;
+      }
+      .hp:not(.text) > .lost {
+        background-color: #6b6b6b !important;
+        opacity: 0.6;
+      }
+      .hp:not(.text) > .shield {
+        background-color: #398aca !important;
       }
     </style>
     <script type="importmap">
@@ -63,6 +99,8 @@
   <body>
     <div id="engine-loading" role="status" aria-live="polite" data-state="loading">
       <strong id="loading-status">正在准备对局，请稍候…</strong>
+      <progress id="loading-progress" max="6" value="0" aria-label="对局载入步骤"></progress>
+      <span id="loading-count">第 1 / 6 步</span>
       <p id="loading-detail">首次进入需要载入本房间的游戏资源，请保持 Wi-Fi 连接。</p>
       <button id="loading-retry" type="button" hidden>重新载入对局</button>
     </div>

@@ -35,6 +35,21 @@ export function installPrivacy() {
       addressedTo = previous;
     }
   };
+  for (const name of ['$compare', '$compareMultiple']) {
+    const compare = lib.element.Player.prototype[name];
+    lib.element.Player.prototype[name] = function (card, targets, cards, ...args) {
+      // Selection stays private until the native comparison animation starts.
+      // Only its declared materials become public, never the ordering zone.
+      const event = get.event();
+      if (event)
+        event.partyShownCompareCards = [
+          ...(event.partyShownCompareCards ?? []),
+          card,
+          ...(Array.isArray(cards) ? cards : [cards]),
+        ];
+      return compare.call(this, card, targets, cards, ...args);
+    };
+  }
   function visible(card) {
     if (!receiver || _status.over) return true;
     const position = get.position(card, true);
@@ -46,11 +61,23 @@ export function installPrivacy() {
     const seen = new Set();
     for (let depth = 0; event && depth < 32 && !seen.has(event); depth++) {
       seen.add(event);
+      if (event.partyShownCompareCards?.includes(card)) return true;
       if (
         ['useCard', 'respond', 'discard', 'showCards'].includes(event.name) &&
         event.cards?.includes(card)
       )
         return true;
+      // 五谷丰登 draws before the ordering move. Its native useCard parent
+      // explicitly records the publicly displayed pool, unlike private 观星.
+      if (
+        event.name === 'useCard' &&
+        event.card?.name === 'wugu' &&
+        event.wuguShownCards?.includes(card)
+      )
+        return true;
+      // 界赵云's 涯角 publicly flips this one deck card before it is moved.
+      // Keep this exact native skill boundary; generic event.card stays private.
+      if (event.name === 'reyajiao' && event.card === card) return true;
       // The flipped result is in player.judging, not event.card (the delayed
       // trick being judged). After judging.shift(), callbacks use result.card.
       if (

@@ -2,6 +2,21 @@ import { APP_VERSION, type ApiError } from '../../../packages/shared/src/contrac
 
 export const app = document.querySelector<HTMLElement>('#app')!;
 
+function requestDeadline(parent: AbortSignal | undefined, milliseconds: number) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), milliseconds);
+  const abort = () => controller.abort();
+  parent?.addEventListener('abort', abort, { once: true });
+  if (parent?.aborted) abort();
+  return {
+    signal: controller.signal,
+    clear: () => {
+      clearTimeout(timer);
+      parent?.removeEventListener('abort', abort);
+    },
+  };
+}
+
 export function element<T extends HTMLElement = HTMLElement>(selector: string): T {
   const result = app.querySelector<T>(selector);
   if (!result) throw new Error(`Missing element: ${selector}`);
@@ -9,15 +24,25 @@ export function element<T extends HTMLElement = HTMLElement>(selector: string): 
 }
 
 export async function api<T>(path: string, method = 'GET', body?: unknown): Promise<T> {
-  const response = await fetch(path, {
-    method,
-    credentials: 'same-origin',
-    headers: { 'Content-Type': 'application/json' },
-    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-  });
-  const data: T | ApiError = await response.json();
-  if (!response.ok) throw new Error((data as ApiError).error?.message ?? '连接失败，请稍后再试。');
-  return data as T;
+  const deadline = requestDeadline(undefined, path.endsWith('/start') ? 190000 : 20000);
+  try {
+    const response = await fetch(path, {
+      method,
+      credentials: 'same-origin',
+      signal: deadline.signal,
+      headers: { 'Content-Type': 'application/json' },
+      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    });
+    const data: T | ApiError = await response.json();
+    if (!response.ok)
+      throw new Error((data as ApiError).error?.message ?? '连接失败，请稍后再试。');
+    return data as T;
+  } catch (error) {
+    if (deadline.signal.aborted) throw new Error('请求超时，请检查连接后重试。');
+    throw error;
+  } finally {
+    deadline.clear();
+  }
 }
 
 export function frame(
@@ -86,7 +111,49 @@ export function watchEvents(
   url: string,
   name: string,
   update: (data: unknown) => void,
-): EventSource {
+  poll = false,
+): { close(): void } {
+  if (poll) {
+    const abort = new AbortController();
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let last: unknown;
+    const close = () => {
+      abort.abort();
+      clearTimeout(timer);
+    };
+    async function refresh() {
+      const deadline = requestDeadline(abort.signal, 12000);
+      try {
+        const response = await fetch(`${url}?transport=poll`, {
+          credentials: 'same-origin',
+          cache: 'no-store',
+          signal: deadline.signal,
+        });
+        if (response.status === 404 && name === 'room') {
+          if (last) update({ ...last, phase: 'closed', revision: Number.MAX_SAFE_INTEGER });
+          connection(false, '房间已关闭');
+          close();
+          return;
+        }
+        if (!response.ok) throw new Error('Connection unavailable');
+        last = await response.json();
+        if (abort.signal.aborted) return;
+        update(last);
+        connection(true, name === 'room' ? '已连接牌桌' : '服务在线');
+      } catch {
+        if (!abort.signal.aborted) connection(false, '连接断开，正在重连');
+      } finally {
+        deadline.clear();
+        if (!abort.signal.aborted) timer = setTimeout(refresh, 1200);
+      }
+    }
+    void refresh();
+    window.addEventListener('pagehide', close, { once: true });
+    window.addEventListener('pageshow', (event) => {
+      if (event.persisted) location.reload();
+    });
+    return { close };
+  }
   const events = new EventSource(url);
   events.addEventListener('open', () =>
     connection(true, name === 'room' ? '已连接牌桌' : '服务在线'),

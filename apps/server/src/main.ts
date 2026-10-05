@@ -5,12 +5,18 @@ import { APP_ID, APP_VERSION, type ExtensionInfo } from '../../../packages/share
 import { createPartyServer } from './server.js';
 import { findHomeUrls, isLoopbackPortOccupied } from './network.js';
 import { NativeNonameService } from '../../../packages/noname-adapter/src/service.js';
+import { managePublicEntry } from './public-tunnel.js';
 
 const root = process.env.PARTY_PROJECT_ROOT ?? fileURLToPath(new URL('../../../', import.meta.url));
 const preferredPort = Number(process.env.PORT ?? 3000);
 if (!Number.isInteger(preferredPort) || preferredPort < 1 || preferredPort > 65535)
   throw new Error('PORT 需要是 1–65535 之间的端口。');
 const publicUrl = process.env.PUBLIC_URL;
+const entryMode = process.env.PARTY_NETWORK ?? 'internet';
+if (!['internet', 'lan'].includes(entryMode))
+  throw new Error('PARTY_NETWORK 需要是 internet 或 lan。');
+if (entryMode === 'internet' && publicUrl)
+  throw new Error('跨网络启动会自动生成地址，请移除 PUBLIC_URL，或使用局域网启动。');
 const extensions = JSON.parse(
   await readFile(path.join(root, 'config/extensions.json'), 'utf8'),
 ) as ExtensionInfo[];
@@ -23,6 +29,7 @@ const party = createPartyServer({
   ...(publicUrl ? { publicUrl } : {}),
   extensions,
   adapter: new NativeNonameService(root),
+  entryMode: entryMode as 'internet' | 'lan',
 });
 let port = preferredPort;
 while (true) {
@@ -40,7 +47,10 @@ while (true) {
       };
       party.server.once('error', onError);
       party.server.once('listening', onListening);
-      party.server.listen(port, process.env.BIND_HOST ?? '0.0.0.0');
+      party.server.listen(
+        port,
+        entryMode === 'internet' ? '127.0.0.1' : (process.env.BIND_HOST ?? '0.0.0.0'),
+      );
     });
     break;
   } catch (error) {
@@ -57,7 +67,10 @@ while (true) {
 }
 const serverUrl = `http://127.0.0.1:${port}/server`;
 const homeUrls = findHomeUrls(port, publicUrl);
-const runtime = path.join(root, '.runtime');
+const runtime = path.resolve(root, process.env.PARTY_RUNTIME_DIR ?? '.runtime');
+const runtimeWithin = path.relative(path.join(root, '.runtime'), runtime);
+if (runtimeWithin.startsWith('..') || path.isAbsolute(runtimeWithin))
+  throw new Error('运行文件必须位于本项目 .runtime 内。');
 await mkdir(runtime, { recursive: true });
 const temporarySession = path.join(runtime, `session-${process.pid}.json`);
 await writeFile(
@@ -70,7 +83,8 @@ await writeFile(
       controlToken: party.controlToken,
       pid: process.pid,
       serverUrl,
-      homeUrls,
+      entryMode,
+      homeUrls: entryMode === 'lan' ? homeUrls : [],
       startedAt: new Date().toISOString(),
     },
     null,
@@ -80,7 +94,20 @@ await writeFile(
 );
 await rename(temporarySession, path.join(runtime, 'session.json'));
 console.log(
-  `\n聚会三国杀 v${APP_VERSION}\n电脑服务页：${serverUrl}\n${homeUrls.length ? homeUrls.map((url) => `玩家主页：${url}`).join('\n') : '尚未检测到局域网 IPv4 地址，请连接 Wi-Fi 或开启电脑热点。'}\n玩家扫码进入主页后自行建房，电脑不占席位。\n保持电脑服务页开启，由手机房主开始对局。\n`,
+  `\n聚会三国杀 v${APP_VERSION}\n电脑服务页：${serverUrl}\n${entryMode === 'internet' ? '正在自动准备跨网络入口，验证通过后电脑页面显示二维码。' : homeUrls.length ? homeUrls.map((url) => `玩家主页：${url}`).join('\n') : '尚未检测到局域网 IPv4 地址，请连接 Wi-Fi 或开启电脑热点。'}\n玩家扫码进入主页后自行建房，电脑不占席位。\n保持电脑服务页开启，由手机房主开始对局。\n`,
 );
+if (entryMode === 'internet') {
+  const internet = managePublicEntry({
+    root,
+    runtime,
+    port,
+    instanceId: party.instanceId,
+    hasRooms: () => party.lobby.list().length > 0,
+    update: party.setInternetEntry,
+  });
+  party.setInternetRetry(() => void internet.start());
+  party.server.once('close', internet.close);
+  void internet.start();
+}
 process.once('SIGINT', party.stop);
 process.once('SIGTERM', party.stop);

@@ -3,18 +3,21 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import QRCode from 'qrcode';
+import { WebSocketServer } from 'ws';
 import {
   APP_ID,
   APP_VERSION,
   type ExtensionInfo,
   type RoomInfo,
   type ServerInfo,
+  type EntryInfo,
 } from '../../../packages/shared/src/contracts.js';
 import type { EngineAdapter } from '../../../packages/noname-adapter/src/index.js';
 import { NonameAdapter } from '../../../packages/noname-adapter/src/index.js';
 import { NativeNonameService } from '../../../packages/noname-adapter/src/service.js';
+import { isLocalRequest } from '../../../packages/noname-adapter/src/access.js';
 import { AppError } from './errors.js';
-import { findHomeUrls, findJoinUrls } from './network.js';
+import { findHomeUrls } from './network.js';
 import { LobbyStore } from './lobby.js';
 
 interface ServerOptions {
@@ -23,6 +26,7 @@ interface ServerOptions {
   publicUrl?: string;
   adapter?: EngineAdapter;
   extensions?: ExtensionInfo[];
+  entryMode?: EntryInfo['mode'];
 }
 
 function cookies(request: IncomingMessage): Record<string, string> {
@@ -74,8 +78,14 @@ export function createPartyServer(options: ServerOptions) {
   const engine = options.adapter ?? new NonameAdapter();
   const lobby = new LobbyStore(engine, extensions);
   const eventStreams = new Set<ServerResponse>();
-  const playerCookie = (value: string, expiry = 86400) =>
-    `party_player=${value}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${expiry}`;
+  let internetUrl: string | undefined;
+  let entry: EntryInfo =
+    options.entryMode === 'internet'
+      ? { mode: 'internet', status: 'starting', message: '正在准备跨网络入口，请稍候…' }
+      : { mode: 'lan', status: 'ready', message: '手机连接同一 Wi-Fi 或电脑热点后扫码。' };
+  let retryInternet = () => {};
+  const playerCookie = (request: IncomingMessage, value: string, expiry = 86400) =>
+    `party_player=${value}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${expiry}${request.headers['x-party-ingress'] === 'public' ? '; Secure' : ''}`;
 
   const server = createServer((request, response) => {
     response.setHeader('X-Content-Type-Options', 'nosniff');
@@ -100,6 +110,27 @@ export function createPartyServer(options: ServerOptions) {
   });
   server.requestTimeout = 15000;
   server.headersTimeout = 15000;
+  const realtime = new WebSocketServer({ noServer: true, maxPayload: 64 });
+  server.on('upgrade', (request, socket, head) => {
+    const url = new URL(request.url ?? '/', 'http://localhost');
+    if (url.pathname !== '/api/realtime-check') return;
+    let sameOrigin = true;
+    try {
+      if (request.headers.origin)
+        sameOrigin = new URL(request.headers.origin).host === request.headers.host;
+    } catch {
+      sameOrigin = false;
+    }
+    if (!sameOrigin) {
+      socket.end('HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\n');
+      return;
+    }
+    realtime.handleUpgrade(request, socket, head, (ws) => {
+      const timeout = setTimeout(() => ws.terminate(), 10000);
+      ws.once('close', () => clearTimeout(timeout));
+      ws.once('message', () => ws.send('party-sanguosha-realtime'));
+    });
+  });
   if (engine instanceof NativeNonameService)
     engine.attach(server, (code, token) => {
       try {
@@ -113,11 +144,19 @@ export function createPartyServer(options: ServerOptions) {
     for (const stream of eventStreams) stream.end();
   };
   const stop = () => {
+    clearInterval(pollExpiry);
+    for (const socket of realtime.clients) socket.terminate();
+    realtime.close();
     if (engine instanceof NativeNonameService) engine.close();
     closeStreams();
     server.close();
     server.closeIdleConnections();
   };
+  const pollExpiry = setInterval(() => {
+    for (const { code } of lobby.list()) lobby.get(code).expirePolls();
+  }, 5000);
+  pollExpiry.unref();
+  server.once('close', () => clearInterval(pollExpiry));
 
   function stream<T>(
     response: ServerResponse,
@@ -170,10 +209,16 @@ export function createPartyServer(options: ServerOptions) {
     if (engine instanceof NativeNonameService && (await engine.handle(request, response))) return;
     const address = server.address();
     const actualPort = typeof address === 'object' && address ? address.port : options.port;
-    const homeUrls = findHomeUrls(actualPort, options.publicUrl);
+    const homeUrls =
+      entry.mode === 'internet'
+        ? entry.status === 'ready' && internetUrl
+          ? [internetUrl]
+          : []
+        : findHomeUrls(actualPort, options.publicUrl);
     const roomInfo = (code: string): RoomInfo => ({
       room: lobby.get(code).snapshot(),
-      joinUrls: findJoinUrls(actualPort, code, options.publicUrl),
+      joinUrls: homeUrls.map((base) => new URL(`/join/${code}`, base).href),
+      entry,
     });
 
     if (route === 'GET /api/health') {
@@ -186,13 +231,11 @@ export function createPartyServer(options: ServerOptions) {
       });
       return;
     }
-    if (route === 'POST /api/shutdown') {
-      if (
-        !['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(request.socket.remoteAddress ?? '') ||
-        !matches(request.headers['x-party-control'], controlToken)
-      )
+    if (route === 'POST /api/shutdown' || route === 'POST /api/internet/retry') {
+      if (!isLocalRequest(request) || !matches(request.headers['x-party-control'], controlToken))
         throw new AppError(403, 'LOCAL_CONTROL_REQUIRED', '请在服务器电脑上双击停止脚本。');
-      response.once('finish', stop);
+      if (route === 'POST /api/shutdown') response.once('finish', stop);
+      else retryInternet();
       json(response, 200, { ok: true });
       return;
     }
@@ -203,6 +246,7 @@ export function createPartyServer(options: ServerOptions) {
         rooms: lobby.list(),
         extensions,
         engine: engine.status(),
+        entry,
       };
       json(response, 200, info);
       return;
@@ -213,11 +257,15 @@ export function createPartyServer(options: ServerOptions) {
     }
     if (route === 'POST /api/rooms') {
       const created = lobby.create((await readBody(request)).nickname, playerToken);
-      response.setHeader('Set-Cookie', playerCookie(created.token));
+      response.setHeader('Set-Cookie', playerCookie(request, created.token));
       json(response, 201, { ...roomInfo(created.room.code), playerId: created.playerId });
       return;
     }
     if (route === 'GET /api/events') {
+      if (url.searchParams.get('transport') === 'poll') {
+        json(response, 200, lobby.list());
+        return;
+      }
       stream(
         response,
         'lobby',
@@ -241,13 +289,13 @@ export function createPartyServer(options: ServerOptions) {
           return;
         case 'POST players': {
           const joined = lobby.join(code, (await readBody(request)).nickname, playerToken);
-          response.setHeader('Set-Cookie', playerCookie(joined.token));
+          response.setHeader('Set-Cookie', playerCookie(request, joined.token));
           json(response, 201, { ...roomInfo(code), playerId: joined.playerId });
           return;
         }
         case 'DELETE me':
           room.leave(playerToken);
-          response.setHeader('Set-Cookie', playerCookie('', 0));
+          response.setHeader('Set-Cookie', playerCookie(request, '', 0));
           json(response, 200, { ok: true });
           return;
         case 'PUT me/ready':
@@ -271,6 +319,11 @@ export function createPartyServer(options: ServerOptions) {
           json(response, 200, room.snapshot());
           return;
         case 'GET events':
+          if (url.searchParams.get('transport') === 'poll') {
+            room.poll(playerToken);
+            json(response, 200, room.snapshot());
+            return;
+          }
           stream(
             response,
             'room',
@@ -287,7 +340,7 @@ export function createPartyServer(options: ServerOptions) {
       }
     }
 
-    if (route === 'GET /api/qr.svg') {
+    if (route === 'GET /api/qr.svg' || route === 'GET /api/qr.png') {
       const code = url.searchParams.get('room');
       let allowed = homeUrls;
       if (code) {
@@ -298,7 +351,14 @@ export function createPartyServer(options: ServerOptions) {
       }
       const target = url.searchParams.get('url');
       if (!target || !allowed.includes(target))
-        throw new AppError(400, 'INVALID_QR_TARGET', '请选择电脑所在的局域网地址。');
+        throw new AppError(400, 'INVALID_QR_TARGET', '当前邀请入口未就绪，请刷新后再试。');
+      if (url.pathname.endsWith('.png')) {
+        response.writeHead(200, { 'Content-Type': 'image/png', 'Cache-Control': 'no-store' });
+        response.end(
+          await QRCode.toBuffer(target, { width: 720, margin: 2, errorCorrectionLevel: 'M' }),
+        );
+        return;
+      }
       const svg = await QRCode.toString(target, {
         type: 'svg',
         margin: 2,
@@ -310,6 +370,12 @@ export function createPartyServer(options: ServerOptions) {
       return;
     }
     // 旧原型电脑入口迁移到服务页，不再兑换任何房主权限。
+    if (['/server', '/host'].includes(url.pathname) && !isLocalRequest(request))
+      throw new AppError(
+        403,
+        'LOCAL_PAGE_REQUIRED',
+        '电脑服务页只在服务器电脑打开，玩家请进入主页。',
+      );
     if (route === 'GET /host') {
       response.writeHead(302, { Location: '/server' });
       response.end();
@@ -318,6 +384,7 @@ export function createPartyServer(options: ServerOptions) {
     const assets: Record<string, { file: string; mime: string }> = {
       '/assets/app.js': { file: 'app.js', mime: 'text/javascript; charset=utf-8' },
       '/assets/style.css': { file: 'style.css', mime: 'text/css; charset=utf-8' },
+      '/assets/generals.json': { file: 'generals.json', mime: 'application/json; charset=utf-8' },
     };
     const asset =
       assets[url.pathname] ??
@@ -333,5 +400,21 @@ export function createPartyServer(options: ServerOptions) {
     throw new AppError(404, 'NOT_FOUND', '页面不存在。');
   }
 
-  return { server, lobby, instanceId, controlToken, closeStreams, stop };
+  return {
+    server,
+    lobby,
+    instanceId,
+    controlToken,
+    closeStreams,
+    stop,
+    setInternetRetry: (retry: () => void) => {
+      retryInternet = retry;
+    },
+    setInternetEntry: (status: EntryInfo['status'], message: string, url?: string) => {
+      if (url && !/^https:\/\/[a-z0-9]+(?:-[a-z0-9]+)*\.trycloudflare\.com\/$/.test(url))
+        throw new Error('Invalid temporary public URL');
+      internetUrl = status === 'ready' ? url : undefined;
+      entry = { mode: 'internet', status, message };
+    },
+  };
 }

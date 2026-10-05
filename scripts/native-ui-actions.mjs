@@ -5,7 +5,7 @@ export async function chooseGeneral(frame, worker) {
     () =>
       globalThis.partyEngine?._status.event?.name === 'chooseButton' && partyEngine._status.paused,
     {},
-    { timeout: 25000 },
+    { timeout: 120000 },
   );
   await frame.locator('.dialog .button.character').first().tap();
   for (

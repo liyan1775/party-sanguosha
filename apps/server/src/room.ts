@@ -11,7 +11,7 @@ import {
 } from '../../../packages/shared/src/contracts.js';
 import { AppError } from './errors.js';
 
-type Human = PlayerView & { kind: 'human'; token: string; connections: number };
+type Human = PlayerView & { kind: 'human'; token: string; connections: number; pollUntil: number };
 type Bot = PlayerView & { kind: 'bot' };
 type Seat = Human | Bot;
 
@@ -92,6 +92,7 @@ export class RoomStore {
       ready: false,
       online: false,
       connections: 0,
+      pollUntil: 0,
     };
     this.players.set(player.id, player);
     this.ownerId ??= player.id;
@@ -263,10 +264,31 @@ export class RoomStore {
       closed = true;
       if (!player || this.players.get(player.id) !== player) return;
       player.connections = Math.max(0, player.connections - 1);
-      player.online = player.connections > 0;
+      player.online = player.connections > 0 || player.pollUntil > Date.now();
       if (!player.online) player.ready = false;
       this.changed();
     };
+  }
+
+  /** HTTP polling has a lease so every completed request does not mark a phone offline. */
+  poll(token?: string, now = Date.now()): void {
+    const player = this.human(token);
+    if (!player) return;
+    player.pollUntil = now + 30000;
+    if (!player.online) {
+      player.online = true;
+      this.changed();
+    }
+  }
+
+  expirePolls(now = Date.now()): void {
+    for (const player of this.players.values()) {
+      if (player.kind !== 'human' || player.connections || !player.online || player.pollUntil > now)
+        continue;
+      player.online = false;
+      player.ready = false;
+      this.changed();
+    }
   }
 
   private human(token?: string): Human | undefined {

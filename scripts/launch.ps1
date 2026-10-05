@@ -1,6 +1,7 @@
 param(
   [ValidateSet('Start', 'Stop')][string]$Action = 'Start',
-  [switch]$NoBrowser
+  [switch]$NoBrowser,
+  [switch]$Lan
 )
 
 $ErrorActionPreference = 'Stop'
@@ -29,5 +30,6 @@ if (-not $env:HTTPS_PROXY) {
 }
 if ($Action -eq 'Stop') { $taskLauncherArguments += '--stop' }
 if ($NoBrowser) { $taskLauncherArguments += '--no-browser' }
+if ($Lan) { $taskLauncherArguments += '--lan' }
 & $taskNodeExecutable @taskLauncherArguments
 exit $LASTEXITCODE
