@@ -300,6 +300,78 @@ test('HTTP 对局备用通道：每次请求认证，私有消息有序重取，
   assert.equal(forwarded, 1);
 });
 
+test('开局初始化：玩家早于规则宿主连接时保留认证动作，宿主就绪后连接先于消息且不重复', async (t) => {
+  for (const transport of ['websocket', 'poll', 'stream', 'replaced']) {
+    const f = await fixture(t);
+    const channel = randomUUID();
+    let data = JSON.stringify(['init', 'fixture-version']);
+    let socket: WebSocket | undefined;
+    const headers = { Cookie: f.ownerCookie, 'Content-Type': 'application/json' };
+    let path = `${f.base}/engine/poll/${f.id}?channel=${channel}`;
+    if (transport === 'websocket') {
+      socket = f.socket('player', f.ownerCookie);
+      await once(socket, 'open');
+      socket.send(data);
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    } else {
+      await fetch(path, { method: 'POST', headers, body: JSON.stringify({ open: true, channel }) });
+      if (transport === 'stream') {
+        socket = new WebSocket(
+          `${f.base.replace('http:', 'ws:')}/engine/socket/${f.id}/player?transport=stream&channel=${channel}&after=0`,
+          { origin: f.base, headers },
+        );
+        const opened = once(socket, 'message');
+        await once(socket, 'open');
+        await opened;
+        const ack = once(socket, 'message');
+        socket.send(JSON.stringify({ type: 'action', sequence: 1, data }));
+        assert.equal(JSON.parse((await ack)[0].toString()).status, 200);
+      } else {
+        assert.equal(
+          (
+            await fetch(path, {
+              method: 'POST',
+              headers,
+              body: JSON.stringify({ sequence: 1, data }),
+            })
+          ).status,
+          200,
+        );
+      }
+    }
+    if (transport === 'replaced') {
+      const replacement = randomUUID();
+      path = `${f.base}/engine/poll/${f.id}?channel=${replacement}`;
+      await fetch(path, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ open: true, channel: replacement }),
+      });
+      data = JSON.stringify(['init', 'replacement-version']);
+      await fetch(path, { method: 'POST', headers, body: JSON.stringify({ sequence: 1, data }) });
+    }
+    t.after(() => socket?.terminate());
+    const worker = f.socket('worker', f.workerCookie);
+    t.after(() => worker.terminate());
+    const received: { type: string; id: string; data?: string }[] = [];
+    worker.on('message', (bytes) => received.push(JSON.parse(bytes.toString())));
+    await once(worker, 'open');
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    assert.deepEqual(
+      received.map((packet) => packet.type),
+      ['connect', 'message'],
+      transport,
+    );
+    assert.equal(received[1]!.id, f.room.ownerId);
+    assert.equal(received[1]!.data, data);
+    if (transport !== 'websocket') {
+      await fetch(path, { method: 'POST', headers, body: JSON.stringify({ sequence: 1, data }) });
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      assert.equal(received.length, 2, '已确认的初始化重试只执行一次');
+    }
+  }
+});
+
 test('公网持续推送：无需逐批 GET；断开回 HTTP 保留座位、消息与动作去重', async (t) => {
   const f = await fixture(t);
   const worker = f.socket('worker', f.workerCookie);

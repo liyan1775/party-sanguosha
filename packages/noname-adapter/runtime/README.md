@@ -1,5 +1,9 @@
 # 正式无名杀适配
 
+v0.5.1 的局域网入口直接使用本机素材和 WebSocket，不依赖临时公网；公网持续推送连续发送有序动作，不逐条等待前一 ACK，中断按序重试、服务端去重。HTTP/RTC 保持串行。诊断上报每 8 秒一次或线路变化时更新，单请求有超时且不并发堆积。`ENGINE_VERIFY_LOCAL_BRIDGE=1 ENGINE_VERIFY_HUMANS=5 ENGINE_VERIFY_MODES=identity ENGINE_VERIFY_LAN_PLAYERS=4 ENGINE_VERIFY_PUBLIC_DROP=1` 在桌面上验证四 LAN 加一公网代理同桌、真实切断/恢复代理及 LAN 原生操作持续；不等于物理 Wi-Fi/iPhone 测试。
+
+开局期间手机早于规则 iframe 的认证消息暂存于 match 私有内存，规则连接后先 connect 再交付，当前连接身份必须仍匹配；最多 512 条/4MiB，失败/释放清空，旧连接消息丢弃。`ENGINE_VERIFY_DELAY_WORKER_MS=4000` 可在真实对局测试中延迟规则页 HTML，覆盖这一载入次序；范围 0–10000ms，不能与 CACHE 组合。
+
 v0.5.0 的 `observer.js` 使用显式公开字段投影，仅本机控制台读取；不使用原生序列化快照作为观察者数据，不读手牌牌面、牌堆、私人选择或 storage。当前专门的公开牌桌视图不含完整原生动画及特殊技能标记。
 
 公网 PlayerTransport 在同一 PollChannel 上尝试有确认的 WebSocket 持续推送，失败回 HTTP；RTC 同通道接管，不重入座或重复动作。公共 STUN 允许合法 UDP 公网候选、保留私网候选，无 TURN，不保证全部 NAT 穿透。`ENGINE_VERIFY_STREAM_DROP=1` 主动关闭推送并检查原通道继续，`ENGINE_VERIFY_NO_RTC=1` 复核公网路径。`npm run test:engine-api` 强制要求完整固定资源；纯源码常规检查明确跳过完整预加载资源清单一项。

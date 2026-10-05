@@ -237,7 +237,7 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
     }
     if (
       me &&
-      initial.entry?.mode === 'internet' &&
+      (initial.entry?.access ?? initial.entry?.mode) === 'internet' &&
       room.engine.preload &&
       (!localConnection ||
         (localConnection.closed &&
@@ -417,7 +417,7 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
       `${roomPath}/events`,
       'room',
       (snapshot) => renderRoom(snapshot as RoomView),
-      initial.entry.mode === 'internet',
+      (initial.entry.access ?? initial.entry.mode) === 'internet',
     );
   }
 
@@ -486,11 +486,8 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
       const current = await api<RoomInfo>(roomPath);
       bindQr(current.joinUrls, room.code, current.entry ?? initial.entry);
     } catch {
-      bindQr([], room.code, {
-        ...initial.entry,
-        status: 'unavailable',
-        message: '邀请入口暂时无法连接，请稍后再试。',
-      });
+      element('#qr-hint').textContent =
+        '邀请信息暂时无法刷新，保留上次二维码；请确认对应网络可用。';
     }
   }
   element('#share-button').addEventListener('click', () => void shareRoom());

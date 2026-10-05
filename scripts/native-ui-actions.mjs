@@ -51,7 +51,18 @@ export async function playOneAction(frames, worker) {
           '.handcards .card.selectable, .handcards1 .card.selectable, .handcards2 .card.selectable',
         )
         .first();
-      if (!(await selectable.isVisible())) continue;
+      if (!(await selectable.isVisible())) {
+        // A human may legitimately have no 杀/闪 for a response. Decline
+        // through the native control so later turns can offer a card action.
+        if (['chooseToUse', 'chooseToRespond'].includes(eventName)) {
+          const cancel = frame
+            .locator('.control > div')
+            .filter({ hasText: /^取消$/ })
+            .first();
+          if (await cancel.isVisible()) await cancel.tap();
+        }
+        continue;
+      }
       await selectable.tap();
       const target = frame.locator('.player.selectable').first();
       if (await target.isVisible()) await target.tap();

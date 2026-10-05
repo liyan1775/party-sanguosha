@@ -82,7 +82,7 @@ export function createPartyServer(options: ServerOptions) {
   let internetUrl: string | undefined;
   let entry: EntryInfo =
     options.entryMode === 'internet'
-      ? { mode: 'internet', status: 'starting', message: '正在准备跨网络入口，请稍候…' }
+      ? { mode: 'internet', status: 'starting', message: '正在准备跨网络入口，局域网可立即扫码…' }
       : { mode: 'lan', status: 'ready', message: '手机连接同一 Wi-Fi 或电脑热点后扫码。' };
   let retryInternet = () => {};
   const playerCookie = (request: IncomingMessage, value: string, expiry = 86400) =>
@@ -243,16 +243,23 @@ export function createPartyServer(options: ServerOptions) {
     if (engine instanceof NativeNonameService && (await engine.handle(request, response))) return;
     const address = server.address();
     const actualPort = typeof address === 'object' && address ? address.port : options.port;
-    const homeUrls =
-      entry.mode === 'internet'
-        ? entry.status === 'ready' && internetUrl
-          ? [internetUrl]
-          : []
-        : findHomeUrls(actualPort, options.publicUrl);
+    const publicAccess = request.headers['x-party-ingress'] === 'public';
+    const localUrls =
+      options.publicUrl ||
+      (typeof address === 'object' &&
+        address &&
+        !['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(address.address))
+        ? findHomeUrls(actualPort, options.publicUrl)
+        : [];
+    // A published public address stays shareable during a temporary outage.
+    // Public visitors do not receive the computer's private network addresses.
+    const publicUrls = internetUrl ? [internetUrl] : [];
+    const homeUrls = publicAccess ? publicUrls : [...localUrls, ...publicUrls];
+    const responseEntry: EntryInfo = { ...entry, access: publicAccess ? 'internet' : 'lan' };
     const roomInfo = (code: string): RoomInfo => ({
       room: lobby.get(code).snapshot(),
       joinUrls: homeUrls.map((base) => new URL(`/join/${code}`, base).href),
-      entry,
+      entry: responseEntry,
     });
 
     if (route === 'GET /api/health') {
@@ -280,7 +287,7 @@ export function createPartyServer(options: ServerOptions) {
         rooms: lobby.list(),
         extensions,
         engine: engine.status(),
-        entry,
+        entry: responseEntry,
       };
       json(response, 200, info);
       return;
@@ -452,7 +459,7 @@ export function createPartyServer(options: ServerOptions) {
     setInternetEntry: (status: EntryInfo['status'], message: string, url?: string) => {
       if (url && !/^https:\/\/[a-z0-9]+(?:-[a-z0-9]+)*\.trycloudflare\.com\/$/.test(url))
         throw new Error('Invalid temporary public URL');
-      internetUrl = status === 'ready' ? url : undefined;
+      if (url) internetUrl = url;
       entry = { mode: 'internet', status, message };
     },
   };

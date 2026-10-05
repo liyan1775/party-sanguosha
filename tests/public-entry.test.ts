@@ -16,24 +16,37 @@ import {
   verifyRealtime,
 } from '../apps/server/src/public-tunnel.js';
 import { PollChannel } from '../packages/noname-adapter/src/poll-channel.js';
+import { findHomeUrls } from '../apps/server/src/network.js';
 
-test('公网入口：未验证和中断时不发码，恢复后主页与成员邀请共用 HTTPS 地址', async (t) => {
+test('双入口：公网未就绪时局域网可扫码，中断保留两码，公网响应不泄露局域网地址', async (t) => {
+  const lanUrl = 'http://192.168.1.100:3000/';
   const party = createPartyServer({
     port: 0,
     webRoot: fileURLToPath(new URL('../apps/web/', import.meta.url)),
     entryMode: 'internet',
+    publicUrl: lanUrl,
   });
   await new Promise<void>((done) => party.server.listen(0, '127.0.0.1', done));
   const address = party.server.address();
   assert(address && typeof address === 'object');
   const base = `http://127.0.0.1:${address.port}`;
+  const gateway = createPublicGateway(address.port);
+  await new Promise<void>((done) => gateway.server.listen(0, '127.0.0.1', done));
+  const ingress = gateway.server.address();
+  assert(ingress && typeof ingress === 'object');
+  const publicBase = `http://127.0.0.1:${ingress.port}`;
   t.after(() => {
+    gateway.close();
     party.stop();
     party.server.closeAllConnections();
   });
   const info = () => fetch(`${base}/api/info`).then((response) => response.json());
-  assert.deepEqual((await info()).homeUrls, []);
+  assert.deepEqual((await info()).homeUrls, [lanUrl]);
+  assert.equal((await info()).entry.access, 'lan');
   assert.equal((await info()).entry.status, 'starting');
+  const publicInfo = () => fetch(`${publicBase}/api/info`).then((response) => response.json());
+  assert.deepEqual((await publicInfo()).homeUrls, []);
+  assert.equal((await publicInfo()).entry.access, 'internet');
   assert.throws(() => party.setInternetEntry('ready', 'wrong', 'https://other.invalid/'));
   const publicUrl = 'https://friends-party.trycloudflare.com/';
   party.setInternetEntry('ready', 'ready', publicUrl);
@@ -44,25 +57,42 @@ test('公网入口：未验证和中断时不发码，恢复后主页与成员�
   });
   const cookie = created.headers.get('set-cookie')!.split(';')[0]!;
   const data = await created.json();
-  assert.deepEqual(data.joinUrls, [new URL(`/join/${data.room.code}`, publicUrl).href]);
-  assert.equal(JSON.stringify(await info()).includes('192.168.'), false);
+  assert.deepEqual(
+    data.joinUrls,
+    [lanUrl, publicUrl].map((url) => new URL(`/join/${data.room.code}`, url).href),
+  );
+  assert.deepEqual((await publicInfo()).homeUrls, [publicUrl]);
+  assert.equal(JSON.stringify(await publicInfo()).includes('192.168.'), false);
   assert.equal(JSON.stringify(await info()).includes(party.controlToken), false);
+  const publicRoom = await (await fetch(`${publicBase}/api/rooms/${data.room.code}`)).json();
+  assert.deepEqual(publicRoom.joinUrls, [new URL(`/join/${data.room.code}`, publicUrl).href]);
+  assert.equal(
+    (await fetch(`${publicBase}/api/qr.png?url=${encodeURIComponent(lanUrl)}`)).status,
+    400,
+  );
   const qr = `${base}/api/qr.png?url=${encodeURIComponent(publicUrl)}`;
   const image = await fetch(qr);
   assert.equal(image.status, 200);
   assert.equal(image.headers.get('content-type'), 'image/png');
   assert((await image.arrayBuffer()).byteLength > 1000);
   party.setInternetEntry('unavailable', 'waiting');
-  assert.deepEqual((await info()).homeUrls, []);
-  assert.equal((await fetch(qr)).status, 400);
+  assert.deepEqual((await info()).homeUrls, [lanUrl, publicUrl]);
+  assert.equal((await fetch(qr)).status, 200);
+  assert.equal((await fetch(`${base}/api/qr.svg?url=${encodeURIComponent(lanUrl)}`)).status, 200);
   const room = await (await fetch(`${base}/api/rooms/${data.room.code}`)).json();
-  assert.deepEqual(room.joinUrls, []);
+  assert.deepEqual(room.joinUrls, data.joinUrls);
+  const joined = await fetch(`${base}/api/rooms/${data.room.code}/players`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ nickname: '局域网朋友' }),
+  });
+  assert.equal(joined.status, 201, '公网中断时，局域网仍可入座同一房间');
   assert.equal(
     (await fetch(`${base}/api/me`, { headers: { cookie } }).then((r) => r.json())).playerId,
     data.playerId,
   );
   party.setInternetEntry('ready', 'recovered', publicUrl);
-  assert.deepEqual((await info()).homeUrls, [publicUrl]);
+  assert.deepEqual((await info()).homeUrls, [lanUrl, publicUrl]);
   assert.equal(await publicHealthMatches(base, party.instanceId), true);
   assert.equal(await publicHealthMatches(base, randomUUID()), false);
   assert.equal(await verifyRealtime(base), true);
@@ -139,6 +169,31 @@ test('公网代理：伪造 Host、转发头和本机凭据不能取得管理页
     headers: { 'X-Party-Control': party.controlToken, 'X-Party-Ingress': 'public' },
   });
   assert.equal(denied.status, 403);
+});
+
+test('默认双入口监听 LAN：局域网手机可读取大厅，伪造本机 Host 和凭据仍不能管理或停止', async (t) => {
+  const party = createPartyServer({ port: 0, webRoot: '.', entryMode: 'internet' });
+  await new Promise<void>((done) => party.server.listen(0, '0.0.0.0', done));
+  t.after(() => {
+    party.stop();
+    party.server.closeAllConnections();
+  });
+  const address = party.server.address();
+  assert(address && typeof address === 'object');
+  const base = findHomeUrls(address.port)[0];
+  if (!base) return t.skip('测试环境没有私有 IPv4 网卡，真实 LAN 来源需另行验证');
+  const info = await (await fetch(new URL('/api/info', base))).json();
+  assert.equal(info.entry.access, 'lan');
+  assert(info.homeUrls.includes(base));
+  assert.equal(info.entry.status, 'starting');
+  for (const path of ['/server', '/api/console', '/api/shutdown', '/api/internet/retry']) {
+    const response: Response = await fetch(new URL(path, base), {
+      method: ['shutdown', 'retry'].some((part) => path.endsWith(part)) ? 'POST' : 'GET',
+      headers: { Host: `127.0.0.1:${address.port}`, 'X-Party-Control': party.controlToken },
+    });
+    assert.equal(response.status, 403, path);
+  }
+  assert(party.server.listening);
 });
 
 test('公网大厅：连续 HTTP 更新保活，超时撤销准备并保留房主，SSE 与轮询标签共存', async (t) => {

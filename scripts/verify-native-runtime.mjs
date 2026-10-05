@@ -3,6 +3,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { networkInterfaces } from 'node:os';
+import { once } from 'node:events';
 import { chromium } from '@playwright/test';
 import { createPartyServer } from '../apps/server/src/server.ts';
 import { NativeNonameService } from '../packages/noname-adapter/src/service.ts';
@@ -51,6 +52,17 @@ const origin = new URL(
     (gateway ? `http://127.0.0.1:${gateway.server.address().port}` : undefined) ??
     `http://${lan}:${port}`,
 ).origin;
+const lanOrigin = `http://${lan}:${port}`;
+const lanPlayers = Number(process.env.ENGINE_VERIFY_LAN_PLAYERS ?? 0);
+assert(Number.isSafeInteger(lanPlayers) && lanPlayers >= 0 && lanPlayers <= 8);
+const workerDelay = Number(process.env.ENGINE_VERIFY_DELAY_WORKER_MS ?? 0);
+assert(Number.isSafeInteger(workerDelay) && workerDelay >= 0 && workerDelay <= 10000);
+assert(
+  !workerDelay || process.env.ENGINE_VERIFY_CACHE !== '1',
+  'Worker delay requires test routing',
+);
+const playerOrigin = (index) => (index < lanPlayers ? lanOrigin : origin);
+const permittedOrigins = [origin, `http://127.0.0.1:${port}`, ...(lanPlayers ? [lanOrigin] : [])];
 const browser = await chromium.launch({
   channel: process.env.E2E_BROWSER_CHANNEL ?? 'msedge',
   args: ['--disable-background-timer-throttling', '--disable-renderer-backgrounding'],
@@ -211,9 +223,17 @@ async function page(mobile, remote = false) {
   let interrupted = false;
   if (process.env.ENGINE_VERIFY_CACHE !== '1')
     await context.route('**/*', async (route) => {
-      if (![origin, `http://127.0.0.1:${port}`].includes(new URL(route.request().url()).origin)) {
+      if (!permittedOrigins.includes(new URL(route.request().url()).origin)) {
         external.add(route.request().url());
         await route.abort();
+      } else if (
+        !mobile &&
+        workerDelay &&
+        new URL(route.request().url()).pathname.startsWith('/engine/worker/')
+      ) {
+        // Real player initialization must survive arriving before the rule iframe.
+        await new Promise((resolve) => setTimeout(resolve, workerDelay));
+        await route.continue();
       } else if (
         mobile &&
         process.env.ENGINE_VERIFY_RETRY_START === '1' &&
@@ -276,8 +296,7 @@ async function page(mobile, remote = false) {
   page.largeFontRequests = new Set();
   page.on('request', (request) => {
     const path = new URL(request.url()).pathname.replace(/\/core\/[a-f0-9]{40}\//, '/core/');
-    if (![origin, `http://127.0.0.1:${port}`].includes(new URL(request.url()).origin))
-      external.add(request.url());
+    if (!permittedOrigins.includes(new URL(request.url()).origin)) external.add(request.url());
     if (/^\/engine\/core\/(?:character|card)\/[^/]+\.js$/.test(path)) page.packRequests.add(path);
     if (/^\/engine\/core\/font\/(?!suits\.)/.test(path)) page.largeFontRequests.add(path);
   });
@@ -322,7 +341,7 @@ try {
   for (const mode of modes) {
     const phone = await page(true);
     const phones = [phone];
-    await phone.goto(origin);
+    await phone.goto(playerOrigin(0));
     const created = await phone.evaluate(async () => {
       const response = await fetch('/api/rooms', {
         method: 'POST',
@@ -332,7 +351,7 @@ try {
       return response.json();
     });
     const code = created.room.code;
-    await phone.goto(`${origin}/join/${code}`);
+    await phone.goto(`${playerOrigin(0)}/join/${code}`);
     if (mode === modes[0]) {
       await phone.locator('#general-guide').tap();
       await phone.waitForFunction(
@@ -368,9 +387,12 @@ try {
       { code, mode, playerCount, preset: process.env.ENGINE_VERIFY_PRESET ?? 'beginner' },
     );
     for (let index = 1; index < humanCount; index++) {
-      const friend = await page(true, process.env.ENGINE_VERIFY_MIXED_NETWORK === '1');
+      const friend = await page(
+        true,
+        process.env.ENGINE_VERIFY_MIXED_NETWORK === '1' || (lanPlayers > 0 && index >= lanPlayers),
+      );
       phones.push(friend);
-      await friend.goto(`${origin}/join/${code}`);
+      await friend.goto(`${playerOrigin(index)}/join/${code}`);
       await friend.locator('#nickname').fill(`朋友 ${index}`);
       await friend.locator('#join-button').tap();
       await friend.locator('#ready-button').waitFor({ state: 'visible' });
@@ -795,8 +817,8 @@ try {
     }, concealedAtSource);
     assert.equal(
       initial.secure,
-      new URL(origin).protocol === 'https:' ||
-        ['127.0.0.1', 'localhost', '[::1]'].includes(new URL(origin).hostname),
+      new URL(playerOrigin(0)).protocol === 'https:' ||
+        ['127.0.0.1', 'localhost', '[::1]'].includes(new URL(playerOrigin(0)).hostname),
     );
     assert.equal(initial.ownId, created.playerId);
     assert(initial.ownCards > 0, 'own hand is visible');
@@ -976,10 +998,13 @@ try {
       });
       if (gateway) {
         const expectedRoute =
-          process.env.ENGINE_VERIFY_NO_RTC === '1' ||
-          (networkIndex > 0 && process.env.ENGINE_VERIFY_MIXED_NETWORK === '1')
-            ? 'internet'
-            : 'lan';
+          networkIndex < lanPlayers
+            ? 'local'
+            : process.env.ENGINE_VERIFY_NO_RTC === '1' ||
+                lanPlayers > 0 ||
+                (networkIndex > 0 && process.env.ENGINE_VERIFY_MIXED_NETWORK === '1')
+              ? 'internet'
+              : 'lan';
         await participant.waitForFunction(
           (route) => document.querySelector('#match-network')?.dataset.route === route,
           expectedRoute,
@@ -1082,6 +1107,86 @@ try {
       loadingProof.directDropKeptChannel = true;
       console.log(mode, 'local peer closed, same polling channel continued over public ingress');
     }
+    if (process.env.ENGINE_VERIFY_PUBLIC_DROP === '1') {
+      assert(gateway && party && lanPlayers > 0 && lanPlayers < humanCount);
+      const localFrames = gameFrames.slice(0, lanPlayers);
+      const localSeats = await Promise.all(
+        localFrames.map((frame) =>
+          frame.evaluate(() => ({
+            id: partyEngine.game.me.playerid,
+            channel: partyEngine.game.ws.channel,
+          })),
+        ),
+      );
+      await worker.evaluate(() => {
+        const receive = partyEngine.lib.message.server.auto;
+        partyEngine.proof.lanAutosDuringPublicDrop = [];
+        partyEngine.lib.message.server.auto = function (...args) {
+          partyEngine.proof.lanAutosDuringPublicDrop.push(this.id);
+          return receive.apply(this, args);
+        };
+      });
+      party.setInternetEntry('unavailable', '验证：公网中断，局域网继续对局');
+      const closed = once(gateway.server, 'close');
+      const ingressPort = gateway.server.address().port;
+      gateway.close();
+      await closed;
+      for (const localFrame of localFrames)
+        await localFrame.evaluate(() => partyEngine.ui.click.auto());
+      await worker.waitForFunction(
+        (seats) =>
+          seats.every((seat) => partyEngine.proof.lanAutosDuringPublicDrop.includes(seat.id)),
+        localSeats,
+      );
+      // Hold the public listener offline through its disconnect/retry path.
+      await phone.waitForTimeout(3000);
+      for (const [index, localFrame] of localFrames.entries()) {
+        const state = await localFrame.evaluate(async () => ({
+          id: partyEngine.game.me.playerid,
+          channel: partyEngine.game.ws.channel,
+          readyState: partyEngine.game.ws.readyState,
+          route: partyEngine.game.ws.route,
+          health: (await fetch('/api/health')).status,
+          publicStatus: (await (await fetch('/api/info')).json()).entry.status,
+        }));
+        assert.deepEqual({ id: state.id, channel: state.channel }, localSeats[index]);
+        assert.equal(state.readyState, 1);
+        assert.equal(state.route, 'local');
+        assert.equal(state.health, 200);
+        assert.equal(state.publicStatus, 'unavailable');
+      }
+      await new Promise((resolve) => gateway.server.listen(ingressPort, '127.0.0.1', resolve));
+      party.setInternetEntry(
+        'ready',
+        '验证：原公网入口恢复',
+        'https://preview-player.trycloudflare.com/',
+      );
+      for (let index = lanPlayers; index < phones.length; index++) {
+        await phones[index].waitForFunction(
+          () => {
+            const engine = document.querySelector('#game-frame')?.contentWindow?.partyEngine;
+            return engine?.game.me?.name && engine.game.ws?.readyState === 1;
+          },
+          {},
+          { timeout: 30000 },
+        );
+        gameFrames[index] = phones[index]
+          .frames()
+          .find((frame) => frame.url().includes('/engine/player/'));
+        await observeJudgeDisplay(gameFrames[index]);
+        await observePublicDisplay(gameFrames[index]);
+      }
+      loadingProof.publicDrop = {
+        localSeats: lanPlayers,
+        nativeAutosReceived: lanPlayers,
+        localConnectionsKept: true,
+        publicRecovered: true,
+      };
+      console.log(
+        mode,
+        'public listener interrupted and restored; LAN native actions and connections continued',
+      );
+    }
     const previousJudgeDisplays = [];
     if (process.env.ENGINE_VERIFY_RECONNECT) {
       previousJudgeDisplays.push(await gameFrame.evaluate(() => partyJudgeDisplayProof));
@@ -1147,7 +1252,9 @@ try {
         partyEngine.lib.config.game_speed = 'vvfast';
         partyEngine.lib.config.duration = 100;
       });
-      await activeGame.evaluate(() => partyEngine.ui.click.auto());
+      await activeGame.evaluate(() => {
+        if (!partyEngine._status.auto) partyEngine.ui.click.auto();
+      });
     }
     for (
       let elapsed = 0;
@@ -1293,6 +1400,17 @@ try {
       await phone.locator('#game-frame').waitFor({ state: 'detached' });
       console.log(mode, 'second native game completed in the same room');
     }
+    await Promise.all(
+      phones.map((participant) =>
+        participant.waitForFunction(
+          () =>
+            !document.querySelector('#my-seat')?.hidden &&
+            !document.querySelector('#leave-button')?.disabled,
+          {},
+          { timeout: 15000 },
+        ),
+      ),
+    );
     closingRooms.add(code);
     await phone.locator('#leave-button').tap();
     for (const friend of phones.slice(1)) await friend.locator('#leave-button').tap();
@@ -1321,6 +1439,9 @@ try {
     process.env.ENGINE_VERIFY_STALL_WEBSOCKET === '1' ? 'websocket-timeout' : '',
     process.env.ENGINE_VERIFY_PLAYER_URL ? 'public' : '',
     gateway ? 'lan-bridge' : '',
+    lanPlayers ? `${lanPlayers}lan-players` : '',
+    process.env.ENGINE_VERIFY_PUBLIC_DROP === '1' ? 'public-drop' : '',
+    workerDelay ? `worker-delay-${workerDelay}ms` : '',
     process.env.ENGINE_VERIFY_NO_RTC === '1' ? 'no-rtc' : '',
     party ? 'source' : 'portable',
   ]
@@ -1343,6 +1464,20 @@ try {
   );
   console.log(`Verified artifacts: ${artifactRoot}`);
 } catch (error) {
+  for (const context of contexts)
+    for (const page of context.pages())
+      console.log(
+        'page diagnostic',
+        await page
+          .evaluate(() => ({
+            url: location.pathname,
+            seatHidden: document.querySelector('#my-seat')?.hidden,
+            leaveDisabled: document.querySelector('#leave-button')?.disabled,
+            dialog: Boolean(document.querySelector('dialog[open]')),
+            message: document.querySelector('#message')?.textContent,
+          }))
+          .catch(() => 'closed'),
+      );
   for (const context of contexts)
     for (const page of context.pages())
       for (const frame of page.frames()) {
@@ -1372,6 +1507,9 @@ try {
                         ? {
                             readyState: partyEngine.game.ws.readyState,
                             polling: partyEngine.game.ws.polling ?? false,
+                            sequence: partyEngine.game.ws.sequence,
+                            queued: partyEngine.game.ws.outgoing?.map((packet) => packet.sequence),
+                            draining: partyEngine.game.ws.drainingActions,
                           }
                         : null,
                     }

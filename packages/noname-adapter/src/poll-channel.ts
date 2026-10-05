@@ -46,11 +46,14 @@ export class PollChannel {
     // Native actions emit several frames in adjacent tasks. One small window
     // avoids paying a public-network round trip for each of those frames.
     if ((this.pending || this.subscriber) && !this.flush)
-      this.flush = setTimeout(() => {
-        this.flush = undefined;
-        this.pending?.();
-        this.push();
-      }, 12);
+      this.flush = setTimeout(
+        () => {
+          this.flush = undefined;
+          this.pending?.();
+          this.push();
+        },
+        this.subscriber ? 0 : 12,
+      );
   }
   close(code = 1000, reason = '') {
     if (this.readyState !== 1) return;

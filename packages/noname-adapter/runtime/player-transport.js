@@ -46,6 +46,8 @@ export class PlayerTransport extends EventTarget {
   sequence = 0;
   received = 0;
   sending = Promise.resolve();
+  outgoing = [];
+  outgoingBytes = 0;
   channel = connectionId();
   samples = [];
   streamQueue = [];
@@ -313,17 +315,78 @@ export class PlayerTransport extends EventTarget {
       return;
     }
     const sequence = ++this.sequence;
-    this.sending = this.sending
-      .then(async () => {
-        const began = performance.now();
-        const route = this.route;
-        const transport = this.networkTransport();
-        await this.request('POST', { sequence, data }, `?channel=${this.channel}`);
-        if (route === this.route && transport === this.networkTransport())
-          this.reportNetwork(performance.now() - began);
-        window.dispatchEvent(new Event('party-action-ack'));
-      })
-      .catch(() => this.finish(1011, '连接中断，正在恢复原座位'));
+    const bytes = new TextEncoder().encode(data).byteLength;
+    this.outgoingBytes += bytes;
+    if (this.outgoing.length >= 512 || this.outgoingBytes > 4 * 1024 * 1024) {
+      this.finish(1011, '连接过慢，正在恢复原座位');
+      return;
+    }
+    const action = { sequence, data, bytes };
+    this.outgoing.push(action);
+    // A WebSocket preserves order itself. Adjacent native packets can travel
+    // together instead of each waiting one public RTT for the preceding ACK.
+    if (this.streamingActions && this.streamOpen && !window.parent?.partyLan?.connected)
+      this.sendStreamAction(action);
+    this.startActionDrain();
+  }
+  startActionDrain() {
+    if (this.drainingActions) return;
+    this.drainingActions = true;
+    this.sending = Promise.resolve()
+      .then(() => this.drainActions())
+      .catch(() => this.finish(1011, '连接中断，正在恢复原座位'))
+      .finally(() => {
+        this.drainingActions = false;
+        if (this.readyState === 1 && this.outgoing.length) this.startActionDrain();
+      });
+  }
+  sendStreamAction(action) {
+    if (action.pending) return;
+    action.began = performance.now();
+    action.route = this.route;
+    action.transport = this.networkTransport();
+    action.pending = this.streamRequest(`action-${action.sequence}`, {
+      type: 'action',
+      sequence: action.sequence,
+      data: action.data,
+    }).then(
+      () => true,
+      () => false,
+    );
+  }
+  async drainActions() {
+    while (this.readyState === 1 && this.outgoing.length) {
+      const action = this.outgoing[0];
+      if (this.streamOpen && !window.parent?.partyLan?.connected) {
+        this.streamingActions = true;
+        for (const queued of this.outgoing) this.sendStreamAction(queued);
+        if (!(await action.pending)) {
+          this.streamingActions = false;
+          this.stopStream();
+          // The last ACK may have been lost. Replay in order on the same
+          // channel; the server deduplicates packets already applied.
+          for (const queued of this.outgoing) delete queued.pending;
+          continue;
+        }
+      } else {
+        this.streamingActions = false;
+        action.began = performance.now();
+        action.route = this.route;
+        action.transport = this.networkTransport();
+        await this.request(
+          'POST',
+          { sequence: action.sequence, data: action.data },
+          `?channel=${this.channel}`,
+        );
+      }
+      if (this.readyState !== 1) return;
+      this.outgoing.shift();
+      this.outgoingBytes -= action.bytes;
+      if (action.route === this.route && action.transport === this.networkTransport())
+        this.reportNetwork(performance.now() - action.began);
+      window.dispatchEvent(new Event('party-action-ack'));
+    }
+    this.streamingActions = false;
   }
   reportNetwork(rtt, unstable = false) {
     if (Number.isFinite(rtt)) {
@@ -342,14 +405,29 @@ export class PlayerTransport extends EventTarget {
       transport: this.networkTransport(),
     };
     window.parent?.postMessage(network, location.origin);
-    if (globalThis.partyEngine?.setup?.playerStreaming)
+    const reportKey = `${network.route}:${network.transport}:${network.unstable}`;
+    if (
+      globalThis.partyEngine?.setup?.playerStreaming &&
+      !this.networkReporting &&
+      (reportKey !== this.networkReportKey || Date.now() - (this.networkReportedAt ?? 0) >= 8000)
+    ) {
+      this.networkReporting = true;
+      this.networkReportKey = reportKey;
+      this.networkReportedAt = Date.now();
+      const deadline = requestDeadline(this.abort.signal, 8000);
       void fetch(`/engine/network/${network.matchId}`, {
         method: 'POST',
         credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(network),
-        signal: this.abort.signal,
-      }).catch(() => {});
+        signal: deadline.signal,
+      })
+        .catch(() => {})
+        .finally(() => {
+          deadline.clear();
+          this.networkReporting = false;
+        });
+    }
   }
   networkTransport() {
     return ['lan', 'direct'].includes(this.route)
@@ -417,6 +495,8 @@ export class PlayerTransport extends EventTarget {
     clearInterval(this.networkTimer);
     this.abort.abort();
     this.stopStream();
+    this.outgoing = [];
+    this.outgoingBytes = 0;
     this.emit('close', new CloseEvent('close', { code, reason }));
   }
   close(code = 1000, reason = '') {

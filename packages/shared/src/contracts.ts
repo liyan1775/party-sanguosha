@@ -1,5 +1,5 @@
 export const APP_ID = 'party-sanguosha';
-export const APP_VERSION = '0.5.0';
+export const APP_VERSION = '0.5.1';
 
 export const MODES = [
   {
@@ -102,6 +102,8 @@ export interface ServerInfo {
 
 export interface EntryInfo {
   mode: 'lan' | 'internet';
+  /** Route used to reach this response, independent of public tunnel health. */
+  access?: 'lan' | 'internet';
   status: 'starting' | 'ready' | 'unavailable';
   message: string;
 }

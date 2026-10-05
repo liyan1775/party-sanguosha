@@ -47,10 +47,7 @@ while (true) {
       };
       party.server.once('error', onError);
       party.server.once('listening', onListening);
-      party.server.listen(
-        port,
-        entryMode === 'internet' ? '127.0.0.1' : (process.env.BIND_HOST ?? '0.0.0.0'),
-      );
+      party.server.listen(port, process.env.BIND_HOST ?? '0.0.0.0');
     });
     break;
   } catch (error) {
@@ -84,7 +81,7 @@ await writeFile(
       pid: process.pid,
       serverUrl,
       entryMode,
-      homeUrls: entryMode === 'lan' ? homeUrls : [],
+      homeUrls,
       startedAt: new Date().toISOString(),
     },
     null,
@@ -94,7 +91,7 @@ await writeFile(
 );
 await rename(temporarySession, path.join(runtime, 'session.json'));
 console.log(
-  `\n聚会三国杀 v${APP_VERSION}\n电脑服务页：${serverUrl}\n${entryMode === 'internet' ? '正在自动准备跨网络入口，验证通过后电脑页面显示二维码。' : homeUrls.length ? homeUrls.map((url) => `玩家主页：${url}`).join('\n') : '尚未检测到局域网 IPv4 地址，请连接 Wi-Fi 或开启电脑热点。'}\n玩家扫码进入主页后自行建房，电脑不占席位。\n保持电脑服务页开启，由手机房主开始对局。\n`,
+  `\n聚会三国杀 v${APP_VERSION}\n电脑服务页：${serverUrl}\n${homeUrls.length ? homeUrls.map((url) => `局域网玩家主页：${url}`).join('\n') : '尚未检测到局域网 IPv4 地址，请连接 Wi-Fi 或开启电脑热点。'}\n${entryMode === 'internet' ? '正在额外准备公网入口；局域网可立即扫码，公网状态不影响本地牌桌。\n' : ''}玩家扫码进入主页后自行建房，电脑不占席位。\n保持电脑服务页开启，由手机房主开始对局。\n`,
 );
 if (entryMode === 'internet') {
   const internet = managePublicEntry({

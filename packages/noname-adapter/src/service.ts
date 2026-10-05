@@ -24,6 +24,8 @@ type Match = {
   host?: WebSocket;
   players: Map<string, WebSocket | PollChannel>;
   polling: Map<string, PollChannel>;
+  pendingPlayers: { id: string; source: WebSocket | PollChannel; data: string }[];
+  pendingPlayerBytes: number;
   observer: ObserverState | null;
   networks: Map<string, PlayerNetwork>;
   resolve: () => void;
@@ -232,6 +234,8 @@ export class NativeNonameService implements EngineAdapter {
         state: 'starting',
         players: new Map(),
         polling: new Map(),
+        pendingPlayers: [],
+        pendingPlayerBytes: 0,
         observer: null,
         networks: new Map(),
         resolve: resolveStart,
@@ -246,6 +250,8 @@ export class NativeNonameService implements EngineAdapter {
     if (match.state === 'failed' || match.state === 'ended') return;
     const wasStarting = match.state === 'starting';
     match.state = 'failed';
+    match.pendingPlayers = [];
+    match.pendingPlayerBytes = 0;
     clearTimeout(match.timer);
     if (wasStarting) match.reject(new Error('Native rule worker unavailable'));
     this.emit({ type: 'failed', roomCode: match.setup.roomCode });
@@ -255,6 +261,8 @@ export class NativeNonameService implements EngineAdapter {
     for (const match of this.matches.values()) {
       if (match.setup.roomCode !== roomCode) continue;
       this.matches.delete(match.id);
+      match.pendingPlayers = [];
+      match.pendingPlayerBytes = 0;
       clearTimeout(match.timer);
       if (match.state === 'starting') match.reject(new Error('对局已由电脑结束'));
       match.host?.close(1000);
@@ -299,6 +307,27 @@ export class NativeNonameService implements EngineAdapter {
     send(match.host, { type: 'connect', id: playerId });
     return channel;
   }
+  private forwardPlayer(
+    match: Match,
+    id: string,
+    source: WebSocket | PollChannel,
+    data: string,
+  ): boolean {
+    if (match.players.get(id) !== source || source.readyState !== 1) return false;
+    if (match.host?.readyState === WebSocket.OPEN) {
+      send(match.host, { type: 'message', id, data });
+      return true;
+    }
+    // Phones can load before the rule iframe, especially on LAN. Acknowledged
+    // initialization must not disappear while the worker is still starting.
+    if (match.state !== 'starting') return false;
+    const bytes = Buffer.byteLength(data);
+    if (match.pendingPlayers.length >= 512 || match.pendingPlayerBytes + bytes > 4 * 1024 * 1024)
+      return false;
+    match.pendingPlayers.push({ id, source, data });
+    match.pendingPlayerBytes += bytes;
+    return true;
+  }
   private action(match: Match, channel: PollChannel, sequence: unknown, data: unknown) {
     channel.touch();
     if (
@@ -313,8 +342,11 @@ export class NativeNonameService implements EngineAdapter {
       return 403;
     }
     if (sequence === channel.incoming + 1) {
+      if (!this.forwardPlayer(match, channel.playerId, channel, data)) {
+        channel.close(1011, '对局服务暂时不可用，正在恢复原座位');
+        return 503;
+      }
       channel.incoming = sequence as number;
-      send(match.host, { type: 'message', id: channel.playerId, data });
     }
     return 200;
   }
@@ -369,6 +401,11 @@ export class NativeNonameService implements EngineAdapter {
           }
           match.host = ws;
           for (const id of match.players.keys()) send(ws, { type: 'connect', id });
+          for (const packet of match.pendingPlayers)
+            if (match.players.get(packet.id) === packet.source && packet.source.readyState === 1)
+              send(ws, { type: 'message', id: packet.id, data: packet.data });
+          match.pendingPlayers = [];
+          match.pendingPlayerBytes = 0;
           ws.on('message', (bytes) => {
             try {
               const message = JSON.parse(bytes.toString()) as {
@@ -449,7 +486,7 @@ export class NativeNonameService implements EngineAdapter {
                 }
                 const status = this.action(match, channel, body.sequence, body.data);
                 send(ws, { type: 'ack', sequence: body.sequence, status });
-                if (status !== 200) ws.close(1008, '无效对局操作');
+                if (status !== 200) ws.close(status === 503 ? 1011 : 1008, '对局操作未接受');
               } catch {
                 ws.close(1008, '无效对局操作');
               }
@@ -470,7 +507,7 @@ export class NativeNonameService implements EngineAdapter {
               ws.close(1008, '无效对局操作');
               return;
             }
-            send(match.host, { type: 'message', id, data });
+            if (!this.forwardPlayer(match, id, ws, data)) ws.close(1011, '对局服务暂时不可用');
           });
           ws.on('close', () => {
             if (match.players.get(id) !== ws) return;

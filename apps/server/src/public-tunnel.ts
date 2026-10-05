@@ -105,13 +105,16 @@ export function managePublicEntry(options: {
   async function start() {
     if (closed || running) return;
     if (currentUrl && options.hasRooms()) {
-      options.update('unavailable', '公网入口已中断。结束当前牌桌后双击停止，再启动并分享新码。');
+      options.update(
+        'unavailable',
+        '公网入口已中断，局域网仍可扫码和对局。结束当前牌桌后双击停止，再启动并分享新的公网码。',
+      );
       return;
     }
     running = true;
     controller = new AbortController();
     const { signal } = controller;
-    options.update('starting', '正在准备跨网络入口，请稍候…');
+    options.update('starting', '正在准备跨网络入口，局域网可立即扫码…');
     try {
       const [{ executable, configPath }, ingressPort] = await Promise.all([
         ensureConnector(options.root, signal),
@@ -189,11 +192,11 @@ export function managePublicEntry(options: {
       }
       if (!ready || !currentUrl)
         throw new Error(
-          '跨网络入口暂时无法连接。请确认电脑联网，再双击启动重试；同一 Wi-Fi 可用「启动局域网聚会三国杀」。',
+          '跨网络入口暂时无法连接，局域网仍可扫码和对局。请确认电脑联网，再双击启动重试公网入口。',
         );
       options.update(
         'ready',
-        'Wi-Fi 或手机流量均可扫码。整局保持电脑开机、联网和页面开启。',
+        '跨网络入口已就绪。其他 Wi-Fi 或手机流量的朋友使用此码；同 Wi-Fi 优先使用局域网码。',
         currentUrl,
       );
       console.log(`跨网络主页已就绪：${currentUrl}`);
@@ -202,7 +205,9 @@ export function managePublicEntry(options: {
       while (!signal.aborted) {
         await delay(12000, undefined, { signal });
         if (!child || child.exitCode !== null || child.signalCode !== null)
-          throw new Error('联网组件已退出。请重新双击启动；新入口需要分享新码。');
+          throw new Error(
+            '联网组件已退出，局域网仍可扫码和对局。请重新双击启动公网入口；新公网码需要重新分享。',
+          );
         const reachable =
           (await publicHealthMatches(currentUrl, options.instanceId, signal)) &&
           (await verifyRealtime(currentUrl, signal));
@@ -211,7 +216,7 @@ export function managePublicEntry(options: {
           available = false;
           options.update(
             'unavailable',
-            '跨网络入口暂时中断，正在等待恢复。请保持电脑联网，恢复后继续使用原码。',
+            '跨网络入口暂时中断，原码保留，局域网可继续扫码和对局。请保持电脑联网，恢复后继续使用原公网码。',
           );
           await saveLog();
         } else if (reachable && !available) {

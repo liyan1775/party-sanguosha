@@ -3,12 +3,15 @@ import { mkdir } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import type { RoomView } from '../../packages/shared/src/contracts.js';
 import { createPartyServer } from '../../apps/server/src/server.js';
+import { createPublicGateway } from '../../apps/server/src/public-gateway.js';
 
 async function withLobby(
   browser: Browser,
   scenario: (fixture: {
     party: ReturnType<typeof createPartyServer>;
     base: string;
+    publicBase: string;
+    gateway: ReturnType<typeof createPublicGateway> | null;
     page: (desktop?: boolean) => Promise<Page>;
   }) => Promise<void>,
   internet = false,
@@ -23,12 +26,19 @@ async function withLobby(
   const address = party.server.address();
   if (!address || typeof address === 'string') throw new Error('No server address');
   const base = `http://127.0.0.1:${address.port}`;
+  const gateway = internet ? createPublicGateway(address.port) : null;
+  if (gateway) await new Promise<void>((resolve) => gateway.server.listen(0, '127.0.0.1', resolve));
+  const ingress = gateway?.server.address();
+  const publicBase =
+    ingress && typeof ingress === 'object' ? `http://127.0.0.1:${ingress.port}` : base;
   const contexts: BrowserContext[] = [];
   const errors: string[] = [];
   try {
     await scenario({
       party,
       base,
+      publicBase,
+      gateway,
       page: async (desktop = false) => {
         const context = await browser.newContext({
           viewport: desktop ? { width: 1440, height: 1050 } : { width: 390, height: 844 },
@@ -49,6 +59,7 @@ async function withLobby(
     expect(errors).toEqual([]);
   } finally {
     for (const context of contexts) await context.close();
+    gateway?.close();
     party.closeStreams();
     party.server.closeAllConnections();
     await new Promise<void>((resolve) => party.server.close(() => resolve()));
@@ -63,12 +74,14 @@ async function createRoom(page: Page, base: string, nickname: string): Promise<s
   return page.url().split('/').at(-1)!;
 }
 
-async function checkQr(page: Page, roomCode?: string): Promise<string> {
-  await expect(page.locator('#qr')).toBeVisible();
+async function checkQr(page: Page, roomCode?: string, prefix = ''): Promise<string> {
+  await expect(page.locator(`#${prefix}qr`)).toBeVisible();
   await expect
-    .poll(() => page.locator('#qr').evaluate((image) => (image as HTMLImageElement).naturalWidth))
+    .poll(() =>
+      page.locator(`#${prefix}qr`).evaluate((image) => (image as HTMLImageElement).naturalWidth),
+    )
     .toBeGreaterThan(0);
-  const url = await page.locator('#join-url').inputValue();
+  const url = await page.locator(`#${prefix}join-url`).inputValue();
   expect(new URL(url).pathname).toBe(roomCode ? `/join/${roomCode}` : '/');
   expect(new URL(url).hash).toBe('');
   return url;
@@ -202,25 +215,26 @@ test('电脑控制台管理两桌，安全显示昵称、移除等待席位和�
   });
 });
 
-test('跨网络电脑页等待验证才显示码，手机通过 HTTP 更新准备与房主交接，断网时收码', async ({
+test('双码电脑页立即提供局域网，公网等待验证；公网手机 HTTP 更新、交接和中断保留原码', async ({
   browser,
 }) => {
   await withLobby(
     browser,
-    async ({ party, base, page }) => {
+    async ({ party, base, publicBase, page }) => {
       const computer = await page(true);
       await computer.goto(base + '/server');
-      await expect(computer.locator('#qr')).toBeHidden();
+      expect(await checkQr(computer)).toBe('http://192.168.1.100:3000/');
+      await expect(computer.locator('#internet-qr')).toBeHidden();
       await expect(computer.locator('#entry-status')).toContainText('正在准备');
       const publicUrl = 'https://browser-party.trycloudflare.com/';
       party.setInternetEntry('ready', '跨网络可扫码', publicUrl);
-      await expect(computer.locator('#join-url')).toHaveValue(publicUrl);
-      await checkQr(computer);
-      await expect(computer.locator('#network-address')).toBeHidden();
+      await expect(computer.locator('#internet-join-url')).toHaveValue(publicUrl);
+      await checkQr(computer, undefined, 'internet-');
+      await expect(computer.locator('#internet-network-address')).toBeHidden();
       const owner = await page();
-      const code = await createRoom(owner, base, '公网房主');
+      const code = await createRoom(owner, publicBase, '公网房主');
       const friend = await page();
-      await joinRoom(friend, base, code, '其他网络朋友');
+      await joinRoom(friend, publicBase, code, '其他网络朋友');
       await friend.locator('#ready-button').click();
       await expect(owner.locator('#players')).toContainText('已准备');
       await friend.locator('#share-button').click();
@@ -230,21 +244,93 @@ test('跨网络电脑页等待验证才显示码，手机通过 HTTP 更新准�
       await owner.locator('#leave-button').click();
       await expect(friend.locator('#my-role')).toHaveText('你是房主，也参加这一局');
       party.setInternetEntry('unavailable', '公网连接中断');
-      await expect(computer.locator('#qr')).toBeHidden();
-      await expect(computer.locator('#join-url')).toHaveValue('');
+      expect(await checkQr(computer)).toBe('http://192.168.1.100:3000/');
+      await expect(computer.locator('#internet-join-url')).toHaveValue(publicUrl);
+      await checkQr(computer, undefined, 'internet-');
+      await expect(computer.locator('#internet-qr-hint')).toContainText('原码保留');
       await friend.locator('#share-button').click();
-      await expect(friend.locator('#qr')).toBeHidden();
-      await expect(friend.locator('#qr-placeholder')).toHaveText('公网连接中断');
+      expect(await checkQr(friend, code)).toBe(new URL(`/join/${code}`, publicUrl).href);
+      await expect(friend.locator('#qr-hint')).toContainText('原码保留');
       await friend.locator('#close-share').click();
       party.setInternetEntry('ready', '原入口恢复', publicUrl);
-      await expect(computer.locator('#join-url')).toHaveValue(publicUrl);
+      await expect(computer.locator('#internet-join-url')).toHaveValue(publicUrl);
       await friend.reload();
       await expect(friend.locator('#my-role')).toHaveText('你是房主，也参加这一局');
       await expect(friend.locator('#ready-button')).toBeEnabled();
       const popup = await page();
-      await popup.goto(`${base}/join/${code}`);
+      await popup.goto(`${publicBase}/join/${code}`);
       await friend.locator('#leave-button').click();
       await expect(popup.locator('#connection')).toHaveText('房间已关闭');
+    },
+    true,
+  );
+});
+
+test('四个局域网成员与一个公网成员同桌，切断公网后局域网仍可入座、设置和准备，两码不重载', async ({
+  browser,
+}) => {
+  await withLobby(
+    browser,
+    async ({ party, base, publicBase, gateway, page }) => {
+      const publicUrl = 'https://mixed-party.trycloudflare.com/';
+      party.setInternetEntry('ready', '跨网络可扫码', publicUrl);
+      const computer = await page(true);
+      let qrRequests = 0;
+      computer.on('request', (request) => {
+        if (new URL(request.url()).pathname === '/api/qr.svg') qrRequests++;
+      });
+      await computer.goto(base + '/server');
+      const lanQr = await checkQr(computer);
+      expect(await checkQr(computer, undefined, 'internet-')).toBe(publicUrl);
+      const owner = await page();
+      const code = await createRoom(owner, base, '局域网房主');
+      const locals = [owner];
+      for (let index = 1; index < 4; index++) {
+        const local = await page();
+        await joinRoom(local, base, code, `同 Wi-Fi ${index}`);
+        locals.push(local);
+      }
+      const remote = await page();
+      await joinRoom(remote, publicBase, code, '另一家 Wi-Fi');
+      await expect(owner.locator('#player-counter')).toHaveText('5 / 5 席');
+      expect((await owner.request.get(base + '/api/info').then((r) => r.json())).entry.access).toBe(
+        'lan',
+      );
+      expect(
+        (await remote.request.get(publicBase + '/api/info').then((r) => r.json())).entry.access,
+      ).toBe('internet');
+      party.setInternetEntry('unavailable', '跨网络入口暂时中断，局域网继续可用');
+      gateway!.close();
+      await expect(computer.locator('#entry-status')).toContainText('暂时中断');
+      expect(await checkQr(computer)).toBe(lanQr);
+      expect(await checkQr(computer, undefined, 'internet-')).toBe(publicUrl);
+      await owner.getByLabel('武将范围').selectOption('advanced');
+      await owner.getByRole('button', { name: '保存房间设置' }).click();
+      await expect(locals[1]!.locator('#summary-details')).toContainText('进阶档');
+      await locals.pop()!.getByRole('button', { name: '离开房间', exact: true }).click();
+      const replacement = await page();
+      await joinRoom(replacement, base, code, '断公网后入座');
+      locals.push(replacement);
+      for (const local of locals) await local.locator('#ready-button').click();
+      await expect
+        .poll(
+          () =>
+            party.lobby
+              .get(code)
+              .snapshot()
+              .players.filter((player) => player.ready).length,
+        )
+        .toBe(4);
+      await replacement.locator('#share-button').click();
+      expect(new URL(await checkQr(replacement, code)).hostname).toBe('192.168.1.100');
+      await replacement
+        .locator('#network-address')
+        .selectOption(new URL(`/join/${code}`, publicUrl).href);
+      await expect(replacement.locator('#qr-hint')).toContainText('原码保留');
+      for (let index = 0; index < 3; index++) await computer.locator('#refresh-address').click();
+      expect(qrRequests, '控制台状态刷新不重复下载相同二维码').toBe(2);
+      await mkdir('.runtime/previews', { recursive: true });
+      await computer.screenshot({ path: '.runtime/previews/hybrid-console.png', fullPage: true });
     },
     true,
   );

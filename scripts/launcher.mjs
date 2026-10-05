@@ -231,7 +231,7 @@ async function start() {
     }
     console.log(
       entryMode === 'internet'
-        ? '服务已启动，正在自动准备跨网络二维码。手机可用 Wi-Fi 或流量，无需设置网络。'
+        ? '服务已启动，局域网二维码可立即使用，正在额外准备公网入口。两种网络可以加入同一间房。'
         : '局域网服务已启动。手机连接同一 Wi-Fi，扫描电脑上的主页二维码。',
     );
     console.log(session.serverUrl);

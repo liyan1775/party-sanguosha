@@ -6,7 +6,7 @@ import {
   type ServerInfo,
 } from '../../../packages/shared/src/contracts.js';
 import { action, api, connection, element, frame, message, watchEvents } from './ui.js';
-import { bindQr, qrMarkup } from './qr.js';
+import { bindQr, isInternetInvite, qrMarkup } from './qr.js';
 import { startEngineSupervisor } from './engine-supervisor.js';
 import { renderObserver } from './observer-view.js';
 
@@ -33,8 +33,10 @@ export function showServerPage(info: ServerInfo): void {
       <div><span>进行中的对局</span><strong id="match-total">0 局</strong></div>
       <div><span>较慢的连接</span><strong id="slow-total">0 个</strong></div>
     </section>
-    <div class="server-grid console-grid"><section class="panel invite-panel"><div class="panel-heading"><h2>扫码进入主页</h2><span id="entry-label" class="tag">${internet ? '跨网络' : '局域网'}</span></div><p id="entry-status" class="hint" role="status"></p>${qrMarkup('玩家主页二维码', '微信扫一扫 · 进入聚会三国杀主页')}<button id="refresh-address" class="button text-button full-width" type="button">刷新连接状态</button><p class="hint">整局保持电脑开机、页面开启${internet ? '、联网' : ''}，并避免休眠。结束后双击「停止聚会三国杀」。</p></section>
+    <div class="server-grid console-grid"><section class="panel invite-panel"><div class="panel-heading"><h2>同 Wi-Fi 扫这个码</h2><span class="tag">局域网直连</span></div><p class="hint">同 Wi-Fi 或电脑热点的朋友直接连接本机。</p>${qrMarkup('局域网玩家主页二维码', '同 Wi-Fi · 直接进入聚会三国杀主页')}<button id="refresh-address" class="button text-button full-width" type="button">刷新连接状态</button></section>
+    <section id="internet-invite" class="panel invite-panel" ${internet ? '' : 'hidden'}><div class="panel-heading"><h2>其他网络扫这个码</h2><span class="tag">跨网络</span></div><p id="entry-status" class="hint" role="status"></p>${qrMarkup('跨网络玩家主页二维码', '其他 Wi-Fi / 手机流量 · 进入同一个大厅', 'internet-')}</section>
     <section class="panel console-rooms"><div class="panel-heading"><h2>全部房间</h2><span class="tag muted">仅本机管理</span></div><ul id="room-list" class="room-list"></ul><p id="empty-rooms" class="empty-rooms">还没有牌桌。朋友扫码后即可创建房间。</p><p id="console-status" class="hint" role="status"></p></section></div>
+    <p class="hint">两种入口的朋友可以加入同一间房。整局保持电脑开机、页面开启，并避免休眠；跨网络玩家还需要电脑联网。结束后双击「停止聚会三国杀」。</p>
     <section id="console-room" class="panel console-room" hidden><div class="panel-heading"><div><p class="eyebrow">房间详情与观战</p><h2 id="console-room-title"></h2></div><span id="console-room-phase" class="tag"></span></div><p id="console-room-settings" class="hint"></p><div id="console-players" class="console-players"></div><div id="console-actions" class="console-actions"></div><p class="hint">公开观战只显示已亮出的身份、体力、手牌数量、装备和公开动作。</p><div id="observer-view"></div></section>`,
   );
   let rooms: ConsoleRoom[] = [];
@@ -45,7 +47,17 @@ export function showServerPage(info: ServerInfo): void {
   let lastRooms = '';
   function renderEntry(updated: ServerInfo) {
     element('#entry-status').textContent = updated.entry.message;
-    bindQr(updated.homeUrls, undefined, updated.entry);
+    bindQr(
+      updated.homeUrls.filter((url) => !isInternetInvite(url)),
+      undefined,
+      {
+        mode: 'lan',
+        status: updated.homeUrls.length ? 'ready' : updated.entry.status,
+        message: updated.entry.message,
+      },
+    );
+    if (internet)
+      bindQr(updated.homeUrls.filter(isInternetInvite), undefined, updated.entry, 'internet-');
   }
   renderEntry(info);
   connection(true, '服务在线');

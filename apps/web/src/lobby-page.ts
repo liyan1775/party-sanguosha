@@ -78,6 +78,6 @@ export function showHomePage(info: ServerInfo, session: SessionView): void {
         })
         .catch(() => {});
     },
-    info.entry.mode === 'internet',
+    (info.entry.access ?? info.entry.mode) === 'internet',
   );
 }

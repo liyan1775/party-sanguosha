@@ -164,6 +164,80 @@ test('公网推送接管正在等待的 HTTP 读取；推送中断后同通道�
   assert.equal(reads, 2);
 });
 
+test('公网连续动作无需逐条等待 ACK，丢失确认后按序重试，不重复提交且保留原通道', async (t) => {
+  globals(t, {
+    WebSocket: class {},
+    window: Object.assign(new EventTarget(), { parent: { postMessage: () => {} } }),
+    sessionStorage: { getItem: () => null },
+    location: { origin: 'http://fixture' },
+    CloseEvent: class extends Event {},
+  });
+  const { PlayerTransport } = await runtime('player-transport');
+  const socket = new PlayerTransport('ws://fixture/engine/socket/match/player');
+  socket.start = () => {};
+  socket.readyState = 1;
+  socket.polling = true;
+  socket.route = 'internet';
+  socket.streamOpen = true;
+  const acknowledgements = new Map<number, () => void>();
+  const applied: number[] = [];
+  const delivered: number[] = [];
+  let incoming = 0;
+  const apply = (sequence: number) => {
+    if (sequence === incoming + 1) {
+      incoming = sequence;
+      applied.push(sequence);
+    } else assert(sequence <= incoming, 'no gap or out-of-order actions');
+  };
+  socket.streamSocket = {
+    send: (json: string) => {
+      const packet = JSON.parse(json);
+      delivered.push(packet.sequence);
+      apply(packet.sequence);
+      acknowledgements.set(packet.sequence, () => {
+        const pending = socket.streamPending.get(`action-${packet.sequence}`);
+        clearTimeout(pending.timer);
+        socket.streamPending.delete(`action-${packet.sequence}`);
+        pending.resolve({ status: 200 });
+      });
+    },
+    close: () => {},
+  };
+  t.after(() => socket.finish(1000, ''));
+  const originalChannel = socket.channel;
+  socket.send('first');
+  await tick();
+  socket.send('second');
+  await tick();
+  assert.deepEqual(delivered, [1, 2], 'second packet already sent before first ACK');
+  acknowledgements.get(1)!();
+  await tick();
+  const retried: number[] = [];
+  socket.request = async (_method: string, body: { sequence: number }) => {
+    retried.push(body.sequence);
+    apply(body.sequence);
+    return {};
+  };
+  socket.stopStream();
+  let lateSent = false;
+  (globalThis as unknown as { window: EventTarget }).window.addEventListener(
+    'party-action-ack',
+    () => {
+      if (!socket.outgoing.length && !lateSent) {
+        lateSent = true;
+        queueMicrotask(() => socket.send('fourth-after-ack'));
+      }
+    },
+  );
+  socket.send('third');
+  await socket.sending;
+  await tick();
+  assert.deepEqual(retried, [2, 3, 4]);
+  assert.deepEqual(applied, [1, 2, 3, 4]);
+  assert.equal(socket.channel, originalChannel);
+  assert.equal(socket.readyState, 1);
+});
+
 async function promptFixture(t: TestContext) {
   let parent: { name: string };
   class Choice {
