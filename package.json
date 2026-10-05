@@ -1,0 +1,43 @@
+{
+  "name": "party-sanguosha",
+  "version": "0.4.2",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "start": "npm run build && node --use-env-proxy --env-file-if-exists=.env --import tsx apps/server/src/main.ts",
+    "dev": "npm run build && node --use-env-proxy --env-file-if-exists=.env --watch --import tsx apps/server/src/main.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test tests/*.test.ts",
+    "test:browser": "npm run build && playwright test",
+    "engine:prepare": "node --use-env-proxy scripts/prepare-noname-lab.mjs",
+    "engine:lab": "node packages/noname-adapter/lab/serve.mjs",
+    "engine:verify": "node scripts/verify-noname-lab.mjs",
+    "engine:check-definitions": "node scripts/check-native-definitions.mjs",
+    "engine:update-catalog": "node scripts/update-general-catalog.mjs",
+    "engine:update-audio": "node scripts/update-native-audio.mjs",
+    "engine:verify:rooms": "npm run build && npm run engine:check-definitions && node --import tsx scripts/verify-native-runtime.mjs",
+    "package:windows": "node --use-env-proxy scripts/package-windows.mjs",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "check": "npm run typecheck && npm test && npm run build && npm run format:check"
+  },
+  "dependencies": {
+    "qrcode": "1.5.4",
+    "ws": "8.22.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0",
+    "@types/node": "24.10.1",
+    "@types/qrcode": "1.5.6",
+    "@types/ws": "8.18.1",
+    "esbuild": "0.28.2",
+    "prettier": "3.9.9",
+    "sharp": "0.35.5",
+    "tsx": "4.23.15",
+    "typescript": "5.9.3"
+  }
+}

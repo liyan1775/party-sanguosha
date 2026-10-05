@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "status": "runtime-invariants",
+  "seatCountIncludesAI": true,
+  "identity": { "players": [5, 6, 7, 8], "variant": "classic" },
+  "doudizhu": {
+    "players": 3,
+    "variant": "sanguosha",
+    "landlordMaxHpBonus": 1,
+    "landlordSkills": ["feiyang", "bahu"],
+    "candidateEngineMode": "doudizhu",
+    "candidateEngineVariant": "normal",
+    "candidateFeiyangVersion": "online"
+  },
+  "versus": {
+    "players": 4,
+    "teams": [2, 2],
+    "candidateEngineMode": "versus",
+    "candidateEngineVariant": "2v2"
+  },
+  "duel": {
+    "players": 2,
+    "generalsPerPlayer": 1,
+    "replacementGenerals": false,
+    "candidateEngineMode": "single",
+    "candidateEngineVariant": "dianjiang"
+  }
+}

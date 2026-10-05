@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover"
+    />
+    <title>聚会三国杀对局</title>
+    <base href="/engine/core/" />
+    <style>
+      #engine-loading {
+        position: fixed;
+        inset: 0;
+        z-index: 2147483647;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        gap: 16px;
+        padding: 24px;
+        box-sizing: border-box;
+        background: #172723;
+        color: #faf7ee;
+        font:
+          16px/1.6 system-ui,
+          sans-serif;
+        text-align: center;
+      }
+      #engine-loading[hidden],
+      #loading-retry[hidden] {
+        display: none;
+      }
+      #loading-detail {
+        max-width: 560px;
+        margin: 0;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+        color: #d0dcd5;
+      }
+      #loading-progress {
+        width: min(80vw, 400px);
+        accent-color: #d9bd7e;
+      }
+      #loading-count {
+        color: #d0dcd5;
+        font-size: 14px;
+      }
+      #loading-retry {
+        padding: 10px 24px;
+        border: 0;
+        border-radius: 8px;
+        background: #d9bd7e;
+        color: #172723;
+        font: inherit;
+        cursor: pointer;
+      }
+      #window,
+      #window .name,
+      #window .identity,
+      #window .card,
+      #window .hp,
+      #window .control {
+        font-family: system-ui, 'Microsoft YaHei', sans-serif !important;
+      }
+      /* Health must be visible before any optional skin image arrives. */
+      .hp:not(.text):not(.actcount):not(.treasure):not([data-condition='hidden']) > div {
+        background-image: none !important;
+        background-color: #419e35 !important;
+        border: 1px solid #173b15 !important;
+        border-radius: 50% !important;
+      }
+      .hp[data-condition='mid']:not(.text) > div:not(.lost):not(.shield) {
+        background-color: #cfab24 !important;
+      }
+      .hp[data-condition='low']:not(.text) > div:not(.lost):not(.shield) {
+        background-color: #c73838 !important;
+      }
+      .hp:not(.text) > .lost {
+        background-color: #6b6b6b !important;
+        opacity: 0.6;
+      }
+      .hp:not(.text) > .shield {
+        background-color: #398aca !important;
+      }
+    </style>
+    <script type="importmap">
+      {
+        "imports": {
+          "noname": "/engine/core/noname.js",
+          "vue": "/engine/core/node_modules/.pnpm/vue@3.5.28/node_modules/vue/dist/vue.esm-browser.js",
+          "pinyin-pro": "/engine/core/node_modules/.pnpm/pinyin-pro@3.28.0/node_modules/pinyin-pro/dist/index.js",
+          "dedent": "/engine/core/node_modules/.pnpm/dedent@1.7.1/node_modules/dedent/dist/dedent.js"
+        }
+      }
+    </script>
+    <script type="module" src="/engine/runtime/bootstrap.js"></script>
+  </head>
+  <body>
+    <div id="engine-loading" role="status" aria-live="polite" data-state="loading">
+      <strong id="loading-status">正在准备对局，请稍候…</strong>
+      <progress id="loading-progress" max="6" value="0" aria-label="对局载入步骤"></progress>
+      <span id="loading-count">第 1 / 6 步</span>
+      <p id="loading-detail">首次进入需要载入本房间的游戏资源，请保持 Wi-Fi 连接。</p>
+      <button id="loading-retry" type="button" hidden>重新载入对局</button>
+    </div>
+  </body>
+</html>
