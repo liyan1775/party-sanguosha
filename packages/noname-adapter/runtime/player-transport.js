@@ -21,6 +21,7 @@ function requestDeadline(parent, milliseconds) {
   if (parent.aborted) abort();
   return {
     signal: controller.signal,
+    abort: () => controller.abort(),
     clear: () => {
       clearTimeout(timer);
       parent.removeEventListener('abort', abort);
@@ -47,6 +48,9 @@ export class PlayerTransport extends EventTarget {
   sending = Promise.resolve();
   channel = connectionId();
   samples = [];
+  streamQueue = [];
+  streamPending = new Map();
+  pingId = 0;
   constructor(url) {
     super();
     this.url = url;
@@ -54,9 +58,16 @@ export class PlayerTransport extends EventTarget {
     this.key = 'party_http_transport';
     this.route = globalThis.partyEngine?.setup?.playerNetwork === 'internet' ? 'internet' : 'local';
     if (this.route === 'internet')
-      window.parent.addEventListener('party-lan-ready', () => this.currentRead?.abort(), {
-        signal: this.abort.signal,
-      });
+      window.parent.addEventListener(
+        'party-lan-ready',
+        () => {
+          this.currentRead?.abort();
+          this.stopStream();
+        },
+        {
+          signal: this.abort.signal,
+        },
+      );
     queueMicrotask(() => this.start());
     window.addEventListener('pagehide', () => this.close(), { once: true });
   }
@@ -71,7 +82,7 @@ export class PlayerTransport extends EventTarget {
       try {
         const local = window.parent?.partyLan;
         if (this.route !== 'local' && local?.connected) {
-          this.setRoute('lan');
+          this.setRoute(local.route ?? 'lan');
           const response = await local.request(method, `${this.path}${query}`, body);
           if (response.status >= 400 && response.status < 500) {
             this.finish(response.status === 403 ? 1008 : 1011, '对局连接已失效');
@@ -80,7 +91,13 @@ export class PlayerTransport extends EventTarget {
           if (response.status !== 200) throw new Error('Local connection unavailable');
           return response.body;
         }
-        if (this.route === 'lan') this.setRoute('internet');
+        if (['lan', 'direct'].includes(this.route)) this.setRoute('internet');
+        if (this.route === 'internet' && this.polling && !this.streamOpen) this.startStream();
+        if (this.streamOpen) {
+          if (method === 'GET') return await this.readStream();
+          if (method === 'POST' && Number.isSafeInteger(body?.sequence))
+            return await this.streamRequest(`action-${body.sequence}`, { type: 'action', ...body });
+        }
         if (method === 'GET') this.currentRead = deadline;
         const response = await fetch(`${this.path}${query}`, {
           method,
@@ -99,15 +116,108 @@ export class PlayerTransport extends EventTarget {
       } catch (error) {
         failure = error;
         if (this.abort.signal.aborted) throw error;
-        if (method === 'GET' && deadline.signal.aborted && window.parent?.partyLan?.connected)
-          continue;
-        await new Promise((done) => setTimeout(done, 700 * (attempt + 1)));
+        if (window.parent?.partyLan?.connected || (method === 'GET' && this.streamOpen)) continue;
+        if (attempt + 1 < (retry ? 3 : 1))
+          await new Promise((done) => setTimeout(done, 200 * (attempt + 1)));
       } finally {
         deadline.clear();
         if (this.currentRead === deadline) this.currentRead = null;
       }
     }
     throw failure;
+  }
+  startStream() {
+    if (
+      !globalThis.partyEngine?.setup?.playerStreaming ||
+      sessionStorage.getItem(this.key) === '1' ||
+      window.parent?.partyLan?.connected ||
+      this.streamSocket ||
+      Date.now() - (this.streamTriedAt ?? 0) < 30000
+    )
+      return;
+    this.streamTriedAt = Date.now();
+    const socket = new NativeWebSocket(
+      `${this.url}?transport=stream&channel=${this.channel}&after=${this.received}`,
+    );
+    this.streamSocket = socket;
+    const timeout = setTimeout(() => this.stopStream(), 8000);
+    socket.onmessage = ({ data }) => {
+      try {
+        const packet = JSON.parse(data);
+        if (packet.type === 'opened') {
+          clearTimeout(timeout);
+          this.streamOpen = true;
+          this.samples = [];
+          this.currentRead?.abort();
+          void this.measureNetwork?.();
+          return;
+        }
+        if (packet.type === 'frames') {
+          this.streamQueue.push(packet);
+          if (this.streamQueue.length > 512) throw new Error('Stream congested');
+          this.streamReader?.resolve(this.streamQueue.shift());
+          this.streamReader = null;
+        } else if (packet.type === 'ack' || packet.type === 'pong') {
+          const key = packet.type === 'ack' ? `action-${packet.sequence}` : `ping-${packet.id}`;
+          const entry = this.streamPending.get(key);
+          if (!entry) return;
+          clearTimeout(entry.timer);
+          this.streamPending.delete(key);
+          if (packet.status && packet.status !== 200)
+            entry.reject(new Error('Game connection rejected'));
+          else entry.resolve(packet);
+        }
+      } catch (error) {
+        this.streamFailure = `帧处理失败：${error.message}`;
+        this.stopStream();
+      }
+    };
+    socket.onerror = () => {
+      this.streamFailure = 'WebSocket 连接失败';
+      this.stopStream();
+    };
+    socket.onclose = (event) => {
+      this.streamFailure = `${event.code} ${event.reason}`;
+      this.stopStream();
+      if (event.code === 1008) this.finish(1008, event.reason || '对局连接已失效');
+    };
+    this.streamTimeout = timeout;
+  }
+  stopStream() {
+    this.streamOpen = false;
+    clearTimeout(this.streamTimeout);
+    const socket = this.streamSocket;
+    this.streamSocket = null;
+    if (socket) {
+      socket.onopen = socket.onmessage = socket.onerror = socket.onclose = null;
+      socket.close();
+    }
+    this.streamQueue = [];
+    this.streamReader?.reject(new Error('Stream closed'));
+    this.streamReader = null;
+    for (const entry of this.streamPending.values()) {
+      clearTimeout(entry.timer);
+      entry.reject(new Error('Stream closed'));
+    }
+    this.streamPending.clear();
+  }
+  readStream() {
+    this.streamSocket.send(JSON.stringify({ type: 'ack', after: this.received }));
+    if (this.streamQueue.length) return Promise.resolve(this.streamQueue.shift());
+    return new Promise((resolve, reject) => {
+      this.streamReader = { resolve, reject };
+    });
+  }
+  streamRequest(key, packet) {
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => this.stopStream(), 8000);
+      this.streamPending.set(key, { resolve, reject, timer });
+      try {
+        this.streamSocket.send(JSON.stringify(packet));
+      } catch {
+        this.stopStream();
+      }
+    });
   }
   start() {
     if (this.readyState !== 0) return;
@@ -160,6 +270,7 @@ export class PlayerTransport extends EventTarget {
       if (opened.closed) throw new Error('Connection closed');
       this.polling = true;
       this.readyState = 1;
+      if (this.route === 'internet') this.startStream();
       this.startNetworkMonitor();
       this.emit('open', new Event('open'));
       while (this.readyState === 1) {
@@ -206,8 +317,10 @@ export class PlayerTransport extends EventTarget {
       .then(async () => {
         const began = performance.now();
         const route = this.route;
+        const transport = this.networkTransport();
         await this.request('POST', { sequence, data }, `?channel=${this.channel}`);
-        if (route === this.route) this.reportNetwork(performance.now() - began);
+        if (route === this.route && transport === this.networkTransport())
+          this.reportNetwork(performance.now() - began);
         window.dispatchEvent(new Event('party-action-ack'));
       })
       .catch(() => this.finish(1011, '连接中断，正在恢复原座位'));
@@ -220,16 +333,30 @@ export class PlayerTransport extends EventTarget {
     const measured = this.samples.length
       ? [...this.samples].sort((a, b) => a - b)[Math.floor(this.samples.length / 2)]
       : null;
-    window.parent?.postMessage(
-      {
-        type: 'party-network',
-        matchId: globalThis.partyEngine?.setup?.id,
-        route: this.route,
-        rtt: measured,
-        unstable,
-      },
-      location.origin,
-    );
+    const network = {
+      type: 'party-network',
+      matchId: globalThis.partyEngine?.setup?.id,
+      route: this.route,
+      rtt: measured,
+      unstable,
+      transport: this.networkTransport(),
+    };
+    window.parent?.postMessage(network, location.origin);
+    if (globalThis.partyEngine?.setup?.playerStreaming)
+      void fetch(`/engine/network/${network.matchId}`, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(network),
+        signal: this.abort.signal,
+      }).catch(() => {});
+  }
+  networkTransport() {
+    return ['lan', 'direct'].includes(this.route)
+      ? 'rtc'
+      : this.streamOpen || !this.polling
+        ? 'websocket'
+        : 'http';
   }
   setRoute(route) {
     if (this.route !== route) this.samples = [];
@@ -244,25 +371,33 @@ export class PlayerTransport extends EventTarget {
       const began = performance.now();
       const deadline = requestDeadline(this.abort.signal, 8000);
       let route = this.route;
+      let transport = this.networkTransport();
       try {
         const local = window.parent?.partyLan;
         if (this.polling && this.route !== 'local' && local?.connected) {
           const result = await local.request('GET', '/ping');
           if (result.status !== 200) throw new Error('Local connection unavailable');
-          this.setRoute('lan');
-          route = 'lan';
-        } else {
-          if (this.route === 'lan') this.setRoute('internet');
+          this.setRoute(local.route ?? 'lan');
           route = this.route;
-          const response = await fetch('/api/health', {
-            cache: 'no-store',
-            credentials: 'same-origin',
-            signal: deadline.signal,
-          });
-          if (!response.ok) throw new Error('Connection unavailable');
-          await response.arrayBuffer();
+          transport = 'rtc';
+        } else {
+          if (['lan', 'direct'].includes(this.route)) this.setRoute('internet');
+          route = this.route;
+          if (this.streamOpen) {
+            const id = ++this.pingId;
+            await this.streamRequest(`ping-${id}`, { type: 'ping', id });
+          } else {
+            const response = await fetch('/api/health', {
+              cache: 'no-store',
+              credentials: 'same-origin',
+              signal: deadline.signal,
+            });
+            if (!response.ok) throw new Error('Connection unavailable');
+            await response.arrayBuffer();
+          }
         }
-        if (route === this.route) this.reportNetwork(performance.now() - began);
+        if (route === this.route && transport === this.networkTransport())
+          this.reportNetwork(performance.now() - began);
       } catch {
         if (!this.abort.signal.aborted) this.reportNetwork(undefined, true);
       } finally {
@@ -271,6 +406,7 @@ export class PlayerTransport extends EventTarget {
       }
     };
     this.networkTimer = setInterval(measure, 8000);
+    this.measureNetwork = measure;
     window.addEventListener('online', measure, { signal: this.abort.signal });
     document.addEventListener('visibilitychange', measure, { signal: this.abort.signal });
     void measure();
@@ -280,6 +416,7 @@ export class PlayerTransport extends EventTarget {
     this.readyState = 3;
     clearInterval(this.networkTimer);
     this.abort.abort();
+    this.stopStream();
     this.emit('close', new CloseEvent('close', { code, reason }));
   }
   close(code = 1000, reason = '') {

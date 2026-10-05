@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 import { lib, get } from 'noname';
+import { installObserver } from './observer.js';
 
 export async function connectRuleHost() {
   const { setup } = globalThis.partyEngine;
@@ -49,4 +50,13 @@ export async function connectRuleHost() {
     socket.addEventListener('open', resolve, { once: true });
     socket.addEventListener('error', reject, { once: true });
   });
+  const update = installObserver((state) => {
+    if (socket.readyState === WebSocket.OPEN)
+      socket.send(JSON.stringify({ type: 'observer', state }));
+  });
+  const signal = globalThis.partyEngine.signal;
+  globalThis.partyEngine.signal = (type) => {
+    update();
+    signal(type);
+  };
 }

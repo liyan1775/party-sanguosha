@@ -168,6 +168,40 @@ test('电脑只展示主页码，手机建房参赛，任意成员展示直达�
   });
 });
 
+test('电脑控制台管理两桌，安全显示昵称、移除等待席位和关闭指定房间，不占玩家席位', async ({
+  browser,
+}) => {
+  await withLobby(browser, async ({ party, base, page }) => {
+    const computer = await page(true);
+    const owner = await page();
+    const friend = await page();
+    const other = await page();
+    await computer.goto(base + '/server');
+    const code = await createRoom(owner, base, '<img src=x>');
+    await joinRoom(friend, base, code, '朋友');
+    const otherCode = await createRoom(other, base, '另一桌');
+    await expect(computer.locator('#room-total')).toHaveText('2 间');
+    await expect(computer.locator('#console-room-title')).toContainText('<img src=x>');
+    expect(await computer.locator('#console-room-title img').count()).toBe(0);
+    const session = await computer.request.get(base + '/api/me');
+    expect(await session.json()).toEqual({ playerId: null, roomCode: null });
+    computer.on('dialog', (dialog) => void dialog.accept());
+    await computer
+      .locator('.console-player')
+      .filter({ hasText: '朋友' })
+      .getByRole('button', { name: '移除席位' })
+      .click();
+    await expect(friend.locator('#my-seat')).toBeHidden();
+    expect(party.lobby.get(code).snapshot().players.length).toBe(1);
+    await computer.getByRole('button', { name: '关闭房间', exact: true }).click();
+    await expect(computer.locator('#room-total')).toHaveText('1 间');
+    await expect(owner.locator('#connection')).toHaveText('房间已关闭');
+    expect(party.lobby.get(otherCode).snapshot().players.length).toBe(1);
+    await mkdir('.runtime/previews', { recursive: true });
+    await computer.screenshot({ path: '.runtime/previews/service-console.png', fullPage: true });
+  });
+});
+
 test('跨网络电脑页等待验证才显示码，手机通过 HTTP 更新准备与房主交接，断网时收码', async ({
   browser,
 }) => {

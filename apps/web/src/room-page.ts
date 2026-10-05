@@ -39,6 +39,7 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
   let horizontalTable = sessionStorage.getItem('party_table_view') !== 'portrait';
   let localConnection: ReturnType<typeof createLanConnection>;
   let localMatchAttempt: string | null = null;
+  let localAttemptAt = 0;
   const roomPath = `/api/rooms/${room.code}`;
 
   frame(
@@ -146,10 +147,11 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
       const milliseconds = Number.isFinite(data.rtt) ? `${Math.round(data.rtt)} ms` : '';
       networkStatus.textContent = data.unstable
         ? `网络不稳${milliseconds ? ` · ${milliseconds}` : ''}`
-        : `${data.route === 'lan' ? '局域网直连' : data.route === 'internet' ? '公网' : '局域网'} · ${milliseconds || '检测中'}${data.rtt >= 600 ? ' · 稍慢' : ''}`;
+        : `${data.route === 'lan' ? '局域网直连' : data.route === 'direct' ? '跨网络直连' : data.route === 'internet' ? '公网' : '局域网'} · ${milliseconds || '检测中'}${data.rtt >= 600 ? ' · 稍慢' : ''}`;
       networkStatus.classList.toggle('slow-network', data.unstable || data.rtt >= 600);
       networkStatus.dataset.route = data.route;
       networkStatus.dataset.rtt = String(data.rtt ?? '');
+      networkStatus.dataset.transport = data.transport ?? '';
     }
     if (event.data.type === 'party-loading') {
       element('#match-loading').hidden = event.data.failed || event.data.step === 6;
@@ -238,10 +240,12 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
       initial.entry?.mode === 'internet' &&
       room.engine.preload &&
       (!localConnection ||
-        (localConnection.closed && room.matchId && room.matchId !== localMatchAttempt))
+        (localConnection.closed &&
+          (room.matchId !== localMatchAttempt || Date.now() - localAttemptAt >= 30000)))
     ) {
       localConnection = createLanConnection(room.code);
       localMatchAttempt = room.matchId;
+      localAttemptAt = Date.now();
       Object.assign(window, { partyLan: localConnection });
     }
     const waiting = room.phase === 'waiting';

@@ -5,7 +5,13 @@ import { readFileSync } from 'node:fs';
 import { extname, isAbsolute, relative, resolve } from 'node:path';
 import { WebSocket, WebSocketServer } from 'ws';
 import type { EngineAdapter, EngineEvent, MatchSetup } from './index.js';
-import { APP_VERSION, type EngineStatus } from '../../shared/src/contracts.js';
+import {
+  APP_VERSION,
+  type EngineStatus,
+  type ObserverState,
+  type PlayerNetwork,
+} from '../../shared/src/contracts.js';
+import { sanitizeObserver } from './observer.js';
 import { EngineAssets } from './assets.js';
 import { isLocalRequest } from './access.js';
 import { PollChannel } from './poll-channel.js';
@@ -18,6 +24,8 @@ type Match = {
   host?: WebSocket;
   players: Map<string, WebSocket | PollChannel>;
   polling: Map<string, PollChannel>;
+  observer: ObserverState | null;
+  networks: Map<string, PlayerNetwork>;
   resolve: () => void;
   reject: (error: Error) => void;
   timer: NodeJS.Timeout;
@@ -224,6 +232,8 @@ export class NativeNonameService implements EngineAdapter {
         state: 'starting',
         players: new Map(),
         polling: new Map(),
+        observer: null,
+        networks: new Map(),
         resolve: resolveStart,
         reject,
         timer: setTimeout(() => this.fail(match), 180000),
@@ -246,6 +256,7 @@ export class NativeNonameService implements EngineAdapter {
       if (match.setup.roomCode !== roomCode) continue;
       this.matches.delete(match.id);
       clearTimeout(match.timer);
+      if (match.state === 'starting') match.reject(new Error('对局已由电脑结束'));
       match.host?.close(1000);
       for (const player of match.players.values()) player.close(1000);
     }
@@ -267,6 +278,45 @@ export class NativeNonameService implements EngineAdapter {
     const supplied = Buffer.from(value),
       expected = Buffer.from(this.hostToken);
     return supplied.length === expected.length && timingSafeEqual(supplied, expected);
+  }
+  observe(roomCode: string) {
+    const match = [...this.matches.values()].find((item) => item.setup.roomCode === roomCode);
+    return { observer: match?.observer ?? null, networks: [...(match?.networks.values() ?? [])] };
+  }
+  private openChannel(match: Match, id: string, playerId: string) {
+    let channel = match.polling.get(id);
+    if (channel) return channel.playerId === playerId ? channel : undefined;
+    const previous = match.players.get(playerId);
+    previous?.close(1000, '已在另一页面继续对局');
+    if (previous instanceof WebSocket) send(match.host, { type: 'close', id: playerId });
+    channel = new PollChannel(id, playerId, () => {
+      if (match.players.get(playerId) !== channel) return;
+      match.players.delete(playerId);
+      send(match.host, { type: 'close', id: playerId });
+    });
+    match.polling.set(id, channel);
+    match.players.set(playerId, channel);
+    send(match.host, { type: 'connect', id: playerId });
+    return channel;
+  }
+  private action(match: Match, channel: PollChannel, sequence: unknown, data: unknown) {
+    channel.touch();
+    if (
+      channel.readyState !== 1 ||
+      !Number.isSafeInteger(sequence) ||
+      (sequence as number) < 1 ||
+      (sequence as number) > channel.incoming + 1
+    )
+      return 409;
+    if (typeof data !== 'string' || !safeMessage(data)) {
+      channel.close(1008, '无效对局操作');
+      return 403;
+    }
+    if (sequence === channel.incoming + 1) {
+      channel.incoming = sequence as number;
+      send(match.host, { type: 'message', id: channel.playerId, data });
+    }
+    return 200;
   }
   attach(server: Server, membership: Membership) {
     this.membership = membership;
@@ -331,6 +381,11 @@ export class NativeNonameService implements EngineAdapter {
                 if (player?.readyState === WebSocket.OPEN) player.send(message.data);
               } else if (message.type === 'close' && message.id)
                 match.players.get(message.id)?.close();
+              else if (message.type === 'observer')
+                match.observer = sanitizeObserver(
+                  (message as unknown as { state: unknown }).state,
+                  match.setup,
+                );
               else if (message.type === 'started' && match.state === 'starting') {
                 match.state = 'playing';
                 clearTimeout(match.timer);
@@ -348,6 +403,60 @@ export class NativeNonameService implements EngineAdapter {
           });
         } else {
           const id = seat!.id;
+          if (url.searchParams.get('transport') === 'stream') {
+            const channelId = url.searchParams.get('channel') ?? '';
+            const after = Number(url.searchParams.get('after') ?? 0);
+            if (!/^[a-f0-9-]{36}$/.test(channelId)) {
+              ws.close(1008);
+              return;
+            }
+            const channel = this.openChannel(match, channelId, id);
+            if (!channel) {
+              ws.close(1008);
+              return;
+            }
+            send(ws, { type: 'opened' });
+            const off = channel.listen(after, (frame) => {
+              if (ws.bufferedAmount > 4 * 1024 * 1024) {
+                ws.close(1013, '连接过慢');
+                return;
+              }
+              send(ws, { type: 'frames', ...frame });
+            });
+            if (!off) {
+              ws.close(1008);
+              return;
+            }
+            ws.on('pong', () => channel.touch());
+            ws.on('message', (bytes) => {
+              if (
+                this.membership(match.setup.roomCode, cookie(request, 'party_player'))?.id !== id
+              ) {
+                ws.close(1008);
+                return;
+              }
+              try {
+                const body = JSON.parse(bytes.toString());
+                if (body.type === 'ack' && channel.acknowledge(body.after)) return;
+                if (body.type === 'ping') {
+                  channel.touch();
+                  send(ws, { type: 'pong', id: body.id });
+                  return;
+                }
+                if (body.type !== 'action') {
+                  ws.close(1008);
+                  return;
+                }
+                const status = this.action(match, channel, body.sequence, body.data);
+                send(ws, { type: 'ack', sequence: body.sequence, status });
+                if (status !== 200) ws.close(1008, '无效对局操作');
+              } catch {
+                ws.close(1008, '无效对局操作');
+              }
+            });
+            ws.once('close', off);
+            return;
+          }
           const previous = match.players.get(id);
           if (previous) {
             previous.close(1000, '已在另一页面继续对局');
@@ -446,19 +555,10 @@ export class NativeNonameService implements EngineAdapter {
       return;
     }
     if (request.method === 'POST' && body.open === true) {
+      channel ??= this.openChannel(match, id, seat.id);
       if (!channel) {
-        const previous = match.players.get(seat.id);
-        previous?.close(1000, '已在另一页面继续对局');
-        // Remove a replaced WebSocket before its asynchronous close callback.
-        if (previous instanceof WebSocket) send(match.host, { type: 'close', id: seat.id });
-        channel = new PollChannel(id, seat.id, () => {
-          if (match.players.get(seat.id) !== channel) return;
-          match.players.delete(seat.id);
-          send(match.host, { type: 'close', id: seat.id });
-        });
-        match.polling.set(id, channel);
-        match.players.set(seat.id, channel);
-        send(match.host, { type: 'connect', id: seat.id });
+        json(response, 403, {});
+        return;
       }
       channel.touch();
       json(response, 200, { channel: id, closed: channel.readyState !== 1 });
@@ -481,31 +581,61 @@ export class NativeNonameService implements EngineAdapter {
       json(response, 405, {});
       return;
     }
-    channel.touch();
-    const sequence = body.sequence;
-    if (
-      channel.readyState !== 1 ||
-      !Number.isSafeInteger(sequence) ||
-      (sequence as number) < 1 ||
-      (sequence as number) > channel.incoming + 1
-    ) {
-      json(response, 409, {});
-      return;
-    }
-    if (typeof body.data !== 'string' || !safeMessage(body.data)) {
-      channel.close(1008, '无效对局操作');
-      json(response, 403, {});
-      return;
-    }
-    if (sequence === channel.incoming + 1) {
-      channel.incoming = sequence as number;
-      send(match.host, { type: 'message', id: seat.id, data: body.data });
-    }
-    json(response, 200, { sequence });
+    const status = this.action(match, channel, body.sequence, body.data);
+    json(response, status, status === 200 ? { sequence: body.sequence } : {});
   }
   async handle(request: IncomingMessage, response: ServerResponse): Promise<boolean> {
     const url = new URL(request.url ?? '/', 'http://localhost');
     if (!url.pathname.startsWith('/engine/')) return false;
+    const network = /^\/engine\/network\/([\w-]+)$/.exec(url.pathname);
+    if (network && request.method === 'POST') {
+      const match = this.matches.get(network[1]!);
+      const seat = match && this.membership(match.setup.roomCode, cookie(request, 'party_player'));
+      if (
+        !match ||
+        !seat ||
+        !match.setup.seats.some((item) => item.kind === 'human' && item.id === seat.id)
+      ) {
+        json(response, 403, {});
+        return true;
+      }
+      let length = 0;
+      const parts = [];
+      for await (const chunk of request) {
+        length += chunk.length;
+        if (length > 2048) {
+          json(response, 413, {});
+          return true;
+        }
+        parts.push(Buffer.from(chunk));
+      }
+      try {
+        const body = JSON.parse(Buffer.concat(parts).toString('utf8'));
+        if (
+          !['local', 'lan', 'direct', 'internet'].includes(body.route) ||
+          !['rtc', 'http', 'websocket'].includes(body.transport)
+        )
+          throw new Error();
+        match.networks.set(seat.id, {
+          playerId: seat.id,
+          route: body.route,
+          transport: body.transport,
+          rtt:
+            typeof body.rtt === 'number' &&
+            Number.isFinite(body.rtt) &&
+            body.rtt >= 0 &&
+            body.rtt <= 60000
+              ? Math.round(body.rtt)
+              : null,
+          unstable: body.unstable === true,
+          updatedAt: Date.now(),
+        });
+        json(response, 200, {});
+      } catch {
+        json(response, 400, {});
+      }
+      return true;
+    }
     if (await this.lan.handle(request, response, url, cookie(request, 'party_player'))) return true;
     const polling = /^\/engine\/poll\/([\w-]+)$/.exec(url.pathname);
     if (polling) {
@@ -714,6 +844,7 @@ export class NativeNonameService implements EngineAdapter {
             role: worker ? 'worker' : 'player',
             playerId: worker ? null : seat!.id,
             playerPolling: true,
+            playerStreaming: true,
             playerNetwork: request.headers['x-party-ingress'] === 'public' ? 'internet' : 'lan',
             choicePrompts: true,
             assetBase: `/engine/core/${this.assetVersion}/`,
@@ -798,6 +929,7 @@ export class NativeNonameService implements EngineAdapter {
             'audio.js',
             'player-transport.js',
             'prompts.js',
+            'observer.js',
           ].includes(name)
         )
           throw new Error('Invalid runtime path');

@@ -1,5 +1,5 @@
 export const APP_ID = 'party-sanguosha';
-export const APP_VERSION = '0.4.2';
+export const APP_VERSION = '0.5.0';
 
 export const MODES = [
   {
@@ -123,6 +123,49 @@ export interface MembershipResult extends RoomInfo {
 
 export interface ApiError {
   error: { code: string; message: string };
+}
+
+/** Explicit public projection for the local observer; never native serialized state. */
+export interface ObserverState {
+  updatedAt: number;
+  round: number;
+  currentPlayerId: string | null;
+  ended: boolean;
+  players: {
+    id: string;
+    nickname: string;
+    general: string;
+    identity: string;
+    hp: number;
+    maxHp: number;
+    armor: number;
+    handCount: number;
+    dead: boolean;
+    linked: boolean;
+    turnedOver: boolean;
+    equipment: string[];
+    judgments: string[];
+  }[];
+  recent: string[];
+}
+
+export interface PlayerNetwork {
+  playerId: string;
+  route: 'local' | 'lan' | 'direct' | 'internet';
+  transport: 'websocket' | 'http' | 'rtc';
+  rtt: number | null;
+  unstable: boolean;
+  updatedAt: number;
+}
+
+export interface ConsoleRoom {
+  room: RoomView;
+  observer: ObserverState | null;
+  networks: PlayerNetwork[];
+}
+
+export interface ConsoleInfo {
+  rooms: ConsoleRoom[];
 }
 
 export function findMode(id: unknown) {

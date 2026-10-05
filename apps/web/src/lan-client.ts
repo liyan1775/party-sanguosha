@@ -1,14 +1,23 @@
-import { gather, wire, type RelayRequest, type RelayResponse } from './lan-peer.js';
+import {
+  gather,
+  wire,
+  peerConfiguration,
+  privatePeerAddress,
+  filterPeerDescription,
+  type RelayRequest,
+  type RelayResponse,
+} from './lan-peer.js';
 
 export function createLanConnection(roomCode: string) {
   if (typeof RTCPeerConnection !== 'function') return undefined;
-  const peer = new RTCPeerConnection({ iceServers: [] });
+  const peer = new RTCPeerConnection(peerConfiguration);
   const channel = peer.createDataChannel('party-local', { ordered: true });
   const abort = new AbortController();
   let id = '';
   let nextId = 0;
   let finished = false;
   let connected = false;
+  let route: 'lan' | 'direct' = 'direct';
   const pending = new Map<
     number,
     {
@@ -58,7 +67,7 @@ export function createLanConnection(roomCode: string) {
       }
     });
   }
-  const expiry = setTimeout(close, 18000);
+  const expiry = setTimeout(close, 30000);
   const heartbeat = setInterval(() => {
     if (connected)
       void request('GET', '/ping')
@@ -72,6 +81,26 @@ export function createLanConnection(roomCode: string) {
     connected = true;
     clearTimeout(expiry);
     window.dispatchEvent(new Event('party-lan-ready'));
+    void peer
+      .getStats()
+      .then((stats) => {
+        const pair = [...stats.values()].find(
+          (entry) =>
+            entry.type === 'candidate-pair' && entry.state === 'succeeded' && entry.nominated,
+        );
+        const local = pair && stats.get(pair.localCandidateId),
+          remote = pair && stats.get(pair.remoteCandidateId);
+        if (
+          local &&
+          remote &&
+          local.candidateType === 'host' &&
+          remote.candidateType === 'host' &&
+          (!local.address || privatePeerAddress(local.address)) &&
+          (!remote.address || privatePeerAddress(remote.address))
+        )
+          route = 'lan';
+      })
+      .catch(() => {});
   };
   channel.onclose = close;
   channel.onerror = close;
@@ -97,15 +126,19 @@ export function createLanConnection(roomCode: string) {
         void fetch(`/engine/lan/${id}`, { method: 'DELETE' }).catch(() => {});
         return;
       }
-      const response = await fetch(`/engine/lan/${id}`, {
-        credentials: 'same-origin',
-        cache: 'no-store',
-        signal: abort.signal,
-      });
-      if (!response.ok) throw new Error('Local discovery unavailable');
-      const { answer } = await response.json();
-      if (!answer) throw new Error('Local discovery unavailable');
-      await peer.setRemoteDescription(answer);
+      while (!finished) {
+        const response = await fetch(`/engine/lan/${id}`, {
+          credentials: 'same-origin',
+          cache: 'no-store',
+          signal: abort.signal,
+        });
+        if (!response.ok) throw new Error('Local discovery unavailable');
+        const { answer } = await response.json();
+        if (answer) {
+          await peer.setRemoteDescription(filterPeerDescription(answer));
+          break;
+        }
+      }
     } catch {
       close();
     }
@@ -118,6 +151,9 @@ export function createLanConnection(roomCode: string) {
     },
     get connected() {
       return connected;
+    },
+    get route() {
+      return route;
     },
     request,
     close,

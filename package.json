@@ -1,6 +1,6 @@
 {
   "name": "party-sanguosha",
-  "version": "0.4.2",
+  "version": "0.5.0",
   "private": true,
   "type": "module",
   "engines": {
@@ -13,6 +13,7 @@
     "typecheck": "tsc --noEmit",
     "test": "tsx --test tests/*.test.ts",
     "test:browser": "npm run build && playwright test",
+    "test:engine-api": "npm run build && node scripts/test-engine-api.mjs",
     "engine:prepare": "node --use-env-proxy scripts/prepare-noname-lab.mjs",
     "engine:lab": "node packages/noname-adapter/lab/serve.mjs",
     "engine:verify": "node scripts/verify-noname-lab.mjs",

@@ -16,6 +16,52 @@ export interface RelayResponse {
   body: unknown;
 }
 
+// Public STUN discovers an address only; game bytes remain peer-to-peer.
+export const peerConfiguration: RTCConfiguration = {
+  iceServers: [{ urls: 'stun:stun.cloudflare.com:3478' }],
+};
+
+export function privatePeerAddress(address: string): boolean {
+  return /^(?:[\w-]+\.local$|10\.|192\.168\.|172\.(?:1[6-9]|2\d|3[01])\.|f[cd][\da-f]{2}:|fe80:)/i.test(
+    address,
+  );
+}
+
+export function filterPeerDescription(
+  description: RTCSessionDescriptionInit,
+): RTCSessionDescriptionInit {
+  if (typeof description.sdp !== 'string') throw new Error('Invalid peer description');
+  return {
+    ...description,
+    sdp: description.sdp
+      .split('\r\n')
+      .filter((line) => {
+        if (!line.startsWith('a=candidate:')) return true;
+        const fields = line.split(' '),
+          address = fields[4] ?? '',
+          port = Number(fields[5]);
+        const ipv4 = address.split('.').map(Number);
+        const validIp = /^\d+\.\d+\.\d+\.\d+$/.test(address)
+          ? ipv4.every((part) => Number.isInteger(part) && part >= 0 && part <= 255) &&
+            ipv4[0]! > 0 &&
+            ipv4[0] !== 127 &&
+            ipv4[0]! < 224 &&
+            !(ipv4[0] === 169 && ipv4[1] === 254)
+          : /^(?:[23][\da-f]{3}:|f[cd][\da-f]{2}:|fe80:)[\da-f:]+$/i.test(address) ||
+            /^[\w-]+\.local$/i.test(address);
+        return (
+          fields[1] === '1' &&
+          fields[2]?.toLowerCase() === 'udp' &&
+          ['host', 'srflx'].includes(fields[7] ?? '') &&
+          validIp &&
+          port > 0 &&
+          port <= 65535
+        );
+      })
+      .join('\r\n'),
+  };
+}
+
 /** Reliable, ordered chunks also accommodate large eight-seat native snapshots. */
 export function wire(channel: RTCDataChannel, receive: (value: unknown) => void) {
   let parts: string[] = [];
@@ -67,10 +113,11 @@ export function wire(channel: RTCDataChannel, receive: (value: unknown) => void)
 
 export async function gather(peer: RTCPeerConnection) {
   if (peer.iceGatheringState !== 'complete')
-    await new Promise<void>((resolve, reject) => {
+    await new Promise<void>((resolve) => {
       const timer = setTimeout(() => {
         cleanup();
-        reject(new Error('Local discovery timed out'));
+        // A blocked STUN server must not discard already gathered LAN paths.
+        resolve();
       }, 3000);
       const changed = () => {
         if (peer.iceGatheringState === 'complete') {
@@ -85,20 +132,5 @@ export async function gather(peer: RTCPeerConnection) {
       peer.addEventListener('icegatheringstatechange', changed);
       changed();
     });
-  const description = peer.localDescription!.toJSON();
-  // No STUN/TURN services, public IPv6 paths or arbitrary non-local ICE probes.
-  description.sdp = description
-    .sdp!.split('\r\n')
-    .filter((line) => {
-      if (!line.startsWith('a=candidate:')) return true;
-      const fields = line.split(' ');
-      const address = fields[4] ?? '';
-      return (
-        fields[7] === 'host' &&
-        (/^[\w-]+\.local$/.test(address) ||
-          /^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|f[cd][\da-f]{2}:|fe80:)/i.test(address))
-      );
-    })
-    .join('\r\n');
-  return description;
+  return filterPeerDescription(peer.localDescription!.toJSON());
 }

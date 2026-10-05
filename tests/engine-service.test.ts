@@ -13,7 +13,7 @@ import type { MatchSetup } from '../packages/noname-adapter/src/index.js';
 
 async function fixture(t: TestContext) {
   const root = fileURLToPath(new URL('../', import.meta.url));
-  const engine = new NativeNonameService(root);
+  const engine = new NativeNonameService(process.env.PARTY_ENGINE_TEST_ROOT ?? root);
   const party = createPartyServer({ port: 0, webRoot: `${root}/apps/web`, adapter: engine });
   await new Promise<void>((resolve) => party.server.listen(0, '127.0.0.1', resolve));
   const address = party.server.address();
@@ -145,8 +145,16 @@ test('静态引擎资源可压缩和重新验证，私有设置始终禁止缓�
   assert.equal(setup.headers.get('cache-control'), 'no-store');
   assert.equal(setup.headers.get('etag'), null);
   const settings = await setup.json();
-  const pinned = await fetch(`${f.base}${settings.assetBase}card/standard.js`);
-  assert.match(pinned.headers.get('cache-control')!, /immutable/);
+  if (f.engine.status().preload) {
+    assert.equal(setup.status, 200);
+    const pinned = await fetch(`${f.base}${settings.assetBase}card/standard.js`);
+    assert.match(pinned.headers.get('cache-control')!, /immutable/);
+  } else {
+    // A clean source checkout does not contain ignored upstream assets.
+    // Continue testing runtime compression/cache/authentication above.
+    assert.equal((await fetch(`${f.base}/engine/preload`)).status, 503);
+    assert.equal(f.engine.status().ready, false);
+  }
   assert.equal(
     (await fetch(`${f.base}/engine/core/${'0'.repeat(40)}/card/standard.js`)).status,
     404,
@@ -180,6 +188,12 @@ test('电脑任务推送：仅本机建立宿主 cookie，任务变化立即推�
 
 test('大厅预加载清单仅有固定公共素材，武将档切换补齐定义，缩略图使用独立内容哈希', async (t) => {
   const f = await fixture(t);
+  if (!f.engine.status().preload) {
+    if (process.env.PARTY_REQUIRE_ENGINE === '1')
+      assert.fail('完整引擎 API 验证需要先准备固定资源并构建');
+    t.skip('纯源码检出未准备固定引擎；运行 test:engine-api 执行这项完整资源验证');
+    return;
+  }
   const beginner = await (await fetch(`${f.base}/engine/preload`)).json();
   const advanced = await (await fetch(`${f.base}/engine/preload?preset=advanced&mode=duel`)).json();
   assert(advanced.assets.length > beginner.assets.length);
@@ -284,6 +298,84 @@ test('HTTP 对局备用通道：每次请求认证，私有消息有序重取，
     1008,
   );
   assert.equal(forwarded, 1);
+});
+
+test('公网持续推送：无需逐批 GET；断开回 HTTP 保留座位、消息与动作去重', async (t) => {
+  const f = await fixture(t);
+  const worker = f.socket('worker', f.workerCookie);
+  await once(worker, 'open');
+  t.after(() => worker.terminate());
+  const channel = randomUUID();
+  const connection = once(worker, 'message');
+  const socket = new WebSocket(
+    `${f.base.replace('http:', 'ws:')}/engine/socket/${f.id}/player?transport=stream&channel=${channel}&after=0`,
+    { origin: f.base, headers: { Cookie: f.ownerCookie } },
+  );
+  t.after(() => socket.terminate());
+  const opened = once(socket, 'message');
+  await once(socket, 'open');
+  assert.equal(JSON.parse((await opened)[0].toString()).type, 'opened');
+  assert.equal(JSON.parse((await connection)[0].toString()).id, f.room.ownerId);
+  let forwarded = 0;
+  worker.on('message', (bytes) => {
+    if (JSON.parse(bytes.toString()).type === 'message') forwarded++;
+  });
+  const action = { sequence: 1, data: JSON.stringify(['result', {}]) };
+  const accepted = once(socket, 'message');
+  socket.send(JSON.stringify({ type: 'action', ...action }));
+  assert.equal(JSON.parse((await accepted)[0].toString()).status, 200);
+  for (const data of ['first-private-frame', 'second-private-frame']) {
+    const received = once(socket, 'message');
+    worker.send(JSON.stringify({ type: 'send', id: f.room.ownerId, data }));
+    const result = JSON.parse((await received)[0].toString());
+    assert.equal(result.type, 'frames');
+    assert.equal(result.messages[0].data, data);
+  }
+  const ping = once(socket, 'message');
+  socket.send(JSON.stringify({ type: 'ping', id: 7 }));
+  assert.deepEqual(JSON.parse((await ping)[0].toString()), { type: 'pong', id: 7 });
+  const closed = once(socket, 'close');
+  socket.close();
+  await closed;
+  const path = `${f.base}/engine/poll/${f.id}?channel=${channel}`;
+  const headers = { Cookie: f.ownerCookie, 'Content-Type': 'application/json' };
+  assert.equal(
+    (await fetch(path, { method: 'POST', headers, body: JSON.stringify(action) })).status,
+    200,
+  );
+  assert.equal(forwarded, 1);
+  const replay = await (await fetch(path + '&after=0', { headers })).json();
+  assert.deepEqual(
+    replay.messages.map((item: { data: string }) => item.data),
+    ['first-private-frame', 'second-private-frame'],
+  );
+  assert.equal((await fetch(path + '&after=0')).status, 403);
+  // Transport close alone must not tell the native rule worker to lose its seat.
+  assert.equal(forwarded, 1);
+  const network = await fetch(`${f.base}/engine/network/${f.id}`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({
+      route: 'direct',
+      transport: 'rtc',
+      rtt: 35,
+      playerId: 'forged',
+      hand: 'secret',
+    }),
+  });
+  assert.equal(network.status, 200);
+  assert.deepEqual(
+    f.engine.observe(f.room.code).networks.map(({ playerId, rtt }) => ({ playerId, rtt })),
+    [{ playerId: f.room.ownerId, rtt: 35 }],
+  );
+  worker.send(
+    JSON.stringify({
+      type: 'observer',
+      state: { round: 1, players: [], recent: [], storage: 'secret', deck: 'secret' },
+    }),
+  );
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  assert(!JSON.stringify(f.engine.observe(f.room.code)).includes('secret'));
 });
 
 test('HTTP 同一动作的相邻帧合批，保留重取与确认的顺序', async (t) => {

@@ -10,6 +10,7 @@ function allowed(request: IncomingMessage): boolean {
     return false;
   }
   return !(
+    url.pathname.startsWith('/api/console') ||
     ['/server', '/host', '/api/shutdown', '/api/internet/retry', '/engine/jobs'].includes(
       url.pathname,
     ) ||
@@ -25,9 +26,10 @@ export function createPublicGateway(port: number) {
     ...request.headers,
     'x-party-ingress': 'public',
     'x-party-control': '',
+    'x-party-relay': '',
     cookie: (request.headers.cookie ?? '')
       .split(';')
-      .filter((part) => !part.trim().startsWith('party_engine='))
+      .filter((part) => !/^(party_engine|party_console)=/.test(part.trim()))
       .join(';'),
   });
   const gateway = createServer((request, response) => {

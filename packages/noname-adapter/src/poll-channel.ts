@@ -1,5 +1,13 @@
 import type { ServerResponse } from 'node:http';
 
+export interface PollFrame {
+  messages: { sequence: number; data: string; sentAt: number }[];
+  serverTime: number;
+  closed: boolean;
+  code: number;
+  reason: string;
+}
+
 /** Private, bounded message queue. Callers must authenticate the seat on every request. */
 export class PollChannel {
   readonly id: string;
@@ -14,6 +22,8 @@ export class PollChannel {
   private messages: { sequence: number; data: string; sentAt: number }[] = [];
   private pending?: () => void;
   private flush: NodeJS.Timeout | undefined;
+  private subscriber?: (frame: PollFrame) => void;
+  private streamed = 0;
   constructor(
     id: string,
     playerId: string,
@@ -35,10 +45,11 @@ export class PollChannel {
     this.messages.push({ sequence: ++this.sequence, data, sentAt: Date.now() });
     // Native actions emit several frames in adjacent tasks. One small window
     // avoids paying a public-network round trip for each of those frames.
-    if (this.pending && !this.flush)
+    if ((this.pending || this.subscriber) && !this.flush)
       this.flush = setTimeout(() => {
         this.flush = undefined;
         this.pending?.();
+        this.push();
       }, 12);
   }
   close(code = 1000, reason = '') {
@@ -50,16 +61,46 @@ export class PollChannel {
     this.flush = undefined;
     this.disconnected();
     this.pending?.();
+    this.push();
+  }
+  acknowledge(after: number): boolean {
+    if (!Number.isSafeInteger(after) || after < 0 || after > this.sequence) return false;
+    this.touch();
+    while (this.messages[0] && this.messages[0].sequence <= after)
+      this.bytes -= Buffer.byteLength(this.messages.shift()!.data);
+    return true;
+  }
+  private frame(messages = this.messages): PollFrame {
+    return {
+      messages,
+      serverTime: Date.now(),
+      closed: this.readyState !== 1,
+      code: this.code,
+      reason: this.reason,
+    };
+  }
+  private push() {
+    if (!this.subscriber) return;
+    const messages = this.messages.filter((message) => message.sequence > this.streamed);
+    if (!messages.length && this.readyState === 1) return;
+    this.streamed = messages.at(-1)?.sequence ?? this.streamed;
+    this.subscriber(this.frame(messages));
+  }
+  listen(after: number, subscriber: (frame: PollFrame) => void): (() => void) | undefined {
+    if (!this.acknowledge(after)) return undefined;
+    this.subscriber = subscriber;
+    this.streamed = after;
+    this.push();
+    return () => {
+      if (this.subscriber === subscriber) delete this.subscriber;
+    };
   }
   read(after: number, response: ServerResponse) {
     this.touch();
-    if (!Number.isSafeInteger(after) || after < 0 || after > this.sequence) {
+    if (!this.acknowledge(after)) {
       response.writeHead(400);
       response.end();
       return;
-    }
-    while (this.messages[0] && this.messages[0].sequence <= after) {
-      this.bytes -= Buffer.byteLength(this.messages.shift()!.data);
     }
     this.pending?.();
     const finish = () => {
@@ -72,15 +113,7 @@ export class PollChannel {
         'Content-Type': 'application/json; charset=utf-8',
         'Cache-Control': 'no-store',
       });
-      response.end(
-        JSON.stringify({
-          messages: this.messages,
-          serverTime: Date.now(),
-          closed: this.readyState !== 1,
-          code: this.code,
-          reason: this.reason,
-        }),
-      );
+      response.end(JSON.stringify(this.frame()));
     };
     const timer = setTimeout(finish, 10000);
     this.pending = finish;

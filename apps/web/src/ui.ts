@@ -23,14 +23,19 @@ export function element<T extends HTMLElement = HTMLElement>(selector: string): 
   return result;
 }
 
-export async function api<T>(path: string, method = 'GET', body?: unknown): Promise<T> {
+export async function api<T>(
+  path: string,
+  method = 'GET',
+  body?: unknown,
+  headers: Record<string, string> = {},
+): Promise<T> {
   const deadline = requestDeadline(undefined, path.endsWith('/start') ? 190000 : 20000);
   try {
     const response = await fetch(path, {
       method,
       credentials: 'same-origin',
       signal: deadline.signal,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...headers },
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),
     });
     const data: T | ApiError = await response.json();

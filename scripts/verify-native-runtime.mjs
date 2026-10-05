@@ -7,6 +7,7 @@ import { chromium } from '@playwright/test';
 import { createPartyServer } from '../apps/server/src/server.ts';
 import { NativeNonameService } from '../packages/noname-adapter/src/service.ts';
 import { createPublicGateway } from '../apps/server/src/public-gateway.ts';
+import { APP_VERSION } from '../packages/shared/src/contracts.ts';
 import { chooseGeneral, playOneAction } from './native-ui-actions.mjs';
 import {
   verifyChoicePrompts,
@@ -190,7 +191,7 @@ async function page(mobile, remote = false) {
   if (mobile && process.env.ENGINE_VERIFY_HTTP === '1')
     await context.addInitScript(() => sessionStorage.setItem('party_http_transport', '1'));
   if (mobile && process.env.ENGINE_VERIFY_BLOCK_WEBSOCKET === '1')
-    await context.routeWebSocket('**/engine/socket/**/player', (socket) => socket.close());
+    await context.routeWebSocket('**/engine/socket/**/player*', (socket) => socket.close());
   if (mobile && process.env.ENGINE_VERIFY_STALL_WEBSOCKET === '1')
     await context.addInitScript(() => {
       const native = WebSocket;
@@ -957,7 +958,7 @@ try {
     assert(seatProof.additionalPresent);
     if (process.env.ENGINE_VERIFY_LEGACY_HOST === '1')
       assert(
-        (await computer.locator('footer').textContent()).includes('v0.4.2'),
+        (await computer.locator('footer').textContent()).includes(`v${APP_VERSION}`),
         '旧电脑页在载入新规则宿主前自动更新',
       );
     if (duplicateComputer)
@@ -982,6 +983,17 @@ try {
           (route) => document.querySelector('#match-network')?.dataset.route === route,
           expectedRoute,
         );
+        if (
+          expectedRoute === 'internet' &&
+          process.env.ENGINE_VERIFY_HTTP !== '1' &&
+          process.env.ENGINE_VERIFY_BLOCK_WEBSOCKET !== '1' &&
+          process.env.ENGINE_VERIFY_STALL_WEBSOCKET !== '1'
+        )
+          await participant.waitForFunction(
+            () =>
+              document.querySelector('#game-frame')?.contentWindow?.partyEngine?.game.ws
+                .streamOpen === true,
+          );
       }
       const active = participant.frames().find((frame) => frame.url().includes('/engine/player/'));
       await active.waitForFunction(() => {
@@ -993,10 +1005,50 @@ try {
           route: status.dataset.route,
           rtt: Number(status.dataset.rtt),
           text: status.textContent,
+          transport: status.dataset.transport,
         })),
       );
     }
     loadingProof.network = networkProof;
+    await computer.waitForFunction(
+      (code) =>
+        document.querySelector('#console-room-title')?.textContent.includes(code) &&
+        document.querySelectorAll('.observer-seat').length > 0,
+      created.room.code,
+    );
+    const publicView = await computer.evaluate(async (code) => {
+      const data = await (await fetch('/api/console')).json();
+      const entry = data.rooms.find((entry) => entry.room.code === code);
+      return {
+        observer: entry.observer,
+        computerSeat: (await (await fetch('/api/me')).json()).playerId,
+      };
+    }, created.room.code);
+    assert.equal(publicView.computerSeat, null);
+    assert.equal(publicView.observer.players.length, playerCount);
+    assert(
+      publicView.observer.players.every(
+        (player) =>
+          Number.isInteger(player.handCount) && !('hand' in player) && !('storage' in player),
+      ),
+    );
+    if (mode === 'identity')
+      assert(publicView.observer.players.some((player) => player.identity === '身份未公开'));
+    loadingProof.publicObserver = {
+      seats: publicView.observer.players.length,
+      computerHasSeat: false,
+      publicOnly: true,
+    };
+    await computer.screenshot({ path: `${artifactRoot}/${mode}-console.png`, fullPage: true });
+    if (process.env.ENGINE_VERIFY_STREAM_DROP === '1') {
+      const before = await gameFrame.evaluate(() => partyEngine.game.ws.channel);
+      await gameFrame.evaluate(() => partyEngine.game.ws.streamSocket.close());
+      await gameFrame.waitForFunction(
+        () => partyEngine.game.ws.streamOpen === false && partyEngine.game.ws.readyState === 1,
+      );
+      assert.equal(await gameFrame.evaluate(() => partyEngine.game.ws.channel), before);
+      loadingProof.streamDropKeptChannel = true;
+    }
     if (mode === 'doudizhu') {
       assert.equal(seatProof.landlord.hp, seatProof.landlord.characterHp + 1);
       assert(seatProof.landlord.feiyang && seatProof.landlord.bahu);
@@ -1309,6 +1361,12 @@ try {
                       event: partyEngine._status.event?.name,
                       importedMode: Object.keys(partyEngine.lib.imported.mode ?? {}),
                       audio: partyEngine.proof.audio,
+                      stream: {
+                        enabled: partyEngine.setup.playerStreaming,
+                        open: partyEngine.game.ws?.streamOpen,
+                        failure: partyEngine.game.ws?.streamFailure,
+                        forcedHttp: sessionStorage.getItem('party_http_transport'),
+                      },
                       transport: partyEngine.game.ws
                         ? {
                             readyState: partyEngine.game.ws.readyState,

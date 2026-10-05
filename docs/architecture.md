@@ -19,6 +19,8 @@ flowchart LR
 
 大厅与真实对局已接通。电脑页面不承担产品房主职责。手机房主是普通参赛席位加房间管理权限，不自动等同于引擎规则宿主。
 
+v0.5.0 的 `/server` 同时提供独立本机运维权限和公开观战，边界见 ADR-015/016；不把本机运维 cookie 用于手机房主 API。
+
 ## ADR-001：局域网电脑服务与规则宿主
 
 状态：v0.3.0 已正式接入四模式。
@@ -197,3 +199,33 @@ bundle 用内容哈希，其他引擎静态 URL 增加已校验的上游 commit�
 同浏览器电脑页用 Web Locks 持有唯一任务流/规则 iframe/RTC 接待；页面释放后等待页接续，原生服务端仍拒绝第二个规则 WebSocket。setup 声明 serverVersion，旧电脑页在尚无活动规则执行器且启动新 worker 前刷新，保证停启后的旧页能装载新版接待。待机直连过期后，新 match 可重新尝试，避免等待时间长或宿主更新后只能一直走公网。
 
 轻量 health/ping 与完成的动作 POST 测量真实往返，空长轮询等待不参与；线路改变重置样本，最近三次取中位数，八秒刷新，页面后台暂停，连接关闭清理。外层只接收同源、本人 iframe 与当前 matchId 的网络消息，用 textContent 显示线路/毫秒，600ms 起轻提示，失败提示不稳。等待操作元素显式覆盖原生 div 的 hidden 样式，超过 350ms 才显示、收包/POST 确认后收起，三秒上限，不预测规则结果。
+
+## ADR-014：最终选择提示与分支核对
+
+状态：v0.4.3 实现，验证范围见 handoff.md。
+
+原生 GameEvent.send 在手机按 `_args` 重新调用 Player 选择构造器，再应用 `_set`。宿主直接赋值、构造器根据宿主上下文生成的当前文字，以及随后才设置过滤器的默认响应文字，不能仅靠重新构造保持一致。`runtime/prompts.js` 在发送 choose、discardPlayerCard、gainPlayerCard 事件前同步 prompt、prompt2、choiceList、targetprompt、targetprompt2 的当前值；只接收文本、关闭值、原生动态函数或文本数组，不复制额外事件状态、卡牌或过滤器。按 `_set` 最后一项去重；函数保留原生计算时机，既有 privacy.js 与入站保护仍负责原协议。
+
+南蛮、万箭与决斗只在最终过滤器仍为固定版本的杀/闪名称判断、选择数量确定且提示仍为通用文字时补全要求；显式或关闭提示、不同过滤器保持原生。连续响应的剩余总数来自原生 prompt2，每次选择数量来自 selectCard，避免把无双的两次依次出牌写成一次选两张。乱武通过原事件名与原始文字识别。界挑衅按 `character/refresh.js` 的 `!result.bool || !player.hasHistory("damage", ...)` 条件补充造成伤害；界明策按虚拟 useCard 与两个原生 choiceList 分支补充文字。所有改动集中在适配器。
+
+`scripts/check-native-definitions.mjs` 在两档的静态依赖闭包及标准牌堆记录选择调用，新增无参 chooseToRespond 要求复核；结果位于忽略的 `.runtime/native-choice-audit.json`，可从固定引擎重新生成。这一检查覆盖静态入口，不证明动态获得技能、所有技能语义或扩展已穷尽正确。原生探针截获真实 Client JSON，保留逐接收者隐私过滤，在手机用原生 parsedResult 重建，再核对当前字段和对话框。进阶另外调用原生乱武/界乱武/界挑衅内容，只执行到首个选择构造便停止，比较两端合法目标；不推进牌、伤害或体力结算，该探针与完整对局分别记录。
+
+## ADR-015：跨网络直连与有确认的持续推送
+
+状态：v0.5.0；跨家庭 iPhone 微信往返仍待复测。
+
+既有逐席认证信令、私有 relay key 与 DTLS 通道保持，在两端加入 `stun:stun.cloudflare.com:3478` 发现公网 UDP 地址，依据 [Cloudflare 官方文档](https://developers.cloudflare.com/realtime/turn/)。STUN 只发现映射，游戏字节不经它转发；没有媒体权限、TURN、账号或收费中继。只接受 UDP host/srflx、合法单播 IP 或 mDNS，拒绝回环、广播、任意域名与 TCP；STUN 超时保留私网候选。选中候选对区分局域网/跨网络直连，失败继续公网，同局 30 秒后可重试。NAT/防火墙可能阻止直连，普通快照不公布候选或 key。
+
+公网新增 `/engine/socket/:matchId/player?transport=stream&channel=...&after=...`，与 HTTP/RTC 共用 PollChannel。服务连续推送序号帧，不等待逐批 GET 往返；客户端保留逐帧浏览器任务边界、确认/重取、512 帧/4MiB 队列限制。action 与 HTTP 共用白名单和去重，每次重新认证当前席位；流断开仅移除订阅，租约内原通道继续 HTTP。RTC 接管中止正在等待的公网读，不重入座；修复 deadline 缺少 abort 的漏点。隐私序列化和入站物理牌保护不变。
+
+持续推送以同条 WebSocket 应用 ping 测往返；RTC 用认证 ping，HTTP 用实际 POST/health，长轮询空等不计入。切换传输后丢弃旧传输的测量样本。玩家上报的线路、传输、RTT、不稳状态只显示在本机控制台，30 秒过期；它是客户端诊断，不是可信反作弊测量，不含 IP、牌值或 token。
+
+## ADR-016：本机控制台与显式公开观战
+
+状态：v0.5.0。
+
+本机 GET `/server` 建立独立随机 HttpOnly、SameSite=Strict、路径 `/api/console` 的 party_console cookie。管理读取/写入逐次检查回环、本机 Host、Origin/代理标记和 cookie，不复用停止 token 或玩家 cookie；公网代理封锁全部 `/api/console` 并剥除运维 cookie/relay 头。写入带当前房间 revision，UI 确认后发请求，过期点击拒绝。RoomStore 独立运维方法不借用房主入口；移除房主沿用真人交接。结束启动/关闭房间递增启动代次，旧确认/失败不能复活房间，其他房间不受影响。
+
+规则 iframe 的 observer.js 每 500ms 检查显式公开投影，变化才发送，从不读手牌牌面、牌堆、私人选择参数或技能 storage。只取常规公开武将/身份、体力/护甲、手牌数量、装备/判定区、回合；物理用牌/响应离开暗手牌后记录最多 12 条。Node observer.ts 再按席位/字段白名单限制，仅给本机控制台。observer-view.ts 只读呈现，不把原生 get.arenaState/stringifiedResult 当作观察者快照，不伪造真人席位，不改变 privacy.js。当前不是完整原生动画转播；特殊技能额外公开标记须逐项检查后再扩展。
+
+纯源码 CI 不要求忽略的上游素材：网关、压缩/鉴权、运行适配始终检查，完整资源清单一项明确跳过；test:engine-api 强制要求固定资源及构建，缺失失败，真实对局另运行 engine:verify:rooms。

@@ -1,5 +1,9 @@
 # 正式无名杀适配
 
+v0.5.0 的 `observer.js` 使用显式公开字段投影，仅本机控制台读取；不使用原生序列化快照作为观察者数据，不读手牌牌面、牌堆、私人选择或 storage。当前专门的公开牌桌视图不含完整原生动画及特殊技能标记。
+
+公网 PlayerTransport 在同一 PollChannel 上尝试有确认的 WebSocket 持续推送，失败回 HTTP；RTC 同通道接管，不重入座或重复动作。公共 STUN 允许合法 UDP 公网候选、保留私网候选，无 TURN，不保证全部 NAT 穿透。`ENGINE_VERIFY_STREAM_DROP=1` 主动关闭推送并检查原通道继续，`ENGINE_VERIFY_NO_RTC=1` 复核公网路径。`npm run test:engine-api` 强制要求完整固定资源；纯源码常规检查明确跳过完整预加载资源清单一项。
+
 固定基线：libnoname/noname v1.11.6，commit 与核心包校验见 `config/noname-candidate.json`。`lab` 保留基础研究程序，正式服务不复用其无授权转发端点。
 
 ## 运行职责
@@ -19,7 +23,7 @@
 - audio.js 由真实手机触摸解锁 Web Audio，按需播放已校验的本地原生卡牌/技能/阵亡音效；对局工具条可静音，电脑不播放，音效不阻塞载入。原生菜单回调不可恢复，下滑设置与快捷入口关闭。
 - v0.4.1 主页与 waiting 房间通过 `/engine/preload` 取得当前档/模式的公共静态清单，以低优先级逐项读取完整响应，由浏览器缓存复用；后台暂停、开局停止发起新请求，不执行引擎或播放声音。资源 URL 使用上游 commit/构建哈希，支持异步 gzip/Brotli、并发去重与压缩后 64MiB 缓存上限。
 - `scripts/build-native-portraits.mjs` 对已验证原图生成 256px WebP 小图，189 张总量约 3.1MiB，源图约 34.1MiB 保留；服务验证派生 SHA-256 后供选将与牌桌使用。构建变换去掉进阶状态计数额外注册的大日文字体。
-- `prompts.js` 在选择构造和 GameEvent.send 之前写入 prompt/prompt2，南蛮打杀、万箭打闪、乱武最近合法目标/失去体力与结束时可选额外出杀均保留到手机重建事件；不替换过滤器或结算。拼点材料仅在 `$compare`/`$compareMultiple` 原生展示开始后公开，选择阶段仍隐藏。
+- `prompts.js` 在 GameEvent.send 前同步最终提示、补充说明、分支和目标标签，保留动态、自定义和关闭提示；南蛮/万箭/决斗根据最终过滤与每次选择数量补全杀/闪，原生连续响应总数保留。乱武区分最近合法目标、失去体力与结束时可选额外杀；界挑衅明确造成伤害条件，界明策明确虚拟杀与双方摸牌。拼点材料仅在 `$compare`/`$compareMultiple` 原生展示开始后公开，选择阶段仍隐藏。
 - HTTP 长轮询首帧后留 12ms 合批相邻帧，MessageChannel 保持逐帧 Promise/观察器顺序并避免嵌套计时器等待。v0.4.2 提交 result 后超过 350ms 才展示等待提示，明确覆盖上游 div 的 hidden 样式，收包/确认后收起。语音抑制载入、后台与积压事件，fetch/decode 超过 1.5 秒跳过，静音后不补播，最多两段同时播放；启动完成才预热基本牌。
 - v0.4.2 公网玩家直接使用有序 HTTP 通道，等待房间时与电脑建立无 STUN/TURN、无媒体的局域网 RTC 数据通道；电脑仅可转发原生 poll 与轻量 ping，私有授权仅在本机 jobs 流中交给电脑。每个 relay 请求仍验证宿主 cookie、当前房间/真人席位，privacy.js 和 relay.js 原保护保持不变。直连与公网复用通道/序号，失去直连自动回退公网；直连不加速静态素材。工具条显示最近三次往返样本的中位数，长轮询空等、原生动画不计入。
 
@@ -48,7 +52,7 @@ npm run engine:verify:rooms
 
 `ENGINE_VERIFY_CACHE=1` 不拦截同源请求，允许浏览器真实 HTTP 缓存；配合 `ENGINE_VERIFY_RECONNECT=1` 检查刷新后主体 transferSize=0。不要与注入 CSS 慢载入、失败重试或候选 fixture 组合。`ENGINE_VERIFY_COLD_MOBILE_KBPS=128` 则通过浏览器网络模拟设置 128 KiB/s 上下行与 150ms 延迟，可与 CACHE 组合检查真实冷启动和缓存；等待实际客户端手牌到达，再检查大字体请求、纯 CSS 血条与音效。这是桌面限速模拟，不是微信流量测速。验证还检查实际音频解码/播放与静音、真实向下触摸滑动、原生五谷丰登广播/牌面及结算前阵亡身份。检查产品默认节奏后，验证脚本把原生速度改为 vvfast/100ms 加速完整结算；该加速不进入产品配置。
 
-`ENGINE_VERIFY_PRELOAD=1` 配合 CACHE 等待大厅公共素材准备完成，再进入真实选将、发牌与对局，断言 iframe 引擎主体 transferSize=0。`ENGINE_VERIFY_EXPERIENCE=1` 使用真实原生选择构造器、GameEvent.send 和手机客户端对话框，检查四种提示的 `_set` 序列化；另将实际音频响应延迟 2.2 秒，等待二十次语音全部完成且过期丢弃。提示探针与声音探针不伪造牌/伤害/胜者，也不代表三种指定牌/技能已在整局定向触屏验收。MANUAL 还测量原生 result 提交至电脑规则宿主收到的时间，区别于整个动画/下一次可操作的往返延迟。
+`ENGINE_VERIFY_PRELOAD=1` 配合 CACHE 等待大厅公共素材准备完成，再进入真实选将、发牌与对局，断言 iframe 引擎主体 transferSize=0。`ENGINE_VERIFY_EXPERIENCE=1` 检查 23 类选择提示，经原生 GameEvent.send、Client JSON 和逐接收者隐私过滤，在手机按原生 parsedResult 重建后核对当前文字/分支和对话框；进阶再调用原生乱武、界乱武、界挑衅内容，仅执行到选择构造器即停止，并核对两端合法目标。该构造探针不推进技能结算，不等于整局定向触屏验收。另将实际音频响应延迟 2.2 秒，等待二十次语音全部完成且过期丢弃。MANUAL 还测量原生 result 提交至电脑规则宿主收到的时间，区别于整个动画/下一次可操作的往返延迟。`engine:check-definitions` 同时生成静态选择入口审计；新增无参响应须补核对。
 
 `ENGINE_VERIFY_GOD_FIXTURE=1` 仅用于定向神将势力选择回归：浏览器测试路由将候选限制为神赵云、神吕布，配合 `ENGINE_VERIFY_PRESET=advanced` 与 `ENGINE_VERIFY_MODES=duel` 使用。它不改变产品配置，也不替代完整 156 将白名单验证。结果文件按参数区分，记录验证时间和参数。
 

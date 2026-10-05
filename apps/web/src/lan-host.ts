@@ -1,4 +1,11 @@
-import { gather, wire, type LanOffer, type RelayRequest } from './lan-peer.js';
+import {
+  gather,
+  wire,
+  peerConfiguration,
+  filterPeerDescription,
+  type LanOffer,
+  type RelayRequest,
+} from './lan-peer.js';
 
 /** The computer relays only native polling and ping, with a server-issued seat key. */
 export function createLanHost() {
@@ -16,7 +23,7 @@ export function createLanHost() {
     if (typeof RTCPeerConnection !== 'function') return;
     for (const offer of offers) {
       if (peers.has(offer.id) || offer.answered || peers.size >= 32) continue;
-      const peer = new RTCPeerConnection({ iceServers: [] });
+      const peer = new RTCPeerConnection(peerConfiguration);
       const abort = new AbortController();
       peers.set(offer.id, { peer, abort });
       peer.onconnectionstatechange = () => {
@@ -76,24 +83,7 @@ export function createLanHost() {
       };
       void (async () => {
         try {
-          // Strip non-local candidates in both directions before contacting them.
-          if (typeof offer.offer.sdp !== 'string') throw new Error('Invalid local offer');
-          const filtered = {
-            ...offer.offer,
-            sdp: offer.offer.sdp
-              .split('\r\n')
-              .filter((line) => {
-                if (!line.startsWith('a=candidate:')) return true;
-                const fields = line.split(' ');
-                return (
-                  fields[7] === 'host' &&
-                  /^(?:[\w-]+\.local$|10\.|192\.168\.|172\.(?:1[6-9]|2\d|3[01])\.|f[cd][\da-f]{2}:|fe80:)/i.test(
-                    fields[4] ?? '',
-                  )
-                );
-              })
-              .join('\r\n'),
-          };
+          const filtered = filterPeerDescription(offer.offer);
           await peer.setRemoteDescription(filtered);
           await peer.setLocalDescription(await peer.createAnswer());
           const answer = await gather(peer);

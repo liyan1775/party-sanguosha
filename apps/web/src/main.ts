@@ -1,6 +1,7 @@
 import type { RoomInfo, ServerInfo, SessionView } from '../../../packages/shared/src/contracts.js';
 import { api, app } from './ui.js';
-import { showHomePage, showServerPage } from './lobby-page.js';
+import { showHomePage } from './lobby-page.js';
+import { showServerPage } from './console-page.js';
 import { showRoomPage } from './room-page.js';
 
 async function initialize(): Promise<void> {

@@ -26,12 +26,154 @@ async function runtime(name: string) {
   );
 }
 
-test('响应提示随原生事件发送；南蛮/万箭区分杀闪，乱武区分最近目标与额外出杀', async (t) => {
+test('公开观战投影：暗手牌、私有 storage、未亮身份与私人选牌不进入观察者数据', async (t) => {
+  const hiddenCard = { name: 'secret-card' };
+  const player = {
+    playerid: 'seat',
+    nickname: '<img src=x>',
+    name: 'caocao',
+    identity: 'nei',
+    identityShown: false,
+    hp: 3,
+    maxHp: 4,
+    hujia: 1,
+    isDead: () => false,
+    isLinked: () => false,
+    isTurnedOver: () => false,
+    isUnseen: () => false,
+    countCards: (position: string) => {
+      assert.equal(position, 'h');
+      return 1;
+    },
+    getCards: (position: string) => {
+      assert.notEqual(position, 'h');
+      return position === 'e' ? [{ name: 'zhuge' }] : [];
+    },
+    get storage(): never {
+      return assert.fail('must never read private skill storage');
+    },
+  };
+  const status = { over: false, currentPhase: player };
+  globals(t, {
+    nativeFixture: {
+      game: { players: [player], dead: [], roundNumber: 2 },
+      get: { translation: (text: string) => text },
+      _status: status,
+    },
+  });
+  const { publicObserverState } = await runtime('observer');
+  const state = publicObserverState();
+  assert.equal(state.players[0].identity, '身份未公开');
+  assert.equal(state.players[0].handCount, 1);
+  assert.equal(state.players[0].general, 'caocao');
+  assert(!JSON.stringify(state).includes(hiddenCard.name));
+  assert(!JSON.stringify(state).includes('nei'));
+  assert(!JSON.stringify(state).includes('storage'));
+  player.identityShown = true;
+  assert.equal(publicObserverState().players[0].identity, 'nei2');
+  player.isUnseen = () => true;
+  assert.equal(publicObserverState().players[0].general, '未亮将');
+});
+
+test('公网推送接管正在等待的 HTTP 读取；推送中断后同通道继续，不重复 open 或消息', async (t) => {
+  let incoming: ((packet: unknown) => void) | undefined;
+  let nativeSocket: { onclose?: (event: { code: number; reason: string }) => void };
+  class Socket {
+    onmessage?: (event: { data: string }) => void;
+    onclose?: (event: { code: number; reason: string }) => void;
+    constructor() {
+      nativeSocket = this;
+      incoming = (packet) => this.onmessage?.({ data: JSON.stringify(packet) });
+      setTimeout(() => {
+        incoming?.({ type: 'opened' });
+        incoming?.({
+          type: 'frames',
+          messages: [
+            { sequence: 1, sentAt: 0, data: 'stream-one' },
+            { sequence: 2, sentAt: 0, data: 'stream-two' },
+          ],
+        });
+      }, 10);
+    }
+    send() {}
+    close() {}
+  }
+  class Close extends Event {
+    constructor(
+      type: string,
+      public init: unknown,
+    ) {
+      super(type);
+    }
+  }
+  let reads = 0;
+  let opens = 0;
+  const parent = Object.assign(new EventTarget(), { postMessage: () => {} });
+  const window = Object.assign(new EventTarget(), { parent });
+  globals(t, {
+    WebSocket: Socket,
+    CloseEvent: Close,
+    window,
+    document: Object.assign(new EventTarget(), { hidden: true }),
+    location: { origin: 'http://fixture' },
+    sessionStorage: { getItem: () => null },
+    partyEngine: { setup: { id: 'match', playerStreaming: true, playerNetwork: 'internet' } },
+    fetch: async (_url: string, options: { method: string; signal: AbortSignal }) => {
+      if (options.method === 'POST') {
+        opens++;
+        return { ok: true, json: async () => ({ closed: false }) };
+      }
+      if (options.method === 'DELETE') return { ok: true };
+      if (++reads === 2)
+        return {
+          ok: true,
+          json: async () => ({
+            messages: [
+              { sequence: 2, data: 'stream-two' },
+              { sequence: 3, data: 'http-three' },
+            ],
+          }),
+        };
+      return new Promise((_resolve, reject) =>
+        options.signal.addEventListener('abort', () => reject(new Error('cancelled'))),
+      );
+    },
+  });
+  const { PlayerTransport } = await runtime('player-transport');
+  const socket = new PlayerTransport('ws://fixture/engine/socket/match/player');
+  t.after(() => socket.close());
+  let openEvents = 0;
+  socket.onopen = () => openEvents++;
+  const messages: string[] = [];
+  await new Promise<void>((resolve, reject) => {
+    const timeout = setTimeout(() => reject(new Error('transport did not resume')), 2000);
+    socket.onmessage = (event: MessageEvent) => {
+      messages.push(event.data);
+      if (event.data === 'stream-two')
+        setTimeout(() => nativeSocket.onclose?.({ code: 1006, reason: '' }), 0);
+      if (event.data === 'http-three') {
+        clearTimeout(timeout);
+        socket.close();
+        resolve();
+      }
+    };
+  });
+  assert.deepEqual(messages, ['stream-one', 'stream-two', 'http-three']);
+  assert.equal(opens, 1);
+  assert.equal(openEvents, 1);
+  assert.equal(reads, 2);
+});
+
+async function promptFixture(t: TestContext) {
   let parent: { name: string };
   class Choice {
-    prompt?: string;
-    prompt2?: string;
+    prompt?: string | false;
+    prompt2?: string | false;
+    selectCard?: number | number[];
+    filterCard?: unknown;
+    choiceList?: string[];
     sets: [string, unknown][] = [];
+    _set = this.sets;
     constructor(public name: string) {}
     getParent() {
       return parent;
@@ -57,37 +199,156 @@ test('响应提示随原生事件发送；南蛮/万箭区分杀闪，乱武区�
       return choice;
     }
     chooseUseTarget() {
-      return new Choice('chooseUseTarget');
+      const choice = new Choice('chooseUseTarget');
+      choice.prompt = '是否使用一张【杀】？';
+      return choice;
     }
   }
-  globals(t, { nativeFixture: { lib: { element: { Player, GameEvent: Choice } } } });
+  const get = {
+    cnNumber: (num: number) => ['零', '一', '两', '三'][num] ?? String(num),
+    name: (card: unknown) =>
+      typeof card === 'object' && card ? String(Reflect.get(card, 'name')) : String(card),
+  };
+  globals(t, {
+    nativeFixture: {
+      lib: { element: { Player, GameEvent: Choice } },
+      get,
+    },
+  });
   (await runtime('prompts')).installPrompts();
+  return {
+    Choice,
+    Player,
+    get,
+    parent: (name: string) => {
+      parent = { name };
+    },
+  };
+}
+
+test('响应提示随最终过滤与数量发送；南蛮/万箭/决斗区分杀闪，乱武区分最近目标与额外出杀', async (t) => {
+  const fixture = await promptFixture(t);
+  const { Player, get } = fixture;
   const player = new Player();
   for (const [name, card] of [
     ['nanman', '杀'],
     ['wanjian', '闪'],
+    ['juedou', '杀'],
   ]) {
-    parent = { name: name! };
+    fixture.parent(name!);
     const event = player.chooseToRespond();
-    assert(event.prompt?.includes(`【${card}】`));
     // Native filters are added after construction; serialization must still
     // include explicit text so remote reconstruction cannot revert to “牌”.
+    event.set(
+      'filterCard',
+      card === '杀'
+        ? function (card: unknown) {
+            return get.name(card) === 'sha';
+          }
+        : function (card: unknown) {
+            return get.name(card) === 'shan';
+          },
+    );
+    event.set('selectCard', [2, 2]);
+    event.set('prompt2', '共需依次打出两张响应牌');
     assert(
       event
         .send()
-        .some(([key, value]) => key === 'prompt' && String(value).includes(`【${card}】`)),
+        .some(([key, value]) => key === 'prompt' && String(value).includes(`两张【${card}】`)),
     );
+    assert.equal(event.prompt2, '共需依次打出两张响应牌');
+    const once = event.sets.length;
+    event.send();
+    assert.equal(event.sets.length, once, 'repeated sends do not accumulate duplicate text');
   }
-  parent = { name: 'reluanwu' };
+  fixture.parent('reluanwu');
   const forced = player.chooseToUse();
-  assert.match(forced.prompt!, /距离最近.*失去1点体力/);
-  assert.match(forced.prompt2!, /合法目标/);
-  parent = { name: 'reluanwuContentAfter' };
+  assert.match(String(forced.prompt), /距离最近.*失去1点体力/);
+  assert.match(String(forced.prompt2), /合法目标/);
+  fixture.parent('reluanwuContentAfter');
   const extra = player.chooseUseTarget();
-  assert.match(extra.prompt!, /视为使用.*无距离限制.*取消则跳过/);
-  assert.match(extra.prompt2!, /无需提供手牌/);
-  parent = { name: 'other-skill' };
+  assert.match(String(extra.prompt), /视为使用.*无距离限制.*取消则跳过/);
+  assert.match(String(extra.prompt2), /无需提供手牌/);
+  fixture.parent('other-skill');
   assert.equal(player.chooseToRespond().prompt, '请打出一张牌');
+});
+
+test('最终选择文案直接赋值也传到手机，保留分支标签与 false；不携带额外规则或私有状态', async (t) => {
+  const fixture = await promptFixture(t);
+  fixture.parent('custom-skill');
+  for (const name of [
+    'chooseCard',
+    'chooseTarget',
+    'chooseControl',
+    'chooseBool',
+    'chooseToGive',
+    'discardPlayerCard',
+  ]) {
+    const event = new fixture.Choice(name);
+    event.set('prompt', '旧提示');
+    event.prompt = '只选装备区的一张牌';
+    event.prompt2 = '取消则跳过';
+    event.choiceList = ['选项一：摸牌', '选项二：回复体力'];
+    Object.assign(event, { privateCards: ['secret'], filterTarget: () => true });
+    const transmitted = Object.fromEntries(event.send());
+    assert.equal(transmitted.prompt, event.prompt);
+    assert.equal(transmitted.prompt2, event.prompt2);
+    assert.deepEqual(transmitted.choiceList, event.choiceList);
+    assert(!('privateCards' in transmitted));
+    assert(!('filterTarget' in transmitted));
+    event.prompt = false;
+    event.prompt2 = false;
+    assert.equal(Object.fromEntries(event.send()).prompt, false);
+    assert.equal(Object.fromEntries(event.send()).prompt2, false);
+  }
+  const rule = new fixture.Choice('useCard');
+  rule.prompt = '规则内部文字';
+  assert.deepEqual(rule.send(), []);
+});
+
+test('明确或关闭的提示、变化后的过滤器不被通用响应文案覆盖', async (t) => {
+  const fixture = await promptFixture(t);
+  const { get } = fixture;
+  fixture.parent('nanman');
+  const event = new fixture.Player().chooseToRespond();
+  event.set('filterCard', function (card: unknown) {
+    return get.name(card) === 'shan';
+  });
+  event.send();
+  assert.equal(event.prompt, '请打出一张牌', 'unrecognized response requirement stays native');
+  for (const prompt of ['技能修改后的特殊响应', false] as const) {
+    event.prompt = prompt;
+    event.set('filterCard', function (card: unknown) {
+      return get.name(card) === 'sha';
+    });
+    assert.equal(Object.fromEntries(event.send()).prompt, prompt);
+  }
+  fixture.parent('reluanwu');
+  const luanwu = new fixture.Player().chooseToUse();
+  luanwu.prompt = '另一技能追加的选择';
+  luanwu.prompt2 = '追加的条件';
+  assert.equal(Object.fromEntries(luanwu.send()).prompt, luanwu.prompt);
+  assert.equal(luanwu.prompt2, '追加的条件');
+});
+
+test('界挑衅提示造成伤害条件；界明策区分虚拟杀与双方摸牌，过滤器保持原样', async (t) => {
+  const fixture = await promptFixture(t);
+  fixture.parent('oltiaoxin');
+  const tiaoxin = new fixture.Choice('chooseToUse');
+  tiaoxin.prompt = '挑衅：对甲使用一张杀，或令其弃置你的一张牌';
+  const filter = () => true;
+  tiaoxin.set('filterCard', filter);
+  const transmitted = Object.fromEntries(tiaoxin.send());
+  assert.match(String(transmitted.prompt), /使用一张【杀】并造成伤害，否则.*弃置/);
+  assert.equal(transmitted.filterCard, filter);
+  fixture.parent('remingce');
+  const mingce = new fixture.Choice('chooseControl');
+  mingce.prompt = '对乙使用一张杀，或摸一张牌';
+  mingce.choiceList = ['视为对乙使用一张【杀】，若此杀造成伤害则执行选项二', '你与甲各摸一张牌'];
+  const choices = Object.fromEntries(mingce.send());
+  assert.equal(choices.prompt, '明策：请选择一项');
+  assert.match(String(choices.prompt2), /无需提供.*造成伤害.*各摸一张牌/);
+  assert.deepEqual(choices.choiceList, mingce.choiceList);
 });
 
 test('拼点在原生展示时才公开材料，选择阶段、其余暗牌及观星排序仍隐藏', async (t) => {

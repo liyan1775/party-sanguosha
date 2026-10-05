@@ -27,6 +27,7 @@ export class RoomStore {
   };
   private ownerId: string | null = null;
   private botSequence = 0;
+  private startGeneration = 0;
   private readonly players = new Map<string, Seat>();
   private readonly listeners = new Set<(room: RoomView) => void>();
 
@@ -218,6 +219,7 @@ export class RoomStore {
     )
       throw new AppError(409, 'PLAYERS_NOT_READY', '需要人数齐全且所有真人在线、已准备。');
     this.phase = 'starting';
+    const generation = ++this.startGeneration;
     try {
       const starting = this.engine.start({
         roomCode: this.code,
@@ -228,9 +230,12 @@ export class RoomStore {
       });
       this.changed();
       await starting;
+      if (generation !== this.startGeneration) return;
       if (this.phase === 'starting') this.phase = 'playing';
       this.changed();
     } catch {
+      if (generation !== this.startGeneration)
+        throw new AppError(409, 'MATCH_CANCELLED', '电脑控制台已结束这次开局。');
       this.phase = 'waiting';
       this.changed();
       throw new AppError(
@@ -239,6 +244,39 @@ export class RoomStore {
         '对局启动失败，房间已恢复，请查看电脑服务状态。',
       );
     }
+  }
+
+  /** Separate local operator authority, granted only by the console API. */
+  consoleRemovePlayer(id: string): void {
+    this.assertWaiting();
+    const player = this.players.get(id);
+    if (!player) throw new AppError(404, 'PLAYER_NOT_FOUND', '这个座位已移除。');
+    if (player.id === this.ownerId && player.kind === 'human') {
+      this.leave(player.token);
+      return;
+    }
+    this.players.delete(id);
+    this.resetReady();
+    this.changed();
+  }
+
+  consoleReset(): void {
+    if (!['starting', 'playing', 'finished'].includes(this.phase))
+      throw new AppError(409, 'NO_ACTIVE_MATCH', '这个房间已在等待玩家。');
+    this.startGeneration++;
+    this.phase = 'waiting';
+    this.engine.release?.(this.code);
+    this.resetReady();
+    this.changed();
+  }
+
+  consoleClose(): void {
+    this.startGeneration++;
+    this.phase = 'closed';
+    this.ownerId = null;
+    this.players.clear();
+    this.engine.release?.(this.code);
+    this.changed();
   }
 
   returnToWaiting(ownerToken?: string): void {

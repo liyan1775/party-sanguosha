@@ -74,6 +74,7 @@ export function createPartyServer(options: ServerOptions) {
   const instanceId = randomBytes(16).toString('hex');
   // 仅供本机双击停止脚本使用，不赋予任何玩家房主权限，也不进入公开 API。
   const controlToken = randomBytes(32).toString('base64url');
+  const consoleToken = randomBytes(32).toString('base64url');
   const extensions = options.extensions ?? [];
   const engine = options.adapter ?? new NonameAdapter();
   const lobby = new LobbyStore(engine, extensions);
@@ -206,6 +207,39 @@ export function createPartyServer(options: ServerOptions) {
       if (!validOrigin) throw new AppError(403, 'INVALID_ORIGIN', '请从本机房间页面操作。');
     }
     const playerToken = cookies(request).party_player;
+    if (url.pathname.startsWith('/api/console')) {
+      if (!isLocalRequest(request) || !matches(cookies(request).party_console, consoleToken))
+        throw new AppError(403, 'CONSOLE_REQUIRED', '请在服务器电脑的控制台操作。');
+      if (route === 'GET /api/console') {
+        json(response, 200, {
+          rooms: lobby.list().map(({ code }) => ({
+            room: lobby.get(code).snapshot(),
+            ...(engine instanceof NativeNonameService
+              ? engine.observe(code)
+              : { observer: null, networks: [] }),
+          })),
+        });
+        return;
+      }
+      const command = /^\/api\/console\/rooms\/([A-F0-9]{6})(?:\/(reset|players\/[\w-]+))?$/.exec(
+        url.pathname,
+      );
+      if (command) {
+        const room = lobby.get(command[1]!);
+        // Refuse a stale operator click after the room has changed phase/seat.
+        const revision = Number(request.headers['x-party-revision']);
+        if (!Number.isSafeInteger(revision) || revision !== room.snapshot().revision)
+          throw new AppError(409, 'ROOM_CHANGED', '房间刚刚有变化，请查看更新后再操作。');
+        if (request.method === 'DELETE' && !command[2]) room.consoleClose();
+        else if (request.method === 'POST' && command[2] === 'reset') room.consoleReset();
+        else if (request.method === 'DELETE' && command[2]?.startsWith('players/'))
+          room.consoleRemovePlayer(command[2].slice(8));
+        else throw new AppError(405, 'INVALID_CONSOLE_ACTION', '这项控制台操作不可用。');
+        json(response, 200, { ok: true });
+        return;
+      }
+      throw new AppError(404, 'NOT_FOUND', '控制台接口不存在。');
+    }
     if (engine instanceof NativeNonameService && (await engine.handle(request, response))) return;
     const address = server.address();
     const actualPort = typeof address === 'object' && address ? address.port : options.port;
@@ -381,6 +415,11 @@ export function createPartyServer(options: ServerOptions) {
       response.end();
       return;
     }
+    if (route === 'GET /server')
+      response.setHeader(
+        'Set-Cookie',
+        `party_console=${consoleToken}; Path=/api/console; HttpOnly; SameSite=Strict`,
+      );
     const assets: Record<string, { file: string; mime: string }> = {
       '/assets/app.js': { file: 'app.js', mime: 'text/javascript; charset=utf-8' },
       '/assets/style.css': { file: 'style.css', mime: 'text/css; charset=utf-8' },

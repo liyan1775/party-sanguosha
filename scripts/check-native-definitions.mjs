@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { readFile, readdir } from 'node:fs/promises';
+import { readFile, readdir, mkdir, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import ts from 'typescript';
 
@@ -9,6 +9,7 @@ const engine = `${root}/.local/noname/${settings.engineCandidate}`;
 const packs = new Map();
 const skills = new Map();
 const cards = new Map();
+const choiceDefinitions = new Map();
 const key = (name) => name.getText().replace(/^['"]|['"]$/g, '');
 function strings(node) {
   const values = new Set();
@@ -122,6 +123,7 @@ for (const preset of settings.presets) {
     const identity = `${definition.pack}:${id}`;
     if (visited.has(identity)) return;
     visited.add(identity);
+    choiceDefinitions.set(identity, { id, ...definition });
     for (const reference of references(definition.node)) {
       follow(reference, skills, id);
       follow(reference, cards, id);
@@ -145,3 +147,53 @@ for (const preset of settings.presets) {
     `${preset.id}: ${roster.size} generals, ${visited.size} static skill/card dependencies verified`,
   );
 }
+
+// Audit the playable rosters' static dependency closure and the standard deck.
+// A newly introduced parameterless response cannot silently inherit “牌”.
+for (const [id, definitions] of cards) {
+  const definition = definitions.find((item) => item.pack === 'card/standard');
+  if (definition) choiceDefinitions.set(`${definition.pack}:${id}`, { id, ...definition });
+}
+const choiceAudit = [];
+for (const { id, pack, node } of choiceDefinitions.values()) {
+  function visit(item) {
+    if (
+      ts.isCallExpression(item) &&
+      ts.isPropertyAccessExpression(item.expression) &&
+      /^choose/.test(item.expression.name.text)
+    ) {
+      const method = item.expression.name.text;
+      const genericResponse = method === 'chooseToRespond' && item.arguments.length === 0;
+      assert(
+        !genericResponse ||
+          (pack === 'card/standard' && ['nanman', 'wanjian', 'juedou'].includes(id)),
+        `${pack}:${id} has a new generic response; review its final prompt and add a native serialization case`,
+      );
+      choiceAudit.push({
+        pack,
+        id,
+        method,
+        genericResponse,
+        line: item.getSourceFile().getLineAndCharacterOfPosition(item.getStart()).line + 1,
+      });
+    }
+    ts.forEachChild(item, visit);
+  }
+  visit(node);
+}
+await mkdir(`${root}/.runtime`, { recursive: true });
+await writeFile(
+  `${root}/.runtime/native-choice-audit.json`,
+  JSON.stringify(
+    {
+      engine: settings.engineCandidate,
+      definitions: choiceDefinitions.size,
+      choices: choiceAudit,
+    },
+    null,
+    2,
+  ),
+);
+console.log(
+  `Choice audit: ${choiceDefinitions.size} static definitions, ${choiceAudit.length} choice sites; generic responses reviewed`,
+);
