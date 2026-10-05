@@ -10,7 +10,7 @@ v0.5.1 增量验证（2026-10-06）：Windows / Node.js 24.12.0 / Edge，合成 
 | 页面           | Edge 8 组通过；四 LAN / 一公网代理同房，切断代理后 LAN 设置、替换入座、准备、分享码继续，电脑两码均保留；状态刷新不重复请求 QR                                                                                                      |
 | 原生混合五席   | 新手身份 5 个独立真人会话，四 LAN 本机 WebSocket / 一公网代理持续推送；实际选将发牌、物理触屏出牌、隐私过滤与公开观战、断代理期间四席托管指令到规则宿主且原连接保持、同址恢复、自然胜负/回房/离房均通过。`2026-10-05T23-06-40-760Z` |
 
-完整资源 API 10 项全部通过，包含原生 WebSocket/HTTP/持续推送的早到初始化与旧连接替换；固定素材缺失即失败。修复后延迟规则 HTML 4000ms 的四 LAN / 一公网真实原生身份局亦完成全部流程，结果 `2026-10-05T23-36-57-702Z`；相同延迟的两真人新手公网代理单挑/斗地主/2v2 完成触屏物理操作、推送转 HTTP、原座重连、自然结算回房/离房，结果 `2026-10-05T23-36-56-537Z`。正式 3001 在真实公网 unavailable 时核对两码均可见、LAN 主页可打开、引擎在线；现场结果 `.runtime/live-hybrid-entry-outage.json`（2026-10-05T23:38:59Z）与 `.runtime/previews/live-hybrid-console-outage.png`。零房间时通过项目自带启停器载入最终修复，2026-10-05T23:44:56Z 再核对公网 ready、两码实际可见、LAN 主页和引擎在线、零房间；`.runtime/live-hybrid-entry-final.json`。
+完整资源 API 10 项全部通过，包含原生 WebSocket/HTTP/持续推送的早到初始化与旧连接替换；固定素材缺失即失败。修复后延迟规则 HTML 4000ms 的四 LAN / 一公网真实原生身份局亦完成全部流程，结果 `2026-10-05T23-36-57-702Z`；相同延迟的两真人新手公网代理单挑/斗地主/2v2 完成触屏物理操作、推送转 HTTP、原座重连、自然结算回房/离房，结果 `2026-10-05T23-36-56-537Z`。正式 3001 在真实公网 unavailable 时核对两码均可见、LAN 主页可打开、引擎在线；现场结果 `.runtime/live-hybrid-entry-outage.json`（2026-10-05T23:38:59Z）与 `.runtime/previews/live-hybrid-console-outage.png`。零房间时通过项目自带启停器载入最终修复，23:44:56Z 核对公网 ready、两码可见、LAN 与引擎正常；23:49:12Z 公网再度 unavailable，同样验证两码保留、LAN 和引擎正常、零房间，最近现场结果 `.runtime/live-hybrid-entry-final.json`。
 
 源码提交 `4d3ee09` 的 [Project checks](https://github.com/liyan1775/party-sanguosha/actions/runs/37390393697) Ubuntu / Windows 均通过。
 

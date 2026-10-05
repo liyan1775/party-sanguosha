@@ -12,7 +12,7 @@ v0.5.1 根据用户的新约束默认同时提供 LAN 与临时公网。旧默�
 
 初始化修复后完整资源 API 10 项全部通过。规则页 HTML 特意延迟 4000ms 的四 LAN / 一公网五真人身份局，再次完成实际选将发牌、触屏出牌、断/恢复代理、原 LAN 通道保持、公开观战/隐私和自然结算回房/离房，结果 `2026-10-05T23-36-57-702Z`。同样延迟下，两真人新手公网代理单挑/斗地主/2v2 完成触屏物理操作、持续推送中断转 HTTP、原席位重连和自然结算回房/离房，结果 `2026-10-05T23-36-56-537Z`。测试手动操作助手在无合法杀/闪时按原生取消，避免将合法无牌响应误写成游戏停滞。正式 3001 的真实隧道在 2026-10-05T23:38:59Z 处于 unavailable，Edge 现场核对两码均可见、LAN 主页可打开且引擎在线，零房间；`.runtime/live-hybrid-entry-outage.json` 与 `.runtime/previews/live-hybrid-console-outage.png`。这是实际隧道故障状态的入口验证，没有据此声称 iPhone 或公网 RTT 已改善。
 
-最后确认正式实例零房间后，使用项目自带 `scripts/launcher.mjs --stop` / 启动器重启，载入最终 v0.5.1 初始化修复。仅结束本目录实例，默认浏览器重新打开；`http://127.0.0.1:3001/server`，LAN `http://192.168.124.19:3001/`。2026-10-05T23:44:56Z 核对公网 ready、两码实际可见、引擎在线、LAN 主页可打开且零房间，结果 `.runtime/live-hybrid-entry-final.json` / `.runtime/previews/live-hybrid-console-final.png`；重启生成新临时公网地址，后续短暂中断仍保留该地址。
+最后确认正式实例零房间后，使用项目自带 `scripts/launcher.mjs --stop` / 启动器重启，载入最终 v0.5.1 初始化修复。仅结束本目录实例，默认浏览器重新打开；`http://127.0.0.1:3001/server`，LAN `http://192.168.124.19:3001/`。2026-10-05T23:44:56Z 曾核对公网 ready、两码实际可见、引擎在线、LAN 主页可打开且零房间；随后 23:49:12Z 公网再次 unavailable，两码仍实际可见、LAN 主页和引擎正常、零房间，最近现场结果 `.runtime/live-hybrid-entry-final.json` / `.runtime/previews/live-hybrid-console-final.png`。重启生成新临时公网地址，后续短暂中断仍保留该地址；没有据此推导临时公网长期稳定。
 
 v0.5.1 实现提交 `4d3ee09` 已常规推送到原仓库 main，[Project checks](https://github.com/liyan1775/party-sanguosha/actions/runs/37390393697) 的 Ubuntu / Windows 均 success；没有强推。上传继续使用已有 Windows 系统代理，仅本次 Git 命令设置，未改变持久配置。
 
