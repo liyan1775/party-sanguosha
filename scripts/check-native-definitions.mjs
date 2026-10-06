@@ -155,7 +155,9 @@ for (const [id, definitions] of cards) {
   if (definition) choiceDefinitions.set(`${definition.pack}:${id}`, { id, ...definition });
 }
 const choiceAudit = [];
+const visibilityAudit = [];
 for (const { id, pack, node } of choiceDefinitions.values()) {
+  const handMaterials = /getCards\(["']h["']|viewHandcard|showHandcards/.test(node.getText());
   function visit(item) {
     if (
       ts.isCallExpression(item) &&
@@ -177,6 +179,23 @@ for (const { id, pack, node } of choiceDefinitions.values()) {
         line: item.getSourceFile().getLineAndCharacterOfPosition(item.getStart()).line + 1,
       });
     }
+    if (ts.isCallExpression(item) && ts.isPropertyAccessExpression(item.expression)) {
+      const method = item.expression.name.text;
+      if (
+        /^(viewCards|viewHandcards|showHandcards)$/.test(method) ||
+        (handMaterials &&
+          /^(chooseButton|chooseCardButton|chooseToMove|chooseToMove_new|choosePlayerCard|gainPlayerCard|discardPlayerCard)$/.test(
+            method,
+          ))
+      )
+        visibilityAudit.push({
+          pack,
+          id,
+          method,
+          line: item.getSourceFile().getLineAndCharacterOfPosition(item.getStart()).line + 1,
+          call: item.getText().slice(0, 1000),
+        });
+    }
     ts.forEachChild(item, visit);
   }
   visit(node);
@@ -189,6 +208,18 @@ await writeFile(
       engine: settings.engineCandidate,
       definitions: choiceDefinitions.size,
       choices: choiceAudit,
+    },
+    null,
+    2,
+  ),
+);
+await writeFile(
+  `${root}/.runtime/native-visibility-audit.json`,
+  JSON.stringify(
+    {
+      engine: settings.engineCandidate,
+      definitions: choiceDefinitions.size,
+      sites: visibilityAudit,
     },
     null,
     2,

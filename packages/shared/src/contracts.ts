@@ -1,5 +1,5 @@
 export const APP_ID = 'party-sanguosha';
-export const APP_VERSION = '0.5.1';
+export const APP_VERSION = '0.6.3';
 
 export const MODES = [
   {
@@ -68,6 +68,7 @@ export interface EngineStatus {
   ready: boolean;
   message: string;
   preload?: boolean;
+  lightweight?: boolean;
 }
 
 export interface RoomView {
@@ -145,10 +146,22 @@ export interface ObserverState {
     dead: boolean;
     linked: boolean;
     turnedOver: boolean;
+    controller?: 'human' | 'auto' | 'offline' | 'bot';
     equipment: string[];
     judgments: string[];
   }[];
   recent: string[];
+  /** Sequence of recent[0], plus total public log count (new rule workers). */
+  logStart?: number;
+  logTotal?: number;
+  logFirst?: number;
+}
+
+export interface ObserverLogPage {
+  matchId: string;
+  total: number;
+  first: number;
+  entries: { sequence: number; text: string }[];
 }
 
 export interface PlayerNetwork {

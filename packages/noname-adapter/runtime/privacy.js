@@ -1,6 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-only
 import { lib, get, _status } from 'noname';
 
+let discloseChoice = (_event, send) => send();
+/** Reuse the native choice's narrow disclosure scope when replaying its request. */
+export function withChoiceDisclosure(event, send) {
+  return discloseChoice(event, send);
+}
+
 /** Keep authoritative cards intact; redact while serializing for each receiver. */
 export function installPrivacy() {
   lib.card.party_unknown = { type: 'unknown', enable: false, fullskin: false };
@@ -15,6 +21,40 @@ export function installPrivacy() {
   };
   let receiver;
   let addressedTo;
+  let choiceDisclosure;
+  discloseChoice = function (event, send) {
+    const previous = choiceDisclosure;
+    const cards = new Set();
+    const add = (value, depth = 0) => {
+      if (get.itemtype(value) === 'card') cards.add(value);
+      else if (Array.isArray(value) && depth < 8) for (const item of value) add(item, depth + 1);
+    };
+    // These native APIs explicitly present face-up materials to their actor.
+    // Read ONLY the declared choice, never its parent, target's whole hand or
+    // private storage. Native blank buttons (顺手/过河/拼点) stay concealed.
+    if (
+      ['chooseButton', 'choosePlayerCard', 'discardPlayerCard', 'gainPlayerCard'].includes(
+        event.name,
+      )
+    ) {
+      const dialog = typeof event.dialog === 'number' ? get.idDialog?.(event.dialog) : event.dialog;
+      for (const button of dialog?.buttons ?? [])
+        if (!['blank', 'infohidden'].some((name) => button.classList.contains(name)))
+          add(button.link);
+    } else if (['chooseToMove', 'chooseToMove_new'].includes(event.name)) add(event.list);
+    else if (event.name === 'viewCards') add(event.cards);
+    choiceDisclosure = { player: event.player, cards };
+    try {
+      return send();
+    } finally {
+      choiceDisclosure = previous;
+    }
+  };
+  const choiceSend = lib.element.GameEvent?.prototype.send;
+  if (choiceSend)
+    lib.element.GameEvent.prototype.send = function (...args) {
+      return withChoiceDisclosure(this, () => choiceSend.apply(this, args));
+    };
   const send = lib.element.Client.prototype.send;
   lib.element.Client.prototype.send = function (...args) {
     const previous = receiver;
@@ -54,6 +94,12 @@ export function installPrivacy() {
     if (!receiver || _status.over) return true;
     const position = get.position(card, true);
     if (card.isKnownBy(receiver) || ['e', 'j', 'd'].includes(position)) return true;
+    if (
+      addressedTo === receiver &&
+      choiceDisclosure?.player === receiver &&
+      choiceDisclosure.cards.has(card)
+    )
+      return true;
     // Native use/respond animation is broadcast BEFORE moving the physical
     // materials out of the hand. Reveal that declared card, not its whole hand.
     // Ordering ('o') is also used by private 观星, so it is not globally public.

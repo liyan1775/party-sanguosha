@@ -55,6 +55,108 @@ async function fixture(t: TestContext) {
   return { base, engine, party, id, room, ownerCookie, workerCookie, started, socket };
 }
 
+test('轻量网关：本机按席位镜像，手机只收自己的声明状态，过期或伪造操作不进入原生规则', async (t) => {
+  const f = await fixture(t);
+  const phone = f.socket('player?client=light', f.ownerCookie);
+  await once(phone, 'open');
+  assert.equal(
+    (
+      await fetch(`${f.base}/engine/setup/${f.id}?role=view&seat=${f.room.ownerId}`, {
+        headers: { Cookie: f.ownerCookie },
+      })
+    ).status,
+    403,
+  );
+  const jobs = await (
+    await fetch(`${f.base}/engine/jobs`, { headers: { Cookie: f.workerCookie } })
+  ).json();
+  assert.deepEqual(jobs.jobs[0].views, [f.room.ownerId]);
+  const mirror = f.socket(`view?seat=${f.room.ownerId}`, f.workerCookie);
+  await once(mirror, 'open');
+  const state = {
+    playerId: f.room.ownerId,
+    epoch: 'test-epoch',
+    revision: 1,
+    choice: 7,
+    hand: [{ key: 'a', label: '杀', action: 'choose-card', enabled: true }],
+    controls: [{ key: 'ok', label: '使用', action: 'confirm', enabled: true }],
+    storage: 'private-storage',
+    token: 'private-token',
+    event: 'private-event',
+  };
+  const received = once(phone, 'message');
+  mirror.send(JSON.stringify(['tableView', state]));
+  const snapshot = JSON.parse((await received)[0].toString());
+  assert.equal(snapshot[0], 'table');
+  assert.equal(snapshot[1].playerId, f.room.ownerId);
+  assert(!JSON.stringify(snapshot).includes('private-'));
+  const forwarded = once(mirror, 'message');
+  phone.send(JSON.stringify(['tableAction', 'test-epoch', 7, 'choose-card']));
+  assert.deepEqual(JSON.parse((await forwarded)[0].toString()), {
+    type: 'tableAction',
+    epoch: 'test-epoch',
+    choice: 7,
+    action: 'choose-card',
+  });
+  for (const packet of [
+    ['tableAction', 'test-epoch', 6, 'confirm'],
+    ['tableAction', 'test-epoch', 7, 'arbitrary'],
+  ]) {
+    const current = once(phone, 'message');
+    phone.send(JSON.stringify(packet));
+    assert.equal(JSON.parse((await current)[0].toString())[0], 'table');
+  }
+  const closed = once(phone, 'close');
+  phone.send(JSON.stringify(['result', { bool: true }]));
+  assert.equal((await closed)[0], 1008);
+});
+
+test('轻量 HTTP 复用有序通道，重复确认只送一次，同通道不能转换为原生协议', async (t) => {
+  const f = await fixture(t);
+  const channel = randomUUID();
+  const path = `${f.base}/engine/poll/${f.id}`;
+  const headers = { Cookie: f.ownerCookie, 'Content-Type': 'application/json' };
+  assert.equal(
+    (
+      await fetch(path, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ open: true, channel, client: 'light' }),
+      })
+    ).status,
+    200,
+  );
+  const mirror = f.socket(`view?seat=${f.room.ownerId}`, f.workerCookie);
+  await once(mirror, 'open');
+  mirror.send(
+    JSON.stringify([
+      'tableView',
+      {
+        playerId: f.room.ownerId,
+        epoch: 'epoch',
+        revision: 1,
+        choice: 2,
+        controls: [{ key: 'confirm', label: '使用', action: 'ok', enabled: true }],
+      },
+    ]),
+  );
+  const view = await (await fetch(`${path}?channel=${channel}&after=0`, { headers })).json();
+  assert.equal(JSON.parse(view.messages[0].data)[0], 'table');
+  let forwarded = 0;
+  mirror.on('message', () => forwarded++);
+  const body = JSON.stringify({
+    channel,
+    sequence: 1,
+    data: JSON.stringify(['tableAction', 'epoch', 2, 'ok']),
+  });
+  for (let repeat = 0; repeat < 2; repeat++)
+    assert.equal((await fetch(path, { method: 'POST', headers, body })).status, 200);
+  assert.equal(forwarded, 1);
+  const rejected = f.socket(`player?transport=stream&channel=${channel}`, f.ownerCookie);
+  rejected.on('error', () => {});
+  assert.equal((await once(rejected, 'close'))[0], 1008);
+});
+
 test('引擎网关：玩家与规则宿主会话分离，拒绝陌生会话、跨源与越权操作', async (t) => {
   const f = await fixture(t);
   assert.equal(
@@ -448,6 +550,65 @@ test('公网持续推送：无需逐批 GET；断开回 HTTP 保留座位、消�
   );
   await new Promise((resolve) => setTimeout(resolve, 20));
   assert(!JSON.stringify(f.engine.observe(f.room.code)).includes('secret'));
+});
+
+test('公开整局记录分页仅本机控制台可读，跨房间与过期对局拒绝', async (t) => {
+  const f = await fixture(t);
+  const consolePage = await fetch(`${f.base}/server`);
+  const consoleCookie = consolePage.headers.get('set-cookie')!.split(';')[0]!;
+  const worker = f.socket('worker', f.workerCookie);
+  await once(worker, 'open');
+  for (const start of [1, 101, 201]) {
+    const length = start === 201 ? 25 : 100;
+    worker.send(
+      JSON.stringify({
+        type: 'observer',
+        state: {
+          round: 1,
+          players: [],
+          recent: Array.from({ length }, (_, offset) => `公开动作 ${start + offset}`),
+          logStart: start,
+          logTotal: start + length - 1,
+          storage: 'SECRET',
+          hand: 'SECRET',
+        },
+      }),
+    );
+  }
+  worker.send(JSON.stringify({ type: 'started' }));
+  await f.started;
+  const path = `${f.base}/api/console/rooms/${f.room.code}/log?match=${f.id}`;
+  for (const cookie of ['', f.ownerCookie, f.workerCookie])
+    assert.equal((await fetch(path, { headers: { Cookie: cookie } })).status, 403);
+  assert.equal(
+    (await fetch(path, { headers: { Cookie: consoleCookie, 'X-Party-Ingress': 'public' } })).status,
+    403,
+  );
+  const page = await (await fetch(path, { headers: { Cookie: consoleCookie } })).json();
+  assert.equal(page.matchId, f.id);
+  assert.equal(page.total, 225);
+  assert.equal(page.first, 1);
+  assert.equal(page.entries[0].sequence, 126);
+  const earlier = await (
+    await fetch(path + '&before=126', { headers: { Cookie: consoleCookie } })
+  ).json();
+  assert.equal(earlier.entries.at(-1).sequence, 125);
+  assert(!JSON.stringify(page).includes('SECRET'));
+  const second = f.party.lobby.create('另一桌');
+  assert.equal(
+    (
+      await fetch(`${f.base}/api/console/rooms/${second.room.code}/log?match=${f.id}`, {
+        headers: { Cookie: consoleCookie },
+      })
+    ).status,
+    409,
+  );
+  assert.equal(
+    (await fetch(path + '&before=-1', { headers: { Cookie: consoleCookie } })).status,
+    400,
+  );
+  f.engine.release(f.room.code);
+  assert.equal((await fetch(path, { headers: { Cookie: consoleCookie } })).status, 409);
 });
 
 test('HTTP 同一动作的相邻帧合批，保留重取与确认的顺序', async (t) => {

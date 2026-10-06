@@ -1,5 +1,63 @@
 # 架构与决策
 
+## ADR-022：恢复默认原生手机客户端，保留适配修复
+
+状态：v0.6.3，2026-10-07。用户确认只回退对局 UI，保留扫码主页、房间管理和电脑控制台。默认房间使用 `/engine/player/:match`，不根据旧服务的 lightweight 能力切到自制牌桌。主页/待机房间恢复原生公共资源预加载；旧轻量前端仅由验证器显式设置 `party_lightweight_verification` 使用。ADR-019/021 的默认客户端决策被本条取代，原模块保留用于回归和历史研究。
+
+每房仍只有一个电脑规则 worker，手机直接使用固定原生 UI 和选择函数，默认不创建 `/engine/view` 电脑镜像。保留认证、privacy.js、物理牌引用保护、提示、选将/势力恢复、显式确认、frequent 技能选择、同序号网络通道、公开记录、声音、字体/体力/小图优化及外层方向与异常恢复。原生手机开启原生动画；规则 worker 与旧轻量镜像保持低性能设置。未变更固定上游版本或源码。
+
+selection-recovery.js 在规则 worker 私有内存记录本人的原生 GameEvent.send 选择命令及原 startup chooseButtonOL 数组请求，不把其他私人弹窗更新当作选择，防止开局化身更新覆盖待选请求。连接关闭不立即 unwait('ai')；原生计时器仍决定超时。已认证的同席位 reinited 且原请求仍 waiting 才重放原回调、参数和原编码父事件；不重新构造已推进的事件，也不重复 wait/pause。重放通过 privacy.js 导出的同选择授权范围与原 Player.send/Client.send 过滤，真实结果或超时删除请求，旧连接/已选/超时不重弹。
+
+化身等先独立创建 private videoId 弹窗，再以编号选择，原 arena reinit 不含该 DOM。仅保存同演员 Player.send 的原生 ui.create.dialog/videoId 创建与已知 get.idDialog 更新，最多每席 8 个弹窗、每弹窗 16 帧；原 closeDialog 清除。重连先恢复仍存在的原生弹窗再送当前选择，不读取 storage、捕获广播或向其他席位发私有材料。此路径验证化身，不据此保证所有自定义 UI/扩展；请求/候选/私人材料不进入大厅、公开观战或普通日志。
+
+原生在线结算可执行序列化函数，reinit 也可能直接设置 over；只包装 game.over/lib.onover 不能覆盖全部路径。复用现有 DOM 观察器，只有原生 _status.over 且真实结算对话框已连接时添加原生「回到房间」控件，保留原生胜负画面，删除外层自制结算遮罩。按钮只发送同源/当前 iframe 消息，外层仍复核房间权威状态并执行既有房主 rematch 或成员本地回房；不改变胜者、规则或房主权限。
+
+构建期间旧 Node 可继续提供新网页/运行文件。worker 的电脑页版本检查仅在网页确实旧于服务且无活动对局时刷新；新版 footer 高于旧服务时不倒退重载，避免原来的不等比较造成循环。产品原生路由也不读取旧 lightweight=true 来覆盖默认。此兼容不替代完整停启；Node 版本和能力声明仍由实际进程决定。
+
+## ADR-021：原生动作驱动的轻量表现
+
+状态：v0.6.2，2026-10-06。用户明确保留无名杀界面与动画体验，用代码替代大装饰素材；不独立重做视觉。布局和动作参数见 ui-design.md。
+
+规则 worker 通过 setup.tablePresentation 显式能力启用 table-presentation.js，包装原生 `$draw/$throw/$damage/$damagepop/logSkill/$die` 和 game.log；原方法仍执行，表现采集异常不阻断规则。use/respond 只在当前事件牌确实作为参数被公开记录时产生，避免在无关日志提前揭牌；WeakSet 防止同事件重复，原生 throw 位于 use/respond 时不另放一次。回合由 `_status.currentPhase` 发布，未用 HP/手牌差值还原规则。数字 damagepop 作体力浮字，字符串作普通提示，原生 logSkill 内的重复浮字及回合文字不重复显示。
+
+每个真人接收者单独构造无动作权限的声明事件：顺序号、时间、类型、来源/目标、数量、短文字及授权牌面。虚拟 use/respond 来自当前公开牌；摸牌时只有摸牌者额外获牌面，其他人仍按原生 knower/公开材料可见性处理，不能给未归属的暗牌套用 addressed-to 授权。不读取手牌、牌堆、storage，不发送实体 ID、原生对象或任意函数给手机。内部 Player.send 回调只进入既有本机原生镜像通道，继续经 privacy.js；手机拿到的仍是声明式私有 TableState，公开观察者与日志边界不改。
+
+镜像短期保留最多 32 条 events，与状态一起经原认证 TableView 通道；Node table.ts 再按类型、席位、字段、数量、时间及固定同源素材白名单清洗。能力标志避免仅构建页面时旧 Node 意外启用不认识的新模块。events/presentedAt 是可选字段，旧服务和手机保持兼容；快照比较后才附时间/版本，避免时间变化迫使闲置状态不断发包。接近 125000 字节帧限制时先清减说明，再释放短期动画，不为动画丢掉合法选项。
+
+手机 table-motion.ts 使用已有 PlayerTransport 的投递年龄与镜像时间计算相对过期，不依赖手机/电脑时钟一致。首个 epoch 快照只建游标，重复编号不播；超过三秒、后台、重连、换局与结束时清理/跳过积压。待播最多 12 条、瞬时 DOM 效果最多 24 个；同一序列按编号开始，效果可重叠，不阻塞操作或延迟胜负。偏好及系统 reduced-motion 控制短模式，正常模式保留半秒飞牌和停留。CSS/SVG/WAAPI 绘制通用效果，稳定 key 更新手牌/席位/弹窗，普通快照保持节点、焦点和材料选择。此短期缓冲不是公开日志、存档或完整动画回放。
+
+## ADR-020：原生私有牌面授权与分组选择
+
+状态：v0.6.1，2026-10-06。
+
+原隐私层默认遮盖对手暗手牌，未识别魄袭等原生选择明确呈现的牌面。`privacy.js` 现在在原生 `GameEvent.send` 的同步调用范围内建立临时材料集合：按钮选择只取原生 dialog 已声明、非 blank/非 infohidden 的物理牌；chooseToMove/chooseToMove_new 只取声明 list 中的牌；viewCards 只取 event.cards。必须同时满足接收者为该选择的 player、经该玩家 Player.send 寻址、牌对象属于上述集合，才额外允许牌面序列化；finally 恢复原范围。不遍历事件父链来扩大私人授权，不读取 storage、不持久化额外 knower、不把目标整手设为全局公开。提前编码的原生卡牌继续在实际接收者上下文复查；入站卡牌引用保护、公开观战的独立过滤、各房鉴权均保留。
+
+私有 `TableDialog` 增加可选 groups，保留原生多组普通牌池及其标题；旧的单池 items 和移牌 zones 继续兼容。分组仍带展平的 items 作为旧 Node 清洗器的后备，新手机有 groups 时只显示分组，避免构建期间已有 v0.6.0 服务丢失整池。Node 同样清洗组名/牌面、限制数量、去掉物理牌 ID/附加字段，动作校验覆盖组内的当前合法节点。手机用 textContent 分行渲染，长材料区滚动，确认仍独立提交。
+
+攻心使用固定上游的 chooseToMove_new/addNewRow。投影按当前事件实际 itemContainers 构造三个牌区，转发到其原生点击监听；filterMove、filterOk 和结果仍由原生代码计算，不由手机重写。隐藏镜像关闭动画时，旧 `$swapElement` 的零时长路径也使用既有原子交换，避免等待不存在的 transitionend；有时长的原生路径保留。原生 blank/infohidden 节点在投影中同样遮面，即使镜像已知某张牌也不能把牌背按钮画成牌面。
+
+v0.6.2 已按用户评审后的原生界面方向落地基础表现事件和动画队列，见 ADR-021 与 ui-design.md；本条私有技能授权和分组边界继续适用。
+
+## ADR-019：电脑席位镜像与轻量手机牌桌
+
+状态：v0.6.0，2026-10-06；用户确认以轻量 Web 客户端替代手机整套无名杀前端。
+
+`apps/web/src/table-client.ts` 仅负责 HTML/CSS/SVG 渲染、说明、声音与选择反馈；`packages/shared/src/table.ts` 定义独立的私有席位视图，不进入 `RoomView`、公开观战或大厅日志。手机从 `/engine/table/:match` 和最小的 `/engine/table-setup/:match` 启动，不导入引擎、原生样式、武将/技能脚本或背景字体。大厅预加载的 `client=light` 清单只含轻量脚本/样式，候选头像、出场头像、可见卡牌插画和当前音效按需从同源取得。
+
+固定上游的选择消息携带动态函数，全面另写规则/技能选择器容易产生规则分歧。因此本阶段保留每局一个规则 iframe，并在同一电脑为每个在线真人建立一个原生席位镜像。镜像收到的消息先经过既有 `privacy.js`，再由 `runtime/table-projection.js` 投影自己的手牌、公开角色与区域、可见弹窗和原生合法操作项。只读可见字段，不读取原生 storage，不把函数、事件父链、物理牌 ID 或 HTML 发给手机。DOM 文本最终用 `textContent` 渲染，资源地址经 Node 白名单过滤。完整引擎和选择逻辑只在电脑执行；内存/界面成本转移给电脑，不宣称多房容量已验收。
+
+规则宿主、每个席位镜像和旧手机原生客户端使用独立原生配置/IndexedDB 前缀，防止同源镜像保存联机模式时干扰其他席位启动。镜像的 `chooseToMove` 关闭原生移牌动画，避免隐藏 iframe 的动画帧暂停；手机点击牌/牌区转换成电脑上的原生点击或移动事件，同步手势期间命中已核对的目标节点。移动过滤、排序结果与确认仍由原生事件处理，手机不提交牌堆顺序或任意卡牌对象。
+
+投影模块在原生 WebSocket 创建前完成 import，避免握手的 init 重置原生事件栈时启动事件仍因 import 未完成而在栈中。零时长的原生相邻牌交换会因同步计算第二个 goto 目的位置而还原顺序，镜像在这一 UI 方法里原子交换 DOM 节点，仍由原生移动事件校验并生成结果。结算点击先复核服务端房间；若牌桌结束先于房间消息，记住当前 match 的回房请求，服务端结束后再处理。
+
+本机镜像使用独立 `/engine/view/:match?seat=:id`、`setup?role=view` 和 `/engine/socket/:match/view?seat=:id`。它们要求回环/Host/Origin/入站来源检查、HttpOnly 规则宿主 cookie，且该 match 已有相应真人轻量会话；手机不能获得镜像或规则宿主权限，电脑仍无房主权限。手机 `player?client=light` 与 `PollChannel.lightweight` 复用原认证 WebSocket、HTTP、持续推送及 RTC 去重通道，镜像原生流与手机声明式流用不同集合分发；原生消息不透传手机。同一个连接 ID 不允许切换为原生协议，跨房及过期席位继续拒绝。
+
+每项动作只有临时界面 ID，与镜像启动 epoch、当前选择事件编号绑定。Node 核对当前席位最新操作项；镜像执行前重新核对当前原生事件、节点仍连接且可操作，过期操作只补发当前状态。HTTP/RTC/推送继续按动作序号去重；确认后的旧节点/旧选择不能作用于下一次选择。手机无法提交原生 result、任意卡牌数据、函数或配置。规则镜像生成原生 result，规则 worker 继续保护物理牌引用并采用原生规则、AI 与结算。
+
+镜像按 DOM 变化合并约 35ms 更新，每 500ms补查纯状态变化；帧上限 128KiB，过大的候选说明先缩减，保留选项。手机队列沿用 512 帧/4MiB 上限。手机刷新/短断线保留电脑的同一镜像和选择；通道真正断开后额外保留 20 秒，长断线释放镜像，沿用原生离线 AI。HTTP 的租约仍为 45 秒。镜像异常由仅本机的 supervisor 恢复对应席位 iframe，手机可手动恢复声明式视图。回房/换局释放私有快照与镜像。
+
+真人配置关闭 `auto_confirm`、原生 `autoConfirm` 选择 hook及 frequent 技能自动接受名单，包括洛神首次和后续询问；不改技能定义、锁定技或规则 worker 的 AI hook。普通成员结算后可先关闭自己的牌桌回房等待；只有房主调用已有 rematch API 释放旧局。旧原生客户端保留为显式验证路径，验证器设置 `party_native_verification`，产品不暴露引擎配置菜单。
+
 ## 部署与职责
 
 ```mermaid
@@ -12,14 +70,15 @@ flowchart LR
   Lobby --> Adapter[无名杀适配器\n真人/AI 席位契约]
   Adapter --> Worker[电脑规则执行宿主\n不占玩家席位]
   PC --> Worker
-  Owner --> Relay[同源无名杀对局通道]
+  Owner --> Relay[同源轻量状态与操作通道]
   Members --> Relay
-  Relay --> Worker
+  Relay --> Views[电脑上的原生席位镜像]
+  Views --> Worker
 ```
 
 大厅与真实对局已接通。电脑页面不承担产品房主职责。手机房主是普通参赛席位加房间管理权限，不自动等同于引擎规则宿主。
 
-v0.5.0 的 `/server` 同时提供独立本机运维权限和公开观战，边界见 ADR-015/016；不把本机运维 cookie 用于手机房主 API。
+v0.5.0 的 `/server` 同时提供独立本机运维权限和公开观战，边界见 ADR-015/016；不把本机运维 cookie 用于手机房主 API。v0.6.0 手机默认使用轻量声明式牌桌，原生席位界面移到电脑，见 ADR-019；下文较早版本的手机原生 UI 与预加载描述是保留的回归路径。
 
 ## ADR-001：局域网电脑服务与规则宿主
 
@@ -109,6 +168,8 @@ SSE 连接数支持同一玩家多个标签，最后一个连接断开标记离�
 状态：v0.3.0 已实现，详见 `packages/noname-adapter/runtime/README.md`。
 
 每个 match 在电脑服务页的独立 iframe 中运行原生引擎，规则宿主的 Player 视点脱离所有参赛数组。玩家原生 UI 也在房间 iframe 内运行，外层 SSE 保持在线、二维码和房主身份。`starting` 包含选将；真实发牌完成才 `playing`。原生胜负到 `finished`，房主回房后释放旧 worker，生成新 match 再开局。
+
+外层房间状态与原生牌桌是独立通道；SSE 已收到 finished 不代表手机已处理死亡和结算帧。房间页等待两秒，若当前 match 的原生 `_status.over` 仍未成立，则按原会话重新载入玩家 iframe 一次；正常原生结束画面保留，不因普通房间更新反复重载。工具条另提供手动恢复，运行中全局异常也进入同一重连流程。恢复先查询认证房间状态并校验 match 未变，仅重建玩家视图，不创建规则宿主、重开牌局或由大厅伪造胜负；原生 reinit 继续经过 privacy.js。
 
 仅回环 `/engine/jobs` 发放 HttpOnly 宿主 cookie；宿主与玩家套接字都验证 Origin。玩家连接按大厅 cookie 绑定真实席位，忽略原生 init 中自报的 ID。白名单拒绝原生配置、开局、牌堆读取与任意函数执行；物理牌引用只解析现有 ID，防止客户端改写牌值。源昵称只通过 textContent 显示。
 
@@ -226,7 +287,7 @@ bundle 用内容哈希，其他引擎静态 URL 增加已校验的上游 commit�
 
 本机 GET `/server` 建立独立随机 HttpOnly、SameSite=Strict、路径 `/api/console` 的 party_console cookie。管理读取/写入逐次检查回环、本机 Host、Origin/代理标记和 cookie，不复用停止 token 或玩家 cookie；公网代理封锁全部 `/api/console` 并剥除运维 cookie/relay 头。写入带当前房间 revision，UI 确认后发请求，过期点击拒绝。RoomStore 独立运维方法不借用房主入口；移除房主沿用真人交接。结束启动/关闭房间递增启动代次，旧确认/失败不能复活房间，其他房间不受影响。
 
-规则 iframe 的 observer.js 每 500ms 检查显式公开投影，变化才发送，从不读手牌牌面、牌堆、私人选择参数或技能 storage。只取常规公开武将/身份、体力/护甲、手牌数量、装备/判定区、回合；物理用牌/响应离开暗手牌后记录最多 12 条。Node observer.ts 再按席位/字段白名单限制，仅给本机控制台。observer-view.ts 只读呈现，不把原生 get.arenaState/stringifiedResult 当作观察者快照，不伪造真人席位，不改变 privacy.js。当前不是完整原生动画转播；特殊技能额外公开标记须逐项检查后再扩展。
+规则 iframe 的 observer.js 每 500ms 检查显式公开投影，变化才发送；只取常规公开武将/身份、体力/护甲、手牌数量、装备/判定区、回合及控制状态。v0.5.0 的事件链抽样/12 条物理用牌记录已被 v0.5.2 的原生公开日志收集取代，见 ADR-018。Node observer.ts 再按席位/字段白名单限制，仅给本机控制台。observer-view.ts 只读呈现，不把原生 get.arenaState/stringifiedResult 当作观察者快照，不伪造真人席位，不改变 privacy.js。当前不是完整原生动画转播；特殊技能额外公开标记须逐项检查后再扩展。
 
 纯源码 CI 不要求忽略的上游素材：网关、压缩/鉴权、运行适配始终检查，完整资源清单一项明确跳过；test:engine-api 强制要求固定资源及构建，缺失失败，真实对局另运行 engine:verify:rooms。
 
@@ -241,3 +302,13 @@ bundle 用内容哈希，其他引擎静态 URL 增加已校验的上游 commit�
 已验证的公网 URL 在不可用状态仍保留，供原码显示/保存及同址恢复；公开状态明确标注中断，LAN 地址独立展示。二维码组件只在目标变化时更新 img.src，状态刷新不重新下载相同二维码。公网持续推送出站动作按 WebSocket 顺序连续发送，未确认队列有 512 条/4MiB 上限；中断后按原序号重试，由服务端去重。HTTP/RTC 请求仍串行，避免独立请求乱序。推送帧不保留 HTTP 的 12ms 合批窗口；控制台网络上报最多一个在途、8 秒超时，同路线正常状态每 8 秒一次，线路变化可立即更新。上述修改不更改 RTT 数字、动画节奏、隐私序列化或规则决策。
 
 LAN 手机或持续推送可能在规则 iframe 连接前发送原生初始化。旧实现调用空的宿主连接并确认成功，会丢失消息、卡在选将。`NativeNonameService.forwardPlayer` 在 starting 且宿主未就绪时暂存已认证、通过原白名单的消息，最多 512 条/4MiB；规则连接先交付当前席位 connect，再交付其原序消息，且逐项核对仍为原连接。替换或关闭的连接消息丢弃，失败/释放清空；超限关闭连接并恢复原席位，不虚假确认。该缓冲只存在私有 match 内存，不进入快照或日志，原隐私序列化与入站物理牌保护保留。
+
+## ADR-018：未完成选将恢复与整局公开记录
+
+状态：v0.5.2。
+
+原生 reinit 只还原牌桌，未重发未完成的 chooseButtonOL/chooseButton；Client.close 还会立即将等待释放为 AI。规则宿主的 selection-recovery.js 私有保存启动期间按钮请求，在断线时保留原等待与原超时计时器，客户端 reinited 确认 arena 重建后才给同一席位重发。真实结果或超时删除请求，不给已完成选择重开弹窗。chooseButtonOL 的 AI 哨兵另用原生 chooseButton 决策完成，只将该事件 isOnline 设为 false，防止晚到的重连重新索要已超时选择；不改席位整体控制状态、候选、游戏规则或 AI。请求不离开该局私有内存，重发仍走 privacy.js 与原认证/卡牌引用保护。新模块仅 setup.selectionRecovery 显式启用，旧 Node 服务的运行文件白名单不会因构建页面而被破坏；正式生效需完整停启。
+
+observer.js 在原生 game.log 的公开发布点收集文本，显式投影玩家昵称/公开武将、已公开的实体牌和当前 use/respond 声明的虚拟牌；其他对象不翻译或序列化。未公开手牌和私人 ordering 仅显示暗牌，牌堆、选择参数、storage 不读取；原生公开字符串去掉展示标签，前端全部使用 textContent。牌面公开边界沿用既有 use/respond/discard/showCards、明确五谷/涯角、判定及已展示拼点材料，原 privacy.js 不改。另按原生 Client/message 的连接与托管变化记录控制状态。
+
+每批预览最多 32 条、每条 500 字符，按序号每 32 条主动发送，另每 500ms 更新牌桌，避开 128KiB 原生帧上限和事件抽样遗漏。Node ObserverJournal 去重保留每局最多 10000 条公开文本；常规控制台只拿小预览，GET /api/console/rooms/:code/log?match=:id&before=:sequence 每次最多回看 100 条，逐次验证独立本机 cookie、来源和房间/match。超限显式提示，释放 match 一并清空。浏览器按序号合并，自动补取轮询漏过的中间批次，保留回看记录及滚动位置；切换房间/下一局不混入旧记录，过期请求拒绝。这不是存档或完整原生动画回放，新扩展的额外公开语义仍需检查。

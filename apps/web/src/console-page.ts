@@ -4,6 +4,7 @@ import {
   type ConsoleInfo,
   type ConsoleRoom,
   type ServerInfo,
+  type ObserverLogPage,
 } from '../../../packages/shared/src/contracts.js';
 import { action, api, connection, element, frame, message, watchEvents } from './ui.js';
 import { bindQr, isInternetInvite, qrMarkup } from './qr.js';
@@ -141,7 +142,11 @@ export function showServerPage(info: ServerInfo): void {
         `关闭房间 ${room.code}？所有玩家将离开，本局无法继续。`,
       ),
     );
-    renderObserver(element('#observer-view'), entry.observer);
+    renderObserver(element('#observer-view'), entry.observer, room.matchId, (before) =>
+      api<ObserverLogPage>(
+        `/api/console/rooms/${room.code}/log?match=${encodeURIComponent(room.matchId ?? '')}&before=${before}`,
+      ),
+    );
   }
   function render() {
     if (!rooms.some((entry) => entry.room.code === selected)) selected = rooms[0]?.room.code ?? '';

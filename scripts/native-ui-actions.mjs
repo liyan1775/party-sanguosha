@@ -8,6 +8,11 @@ export async function chooseGeneral(frame, worker) {
     { timeout: 120000 },
   );
   await frame.locator('.dialog .button.character').first().tap();
+  const confirm = frame
+    .locator('.control > div')
+    .filter({ hasText: /^确定$/ })
+    .first();
+  if (await confirm.isVisible()) await confirm.tap();
   for (
     let attempt = 0;
     attempt < 100 && !(await worker.evaluate(() => partyEngine.proof.started));
@@ -17,7 +22,10 @@ export async function chooseGeneral(frame, worker) {
       .locator('.dialog')
       .filter({ hasText: '请选择你的势力' })
       .locator('.button');
-    if (await groupChoice.first().isVisible()) await groupChoice.first().tap();
+    if (await groupChoice.first().isVisible()) {
+      await groupChoice.first().tap();
+      if (await confirm.isVisible()) await confirm.tap();
+    }
     await new Promise((resolve) => setTimeout(resolve, 150));
   }
 }
@@ -64,13 +72,18 @@ export async function playOneAction(frames, worker) {
         continue;
       }
       await selectable.tap();
-      const target = frame.locator('.player.selectable').first();
-      if (await target.isVisible()) await target.tap();
       const confirm = frame
-        .locator('.control')
+        .locator('.control > div')
         .filter({ hasText: /^确定$/ })
         .first();
-      if (await confirm.isVisible()) await confirm.tap();
+      // Global/self-targeting cards already select their native targets. Do not
+      // toggle one off merely because it still carries the selectable class.
+      if (!(await confirm.isVisible())) {
+        const target = frame.locator('.player.selectable:not(.selected)').first();
+        if (await target.isVisible()) await target.tap();
+      }
+      if (!(await confirm.isVisible())) continue;
+      await confirm.tap();
       await worker.waitForFunction(
         (before) =>
           before.some((record) => {

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { setImmediate as tick } from 'node:timers/promises';
 import type { TestContext } from 'node:test';
+import { ObserverJournal } from '../packages/noname-adapter/src/observer.js';
 
 function globals(t: TestContext, values: Record<string, unknown>) {
   for (const [key, value] of Object.entries(values)) {
@@ -20,11 +21,172 @@ async function runtime(name: string) {
       new URL(`../packages/noname-adapter/runtime/${name}.js`, import.meta.url),
       'utf8',
     )
-  ).replace(/import \{([^}]+)\} from 'noname';/, 'const {$1} = globalThis.nativeFixture;');
+  )
+    .replace(/import \{([^}]+)\} from 'noname';/, 'const {$1} = globalThis.nativeFixture;')
+    .replace(
+      "import { withChoiceDisclosure } from './privacy.js';",
+      'const { withChoiceDisclosure } = globalThis.nativeFixture;',
+    );
   return import(
     `data:text/javascript;base64,${Buffer.from(source).toString('base64')}#${Math.random()}`
   );
 }
+
+test('原生技能选择刷新：原请求与期限保留，换席位、已提交和超时不重放', async (t) => {
+  const sent: { id: string; name: string; parent: string }[] = [];
+  let waits = 0;
+  const waiting: Record<string, unknown> = {};
+  class Player {
+    playerid = 'actor';
+    ws: Client | undefined;
+    send(_callback: unknown, name: string, parent: string) {
+      sent.push({ id: this.playerid, name, parent });
+    }
+    wait() {
+      waits++;
+      waiting[this.playerid] = '_noname_waiting';
+    }
+    unwait(result: unknown) {
+      waiting[this.playerid] = result;
+    }
+  }
+  const actor = new Player();
+  class Choice {
+    player = actor;
+    name = 'chooseToMove_new';
+    parent = 'original encoded parent';
+    send() {
+      this.player.send(() => {}, this.name, this.parent);
+      this.player.wait();
+    }
+  }
+  class Client {
+    id = 'actor';
+    close() {
+      actor.unwait('ai');
+    }
+  }
+  const lib = {
+    element: { Player, GameEvent: Choice, Client },
+    playerOL: { actor },
+    node: { torespond: waiting },
+    message: { server: { reinited() {} } },
+  };
+  // The fixture is already playing, as opposed to startup chooseButtonOL.
+  globals(t, {
+    partyEngine: { proof: { started: true } },
+    nativeFixture: {
+      lib,
+      get: { event: () => choice },
+      withChoiceDisclosure: (_event: unknown, send: () => unknown) => send(),
+    },
+  });
+  const { installSelectionRecovery } = await runtime('selection-recovery');
+  installSelectionRecovery();
+  const choice = new Choice();
+  const old = new Client();
+  actor.ws = old;
+  choice.send();
+  choice.parent = 'parent advanced during reconnect';
+  assert.equal(waits, 1);
+  old.close();
+  assert.equal(waiting.actor, '_noname_waiting', 'disconnect must not consume the pending skill');
+  const replacement = new Client();
+  lib.message.server.reinited.call(replacement);
+  assert.equal(sent.length, 1, 'unbound connection cannot receive the private choice');
+  actor.ws = replacement;
+  lib.message.server.reinited.call(replacement);
+  assert.deepEqual(sent, [
+    { id: 'actor', name: 'chooseToMove_new', parent: 'original encoded parent' },
+    { id: 'actor', name: 'chooseToMove_new', parent: 'original encoded parent' },
+  ]);
+  assert.equal(waits, 1, 'replay must not reset the original native timer');
+  actor.unwait({ bool: true });
+  lib.message.server.reinited.call(replacement);
+  assert.equal(sent.length, 2, 'submitted choice cannot reopen');
+  choice.send();
+  actor.unwait('ai');
+  lib.message.server.reinited.call(replacement);
+  assert.equal(sent.length, 3, 'timeout cannot reopen a choice or extend its deadline');
+});
+
+test('原生视频编号弹窗：刷新先恢复本人私有弹窗，保留有界更新，关闭后不再重放', async (t) => {
+  const sent: unknown[][] = [];
+  const waiting: Record<string, unknown> = {};
+  class Player {
+    playerid = 'actor';
+    ws: object = {};
+    send(...args: unknown[]) {
+      sent.push(args);
+    }
+    wait() {
+      waiting.actor = '_noname_waiting';
+    }
+    unwait(result: unknown) {
+      waiting.actor = result;
+    }
+  }
+  const actor = new Player();
+  class Choice {
+    player = actor;
+    name = 'chooseButton';
+    send() {
+      actor.send(() => {}, this.name);
+      actor.wait();
+    }
+  }
+  class Client {
+    id = 'actor';
+    close() {
+      actor.unwait('ai');
+    }
+  }
+  const lib = {
+    element: { Player, GameEvent: Choice, Client },
+    playerOL: { actor },
+    node: { torespond: waiting },
+    message: { server: { reinited() {} } },
+  };
+  const choice = new Choice();
+  globals(t, {
+    // Huashen can also run before the initial native deal is confirmed.
+    partyEngine: { proof: { started: false } },
+    nativeFixture: {
+      lib,
+      get: { event: () => choice, idDialog: () => ({ isConnected: true }) },
+      withChoiceDisclosure: (event: Choice, send: () => unknown) => {
+        assert.equal(event.player, actor);
+        return send();
+      },
+    },
+  });
+  (await runtime('selection-recovery')).installSelectionRecovery();
+  // These callbacks are never executed by the fixture; they stand for the
+  // native actor-addressed creation/update protocol used by Huashen.
+  const create = new Function(
+    'id',
+    'const dialog = ui.create.dialog("choice"); dialog.videoId = id;',
+  );
+  const update = new Function('index', 'id', 'get.idDialog(id).dataset.current = index;');
+  actor.send(create, 7);
+  for (let index = 0; index < 30; index++) actor.send(update, index, 7);
+  choice.send();
+  const originalChoice = sent.at(-1);
+  actor.send(update, 99, 7);
+  sent.length = 0;
+  const replacement = new Client();
+  actor.ws = replacement;
+  lib.message.server.reinited.call(replacement);
+  assert.equal(sent.length, 17, 'private dialog updates remain bounded plus one original request');
+  assert.equal(sent[0]![0], create, 'native creation must precede ID-based choice');
+  assert.deepEqual(sent.at(-1), originalChoice);
+  actor.send('closeDialog', 7);
+  actor.unwait({ bool: true });
+  choice.send();
+  sent.length = 0;
+  lib.message.server.reinited.call(replacement);
+  assert.equal(sent.length, 1, 'closed private dialogs cannot reappear for later choices');
+});
 
 test('公开观战投影：暗手牌、私有 storage、未亮身份与私人选牌不进入观察者数据', async (t) => {
   const hiddenCard = { name: 'secret-card' };
@@ -73,6 +235,125 @@ test('公开观战投影：暗手牌、私有 storage、未亮身份与私人选
   assert.equal(publicObserverState().players[0].identity, 'nei2');
   player.isUnseen = () => true;
   assert.equal(publicObserverState().players[0].general, '未亮将');
+});
+
+test('公开日志捕捉短事件与虚拟牌，整局分批保留；暗牌、观星与未知对象不泄露', async (t) => {
+  const player = (id: string) => ({
+    kind: 'player',
+    playerid: id,
+    nickname: id,
+    name: 'public-general',
+    identity: 'nei',
+    identityShown: false,
+    hp: 3,
+    maxHp: 4,
+    hujia: 0,
+    isAuto: false,
+    ws: { closed: false },
+    isDead: () => false,
+    isLinked: () => false,
+    isTurnedOver: () => false,
+    isUnseen: () => false,
+    countCards: () => 2,
+    getCards: () => [],
+    get storage(): never {
+      return assert.fail('private storage must not be read');
+    },
+  });
+  const actor = player('a'),
+    target = player('b');
+  const hidden = { kind: 'card', name: 'SECRET-HAND', position: 'h' };
+  const ordering = { kind: 'card', name: 'SECRET-DECK', position: 'o' };
+  const shown = { kind: 'card', name: 'PUBLIC-CARD', position: 'h' };
+  const virtual = { name: 'PUBLIC-VIRTUAL' };
+  let event: { name: string; cards?: unknown[]; card?: unknown } = { name: 'chooseToMove' };
+  let originalCalls = 0;
+  class Client {
+    close() {}
+  }
+  const lib = { configOL: { gameStarted: true }, element: { Client }, message: { server: {} } };
+  const game = {
+    players: [actor, target],
+    dead: [],
+    roundNumber: 1,
+    log: (..._args: unknown[]) => {
+      originalCalls++;
+      return 'native-result';
+    },
+  };
+  const status = { over: false, currentPhase: actor };
+  const window = new EventTarget();
+  globals(t, {
+    window,
+    partyEngine: {
+      setup: {
+        seats: [
+          { id: 'a', nickname: '<img src=x>', kind: 'human' },
+          { id: 'b', nickname: '目标', kind: 'human' },
+        ],
+      },
+      proof: { started: true },
+    },
+    nativeFixture: {
+      lib,
+      game,
+      _status: status,
+      get: {
+        event: () => event,
+        position: (card: { position: string }) => card.position,
+        is: { shownCard: () => false },
+        itemtype: (value: { kind?: string }) => value?.kind,
+        translation: (value: string | { name: string }) =>
+          typeof value === 'string' ? value : value.name,
+      },
+    },
+  });
+  t.after(() => window.dispatchEvent(new Event('pagehide')));
+  const { installObserver, observerCardVisible } = await runtime('observer');
+  const journal = new ObserverJournal();
+  const update = installObserver((state: Parameters<ObserverJournal['append']>[0]) => {
+    assert(
+      Buffer.byteLength(JSON.stringify(state)) < 131072,
+      'observer batches fit the native gateway frame limit',
+    );
+    journal.append(state);
+  });
+  assert.equal(
+    game.log(actor, '获得', hidden, ordering, { storage: 'SECRET-STORAGE' }),
+    'native-result',
+  );
+  assert.equal(observerCardVisible(ordering), false);
+  event = { name: 'useCard', cards: [shown], card: virtual };
+  game.log(actor, '对', target, '使用了', virtual, shown);
+  for (const message of ['摸了两张牌', '发动【公开技能】', '受到一点伤害', '濒死', '阵亡'])
+    game.log(actor, message);
+  for (let index = 0; index < 250; index++) game.log(`短暂事件 ${index}`);
+  for (let index = 0; index < 64; index++) game.log(`长事件 ${index} ${'\u0001'.repeat(500)}`);
+  update();
+  update();
+  let before: number | undefined;
+  const all = [];
+  do {
+    const page = journal.page('match', before);
+    all.unshift(...page.entries);
+    before = page.entries[0]?.sequence;
+  } while (before && before > 1);
+  assert.equal(
+    all.length,
+    originalCalls,
+    'every native log survives timer intervals and duplicate previews',
+  );
+  assert.deepEqual(
+    all.map((entry) => entry.sequence),
+    Array.from({ length: originalCalls }, (_, index) => index + 1),
+  );
+  const text = all.map((entry) => entry.text).join('\n');
+  assert(text.includes('<img src=x>（public-general）对目标'));
+  assert(text.includes('PUBLIC-VIRTUAL') && text.includes('PUBLIC-CARD'));
+  assert(text.includes('伤害') && text.includes('阵亡') && text.includes('短暂事件 0'));
+  assert(!text.includes('SECRET') && !text.includes('nei'));
+  status.over = true;
+  assert.equal(observerCardVisible(hidden), false, 'ending does not reveal concealed faces');
 });
 
 test('公网推送接管正在等待的 HTTP 读取；推送中断后同通道继续，不重复 open 或消息', async (t) => {
@@ -497,6 +778,148 @@ test('拼点在原生展示时才公开材料，选择阶段、其余暗牌及�
   ]);
   event = { name: 'chooseToGuanxing', getParent: () => undefined };
   assert(client.send(...cards).every((value) => value.includes('party_unknown')));
+});
+
+test('私有牌面选择按原生声明授权：魄袭/攻心可看具体材料，暗选、旁人及选择结束仍遮盖', async (t) => {
+  type Card = {
+    kind: string;
+    cardid: string;
+    name: string;
+    position: string;
+    isKnownBy(): boolean;
+  };
+  const cards: Card[] = ['shown-a', 'shown-b', 'blank', 'unrelated'].map((cardid) => ({
+    kind: 'card',
+    cardid,
+    name: cardid,
+    position: 'h',
+    isKnownBy: () => false,
+  }));
+  const buttons = cards.slice(0, 3).map((link, index) => ({
+    link,
+    classList: { contains: (name: string) => index === 2 && name === 'blank' },
+  }));
+  const get = {
+    itemtype: (value: unknown) => (value as Card)?.kind,
+    position: (card: Card) => card.position,
+    owner: () => target,
+    event: () => undefined,
+    mode: () => 'duel',
+    cardInfoOL: (card: Card) =>
+      '_noname_card:' + JSON.stringify([card.cardid, 'spade', 7, card.name, '']),
+    cardInfo: (card: Card) => ['spade', 7, card.name, '', card.cardid],
+    stringifiedResult: (value: unknown): unknown => {
+      if ((value as Card)?.kind === 'card') return get.cardInfoOL(value as Card);
+      if (Array.isArray(value)) return value.map((item) => get.stringifiedResult(item));
+      return value;
+    },
+  };
+  class Client {
+    constructor(public id: string) {}
+    send(...args: unknown[]) {
+      return args.map((value) => get.stringifiedResult(value));
+    }
+  }
+  class Player {
+    constructor(public client: Client) {}
+    send(...args: unknown[]) {
+      return this.client.send(...args);
+    }
+    $compare() {}
+    $compareMultiple() {}
+  }
+  const actor = new Player(new Client('actor'));
+  const target = new Player(new Client('target'));
+  const bystander = new Player(new Client('bystander'));
+  class GameEvent {
+    name = 'chooseButton';
+    player = actor;
+    dialog = { buttons };
+    list: unknown[] = [
+      ['目标手牌', cards.slice(0, 2)],
+      [['弃置'], ['置于牌堆顶']],
+    ];
+    cards = cards.slice(0, 2);
+    send() {
+      // Include native card tuples and previously encoded parent cards, too.
+      const encoded = cards.map((card) => get.cardInfoOL(card));
+      const tuples = cards.map((card) => get.cardInfo(card));
+      return { actor: this.player.send(cards, tuples, encoded), other: bystander.send(cards) };
+    }
+  }
+  globals(t, {
+    nativeFixture: {
+      lib: {
+        element: {
+          Client,
+          Player,
+          GameEvent,
+          Card: class {
+            init() {}
+          },
+        },
+        card: {},
+        translate: {},
+        playerOL: { actor, target, bystander },
+        cardOL: Object.fromEntries(cards.map((card) => [card.cardid, card])),
+      },
+      get,
+      _status: {},
+    },
+  });
+  (await runtime('privacy')).installPrivacy();
+  const choice = new GameEvent();
+  const known = (value: unknown) => JSON.stringify(value).includes('"shown-a"');
+  const named = (value: unknown, name: string) => {
+    const faces: unknown[] = [];
+    const visit = (item: unknown) => {
+      if (typeof item === 'string' && item.startsWith('_noname_card:'))
+        faces.push(JSON.parse(item.slice(13))[3]);
+      else if (Array.isArray(item)) {
+        if (item.length === 5 && ['spade', 'none'].includes(item[0])) faces.push(item[2]);
+        else item.forEach(visit);
+      }
+    };
+    visit(value);
+    return faces.includes(name);
+  };
+  for (const method of [
+    'chooseButton',
+    'choosePlayerCard',
+    'discardPlayerCard',
+    'gainPlayerCard',
+    'chooseToMove',
+    'chooseToMove_new',
+    'viewCards',
+  ]) {
+    choice.name = method;
+    const result = choice.send();
+    assert(known(result.actor), `${method} retains the declared card reference`);
+    assert(
+      named(result.actor, 'shown-a') && named(result.actor, 'shown-b'),
+      `${method} reveals face-up materials`,
+    );
+    assert(!named(result.actor, 'blank') && !named(result.actor, 'unrelated'));
+    assert(
+      !named(result.other, 'shown-a') && !named(result.other, 'shown-b'),
+      'bystander stays concealed during nested sends',
+    );
+    assert(
+      !named(actor.send(cards), 'shown-a'),
+      'authorization ends with the synchronous choice send',
+    );
+  }
+  choice.name = 'chooseButton';
+  choice.dialog.buttons = buttons.map((button) => ({
+    ...button,
+    classList: { contains: () => true },
+  }));
+  assert(!named(choice.send().actor, 'shown-a'), 'all-blank native choices stay concealed');
+  choice.name = 'chooseToCompare';
+  assert(
+    !named(choice.send().actor, 'shown-a'),
+    'a different event cannot use a face-up dialog as authorization',
+  );
 });
 
 test('慢音频过期后不补播，静音后再开启也不会复活旧语音，载入与后台保持安静', async (t) => {

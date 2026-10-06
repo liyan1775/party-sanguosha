@@ -1,5 +1,5 @@
 /** Cache public, versioned assets while players read skills and wait in the lobby. */
-export function createAssetPreloader(status: HTMLElement) {
+export function createAssetPreloader(status: HTMLElement, lightweight = false) {
   const completed = new Set<string>();
   const failed = new Set<string>();
   let plan: string[] = [];
@@ -60,7 +60,7 @@ export function createAssetPreloader(status: HTMLElement) {
   async function load(preset: string, mode: string, ticket: number) {
     try {
       const response = await fetch(
-        `/engine/preload?preset=${encodeURIComponent(preset)}&mode=${encodeURIComponent(mode)}`,
+        `/engine/preload?preset=${encodeURIComponent(preset)}&mode=${encodeURIComponent(mode)}${lightweight ? '&client=light' : ''}`,
         { cache: 'no-store' },
       );
       if (!response.ok) throw new Error('Preload unavailable');
@@ -70,8 +70,11 @@ export function createAssetPreloader(status: HTMLElement) {
       // request match setup, cookies, private queues or a third-party host.
       plan = data.assets.filter(
         (url) =>
-          /^\/engine\/(bundle\/noname-[a-f0-9]{64}\.js|core\/[a-f0-9]{40}\/[\w/.-]+)$/.test(url) &&
-          new URL(url, location.origin).pathname === url,
+          (lightweight
+            ? /^\/assets\/table\.(js|css)$/.test(url)
+            : /^\/engine\/(bundle\/noname-[a-f0-9]{64}\.js|core\/[a-f0-9]{40}\/[\w/.-]+)$/.test(
+                url,
+              )) && new URL(url, location.origin).pathname === url,
       );
       progress();
       void run();

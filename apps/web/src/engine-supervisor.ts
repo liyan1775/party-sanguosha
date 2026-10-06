@@ -29,23 +29,47 @@ export function startEngineSupervisor(): void {
 function runSupervisor(): void {
   const lan = createLanHost();
   const frames = new Map<string, HTMLIFrameElement>();
+  const retryAt = new Map<string, number>();
+  window.addEventListener('message', (event) => {
+    if (event.origin !== location.origin || event.data?.type !== 'party-view-failed') return;
+    for (const [key, frame] of frames) {
+      if (
+        !frame.classList.contains('engine-seat-view') ||
+        event.source !== frame.contentWindow ||
+        !key.startsWith(`${event.data.matchId}/`)
+      )
+        continue;
+      if (Date.now() - (retryAt.get(key) ?? 0) < 5000) return;
+      retryAt.set(key, Date.now());
+      setTimeout(() => {
+        if (frames.get(key) === frame) frame.src = frame.src;
+      }, 1000);
+    }
+  });
   let running = false;
-  function render(jobs: { id: string; roomCode: string }[]): void {
-    const active = new Set(jobs.map((job) => job.id));
+  function render(jobs: { id: string; roomCode: string; views?: string[] }[]): void {
+    const active = new Set(
+      jobs.flatMap((job) => [job.id, ...(job.views ?? []).map((seat) => `${job.id}/${seat}`)]),
+    );
     for (const [id, frame] of frames)
       if (!active.has(id)) {
         frame.remove();
         frames.delete(id);
       }
     for (const job of jobs) {
-      if (frames.has(job.id)) continue;
-      const frame = document.createElement('iframe');
-      frame.className = 'engine-worker';
-      frame.title = `房间 ${job.roomCode} 的对局服务`;
-      frame.src = `/engine/worker/${job.id}`;
-      frame.setAttribute('aria-hidden', 'true');
-      document.body.append(frame);
-      frames.set(job.id, frame);
+      for (const seat of [null, ...(job.views ?? [])]) {
+        const key = seat ? `${job.id}/${seat}` : job.id;
+        if (frames.has(key)) continue;
+        const frame = document.createElement('iframe');
+        frame.className = seat ? 'engine-worker engine-seat-view' : 'engine-worker';
+        frame.title = `房间 ${job.roomCode} 的${seat ? '玩家视图' : '对局服务'}`;
+        frame.src = seat
+          ? `/engine/view/${job.id}?seat=${encodeURIComponent(seat)}`
+          : `/engine/worker/${job.id}`;
+        frame.setAttribute('aria-hidden', 'true');
+        document.body.append(frame);
+        frames.set(key, frame);
+      }
     }
     connection(true, '对局服务在线');
   }
@@ -54,7 +78,7 @@ function runSupervisor(): void {
     running = true;
     try {
       const { jobs, lanOffers } = await api<{
-        jobs: { id: string; roomCode: string }[];
+        jobs: { id: string; roomCode: string; views?: string[] }[];
         lanOffers?: LanOffer[];
       }>('/engine/jobs');
       render(jobs);

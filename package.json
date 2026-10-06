@@ -1,6 +1,6 @@
 {
   "name": "party-sanguosha",
-  "version": "0.5.1",
+  "version": "0.6.3",
   "private": true,
   "type": "module",
   "engines": {
@@ -21,6 +21,9 @@
     "engine:update-catalog": "node scripts/update-general-catalog.mjs",
     "engine:update-audio": "node scripts/update-native-audio.mjs",
     "engine:verify:rooms": "npm run build && npm run engine:check-definitions && node --import tsx scripts/verify-native-runtime.mjs",
+    "engine:verify:recovery": "npm run build && node --import tsx scripts/verify-native-recovery.mjs",
+    "engine:verify:selection": "npm run build && node --import tsx scripts/verify-native-selection.mjs",
+    "engine:verify:lightweight": "npm run build && node --import tsx scripts/verify-lightweight.mjs",
     "package:windows": "node --use-env-proxy scripts/package-windows.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",

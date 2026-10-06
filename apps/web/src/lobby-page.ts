@@ -48,7 +48,10 @@ export function showHomePage(info: ServerInfo, session: SessionView): void {
     <section class="panel guide-panel"><h2>上桌前看看</h2><p class="hint">新手档和进阶档的武将、技能都可以在这里查看。</p>${guideButton}<p id="engine-preload" class="hint" role="status" hidden></p></section>${listMarkup}`,
   );
   bindGeneralGuide();
-  createAssetPreloader(element('#engine-preload')).update(Boolean(info.engine.preload));
+  createAssetPreloader(
+    element('#engine-preload'),
+    sessionStorage.getItem('party_lightweight_verification') === '1',
+  ).update(Boolean(info.engine.preload));
   const renderSession = () => {
     element('#current-room').hidden = !session.roomCode;
     element('#create-panel').hidden = Boolean(session.roomCode);

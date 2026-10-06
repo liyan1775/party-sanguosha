@@ -57,6 +57,15 @@ async function start() {
   // Native loadConfig resets duration to 500; apply the room's pace afterwards
   // on both the rule worker and phones, without changing any AI decisions.
   lib.config.duration = setup.settings.generalPreset === 'beginner' ? 1000 : 500;
+  if (setup.role !== 'worker') {
+    lib.config.auto_confirm = false;
+    // Off-screen computer mirrors cannot wait for browser animation frames.
+    // Native chooseToMove keeps its filters and result, with instant DOM moves.
+    if (setup.tableView) lib.config.animation_choose_to_move = false;
+    // This native list disables automatic frequent-skill acceptance for human
+    // choices, including both the first and repeated Luoshen questions.
+    lib.config.autoskilllist = Object.keys(lib.skill);
+  }
   for (const [name, path] of Object.entries(setup.portraitAliases))
     if (lib.character[name]) lib.character[name].img = path;
   for (const [name, path] of Object.entries(setup.mobilePortraits ?? {}))
@@ -70,22 +79,39 @@ async function start() {
   lib.group = lib.group.filter((group) => ['wei', 'shu', 'wu', 'qun', 'shen'].includes(group));
   lib.init.onfree();
   if (setup.role !== 'worker') {
+    // Native init replaces the startup event stack. Load the projector before
+    // opening the socket so no await can keep start() alive after init arrives.
+    const project = setup.tableView
+      ? (await import('./table-projection.js')).installTableProjection
+      : null;
     const scheme = location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const playerUrl = `${scheme}//${location.host}/engine/socket/${setup.id}/player`;
+    const playerUrl = setup.tableView
+      ? `${scheme}//${location.host}/engine/socket/${setup.id}/view?seat=${setup.playerId}`
+      : `${scheme}//${location.host}/engine/socket/${setup.id}/player`;
     if (setup.playerPolling) {
       const { connectPlayer } = await import('./player-transport.js');
       connectPlayer(game, playerUrl);
     } else game.connect(playerUrl);
+    if (project) project();
     const close = game.ws.onclose;
     game.ws.onclose = function (event) {
       close.call(this, event);
       if (!_status.over && event.code !== 1008 && event.reason !== '已在另一页面继续对局')
-        parent.postMessage({ type: 'party-disconnected', matchId: setup.id }, location.origin);
+        parent.postMessage(
+          { type: setup.tableView ? 'party-view-failed' : 'party-disconnected', matchId: setup.id },
+          location.origin,
+        );
     };
     game.ws.onerror = () => {};
     return;
   }
   configure(setup);
+  // A running older Node service may still serve newly built pages. Its
+  // runtime allowlist has no recovery module; enable only with explicit setup.
+  if (setup.selectionRecovery) {
+    const { installSelectionRecovery } = await import('./selection-recovery.js');
+    installSelectionRecovery();
+  }
   game.onlineroom = true;
   lib.node ??= {};
   game.createServer();
@@ -248,6 +274,17 @@ async function start() {
   ]);
   const offers = new Map(choices.map((choice) => [choice[0].playerid, choice[1][1][0].slice()]));
   const selected = await game.players[0].chooseButtonOL(choices).forResult();
+  for (const [player, ...args] of choices) {
+    // Native chooseButtonOL returns the sentinel on timeout/disconnect rather
+    // than a button result. Finish that seat through the native button AI.
+    if (selected[player.playerid] === 'ai') {
+      const automatic = player.chooseButton(...args);
+      // A late reconnect may already have rebound player.ws. The expired
+      // choice must still finish through native AI, without asking it again.
+      automatic.isOnline = () => false;
+      selected[player.playerid] = await automatic.forResult();
+    }
+  }
   for (const player of game.players) {
     const name = selected[player.playerid]?.links?.[0];
     if (!name || !offers.get(player.playerid).includes(name)) throw new Error('无效的武将选择');

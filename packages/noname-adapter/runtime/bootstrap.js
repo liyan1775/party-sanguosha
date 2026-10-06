@@ -52,6 +52,16 @@ const fail = (error) => {
   if (proof.errors.length < 10) proof.errors.push(String(error?.stack ?? error));
   if (failed) return;
   failed = true;
+  if ((role === 'player' || role === 'view') && proof.booted) {
+    // A runtime error must restore this client's authoritative snapshot rather
+    // than leave a frozen table while the rule worker continues the match.
+    parent.postMessage(
+      { type: role === 'view' ? 'party-view-failed' : 'party-disconnected', matchId: id },
+      location.origin,
+    );
+    globalThis.partyEngine.game.ws?.close(4000, '正在恢复牌桌');
+    return;
+  }
   clearTimeout(deadline);
   loading.hidden = false;
   loading.dataset.state = 'failed';
@@ -79,12 +89,23 @@ window.addEventListener(
   },
   { once: true },
 );
-window.addEventListener('error', (event) => fail(event.error ?? event.message));
-window.addEventListener('unhandledrejection', (event) => fail(event.reason));
+function handleError(event, error) {
+  if ((role === 'player' || role === 'view') && proof.booted) {
+    // The upstream reporter opens a blocking alert. Let the outer page restore
+    // this client while retaining diagnostics in its private proof object.
+    event.preventDefault();
+    event.stopImmediatePropagation();
+  }
+  fail(error);
+}
+window.addEventListener('error', (event) => handleError(event, event.error ?? event.message));
+window.addEventListener('unhandledrejection', (event) => handleError(event, event.reason));
 
 try {
   progress('setup', '正在读取房间设置…');
-  const response = await fetch(`/engine/setup/${id}?role=${role}`);
+  const response = await fetch(
+    `/engine/setup/${id}?role=${role}${role === 'view' ? `&seat=${encodeURIComponent(new URLSearchParams(location.search).get('seat') ?? '')}` : ''}`,
+  );
   if (!response.ok) throw new Error('你的对局座位已失效，请返回房间。');
   const setup = await response.json();
   if (role === 'worker' && setup.serverVersion && parent !== window) {
@@ -95,9 +116,16 @@ try {
       const state = frame.contentWindow?.partyEngine?.proof;
       return state?.started && !state.ended;
     });
-    if (pageVersion && pageVersion !== setup.serverVersion && !active) {
+    const serverVersion = setup.serverVersion.split('.').map(Number);
+    const browserVersion = (pageVersion ?? '').split('.').map(Number);
+    const difference = serverVersion.findIndex((part, index) => part !== browserVersion[index]);
+    const pageIsOlder =
+      pageVersion && difference >= 0 && browserVersion[difference] < serverVersion[difference];
+    if (pageIsOlder && !active) {
       // A service restart can leave its old supervisor tab alive. Refresh it
       // before connecting a rule worker, so the new LAN receiver is installed.
+      // Newer web assets can also be served by an older running Node instance;
+      // reloading those backwards would loop and prevent preserved rooms starting.
       clearTimeout(deadline);
       clearInterval(progressTimer);
       resourceObserver.disconnect();
@@ -136,7 +164,9 @@ try {
   if (failed) throw new Error('载入已中断，请重试。');
   lib.assetURL = setup.assetBase ?? '/engine/core/';
   lib.device = device;
-  lib.configprefix = `party_match_${id}_`;
+  // Computer mirrors share one browser origin. Native connect writes mode and
+  // preferences to storage, so each executor/view needs its own namespace.
+  lib.configprefix = `party_match_${id}_${role}${role === 'view' ? `_${setup.playerId}` : ''}_`;
   localStorage.setItem(`${lib.configprefix}directstart`, 'true');
   localStorage.setItem(`${lib.configprefix}loadtime`, '120000');
   lib.init.reset = () => fail(new Error('引擎载入超时，请检查 Wi-Fi 和电脑服务页后重试。'));
@@ -163,11 +193,11 @@ try {
     phonelayout: true,
     compatible: false,
     background_music: 'music_off',
-    background_audio: role === 'player',
-    background_speak: role === 'player',
+    background_audio: role !== 'worker',
+    background_speak: role !== 'worker',
     volumn_audio: 6,
-    animation: false,
-    low_performance: true,
+    animation: role === 'player' && !setup.tableView,
+    low_performance: role !== 'player' || Boolean(setup.tableView),
     game_speed: setup.settings.generalPreset === 'beginner' ? 'slow' : 'fast',
     duration: setup.settings.generalPreset === 'beginner' ? 1000 : 500,
     sync_speed: true,
@@ -187,7 +217,7 @@ try {
     global_font: 'default',
     card_font: 'default',
     version: '1.11.6',
-    auto_confirm: true,
+    auto_confirm: false,
     identity_mode: 'normal',
     doudizhu_mode: 'normal',
     versus_mode: '2v2',
@@ -257,11 +287,13 @@ try {
   installPrivacy();
   installControls();
   installAudio();
+  if (role === 'worker' && setup.tablePresentation)
+    (await import('./table-presentation.js')).installTablePresentation();
   installPrompts();
   // A rule worker has no participating viewpoint, and always uses native AI
   // for AI seats. Human clients make their choices in the upstream interface.
   _status.auto = role === 'worker';
-  if (role === 'player') game.onlineID = setup.playerId;
+  if (role !== 'worker') game.onlineID = setup.playerId;
   lib.onover.push(() => {
     proof.ended = true;
     globalThis.partyEngine.signal?.('ended');

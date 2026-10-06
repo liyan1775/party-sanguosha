@@ -10,6 +10,7 @@ import { NativeNonameService } from '../packages/noname-adapter/src/service.ts';
 import { createPublicGateway } from '../apps/server/src/public-gateway.ts';
 import { APP_VERSION } from '../packages/shared/src/contracts.ts';
 import { chooseGeneral, playOneAction } from './native-ui-actions.mjs';
+import { verifyNativePrivateChoices } from './native-private-choices.mjs';
 import {
   verifyChoicePrompts,
   verifyLateVoices,
@@ -228,6 +229,31 @@ async function page(mobile, remote = false) {
         await route.abort();
       } else if (
         !mobile &&
+        process.env.ENGINE_VERIFY_PRIVATE &&
+        new URL(route.request().url()).pathname === '/engine/runtime/mode.js'
+      ) {
+        assert.equal(process.env.ENGINE_VERIFY_PRESET, 'advanced');
+        const headers = { ...route.request().headers() };
+        delete headers['if-none-match'];
+        delete headers['if-modified-since'];
+        const response = await route.fetch({ headers });
+        const source = await response.text();
+        const hero = process.env.ENGINE_VERIFY_PRIVATE === 'poxi' ? 'shen_ganning' : 'shen_lvmeng';
+        assert(source.includes('pool.randomRemove(choiceCount)'));
+        await route.fulfill({
+          response,
+          body: source
+            .replace(
+              'pool.randomRemove(choiceCount)',
+              `[['${hero}', 're_caocao', 're_liubei'][game.players.indexOf(player)]]`,
+            )
+            .replace(
+              'const seats = setup.seats.slice().randomSort();',
+              'const seats = setup.seats.slice();',
+            ),
+        });
+      } else if (
+        !mobile &&
         workerDelay &&
         new URL(route.request().url()).pathname.startsWith('/engine/worker/')
       ) {
@@ -329,6 +355,10 @@ try {
     await computer.locator('footer').evaluate((footer) => {
       footer.textContent = '聚会三国杀 v0.4.1';
     });
+  if (process.env.ENGINE_VERIFY_NEWER_HOST === '1')
+    await computer.locator('footer').evaluate((footer) => {
+      footer.textContent = '聚会三国杀 v0.6.999';
+    });
   let duplicateComputer =
     process.env.ENGINE_VERIFY_DUPLICATE_HOST === '1' ? await computer.context().newPage() : null;
   if (duplicateComputer) await duplicateComputer.goto(`http://127.0.0.1:${port}/server`);
@@ -429,7 +459,7 @@ try {
         .querySelector('#game-frame')
         ?.contentWindow?.location.pathname.startsWith('/engine/player/'),
     );
-    const gameFrame = phone.frames().find((frame) => frame.url().includes('/engine/player/'));
+    let gameFrame = phone.frames().find((frame) => frame.url().includes('/engine/player/'));
     assert(gameFrame);
     if (process.env.ENGINE_VERIFY_RETRY_START === '1') {
       for (const participant of phones) {
@@ -472,6 +502,11 @@ try {
       .frames()
       .find((frame) => frame.url().endsWith(`/engine/worker/${currentMatch}`));
     assert(worker);
+    if (process.env.ENGINE_VERIFY_NEWER_HOST === '1')
+      assert(
+        (await computer.locator('footer').textContent()).includes('v0.6.999'),
+        'newer compatible supervisor must not reload backwards',
+      );
     await worker.evaluate(() => {
       partyEngine.proof.publicCards = {
         throws: 0,
@@ -541,6 +576,7 @@ try {
       };
     });
     const gameFrames = [];
+    const previousJudgeDisplays = [];
     for (const participant of phones) {
       await participant.waitForFunction(() =>
         document
@@ -1080,6 +1116,37 @@ try {
       assert(seatProof.landlord.feiyang && seatProof.landlord.bahu);
     }
     await phone.screenshot({ path: `${artifactRoot}/${mode}-playing.png` });
+    assert.equal(
+      await computer.locator('.engine-seat-view').count(),
+      0,
+      'native phones need no computer seat mirrors',
+    );
+    for (const activeGame of gameFrames) {
+      assert(
+        await activeGame.evaluate(
+          () =>
+            partyEngine.lib.config.animation &&
+            !partyEngine.lib.config.low_performance &&
+            !partyEngine.lib.config.auto_confirm &&
+            !partyEngine.lib.hooks.checkEnd.some((hook) => hook.name === 'autoConfirm'),
+        ),
+        'native animation and explicit human confirmation remain enabled',
+      );
+    }
+    if (process.env.ENGINE_VERIFY_PRIVATE) {
+      previousJudgeDisplays.push(await gameFrame.evaluate(() => partyJudgeDisplayProof));
+      loadingProof.privateChoice = await verifyNativePrivateChoices({
+        kind: process.env.ENGINE_VERIFY_PRIVATE,
+        worker,
+        phones,
+        playerId: created.playerId,
+        output: artifactRoot,
+      });
+      gameFrame = phone.frames().find((frame) => frame.url().includes('/engine/player/'));
+      gameFrames[0] = gameFrame;
+      await observeJudgeDisplay(gameFrame);
+      await observePublicDisplay(gameFrame);
+    }
     if (process.env.ENGINE_VERIFY_MANUAL === '1') {
       const delivery = await observeActionDelivery(worker, gameFrames);
       await playOneAction(gameFrames, worker);
@@ -1187,7 +1254,6 @@ try {
         'public listener interrupted and restored; LAN native actions and connections continued',
       );
     }
-    const previousJudgeDisplays = [];
     if (process.env.ENGINE_VERIFY_RECONNECT) {
       previousJudgeDisplays.push(await gameFrame.evaluate(() => partyJudgeDisplayProof));
       if (process.env.ENGINE_VERIFY_RECONNECT === 'socket') {
@@ -1341,7 +1407,30 @@ try {
     }
     assert.equal(ended.hostInSeats, false);
     assert.deepEqual(ended.errors, []);
-    await phone.locator('#rematch-button').tap();
+    for (const participant of phones) {
+      const table = participant.frames().find((frame) => frame.url().includes('/engine/player/'));
+      await table.locator('#party-return-room').waitFor({ state: 'visible' });
+      assert(
+        await table.evaluate(() => partyEngine._status.over && partyEngine.ui.dialog?.isConnected),
+      );
+      assert.equal(
+        await participant.locator('#match-result').count(),
+        0,
+        'native settlement is unobstructed',
+      );
+    }
+    await phone.screenshot({ path: `${artifactRoot}/${mode}-settlement.png` });
+    for (const participant of phones.slice(1)) {
+      await participant.frameLocator('#game-frame').locator('#party-return-room').tap();
+      await participant.locator('#game-frame').waitFor({ state: 'detached' });
+      await participant.locator('#waiting-return').waitFor({ state: 'visible' });
+      assert.equal(
+        await worker.evaluate(() => partyEngine.proof.ended),
+        true,
+        'member return retains the finished match',
+      );
+    }
+    await phone.frameLocator('#game-frame').locator('#party-return-room').tap();
     await phone.locator('#game-frame').waitFor({ state: 'detached' });
     if (process.env.ENGINE_VERIFY_SECOND_ROUND === '1') {
       for (const participant of phones) await participant.locator('#ready-button').tap();

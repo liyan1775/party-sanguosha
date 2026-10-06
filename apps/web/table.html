@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>聚会三国杀 · 牌桌</title>
+    <link rel="stylesheet" href="/assets/table.css" />
+    <script type="module" src="/assets/table.js"></script>
+  </head>
+  <body>
+    <main id="table" aria-label="三国杀牌桌">
+      <svg
+        class="table-landscape"
+        viewBox="0 0 1200 600"
+        preserveAspectRatio="none"
+        aria-hidden="true"
+      >
+        <defs>
+          <pattern id="table-grain" width="48" height="48" patternUnits="userSpaceOnUse">
+            <path d="M0 24h48M24 0v48M4 4h12v12H4zM32 32h12v12H32z" />
+          </pattern>
+          <path
+            id="table-cloud"
+            d="M0 0c40-70 110-70 120-10s-60 90-65 35 40-40 50-15M120-10c55-50 95 5 65 40s-55-5-25-20"
+          />
+        </defs>
+        <rect width="1200" height="600" fill="url(#table-grain)" opacity=".18" />
+        <g transform="translate(600 290)" fill="none">
+          <circle r="205" />
+          <circle r="195" />
+          <circle r="155" />
+          <use href="#table-cloud" transform="rotate(0) translate(0 -145)" />
+          <use href="#table-cloud" transform="rotate(90) translate(0 -145)" />
+          <use href="#table-cloud" transform="rotate(180) translate(0 -145)" />
+          <use href="#table-cloud" transform="rotate(270) translate(0 -145)" />
+        </g>
+      </svg>
+      <header class="table-header">
+        <span>聚会三国杀</span><span id="round-label">等待电脑牌桌…</span
+        ><button id="motion-button" type="button" aria-pressed="false">精简动画</button
+        ><button id="auto-button" type="button" hidden>托管</button>
+      </header>
+      <section id="opponents" class="opponents" aria-label="其他角色"></section>
+      <section class="table-center">
+        <div id="played" class="played" aria-label="最近公开牌"></div>
+        <p id="turn-hint">正在连接自己的座位…</p>
+        <p id="motion-status" role="status" aria-live="polite"></p>
+      </section>
+      <section id="choice-panel" class="choice-panel" aria-label="当前选择" hidden>
+        <div id="choice-content" data-scroll-key="choices"></div>
+      </section>
+      <footer class="table-footer">
+        <div class="action-bar">
+          <p id="action-prompt" role="status" aria-live="polite">正在准备牌桌…</p>
+          <div id="controls" class="controls"></div>
+        </div>
+        <div class="hand-row">
+          <div class="hand-tools">
+            <button id="abilities-button" type="button">技能说明</button
+            ><button id="card-help-button" type="button">牌面说明</button
+            ><span id="hand-count"></span>
+          </div>
+          <div id="hand" class="hand" data-scroll-key="hand" aria-label="你的手牌"></div>
+          <div id="self" class="self-seat"></div>
+        </div>
+      </footer>
+      <section id="result-panel" class="result-panel" hidden aria-label="对局结算">
+        <p class="result-eyebrow">此局终了 · 来日再战</p>
+        <h1 id="result-title">本局已结束</h1>
+        <p>回到原房间，保留这一桌朋友。</p>
+        <button id="return-room" class="primary" type="button">回到房间</button>
+      </section>
+      <p id="action-feedback" class="action-feedback" role="status" hidden>正在同步选择…</p>
+      <section id="connection-error" class="connection-error" hidden>
+        <p>牌桌连接中断，正在恢复原座位…</p>
+        <button id="retry-table" type="button">重新连接</button>
+      </section>
+      <dialog id="detail-dialog">
+        <button id="close-detail" class="close-detail" type="button" aria-label="关闭说明">
+          ×
+        </button>
+        <h2 id="detail-title"></h2>
+        <div id="detail-content"></div>
+      </dialog>
+    </main>
+  </body>
+</html>

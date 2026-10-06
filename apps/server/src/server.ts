@@ -221,6 +221,22 @@ export function createPartyServer(options: ServerOptions) {
         });
         return;
       }
+      const logRoom = /^\/api\/console\/rooms\/([A-F0-9]{6})\/log$/.exec(url.pathname);
+      if (request.method === 'GET' && logRoom) {
+        lobby.get(logRoom[1]!);
+        const before = url.searchParams.has('before')
+          ? Number(url.searchParams.get('before'))
+          : undefined;
+        if (before !== undefined && (!Number.isSafeInteger(before) || before < 1))
+          throw new AppError(400, 'INVALID_LOG_CURSOR', '记录位置无效。');
+        const page =
+          engine instanceof NativeNonameService
+            ? engine.observerLog(logRoom[1]!, url.searchParams.get('match') ?? '', before)
+            : null;
+        if (!page) throw new AppError(409, 'MATCH_CHANGED', '本局已变化，请查看当前对局。');
+        json(response, 200, page);
+        return;
+      }
       const command = /^\/api\/console\/rooms\/([A-F0-9]{6})(?:\/(reset|players\/[\w-]+))?$/.exec(
         url.pathname,
       );
@@ -431,6 +447,8 @@ export function createPartyServer(options: ServerOptions) {
       '/assets/app.js': { file: 'app.js', mime: 'text/javascript; charset=utf-8' },
       '/assets/style.css': { file: 'style.css', mime: 'text/css; charset=utf-8' },
       '/assets/generals.json': { file: 'generals.json', mime: 'application/json; charset=utf-8' },
+      '/assets/table.js': { file: 'table.js', mime: 'text/javascript; charset=utf-8' },
+      '/assets/table.css': { file: 'table.css', mime: 'text/css; charset=utf-8' },
     };
     const asset =
       assets[url.pathname] ??

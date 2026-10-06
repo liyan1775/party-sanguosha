@@ -56,6 +56,7 @@ export class PlayerTransport extends EventTarget {
   constructor(url) {
     super();
     this.url = url;
+    this.lightweight = new URL(url).searchParams.get('client') === 'light';
     this.path = new URL(url).pathname.replace('/socket/', '/poll/').replace(/\/player$/, '');
     this.key = 'party_http_transport';
     this.route = globalThis.partyEngine?.setup?.playerNetwork === 'internet' ? 'internet' : 'local';
@@ -139,7 +140,7 @@ export class PlayerTransport extends EventTarget {
       return;
     this.streamTriedAt = Date.now();
     const socket = new NativeWebSocket(
-      `${this.url}?transport=stream&channel=${this.channel}&after=${this.received}`,
+      `${this.url}${this.url.includes('?') ? '&' : '?'}transport=stream&channel=${this.channel}&after=${this.received}`,
     );
     this.streamSocket = socket;
     const timeout = setTimeout(() => this.stopStream(), 8000);
@@ -267,7 +268,11 @@ export class PlayerTransport extends EventTarget {
   }
   async startPolling() {
     try {
-      const opened = await this.request('POST', { open: true, channel: this.channel });
+      const opened = await this.request('POST', {
+        open: true,
+        channel: this.channel,
+        ...(this.lightweight ? { client: 'light' } : {}),
+      });
       if (this.abort.signal.aborted) return;
       if (opened.closed) throw new Error('Connection closed');
       this.polling = true;

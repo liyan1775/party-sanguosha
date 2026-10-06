@@ -1,7 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-only
-import { lib, game, ui } from 'noname';
+import { lib, game, ui, _status } from 'noname';
 
 export function installControls() {
+  let updateSettlement = () => {};
+  if (globalThis.partyEngine.setup.role !== 'worker') {
+    // The upstream hook also auto-confirms skills tagged direct even when the
+    // config is off. Keep its other check hooks; human selections require OK.
+    lib.hooks.checkEnd = lib.hooks.checkEnd.filter((hook) => hook.name !== 'autoConfirm');
+  }
   // The scaled native canvas is a fixed viewport. overflow:hidden still lets
   // focus/scrollIntoView move #window and crop the arena after choosing a general.
   // Dialogs and hand areas keep their own scrolling containers.
@@ -50,8 +56,28 @@ export function installControls() {
       });
     }
   };
-  new MutationObserver(hideMenus).observe(document.body, { childList: true, subtree: true });
+  new MutationObserver(() => {
+    hideMenus();
+    updateSettlement();
+  }).observe(document.body, { childList: true, subtree: true });
   if (globalThis.partyEngine.setup.role === 'player') {
+    if (!globalThis.partyEngine.setup.tableView) {
+      // Online settlement may execute a serialized native function, or reinit
+      // may set over directly. Observe its real dialog instead of only wrapping
+      // game.over/lib.onover; neither intercepts all native ending paths.
+      updateSettlement = () => {
+        if (_status.over && ui.dialog?.isConnected && !ui.partyReturnRoom?.isConnected) {
+          globalThis.partyEngine.proof.ended = true;
+          ui.partyReturnRoom = ui.create.control('回到房间', () => {
+            parent.postMessage(
+              { type: 'party-return-room', matchId: globalThis.partyEngine.setup.id },
+              location.origin,
+            );
+          });
+          ui.partyReturnRoom.id = 'party-return-room';
+        }
+      };
+    }
     const feedback = document.createElement('div');
     feedback.id = 'party-action-status';
     feedback.setAttribute('role', 'status');

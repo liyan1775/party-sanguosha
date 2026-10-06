@@ -36,6 +36,15 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
   let matchId: string | null = null;
   let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
   let reconnectAttempt = 0;
+  let finishedSyncTimer: ReturnType<typeof setTimeout> | undefined;
+  let finishedSyncMatch: string | null = null;
+  let returnedMatchId: string | null = null;
+  let pendingReturnMatchId: string | null = null;
+  let returning = false;
+  // Native is the product client, including while an older service is running.
+  // Keep the former client reachable only for explicit regression fixtures.
+  const lightweight = sessionStorage.getItem('party_lightweight_verification') === '1';
+  const playerFrameUrl = (id: string) => `/engine/${lightweight ? 'table' : 'player'}/${id}`;
   let horizontalTable = sessionStorage.getItem('party_table_view') !== 'portrait';
   let localConnection: ReturnType<typeof createLanConnection>;
   let localMatchAttempt: string | null = null;
@@ -66,13 +75,26 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
   preloadStatus.className = 'hint';
   preloadStatus.setAttribute('role', 'status');
   element('.welcome-panel').appendChild(preloadStatus);
-  const preloader = createAssetPreloader(preloadStatus);
+  const preloader = createAssetPreloader(preloadStatus, lightweight);
+  const waitingReturn = document.createElement('p');
+  waitingReturn.id = 'waiting-return';
+  waitingReturn.className = 'message';
+  waitingReturn.hidden = true;
+  waitingReturn.textContent = '你已回到房间，等房主准备下一局。';
+  element('.welcome-panel').prepend(waitingReturn);
   const networkStatus = document.createElement('span');
   networkStatus.id = 'match-network';
   networkStatus.className = 'match-network';
   networkStatus.textContent = '网络检测中';
   networkStatus.title = '最近一次手机到电脑服务的往返延迟，游戏动画不计入';
   element('.match-toolbar').insertBefore(networkStatus, element('#orientation-hint'));
+  const restoreButton = document.createElement('button');
+  restoreButton.id = 'match-restore';
+  restoreButton.className = 'button secondary';
+  restoreButton.type = 'button';
+  restoreButton.textContent = '恢复牌桌';
+  action(restoreButton, restoreGame);
+  element('.match-toolbar').insertBefore(restoreButton, element('#match-share'));
 
   const owner = () => session.roomCode === room.code && session.playerId === room.ownerId;
   const refresh = () => renderRoom(room);
@@ -109,26 +131,32 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
       void audio.setEnabled(element('#match-sound').getAttribute('aria-pressed') !== 'true');
     else void audio?.toggle();
   });
+  async function restoreGame(): Promise<void> {
+    const restoringMatch = matchId;
+    if (!restoringMatch) return;
+    const info = await api<RoomInfo>(roomPath);
+    renderRoom(info.room);
+    const frame = document.querySelector<HTMLIFrameElement>('#game-frame');
+    if (
+      frame &&
+      matchId === restoringMatch &&
+      info.room.matchId === restoringMatch &&
+      ['starting', 'playing', 'finished'].includes(info.room.phase)
+    ) {
+      element('#match-loading-status').textContent =
+        info.room.phase === 'finished' ? '正在同步最终牌桌…' : '正在恢复原座位…';
+      element('#match-loading').hidden = false;
+      frame.src = playerFrameUrl(restoringMatch);
+    }
+  }
   function reconnectGame(): void {
-    if (reconnectTimer || !matchId || !['starting', 'playing'].includes(room.phase)) return;
+    if (reconnectTimer || !matchId || !['starting', 'playing', 'finished'].includes(room.phase))
+      return;
     element('#match-label').textContent = '连接中断，正在恢复原座位…';
     reconnectTimer = setTimeout(
       () => {
         reconnectTimer = undefined;
-        void api<RoomInfo>(roomPath)
-          .then((info) => {
-            renderRoom(info.room);
-            const frame = document.querySelector<HTMLIFrameElement>('#game-frame');
-            if (
-              frame &&
-              matchId === info.room.matchId &&
-              ['starting', 'playing'].includes(info.room.phase)
-            ) {
-              element('#match-loading').hidden = false;
-              frame.src = `/engine/player/${matchId}`;
-            }
-          })
-          .catch(reconnectGame);
+        void restoreGame().catch(reconnectGame);
       },
       Math.min(5000, 1000 * ++reconnectAttempt),
     );
@@ -142,6 +170,8 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
     )
       return;
     if (event.data.type === 'party-disconnected') reconnectGame();
+    if (event.data.type === 'party-return-room')
+      void perform(element('#rematch-button'), returnRoom, refresh);
     if (event.data.type === 'party-network') {
       const data = event.data;
       const milliseconds = Number.isFinite(data.rtt) ? `${Math.round(data.rtt)} ms` : '';
@@ -170,7 +200,14 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
       refresh();
     }
   });
-  window.addEventListener('pagehide', () => clearTimeout(reconnectTimer), { once: true });
+  window.addEventListener(
+    'pagehide',
+    () => {
+      clearTimeout(reconnectTimer);
+      clearTimeout(finishedSyncTimer);
+    },
+    { once: true },
+  );
 
   function setDraftMode(modeId: ModeId, count: number): void {
     draftMode = modeId;
@@ -250,7 +287,10 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
     }
     const waiting = room.phase === 'waiting';
     const inMatch = Boolean(
-      me && room.matchId && ['starting', 'playing', 'finished'].includes(room.phase),
+      me &&
+      room.matchId &&
+      returnedMatchId !== room.matchId &&
+      ['starting', 'playing', 'finished'].includes(room.phase),
     );
     element('#match-panel').hidden = !inMatch;
     app.classList.toggle('in-match', inMatch);
@@ -262,14 +302,23 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
         : room.phase === 'starting'
           ? '正在选将'
           : `${findMode(room.settings.mode)!.name} · ${room.code}`;
-    element('#rematch-button').hidden = room.phase !== 'finished' || !isOwner;
+    element('#rematch-button').hidden = room.phase !== 'finished';
+    element('#rematch-button').textContent = isOwner ? '回到房间，准备下一局' : '回到房间';
     element('#finished-hint').hidden = room.phase !== 'finished' || isOwner;
+    waitingReturn.hidden = room.phase !== 'finished' || returnedMatchId !== room.matchId;
     if (inMatch && room.matchId !== matchId) {
       const frame = document.createElement('iframe');
       frame.id = 'game-frame';
       frame.title = '三国杀对局';
       frame.allow = 'autoplay';
-      frame.src = `/engine/player/${room.matchId}`;
+      frame.src = playerFrameUrl(room.matchId!);
+      frame.addEventListener('load', () => {
+        if (room.phase === 'finished')
+          frame.contentWindow?.postMessage(
+            { type: 'party-finished', matchId: room.matchId },
+            location.origin,
+          );
+      });
       element('#game-frame-mount').replaceChildren(frame);
       element('#match-loading').hidden = false;
       element('#match-sound').textContent = '开启声音';
@@ -280,6 +329,36 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
       element('#game-frame-mount').replaceChildren();
       element('#match-loading').hidden = true;
       matchId = null;
+    }
+    if (inMatch && room.phase === 'finished')
+      document
+        .querySelector<HTMLIFrameElement>('#game-frame')
+        ?.contentWindow?.postMessage(
+          { type: 'party-finished', matchId: room.matchId },
+          location.origin,
+        );
+    if (room.phase !== 'finished' || finishedSyncMatch !== room.matchId) {
+      clearTimeout(finishedSyncTimer);
+      finishedSyncTimer = undefined;
+    }
+    if (inMatch && room.phase === 'finished' && finishedSyncMatch !== room.matchId) {
+      finishedSyncMatch = room.matchId;
+      finishedSyncTimer = setTimeout(() => {
+        finishedSyncTimer = undefined;
+        const frame = document.querySelector<HTMLIFrameElement>('#game-frame');
+        const native = (
+          frame?.contentWindow as
+            (Window & { partyEngine?: { _status?: { over?: boolean } } }) | null
+        )?.partyEngine;
+        // The lobby can finish while an interrupted native client still shows
+        // old HP and equipment. Allow normal delivery, then fetch an authenticated
+        // native reinit once; never fabricate a winner or alter the rule worker.
+        if (room.phase === 'finished' && matchId === finishedSyncMatch && !native?._status?.over)
+          void restoreGame().catch(() => {
+            if (room.phase === 'finished' && matchId === finishedSyncMatch)
+              element('#match-label').textContent = '本局已结束，点击恢复牌桌同步最终画面';
+          });
+      }, 2000);
     }
     if (isOwner !== wasOwner) {
       settingsDirty = false;
@@ -308,7 +387,9 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
       ? `${readyHumans} / ${humans.length} 位真人已准备，${empty} 个空位；AI 自动准备。`
       : room.phase === 'closed'
         ? '这张牌桌已散，返回主页可以另开一局。'
-        : '对局正在启动或进行中，房间设置已锁定。';
+        : room.phase === 'finished'
+          ? '本局已结束，等待房主回房准备下一局。'
+          : '对局正在启动或进行中，房间设置已锁定。';
 
     element('#join-form').hidden =
       Boolean(me) || Boolean(session.roomCode && session.roomCode !== room.code) || !waiting;
@@ -409,6 +490,11 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
       events?.close();
       connection(false, '房间已关闭');
     }
+    if (pendingReturnMatchId && pendingReturnMatchId !== room.matchId) pendingReturnMatchId = null;
+    if (!returning && pendingReturnMatchId === room.matchId && room.phase === 'finished') {
+      pendingReturnMatchId = null;
+      queueMicrotask(() => void perform(element('#rematch-button'), returnRoom, refresh));
+    }
   }
 
   function connectEvents(): void {
@@ -492,13 +578,29 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
   }
   element('#share-button').addEventListener('click', () => void shareRoom());
   element('#match-share').addEventListener('click', () => void shareRoom());
-  action(
-    element('#rematch-button'),
-    async () => {
-      renderRoom(await api<RoomView>(`${roomPath}/rematch`, 'POST', {}));
-    },
-    refresh,
-  );
+  async function returnRoom(): Promise<void> {
+    if (returning) return;
+    returning = true;
+    try {
+      // Native settlement may reach the table before the outer room's poll.
+      // Re-read authority, or remember the click until that match is finished.
+      const current = await api<RoomInfo>(roomPath);
+      renderRoom(current.room);
+      if (room.phase !== 'finished') {
+        if (room.phase === 'playing') pendingReturnMatchId = room.matchId;
+        return;
+      }
+      pendingReturnMatchId = null;
+      if (owner()) renderRoom(await api<RoomView>(`${roomPath}/rematch`, 'POST', {}));
+      else {
+        returnedMatchId = room.matchId;
+        refresh();
+      }
+    } finally {
+      returning = false;
+    }
+  }
+  action(element('#rematch-button'), returnRoom, refresh);
   element('#close-share').addEventListener('click', () =>
     element<HTMLDialogElement>('#share-dialog').close(),
   );

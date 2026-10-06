@@ -2,6 +2,7 @@ import { test, expect, type Browser, type BrowserContext, type Page } from '@pla
 import { mkdir } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import type { RoomView } from '../../packages/shared/src/contracts.js';
+import type { EngineAdapter, EngineEvent } from '../../packages/noname-adapter/src/index.js';
 import { createPartyServer } from '../../apps/server/src/server.js';
 import { createPublicGateway } from '../../apps/server/src/public-gateway.js';
 
@@ -15,12 +16,14 @@ async function withLobby(
     page: (desktop?: boolean) => Promise<Page>;
   }) => Promise<void>,
   internet = false,
+  adapter?: EngineAdapter,
 ) {
   const party = createPartyServer({
     port: 0,
     webRoot: fileURLToPath(new URL('../../dist/web/', import.meta.url)),
     publicUrl: 'http://192.168.1.100:3000',
     entryMode: internet ? 'internet' : 'lan',
+    ...(adapter ? { adapter } : {}),
   });
   await new Promise<void>((resolve) => party.server.listen(0, '127.0.0.1', resolve));
   const address = party.server.address();
@@ -181,6 +184,124 @@ test('电脑只展示主页码，手机建房参赛，任意成员展示直达�
   });
 });
 
+test('模拟牌桌更新中断：结束后同步最终画面，手动恢复保留房间和座位', async ({ browser }) => {
+  const listeners = new Set<(event: EngineEvent) => void>();
+  const adapter: EngineAdapter = {
+    status: () => ({ id: 'noname', ready: true, message: '页面恢复测试占位器' }),
+    start: async () => {},
+    matchId: () => 'recovery-fixture',
+    subscribe: (listener) => {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+    release: () => {},
+  };
+  await withLobby(
+    browser,
+    async ({ party, base, page }) => {
+      const phone = await page();
+      let loads = 0;
+      let nativeFinished = false;
+      await phone.route('**/engine/player/recovery-fixture', (route) => {
+        loads++;
+        return route.fulfill({
+          contentType: 'text/html',
+          body: `<p id="native-state">${loads === 1 ? '旧画面：双方仍有体力' : '已同步牌桌'}</p><script>window.partyEngine={_status:{over:${nativeFinished}}};parent.postMessage({type:'party-connected',matchId:'recovery-fixture'},location.origin);</script>`,
+        });
+      });
+      const code = await createRoom(phone, base, '恢复测试');
+      const seatBefore = party.lobby.get(code).snapshot().players[0]!.id;
+      await phone.getByRole('button', { name: /单挑/ }).click();
+      await phone.getByRole('button', { name: '保存房间设置' }).click();
+      await phone.getByRole('button', { name: '补满空位' }).click();
+      await phone.locator('#ready-button').click();
+      await phone.locator('#start-button').click();
+      await expect(phone.frameLocator('#game-frame').locator('#native-state')).toContainText(
+        '双方仍有体力',
+      );
+      expect(loads).toBe(1);
+      for (const listener of listeners) listener({ type: 'ended', roomCode: code });
+      await expect(phone.locator('#match-label')).toHaveText('本局已结束');
+      await expect.poll(() => loads).toBe(2);
+      await expect(phone.frameLocator('#game-frame').locator('#native-state')).toHaveText(
+        '已同步牌桌',
+      );
+      // An ordinary lobby update must not restart the final snapshot repeatedly.
+      const token = (await phone.context().cookies()).find(
+        (cookie) => cookie.name === 'party_player',
+      )!.value;
+      const disconnect = party.lobby.get(code).connect(token);
+      disconnect();
+      await phone.waitForTimeout(2200);
+      expect(loads).toBe(2);
+      await phone.getByRole('button', { name: '恢复牌桌', exact: true }).click();
+      await expect.poll(() => loads).toBe(3);
+      expect(party.lobby.get(code).snapshot().phase).toBe('finished');
+      expect(party.lobby.get(code).snapshot().players[0]!.id).toBe(seatBefore);
+
+      // A client that already rendered the native end screen retains it.
+      nativeFinished = true;
+      await phone.reload();
+      await expect(phone.locator('#match-label')).toHaveText('本局已结束');
+      await expect.poll(() => loads).toBe(4);
+      await phone.waitForTimeout(2200);
+      expect(loads).toBe(4);
+      await phone.locator('#rematch-button').click();
+      await expect(phone.locator('#game-frame')).toHaveCount(0);
+      await expect(phone.locator('#ready-button')).toBeEnabled();
+    },
+    false,
+    adapter,
+  );
+});
+
+test('结算先到牌桌：提前点击回房等待服务端结束，原房与席位保留', async ({ browser }) => {
+  const listeners = new Set<(event: EngineEvent) => void>();
+  const adapter: EngineAdapter = {
+    status: () => ({ id: 'noname', ready: true, message: '结算同步测试占位器' }),
+    start: async () => {},
+    matchId: () => 'return-fixture',
+    release: () => {},
+    subscribe: (listener) => {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+  };
+  await withLobby(
+    browser,
+    async ({ party, base, page }) => {
+      const phone = await page();
+      await phone.route('**/engine/player/return-fixture', (route) =>
+        route.fulfill({
+          contentType: 'text/html',
+          body: "<button id='table-return'>回到房间</button><script>parent.postMessage({type:'party-connected',matchId:'return-fixture'},location.origin);document.querySelector('button').onclick=()=>parent.postMessage({type:'party-return-room',matchId:'return-fixture'},location.origin);</script>",
+        }),
+      );
+      const code = await createRoom(phone, base, '结算同步');
+      const seat = party.lobby.get(code).snapshot().ownerId;
+      await phone.getByRole('button', { name: /单挑/ }).click();
+      await phone.getByRole('button', { name: '保存房间设置' }).click();
+      await phone.getByRole('button', { name: '补满空位' }).click();
+      await phone.locator('#ready-button').click();
+      await phone.locator('#start-button').click();
+      const response = phone.waitForResponse(
+        (response) =>
+          response.url().endsWith(`/api/rooms/${code}`) && response.request().method() === 'GET',
+      );
+      await phone.frameLocator('#game-frame').locator('#table-return').click();
+      await response;
+      expect(party.lobby.get(code).snapshot().phase).toBe('playing');
+      for (const listener of listeners) listener({ type: 'ended', roomCode: code });
+      await expect(phone.locator('#game-frame')).toHaveCount(0);
+      await expect(phone.locator('#ready-button')).toBeEnabled();
+      expect(party.lobby.get(code).snapshot().phase).toBe('waiting');
+      expect(party.lobby.get(code).snapshot().ownerId).toBe(seat);
+    },
+    false,
+    adapter,
+  );
+});
+
 test('电脑控制台管理两桌，安全显示昵称、移除等待席位和关闭指定房间，不占玩家席位', async ({
   browser,
 }) => {
@@ -212,6 +333,103 @@ test('电脑控制台管理两桌，安全显示昵称、移除等待席位和�
     expect(party.lobby.get(otherCode).snapshot().players.length).toBe(1);
     await mkdir('.runtime/previews', { recursive: true });
     await computer.screenshot({ path: '.runtime/previews/service-console.png', fullPage: true });
+  });
+});
+
+test('公开记录占位页面：回看整局、实时更新保留阅读位置，换局清空记录与安全文本', async ({
+  browser,
+}) => {
+  await withLobby(browser, async ({ party, base, page }) => {
+    const computer = await page(true);
+    const created = party.lobby.create('<b>玩家</b>');
+    let total = 220;
+    let matchId = 'observer-match-1';
+    await computer.route('**/api/console', (route) =>
+      route.fulfill({
+        json: {
+          rooms: [
+            {
+              room: { ...created.room.snapshot(), phase: 'playing', matchId },
+              networks: [],
+              observer: {
+                updatedAt: 1,
+                round: 2,
+                ended: false,
+                currentPlayerId: created.playerId,
+                players: [
+                  {
+                    id: created.playerId,
+                    nickname: '<b>玩家</b>',
+                    general: '公开武将',
+                    identity: '身份未公开',
+                    hp: 3,
+                    maxHp: 4,
+                    armor: 0,
+                    handCount: 2,
+                    dead: false,
+                    linked: false,
+                    turnedOver: false,
+                    controller: 'human',
+                    equipment: [],
+                    judgments: [],
+                  },
+                ],
+                recent: Array.from(
+                  { length: 100 },
+                  (_, offset) => `公开动作 ${total - 99 + offset} <img src=x>`,
+                ),
+                logStart: total - 99,
+                logTotal: total,
+                logFirst: 1,
+              },
+            },
+          ],
+        },
+      }),
+    );
+    await computer.route('**/api/console/rooms/*/log?*', (route) => {
+      const before = Number(new URL(route.request().url()).searchParams.get('before'));
+      return route.fulfill({
+        json: {
+          matchId,
+          total,
+          first: 1,
+          entries: Array.from({ length: Math.min(100, before - 1) }, (_, offset) => ({
+            sequence: Math.max(1, before - 100) + offset,
+            text: `早期公开动作 ${Math.max(1, before - 100) + offset}`,
+          })),
+        },
+      });
+    });
+    await computer.goto(`${base}/server`);
+    const list = computer.locator('.observer-recent');
+    await expect(list.locator('li')).toHaveCount(100);
+    await expect(computer.locator('.observer-seat h3')).toHaveText('<b>玩家</b>');
+    await expect(computer.locator('.observer-recent img, .observer-seat b')).toHaveCount(0);
+    await computer.getByRole('button', { name: '查看更早记录' }).click();
+    await expect(list.locator('li')).toHaveCount(200);
+    await computer.getByRole('button', { name: '查看更早记录' }).click();
+    await expect(list.locator('li')).toHaveCount(220);
+    await expect(list.locator('li').first()).toHaveText('早期公开动作 1');
+    await list.evaluate((node) => {
+      node.scrollTop = 140;
+    });
+    total = 240;
+    await expect(computer.locator('.observer-log h3')).toHaveText('本局公开记录 · 240 条');
+    await expect(list.locator('li')).toHaveCount(240);
+    expect(await list.evaluate((node) => node.scrollTop)).toBeCloseTo(140, 0);
+    await expect(list.locator('li').first()).toHaveText('早期公开动作 1');
+    total = 500;
+    await expect(list.locator('li')).toHaveCount(500);
+    expect(
+      await list
+        .locator('li')
+        .evaluateAll((items) => items.map((item) => (item as HTMLLIElement).value)),
+    ).toEqual(Array.from({ length: 500 }, (_, index) => index + 1));
+    matchId = 'observer-match-2';
+    await expect(computer.locator('.observer-log')).toHaveAttribute('data-match-id', matchId);
+    await expect(list.locator('li')).toHaveCount(100);
+    await expect(list.locator('li').first()).toHaveText('公开动作 401 <img src=x>');
   });
 });
 

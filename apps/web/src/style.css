@@ -742,11 +742,14 @@ footer {
 }
 .match-toolbar {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
-  gap: 8px;
-  padding: 6px 12px;
-  min-height: 46px;
+  gap: 5px;
+  padding: 3px 8px;
+  min-height: 38px;
+  overflow-x: auto;
+  flex-shrink: 0;
+  scrollbar-width: thin;
   color: #fff;
   background: #172520;
 }
@@ -770,6 +773,7 @@ footer {
 .match-toolbar strong {
   margin-right: auto;
   font-size: 13px;
+  white-space: nowrap;
 }
 .match-network {
   flex-shrink: 0;
@@ -786,6 +790,8 @@ footer {
   min-height: 32px;
   font-size: 12px;
   width: auto;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 #game-frame-container {
   position: relative;
@@ -1016,9 +1022,21 @@ footer {
   margin: 7px 0 0;
 }
 .observer-recent {
-  color: var(--muted);
+  color: #273831;
   font-size: 14px;
   line-height: 1.8;
+  max-height: 420px;
+  overflow-y: auto;
+  padding: 8px 12px 8px 42px;
+  background: #f5f3ea;
+  border-radius: 9px;
+}
+.observer-log {
+  margin-top: 24px;
+}
+.observer-control {
+  color: var(--green);
+  font-weight: 600;
 }
 @media (max-width: 800px) {
   .console-stats {

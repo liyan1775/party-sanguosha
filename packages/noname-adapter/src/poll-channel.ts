@@ -28,6 +28,7 @@ export class PollChannel {
     id: string,
     playerId: string,
     private readonly disconnected: () => void,
+    readonly lightweight = false,
   ) {
     this.id = id;
     this.playerId = playerId;

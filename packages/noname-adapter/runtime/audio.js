@@ -5,6 +5,23 @@ import { lib, game } from 'noname';
 export function installAudio() {
   const { setup, proof } = globalThis.partyEngine;
   const available = new Set(setup.audioFiles);
+  if (setup.tableView) {
+    game.playAudio = function (...args) {
+      const options =
+        args.length === 1 && typeof args[0] === 'object'
+          ? args[0]
+          : {
+              path: args
+                .filter((arg) => typeof arg === 'string' || typeof arg === 'number')
+                .join('/'),
+            };
+      const path = /\.(mp3|ogg)$/.test(options.path ?? '') ? options.path : `${options.path}.mp3`;
+      if (proof.booted && game.ws?.readyState === 1 && available.has(path))
+        game.ws.send(JSON.stringify(['tableAudio', path]));
+      return document.createElement('audio');
+    };
+    return;
+  }
   proof.audio = { decoded: 0, played: 0, failures: 0, dropped: 0 };
   const buffers = new Map();
   const encoded = new Map();

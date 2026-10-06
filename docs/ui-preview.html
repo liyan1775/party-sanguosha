@@ -1,0 +1,1411 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>聚会三国杀 · 经典牌桌设计预览</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: system-ui, 'Microsoft YaHei', sans-serif;
+        color: #f4e6cc;
+        background: #141917;
+        --gold: #d4b57b;
+        --quiet: #b6ae99;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+      }
+      button,
+      select,
+      input {
+        font: inherit;
+      }
+      button {
+        cursor: pointer;
+      }
+      button:focus-visible,
+      select:focus-visible {
+        outline: 2px solid #f4d692;
+        outline-offset: 3px;
+      }
+      button:disabled {
+        opacity: 0.42;
+        cursor: default;
+      }
+      [hidden] {
+        display: none !important;
+      }
+      .page {
+        max-width: 1120px;
+        margin: auto;
+        padding: 28px 22px 38px;
+      }
+      .intro {
+        display: flex;
+        align-items: end;
+        justify-content: space-between;
+        gap: 18px;
+        margin-bottom: 20px;
+      }
+      .eyebrow {
+        color: var(--gold);
+        font-size: 11px;
+        letter-spacing: 3px;
+        margin: 0 0 6px;
+      }
+      h1 {
+        margin: 0;
+        font:
+          32px/1.3 'KaiTi',
+          'STKaiti',
+          serif;
+      }
+      .intro p:last-child {
+        color: var(--quiet);
+        font-size: 13px;
+        margin: 8px 0 0;
+      }
+      .demo-note {
+        font-size: 11px;
+        color: var(--quiet);
+        white-space: nowrap;
+      }
+      .settings {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 12px 20px;
+        margin-bottom: 16px;
+        font-size: 12px;
+      }
+      .settings label {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+      }
+      select {
+        background: #242b26;
+        color: #f4e6cc;
+        border: 1px solid #626655;
+        padding: 7px 10px;
+        border-radius: 4px;
+      }
+      .settings input {
+        accent-color: #d4b57b;
+      }
+      .viewport {
+        position: relative;
+        width: 100%;
+        overflow: hidden;
+      }
+      .board {
+        width: 844px;
+        height: 390px;
+        position: absolute;
+        left: 0;
+        top: 0;
+        transform-origin: left top;
+        overflow: hidden;
+        background:
+          radial-gradient(ellipse at 50% 42%, #41413780, transparent 64%),
+          repeating-linear-gradient(115deg, #ffffff02 0 1px, transparent 1px 6px),
+          linear-gradient(120deg, #282d26, #202722 60%, #343226);
+        border: 1px solid #877552;
+        border-radius: 10px;
+      }
+      .board::after {
+        content: '';
+        position: absolute;
+        inset: 7px;
+        border: 1px solid #ad91552b;
+        border-radius: 5px;
+        pointer-events: none;
+      }
+      .topbar {
+        position: absolute;
+        top: 0;
+        width: 100%;
+        height: 32px;
+        padding: 0 15px;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        background: #151e1bbc;
+        font-size: 11px;
+        color: #c5b797;
+        border-bottom: 1px solid #806a403b;
+      }
+      .brand {
+        font:
+          15px 'KaiTi',
+          serif;
+        letter-spacing: 2px;
+        color: #ead2a1;
+      }
+      .topbar .round {
+        margin-left: auto;
+      }
+      .topbar .line {
+        color: #a5c3b6;
+      }
+      .seats {
+        position: absolute;
+        top: 39px;
+        left: 132px;
+        right: 22px;
+        display: flex;
+        justify-content: space-around;
+        gap: 14px;
+      }
+      .seat {
+        position: relative;
+        width: 99px;
+        flex-shrink: 0;
+        text-align: center;
+      }
+      .nickname {
+        display: block;
+        font-size: 11px;
+        color: #ddcfb0;
+        height: 17px;
+      }
+      .face {
+        display: block;
+        width: 100%;
+        height: 91px;
+        border-radius: 5px;
+        padding: 0;
+        overflow: hidden;
+        position: relative;
+        background: #4a5243;
+        color: #ffedc6;
+        border: 1px solid #9e8860;
+      }
+      .face img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: 50% 20%;
+      }
+      .face::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(transparent 25%, #17221b9c 60%, #141d18 100%);
+        pointer-events: none;
+      }
+      .general {
+        position: absolute;
+        bottom: 15px;
+        left: 7px;
+        z-index: 1;
+        font:
+          19px 'KaiTi',
+          serif;
+        letter-spacing: 1px;
+      }
+      .identity {
+        position: absolute;
+        right: 4px;
+        top: 4px;
+        z-index: 1;
+        color: #f5ddad;
+        font-size: 11px;
+        background: #1d271be0;
+        padding: 2px 4px;
+        border-radius: 2px;
+      }
+      .handcount {
+        position: absolute;
+        right: 5px;
+        bottom: 19px;
+        z-index: 1;
+        font-size: 11px;
+      }
+      .health {
+        position: absolute;
+        left: 6px;
+        bottom: 3px;
+        right: 5px;
+        display: flex;
+        gap: 3px;
+        align-items: center;
+        z-index: 1;
+      }
+      .health i {
+        width: 9px;
+        height: 8px;
+        background: #9faf68;
+        border-radius: 4px 1px;
+        transform: skew(-15deg);
+      }
+      .health i.empty {
+        background: #ffffff27;
+      }
+      .health b {
+        margin-left: auto;
+        font-size: 10px;
+        font-weight: 500;
+      }
+      .equipment {
+        margin-top: 4px;
+        font-size: 10px;
+        color: #c0b697;
+        white-space: nowrap;
+      }
+      .face.target {
+        outline: 2px solid #f1ca81;
+        outline-offset: 2px;
+      }
+      .target-check {
+        position: absolute;
+        top: 34px;
+        right: 8px;
+        z-index: 2;
+        font-size: 20px;
+        color: #ffe1a2;
+      }
+      .seat.current::before {
+        content: '回合中';
+        position: absolute;
+        top: -2px;
+        left: -4px;
+        z-index: 3;
+        background: #ad8142;
+        padding: 2px 5px;
+        border-radius: 3px;
+        font-size: 10px;
+      }
+      .board.eight .seats {
+        gap: 10px;
+        left: 119px;
+      }
+      .board.eight .seat {
+        width: 84px;
+      }
+      .board.eight .face {
+        height: 85px;
+      }
+      .board.eight .general {
+        font-size: 17px;
+      }
+      .log {
+        position: absolute;
+        left: 15px;
+        top: 48px;
+        width: 103px;
+        color: #a7ae9a;
+        font-size: 10px;
+        line-height: 1.7;
+      }
+      .log strong {
+        color: #dfceaa;
+        font-size: 11px;
+        font-weight: 500;
+        display: block;
+        margin-bottom: 8px;
+      }
+      .log p {
+        margin: 0 0 7px;
+      }
+      .deck {
+        position: absolute;
+        left: 42px;
+        top: 190px;
+        width: 50px;
+        height: 65px;
+        border: 1px solid #987746;
+        border-radius: 4px;
+        background: repeating-linear-gradient(45deg, #b7975824 0 1px, transparent 1px 7px), #27342a;
+        color: #ceb78b;
+        box-shadow:
+          3px 3px #16231b,
+          4px 4px #8d784e;
+        display: grid;
+        place-items: center;
+        font:
+          17px 'KaiTi',
+          serif;
+        writing-mode: vertical-rl;
+      }
+      .center {
+        position: absolute;
+        left: 192px;
+        right: 110px;
+        top: 165px;
+        height: 70px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+      }
+      .center-empty {
+        font:
+          22px 'KaiTi',
+          serif;
+        letter-spacing: 9px;
+        color: #9f9e7d36;
+      }
+      .event-label {
+        position: absolute;
+        top: 165px;
+        right: 23px;
+        width: 104px;
+        color: #c4b694;
+        font-size: 11px;
+        line-height: 1.7;
+      }
+      .footer {
+        position: absolute;
+        inset: auto 0 0;
+        height: 149px;
+        background: linear-gradient(transparent, #17211ee6 48%);
+        border-top: 1px solid #ae935530;
+      }
+      .actionbar {
+        position: absolute;
+        left: 132px;
+        right: 130px;
+        top: 5px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        height: 43px;
+      }
+      .prompt {
+        flex: 1;
+        margin: 0;
+        line-height: 1.5;
+        color: #ecdbb9;
+        font-size: 12px;
+      }
+      .main-btn,
+      .secondary,
+      .skill {
+        height: 42px;
+        min-width: 66px;
+        border-radius: 4px;
+        padding: 0 12px;
+      }
+      .main-btn {
+        color: #292d22;
+        font-weight: 650;
+        border: 1px solid #ebd6a0;
+        background: linear-gradient(#dfc797, #bc9455);
+        box-shadow: 0 2px 7px #0005;
+      }
+      .secondary {
+        color: #cec4ad;
+        border: 1px solid #857656;
+        background: #252e25;
+        font-size: 12px;
+      }
+      .skill {
+        color: #ecd199;
+        border: 1px solid #9d8050;
+        background: #414332;
+        font:
+          17px 'KaiTi',
+          serif;
+      }
+      .tools {
+        position: absolute;
+        left: 16px;
+        bottom: 15px;
+        width: 99px;
+        display: grid;
+        gap: 6px;
+      }
+      .tools button {
+        padding: 6px 0;
+        border: 1px solid #80714c69;
+        border-radius: 4px;
+        background: #202d25;
+        color: #c4bdab;
+        font-size: 11px;
+      }
+      .tools span {
+        text-align: center;
+        font-size: 10px;
+        color: #abac96;
+      }
+      .hand {
+        position: absolute;
+        left: 132px;
+        right: 130px;
+        bottom: 7px;
+        display: flex;
+        align-items: end;
+        gap: 6px;
+        height: 94px;
+        overflow: auto hidden;
+        padding: 12px 3px 5px;
+        scrollbar-width: thin;
+        scrollbar-color: #897049 transparent;
+      }
+      .card {
+        display: block;
+        position: relative;
+        flex-shrink: 0;
+        width: 62px;
+        height: 84px;
+        border: 1px solid #ab9468;
+        border-radius: 5px;
+        padding: 0;
+        color: #2a2922;
+        background: #e8dcc1;
+        box-shadow: 0 3px 7px #0006;
+        overflow: hidden;
+      }
+      .card img {
+        position: absolute;
+        inset: 0;
+        height: 100%;
+        width: 100%;
+        object-fit: cover;
+      }
+      .card .corner {
+        position: absolute;
+        z-index: 1;
+        top: 3px;
+        left: 4px;
+        font:
+          12px/1.1 Georgia,
+          serif;
+        white-space: pre-line;
+      }
+      .card .name {
+        position: absolute;
+        z-index: 1;
+        top: 4px;
+        left: 22px;
+        writing-mode: vertical-rl;
+        font:
+          bold 16px 'KaiTi',
+          serif;
+        padding: 3px 0;
+        max-height: 76px;
+      }
+      .card .paper {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        width: 38px;
+        background: linear-gradient(90deg, #efe5cbed 60%, #efe5cb10);
+      }
+      .red {
+        color: #9d342e;
+      }
+      .card.selected {
+        transform: translateY(-10px);
+        outline: 2px solid #f2cc83;
+        outline-offset: 0;
+      }
+      .card .tick {
+        position: absolute;
+        right: 3px;
+        bottom: 3px;
+        background: #785827;
+        color: #ffe8b4;
+        width: 17px;
+        height: 17px;
+        border-radius: 50%;
+        font-size: 12px;
+        line-height: 17px;
+      }
+      .card.unavailable {
+        opacity: 0.42;
+      }
+      .card:active {
+        filter: brightness(1.1);
+      }
+      .center .card {
+        width: 48px;
+        height: 65px;
+      }
+      .center .card .name {
+        font-size: 14px;
+        left: 20px;
+      }
+      .self {
+        position: absolute;
+        right: 18px;
+        bottom: 10px;
+        width: 95px;
+      }
+      .self .face {
+        height: 107px;
+      }
+      .self .general {
+        bottom: 17px;
+      }
+      .self .nickname {
+        color: #e2c991;
+      }
+      .effects {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        z-index: 15;
+      }
+      .flying {
+        position: absolute;
+        z-index: 15;
+        margin: 0;
+      }
+      .beam {
+        position: absolute;
+        height: 2px;
+        width: 100%;
+        background: linear-gradient(90deg, transparent, #efd596, #f9eac1);
+        transform-origin: 0 50%;
+      }
+      .pop {
+        position: absolute;
+        font:
+          bold 29px Georgia,
+          serif;
+        color: #f58d76;
+        text-shadow: 0 2px 6px #000;
+      }
+      .pop.heal {
+        color: #b3d98c;
+      }
+      .toast {
+        position: absolute;
+        top: 36px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 18;
+        padding: 7px 14px;
+        background: #161f1ced;
+        border: 1px solid #9e865470;
+        border-radius: 4px;
+        color: #e1c89b;
+        font-size: 12px;
+        max-width: 500px;
+      }
+      .overlay {
+        position: absolute;
+        inset: 0;
+        z-index: 10;
+        background: #0a1513a3;
+        display: grid;
+        place-items: center;
+      }
+      .modal {
+        width: 600px;
+        max-height: 330px;
+        padding: 13px 17px;
+        border: 1px solid #ac8b56;
+        border-radius: 6px;
+        background: linear-gradient(135deg, #34392e, #1c2923);
+        box-shadow: 0 12px 55px #0009;
+      }
+      .modal-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 9px;
+      }
+      .modal-header h2 {
+        font:
+          22px 'KaiTi',
+          serif;
+        color: #efdaa8;
+        margin: 0;
+      }
+      .modal-header p {
+        margin: 0;
+        color: #c9b995;
+        font-size: 12px;
+      }
+      .pools {
+        overflow: auto;
+        max-height: 220px;
+      }
+      .pool {
+        margin: 0 0 9px;
+      }
+      .pool h3 {
+        font-size: 12px;
+        margin: 0 0 6px;
+        color: #dccba6;
+        font-weight: 500;
+      }
+      .pool h3 small {
+        margin-left: 12px;
+        font-size: 10px;
+        color: #aeb6a4;
+      }
+      .pool-cards {
+        display: flex;
+        gap: 7px;
+        padding: 12px 3px 3px;
+        overflow-x: auto;
+      }
+      .pool .card {
+        height: 62px;
+        width: 48px;
+      }
+      .pool .card .name {
+        font-size: 13px;
+        left: 20px;
+      }
+      .pool .card .corner {
+        font-size: 10px;
+      }
+      .modal-footer {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        justify-content: flex-end;
+        border-top: 1px solid #a58d5038;
+        padding-top: 9px;
+      }
+      .modal-footer span {
+        margin-right: auto;
+        font-size: 12px;
+        color: #d9c49d;
+      }
+      .demo-controls {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+        padding-top: 16px;
+      }
+      .demo-controls button {
+        border: 1px solid #5f6755;
+        background: #252e27;
+        color: #dcc9a6;
+        padding: 8px 12px;
+        border-radius: 4px;
+        font-size: 12px;
+      }
+      .demo-controls .reset {
+        margin-left: auto;
+        color: #b7bcad;
+      }
+      .caption {
+        color: #a4ae9c;
+        font-size: 12px;
+        margin: 13px 0 0;
+        line-height: 1.8;
+      }
+      @media (max-width: 600px) {
+        .page {
+          padding: 18px 12px;
+        }
+        .intro {
+          align-items: start;
+          flex-direction: column;
+          gap: 6px;
+        }
+        h1 {
+          font-size: 27px;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .card {
+          transition: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <p style="margin: 8px; padding: 12px; background: #fff2cc; color: #292113">
+      旧设计研究演示：此独立视觉与短动画方案已被取代。v0.6.2
+      按无名杀原界面和动作实现，正常飞牌半秒并保留停留。当前方向见
+      docs/ui-design.md，实际效果请在正式牌桌体验。
+    </p>
+    <main class="page">
+      <header class="intro">
+        <div>
+          <p class="eyebrow">聚会三国杀 · 设计提案</p>
+          <h1>让每一次出牌，都有来有回</h1>
+          <p>经典牌桌结构 · 清楚的武将与牌面 · 连贯的动作反馈</p>
+        </div>
+        <span class="demo-note">交互演示 / 不连接正式对局</span>
+      </header>
+      <div class="settings">
+        <label
+          >牌桌席位
+          <select id="seat-count">
+            <option value="5">5 席</option>
+            <option value="8">8 席</option>
+          </select></label
+        >
+        <label
+          >模拟响应
+          <select id="latency">
+            <option value="80">80ms</option>
+            <option value="1200">1200ms</option>
+          </select></label
+        >
+        <label><input type="checkbox" id="reduced" />精简动画</label>
+        <span class="demo-note">拟定画布 844 × 390</span>
+      </div>
+      <div class="viewport" id="viewport">
+        <section id="board" class="board" aria-label="经典三国杀牌桌交互预览">
+          <header class="topbar">
+            <span class="brand">聚会三国杀</span><span>身份局 · 5 席</span
+            ><span class="round" id="round">第 2 轮 · 出牌阶段</span
+            ><span class="line">演示牌桌</span>
+          </header>
+          <aside class="log" id="log">
+            <strong>本轮公开记录</strong>
+            <p>曹操摸了 2 张牌</p>
+            <p>赵云使用了【杀】</p>
+            <p>孙权打出了【闪】</p>
+          </aside>
+          <div class="seats" id="seats"></div>
+          <div class="deck" id="deck" aria-label="牌堆">牌堆</div>
+          <div class="center" id="center"><span class="center-empty">运筹帷幄</span></div>
+          <p class="event-label" id="event-label">轮到你了<br />选择牌与目标</p>
+          <footer class="footer">
+            <div class="actionbar">
+              <button class="skill" id="poxi">魄袭</button>
+              <p class="prompt" id="prompt" role="status">
+                你的出牌阶段<br />选牌、选目标，再点使用
+              </p>
+              <button class="secondary" id="end">结束出牌</button
+              ><button class="main-btn" id="use" disabled>使用</button>
+            </div>
+            <div class="tools">
+              <button id="help">技能说明</button><button id="card-help">牌面说明</button
+              ><span id="hand-count"></span>
+            </div>
+            <div class="hand" id="hand" aria-label="你的手牌"></div>
+            <div class="self seat current" id="self"></div>
+          </footer>
+          <div class="effects" id="effects" aria-hidden="true"></div>
+          <p class="toast" id="toast" hidden role="status"></p>
+          <div class="overlay" id="overlay" hidden>
+            <section
+              class="modal"
+              id="modal"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="modal-title"
+            ></section>
+          </div>
+        </section>
+      </div>
+      <div class="demo-controls">
+        <button id="draw">演示摸牌</button><button id="damage">演示受伤</button
+        ><button id="turn">演示回合切换</button><button id="skill-demo">打开魄袭选择</button
+        ><button id="reset" class="reset">重置演示</button>
+      </div>
+      <p class="caption">
+        先点下方的【杀】，再点上方的曹操，最后点「使用」，观察出牌、指向与受伤过程。切换到 1200ms
+        可查看等待反馈；魄袭用两行展示两人的手牌，按不同花色选择四张。
+      </p>
+    </main>
+    <script>
+      (() => {
+        const $ = (id) => document.getElementById(id);
+        const file = location.protocol === 'file:';
+        const portraits = file ? '../dist/engine/portraits/' : '/portraits/';
+        const cardsPath = file ? '../.local/noname/v1.11.6/image/card/' : '/cards/';
+        const labels = {
+          sha: '杀',
+          shan: '闪',
+          tao: '桃',
+          wuxie: '无懈可击',
+          guohe: '过河拆桥',
+          wuzhong: '无中生有',
+        };
+        const make = (tag, cls, text = '') => {
+          const node = document.createElement(tag);
+          node.className = cls;
+          node.textContent = text;
+          return node;
+        };
+        const initial = [
+          { id: 'c1', name: 'sha', suit: '♠', number: '7' },
+          { id: 'c2', name: 'shan', suit: '♥', number: '2' },
+          { id: 'c3', name: 'tao', suit: '♦', number: '3' },
+          { id: 'c4', name: 'wuxie', suit: '♣', number: 'Q' },
+          { id: 'c5', name: 'sha', suit: '♥', number: '10' },
+          { id: 'c6', name: 'wuzhong', suit: '♥', number: '7' },
+        ];
+        const enemies = [
+          {
+            name: '曹操',
+            image: 'caocao',
+            nickname: '阿杰',
+            hp: 4,
+            max: 4,
+            hand: 4,
+            equipment: '八卦阵',
+            identity: '主公',
+          },
+          {
+            name: '赵云',
+            image: 'zhaoyun',
+            nickname: '小宇',
+            hp: 3,
+            max: 4,
+            hand: 3,
+            equipment: '青釭剑',
+            identity: '未公开',
+          },
+          {
+            name: '孙权',
+            image: 'sunquan',
+            nickname: '木木',
+            hp: 4,
+            max: 4,
+            hand: 5,
+            equipment: '',
+            identity: '未公开',
+          },
+          {
+            name: '貂蝉',
+            image: 'diaochan',
+            nickname: '阿宁',
+            hp: 3,
+            max: 3,
+            hand: 2,
+            equipment: '乐不思蜀',
+            identity: '未公开',
+          },
+          {
+            name: '神吕蒙',
+            image: 'shen_lvmeng',
+            nickname: '小齐',
+            hp: 3,
+            max: 3,
+            hand: 5,
+            equipment: '',
+            identity: '未公开',
+          },
+          {
+            name: '关羽',
+            image: 'guanyu',
+            nickname: '老李',
+            hp: 4,
+            max: 4,
+            hand: 4,
+            equipment: '赤兔',
+            identity: '未公开',
+          },
+          {
+            name: '甄姬',
+            image: 'zhenji',
+            nickname: '小夏',
+            hp: 3,
+            max: 3,
+            hand: 3,
+            equipment: '',
+            identity: '未公开',
+          },
+        ];
+        const me = {
+          name: '神甘宁',
+          image: 'shen_ganning',
+          nickname: '你',
+          hp: 6,
+          max: 6,
+          hand: 6,
+          equipment: '魄袭 · 劫营',
+          identity: '反贼',
+        };
+        let hand = [],
+          selected = '',
+          target = -1,
+          serial = 10,
+          toastTimer,
+          pending = false,
+          turn = -1,
+          generation = 0;
+        const reduced = () =>
+          $('reduced').checked || matchMedia('(prefers-reduced-motion: reduce)').matches;
+        function motion(node, frames, duration) {
+          if (!node.animate || reduced()) return Promise.resolve();
+          return node
+            .animate(frames, { duration, easing: 'cubic-bezier(.2,.7,.2,1)', fill: 'none' })
+            .finished.catch(() => {});
+        }
+        function message(text, permanent = false) {
+          clearTimeout(toastTimer);
+          $('toast').textContent = text;
+          $('toast').hidden = false;
+          if (!permanent) toastTimer = setTimeout(() => ($('toast').hidden = true), 2200);
+        }
+        const image = (src) => {
+          const img = make('img', '');
+          img.src = src;
+          img.alt = '';
+          img.draggable = false;
+          img.onerror = () => (img.hidden = true);
+          return img;
+        };
+        function card(card, click) {
+          const node = make('button', 'card');
+          node.type = 'button';
+          node.dataset.id = card.id;
+          node.setAttribute('aria-label', `${labels[card.name]} ${card.suit}${card.number}`);
+          node.setAttribute('aria-pressed', 'false');
+          node.append(
+            image(cardsPath + card.name + '.png'),
+            make('span', 'paper'),
+            make(
+              'span',
+              `corner${['♥', '♦'].includes(card.suit) ? ' red' : ''}`,
+              card.suit + '\n' + card.number,
+            ),
+            make('span', 'name', labels[card.name]),
+          );
+          if (click) node.onclick = () => click(node);
+          return node;
+        }
+        function mark(node, active) {
+          node.classList.toggle('selected', active);
+          node.setAttribute('aria-pressed', String(active));
+          node.querySelector('.tick')?.remove();
+          if (active) node.append(make('span', 'tick', '✓'));
+        }
+        function face(player, index) {
+          const node = make('button', 'face');
+          node.type = 'button';
+          node.setAttribute(
+            'aria-label',
+            index < 0 ? '你的武将 神甘宁' : `选择目标 ${player.name}`,
+          );
+          node.append(
+            image(portraits + player.image + '.webp'),
+            make('span', 'general', player.name),
+            make('span', 'identity', player.identity),
+            make('span', 'handcount', `${player.hand}张`),
+          );
+          const health = make('span', 'health');
+          for (let i = 0; i < player.max; i++)
+            health.append(make('i', i < player.hp ? '' : 'empty'));
+          health.append(make('b', '', `${player.hp}/${player.max}`));
+          node.append(health);
+          if (index >= 0)
+            node.onclick = () => {
+              if (pending) return;
+              target = target === index ? -1 : index;
+              updateTargets();
+              updatePrompt();
+            };
+          return node;
+        }
+        function renderSeats() {
+          $('seats').replaceChildren();
+          const count = Number($('seat-count').value) - 1;
+          enemies.slice(0, count).forEach((player, index) => {
+            const seat = make('article', 'seat');
+            seat.dataset.index = index;
+            seat.append(
+              make('span', 'nickname', player.nickname),
+              face(player, index),
+              make('div', 'equipment', player.equipment),
+            );
+            seat.classList.toggle('current', turn === index);
+            $('seats').append(seat);
+          });
+          $('self').replaceChildren(make('span', 'nickname', '你 · 神甘宁'), face(me, -1));
+          $('self').classList.toggle('current', turn === -1);
+          $('board').classList.toggle('eight', count === 7);
+          document.querySelector('.topbar span:nth-child(2)').textContent =
+            `身份局 · ${count + 1} 席`;
+          updateTargets();
+        }
+        function updateTargets() {
+          document.querySelectorAll('#seats .seat').forEach((seat) => {
+            const active = Number(seat.dataset.index) === target;
+            const f = seat.querySelector('.face');
+            f.classList.toggle('target', active);
+            f.setAttribute('aria-pressed', String(active));
+            f.querySelector('.target-check')?.remove();
+            if (active) f.append(make('span', 'target-check', '✓'));
+          });
+        }
+        function updatePrompt() {
+          const chosen = hand.find((card) => card.id === selected);
+          $('use').disabled = !chosen || (chosen.name === 'sha' && target < 0) || pending;
+          $('prompt').textContent = pending
+            ? '已提交，等待电脑确认…'
+            : chosen
+              ? `已选【${labels[chosen.name]}】${target >= 0 ? ' → ' + enemies[target].name : ' · 请选择目标'}\n点「使用」提交`
+              : '你的出牌阶段\n选牌、选目标，再点使用';
+        }
+        function renderHand() {
+          const nodes = new Map([...$('hand').children].map((node) => [node.dataset.id, node]));
+          hand.forEach((value) => {
+            let node = nodes.get(value.id);
+            if (!node) {
+              node = card(value, (button) => {
+                if (pending) return;
+                selected = selected === value.id ? '' : value.id;
+                [...$('hand').children].forEach((item) => mark(item, item.dataset.id === selected));
+                motion(
+                  button,
+                  [
+                    { transform: 'translateY(0)' },
+                    { transform: selected ? 'translateY(-10px)' : 'translateY(0)' },
+                  ],
+                  120,
+                );
+                updatePrompt();
+              });
+            }
+            nodes.delete(value.id);
+            $('hand').append(node);
+            mark(node, value.id === selected);
+          });
+          nodes.forEach((node) => node.remove());
+          me.hand = hand.length;
+          $('hand-count').textContent = `手牌 ${hand.length} 张`;
+          updatePrompt();
+        }
+        function position(node) {
+          const board = $('board').getBoundingClientRect(),
+            rect = node.getBoundingClientRect(),
+            s = board.width / 844;
+          return {
+            x: (rect.left - board.left + rect.width / 2) / s,
+            y: (rect.top - board.top + rect.height / 2) / s,
+          };
+        }
+        async function fly(value, from, to) {
+          if (reduced()) return;
+          const node = card(value);
+          node.classList.add('flying');
+          node.style.left = `${to.x - 31}px`;
+          node.style.top = `${to.y - 42}px`;
+          $('effects').append(node);
+          await motion(
+            node,
+            [
+              {
+                transform: `translate(${from.x - to.x}px,${from.y - to.y}px) rotate(-8deg)`,
+                opacity: 0.8,
+              },
+              { transform: 'translate(0,0) rotate(0)', opacity: 1 },
+            ],
+            300,
+          );
+          node.remove();
+        }
+        async function beam(from, to) {
+          if (reduced()) return;
+          const dx = to.x - from.x,
+            dy = to.y - from.y,
+            angle = (Math.atan2(dy, dx) * 180) / Math.PI;
+          const line = make('div', 'beam');
+          line.style.left = `${from.x}px`;
+          line.style.top = `${from.y}px`;
+          line.style.width = `${Math.hypot(dx, dy)}px`;
+          $('effects').append(line);
+          await motion(
+            line,
+            [
+              { transform: `rotate(${angle}deg) scaleX(0)`, opacity: 0 },
+              { transform: `rotate(${angle}deg) scaleX(1)`, opacity: 1 },
+              { transform: `rotate(${angle}deg) scaleX(1)`, opacity: 0 },
+            ],
+            250,
+          );
+          line.remove();
+        }
+        function addLog(text) {
+          const log = $('log');
+          log.append(make('p', '', text));
+          while (log.querySelectorAll('p').length > 4) log.querySelector('p').remove();
+        }
+        async function hit(index) {
+          const person = index < 0 ? me : enemies[index];
+          person.hp = Math.max(1, person.hp - 1);
+          renderSeats();
+          const node =
+            index < 0
+              ? $('self').querySelector('.face')
+              : $('seats').children[index].querySelector('.face');
+          const at = position(node),
+            pop = make('span', 'pop', '−1');
+          pop.style.left = `${at.x - 16}px`;
+          pop.style.top = `${at.y - 5}px`;
+          $('effects').append(pop);
+          addLog(`${person.name}受到 1 点伤害`);
+          await Promise.all([
+            motion(node, [{ opacity: 1 }, { opacity: 0.55 }, { opacity: 1 }], 220),
+            motion(
+              pop,
+              [
+                { transform: 'translateY(0)', opacity: 1 },
+                { transform: 'translateY(-25px)', opacity: 0 },
+              ],
+              450,
+            ),
+          ]);
+          pop.remove();
+        }
+        async function submit(run) {
+          if (pending) return;
+          pending = true;
+          updatePrompt();
+          const current = generation;
+          const timer = setTimeout(() => message('已提交，等待电脑确认…', true), 350);
+          await new Promise((resolve) => setTimeout(resolve, Number($('latency').value)));
+          clearTimeout(timer);
+          if (current !== generation) return;
+          $('toast').hidden = true;
+          try {
+            await run();
+          } finally {
+            pending = false;
+            updatePrompt();
+          }
+        }
+        $('use').onclick = () => {
+          const chosen = hand.find((item) => item.id === selected);
+          if (!chosen) return;
+          const destination = target;
+          const from = position(
+            [...$('hand').children].find((node) => node.dataset.id === chosen.id),
+          );
+          submit(async () => {
+            selected = '';
+            hand = hand.filter((item) => item.id !== chosen.id);
+            renderHand();
+            renderSeats();
+            await fly(chosen, from, { x: 440, y: 197 });
+            $('center').replaceChildren(card(chosen));
+            const text =
+              destination < 0
+                ? `神甘宁使用【${labels[chosen.name]}】`
+                : `神甘宁 → ${enemies[destination].name}\n使用【${labels[chosen.name]}】`;
+            $('event-label').textContent = text;
+            addLog(text.replace('\n', ' '));
+            if (destination >= 0) {
+              await beam(
+                { x: 440, y: 197 },
+                position($('seats').children[destination].querySelector('.face')),
+              );
+              if (chosen.name === 'sha') await hit(destination);
+            }
+            target = -1;
+            updateTargets();
+          });
+        };
+        async function draw() {
+          const values = [
+            { id: `c${++serial}`, name: 'shan', suit: '♦', number: '6' },
+            { id: `c${++serial}`, name: 'sha', suit: '♣', number: '9' },
+          ];
+          await submit(async () => {
+            const from = position($('deck'));
+            hand.push(...values);
+            renderHand();
+            renderSeats();
+            await Promise.all(
+              values.map((value, index) => fly(value, from, { x: 490 + index * 34, y: 332 })),
+            );
+            $('event-label').textContent = '神甘宁摸了 2 张牌';
+            addLog('神甘宁摸了 2 张牌');
+          });
+        }
+        $('draw').onclick = draw;
+        $('damage').onclick = () => submit(() => hit(-1));
+        function nextTurn() {
+          if (pending) return;
+          turn = turn < 0 ? 0 : -1;
+          renderSeats();
+          $('round').textContent = turn < 0 ? '第 2 轮 · 出牌阶段' : '第 2 轮 · 曹操的回合';
+          message(turn < 0 ? '轮到你了 · 出牌阶段' : '曹操的回合');
+          const node = turn < 0 ? $('self') : $('seats').children[0];
+          motion(
+            node,
+            [
+              { transform: 'translateY(-4px)', opacity: 0.7 },
+              { transform: 'translateY(0)', opacity: 1 },
+            ],
+            180,
+          );
+        }
+        $('turn').onclick = nextTurn;
+        $('end').onclick = nextTurn;
+        function closeModal() {
+          $('overlay').hidden = true;
+          $('poxi').focus();
+        }
+        function poxi() {
+          if (pending) return;
+          const modal = $('modal');
+          modal.replaceChildren();
+          const head = make('div', 'modal-header');
+          head.append(make('h2', '', '魄袭'), make('p', '', '可弃置两人手牌中四张花色不同的牌'));
+          head.firstChild.id = 'modal-title';
+          modal.append(head);
+          const pools = make('div', 'pools');
+          const enemyCards = [
+            { id: 'e1', name: 'sha', suit: '♠', number: '5' },
+            { id: 'e2', name: 'shan', suit: '♥', number: '8' },
+            { id: 'e3', name: 'guohe', suit: '♣', number: 'Q' },
+            { id: 'e4', name: 'tao', suit: '♦', number: '9' },
+          ];
+          const options = new Map(),
+            chosen = new Map();
+          for (const [label, values] of [
+            ['你的手牌', hand],
+            ['曹操的手牌', enemyCards],
+          ]) {
+            const pool = make('section', 'pool'),
+              title = make('h3', '', label);
+            title.append(
+              make(
+                'small',
+                '',
+                label.startsWith('曹操') ? '仅你获准查看' : '可以与对方的牌组合选择',
+              ),
+            );
+            const row = make('div', 'pool-cards');
+            values.forEach((value) => {
+              const node = card(value, () => {
+                if (chosen.has(value.id)) chosen.delete(value.id);
+                else if (
+                  chosen.size < 4 &&
+                  ![...chosen.values()].some((item) => item.suit === value.suit)
+                )
+                  chosen.set(value.id, value);
+                else {
+                  message('请选择尚未选择的花色');
+                  return;
+                }
+                update();
+              });
+              options.set(value.id, { value, node });
+              row.append(node);
+            });
+            pool.append(title, row);
+            pools.append(pool);
+          }
+          modal.append(pools);
+          const footer = make('div', 'modal-footer'),
+            count = make('span', ''),
+            cancel = make('button', 'secondary', '取消'),
+            confirm = make('button', 'main-btn', '确定');
+          cancel.onclick = closeModal;
+          confirm.onclick = () => {
+            const selectedValues = [...chosen.values()],
+              from = position(modal);
+            closeModal();
+            submit(async () => {
+              const ownIds = new Set(
+                selectedValues.filter((item) => !item.id.startsWith('e')).map((item) => item.id),
+              );
+              hand = hand.filter((item) => !ownIds.has(item.id));
+              enemies[0].hand = Math.max(0, enemies[0].hand - (4 - ownIds.size));
+              selected = '';
+              renderHand();
+              renderSeats();
+              await Promise.all(
+                selectedValues.map((item, index) =>
+                  fly(item, from, { x: 350 + index * 54, y: 197 }),
+                ),
+              );
+              $('center').replaceChildren(...selectedValues.map((item) => card(item)));
+              $('event-label').textContent = '神甘宁发动【魄袭】\n弃置 4 张不同花色牌';
+              addLog('神甘宁发动【魄袭】');
+              message('已确认 · 演示弃牌完成');
+            });
+          };
+          footer.append(count, cancel, confirm);
+          modal.append(footer);
+          function update() {
+            count.textContent = `已选 ${chosen.size}/4 张 · 四种不同花色`;
+            confirm.disabled = chosen.size !== 4;
+            options.forEach(({ value, node }) => {
+              mark(node, chosen.has(value.id));
+              node.classList.toggle(
+                'unavailable',
+                !chosen.has(value.id) &&
+                  [...chosen.values()].some((item) => item.suit === value.suit),
+              );
+            });
+          }
+          update();
+          $('overlay').hidden = false;
+          motion(
+            modal,
+            [
+              { transform: 'translateY(8px) scale(.97)', opacity: 0 },
+              { transform: 'translateY(0) scale(1)', opacity: 1 },
+            ],
+            180,
+          );
+          cancel.focus();
+        }
+        $('poxi').onclick = poxi;
+        $('skill-demo').onclick = poxi;
+        $('help').onclick = () =>
+          message('魄袭：观看一名其他角色的手牌，可弃置双方四张花色不同的牌。');
+        $('card-help').onclick = () =>
+          message('牌名、花色、点数保持清晰；正式版可点按查看完整说明。');
+        $('overlay').onclick = (event) => {
+          if (event.target === $('overlay')) closeModal();
+        };
+        document.addEventListener('keydown', (event) => {
+          if (event.key === 'Escape') closeModal();
+          if (event.key === 'Tab' && !$('overlay').hidden) {
+            const buttons = [...$('modal').querySelectorAll('button:not(:disabled)')];
+            const current = buttons.indexOf(document.activeElement);
+            if (
+              (event.shiftKey && current <= 0) ||
+              (!event.shiftKey && current === buttons.length - 1)
+            ) {
+              event.preventDefault();
+              buttons[event.shiftKey ? buttons.length - 1 : 0].focus();
+            }
+          }
+        });
+        $('seat-count').onchange = () => {
+          target = -1;
+          renderSeats();
+          updatePrompt();
+        };
+        $('reduced').onchange = () =>
+          document.getAnimations().forEach((animation) => animation.finish());
+        function reset() {
+          generation++;
+          pending = false;
+          selected = '';
+          target = -1;
+          turn = -1;
+          hand = initial.map((item) => ({ ...item }));
+          enemies.forEach((person) => (person.hp = person.max));
+          enemies[0].hand = 4;
+          me.hp = 6;
+          $('effects').replaceChildren();
+          $('center').replaceChildren(make('span', 'center-empty', '运筹帷幄'));
+          $('overlay').hidden = true;
+          $('toast').hidden = true;
+          $('round').textContent = '第 2 轮 · 出牌阶段';
+          $('event-label').textContent = '轮到你了\n选择牌与目标';
+          renderHand();
+          renderSeats();
+        }
+        $('reset').onclick = reset;
+        const resize = () => {
+          const scale = $('viewport').clientWidth / 844;
+          $('board').style.transform = `scale(${scale})`;
+          $('viewport').style.height = `${390 * scale}px`;
+        };
+        new ResizeObserver(resize).observe($('viewport'));
+        reset();
+        resize();
+      })();
+    </script>
+  </body>
+</html>

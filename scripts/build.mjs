@@ -20,6 +20,21 @@ await build({
 });
 await copyFile(path.join(root, 'apps/web/index.html'), path.join(output, 'index.html'));
 await copyFile(path.join(root, 'apps/web/src/style.css'), path.join(output, 'style.css'));
+await build({
+  entryPoints: [path.join(root, 'apps/web/src/table-client.ts')],
+  outfile: path.join(output, 'table.js'),
+  bundle: true,
+  format: 'esm',
+  target: ['chrome91', 'safari16.4'],
+  minify: true,
+});
+await copyFile(path.join(root, 'apps/web/table.html'), path.join(output, 'table.html'));
+await build({
+  entryPoints: [path.join(root, 'apps/web/src/table.css')],
+  outfile: path.join(output, 'table.css'),
+  minify: true,
+  target: ['chrome91', 'safari16.4'],
+});
 await copyFile(path.join(root, 'config/general-catalog.json'), path.join(output, 'generals.json'));
 const serverBuild = await build({
   entryPoints: [path.join(root, 'apps/server/src/main.ts')],
