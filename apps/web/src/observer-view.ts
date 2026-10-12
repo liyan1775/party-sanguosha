@@ -11,6 +11,34 @@ type LogView = {
 };
 const logViews = new WeakMap<HTMLElement, LogView>();
 
+/** The same numbered public journal can be read by an authenticated seated player. */
+export function renderObserverLog(
+  target: HTMLElement,
+  page: ObserverLogPage,
+  load: (before: number) => Promise<ObserverLogPage>,
+): void {
+  let view = logViews.get(target);
+  if (!view || view.matchId !== page.matchId) {
+    view = {
+      matchId: page.matchId,
+      entries: new Map(),
+      total: 0,
+      first: 1,
+      loading: false,
+      error: '',
+      complete: true,
+    };
+    logViews.set(target, view);
+  }
+  for (const entry of page.entries) view.entries.set(entry.sequence, entry.text);
+  target.dataset.matchId = page.matchId;
+  view.first = Math.max(view.first, page.first);
+  view.total = Math.max(view.total, page.total);
+  for (const sequence of view.entries.keys())
+    if (sequence < view.first) view.entries.delete(sequence);
+  renderLog(target, view, load);
+}
+
 function renderLog(
   target: HTMLElement,
   view: LogView,
@@ -36,10 +64,15 @@ function renderLog(
     renderLog(target, view, load);
     try {
       const page = await load(before);
-      if (page.matchId !== view.matchId || !target.isConnected) return;
+      if (
+        page.matchId !== view.matchId ||
+        target.dataset.matchId !== view.matchId ||
+        !target.isConnected
+      )
+        return;
       const size = view.entries.size;
       for (const entry of page.entries) view.entries.set(entry.sequence, entry.text);
-      view.first = page.first;
+      view.first = Math.max(view.first, page.first);
       view.total = Math.max(view.total, page.total);
       for (const sequence of view.entries.keys())
         if (sequence < view.first) view.entries.delete(sequence);
@@ -49,7 +82,8 @@ function renderLog(
       view.error = error instanceof Error ? error.message : '读取记录失败，请重试。';
     } finally {
       view.loading = false;
-      if (target.isConnected) renderLog(target, view, load, focusEarlier && !view.error);
+      if (target.isConnected && target.dataset.matchId === view.matchId)
+        renderLog(target, view, load, focusEarlier && !view.error);
     }
   }
   if (load && first > view.first) {
@@ -95,7 +129,7 @@ function renderLog(
   if (gap && load && !view.loading && !view.error) void readPage(gap, false);
 }
 
-/** Text-only public data: a console never selects a participating viewpoint. */
+/** Text-only public data: observers never select a participating viewpoint. */
 export function renderObserver(
   target: HTMLElement,
   state: ObserverState | null,
@@ -123,6 +157,12 @@ export function renderObserver(
   const heading = document.createElement('p');
   heading.className = 'observer-round';
   heading.textContent = `${state.ended ? '本局已结束' : state.round ? `第 ${state.round} 轮` : '选将与发牌中'} · 公开视角`;
+  if (state.deckCount !== undefined) heading.textContent += ` · 牌堆剩余 ${state.deckCount} 张`;
+  if (state.identityCounts) {
+    const counts = state.identityCounts;
+    heading.textContent += ` · 剩余身份：主 ${counts.zhu} 忠 ${counts.zhong} 反 ${counts.fan} 内 ${counts.nei}`;
+    heading.title = '按开局身份人数减去已公开的阵亡身份，不显示在场玩家的隐藏身份';
+  }
   const board = document.createElement('div');
   board.className = 'observer-board';
   for (const player of state.players) {
@@ -141,6 +181,7 @@ export function renderObserver(
       ? {
           human: '玩家手动操作',
           auto: '玩家开启托管',
+          reconnecting: '连接中断 · 等待重连',
           offline: state.ended
             ? '玩家断线'
             : state.round

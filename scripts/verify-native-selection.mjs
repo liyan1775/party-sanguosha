@@ -35,27 +35,45 @@ const output = `.runtime/native-selection/${new Date().toISOString().replaceAll(
 await mkdir(output, { recursive: true });
 const errors = [],
   results = [];
+const lobbySelection = process.env.ENGINE_VERIFY_GENERAL_SELECTION === '1';
+const testConflict = process.env.ENGINE_VERIFY_VERSUS_CONFLICT === '1';
 async function page(mobile) {
   const context = await browser.newContext(
     mobile ? { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true } : {},
   );
   const result = await context.newPage();
-  if (process.env.ENGINE_VERIFY_SELECTION_GOD === '1')
-    await context.route('**/engine/runtime/mode.js', async (route) => {
-      const headers = { ...route.request().headers() };
-      delete headers['if-none-match'];
-      delete headers['if-modified-since'];
-      const response = await route.fetch({ headers });
-      const source = await response.text();
-      assert(source.includes('pool.randomRemove(choiceCount)'));
-      await route.fulfill({
-        response,
-        body: source.replace(
-          'pool.randomRemove(choiceCount)',
-          "[game.players.indexOf(player) === 0 ? 'shen_zhaoyun' : 'shen_lvbu']",
-        ),
-      });
+  await context.route('**/engine/runtime/mode.js', async (route) => {
+    const headers = { ...route.request().headers() };
+    delete headers['if-none-match'];
+    delete headers['if-modified-since'];
+    const response = await route.fetch({ headers });
+    const source = await response.text();
+    let body = source
+      .replace(
+        'const seats = setup.seats.slice().randomSort();',
+        'const seats = setup.seats.slice();',
+      )
+      .replace(
+        'const roles = identities(setup.settings.mode, seats.length);',
+        "const roles = identities(setup.settings.mode, seats.length); if (setup.settings.mode === 'identity') roles.sort((a, b) => (b === 'zhu') - (a === 'zhu'));",
+      );
+    if (process.env.ENGINE_VERIFY_VERSUS_TEAMMATES === '1')
+      body = body.replace(
+        'const seats = setup.seats.slice();',
+        "const seats = setup.seats.slice(); if (setup.settings.mode === 'versus') { const humans = seats.filter(seat => seat.kind === 'human'); const middle = seats.filter(seat => seat !== humans[0] && seat !== humans[1]); seats.splice(0, 4, humans[0], ...middle, humans[1]); }",
+      );
+    if (process.env.ENGINE_VERIFY_SELECTION_GOD === '1' && !lobbySelection) {
+      assert(source.includes('pool.randomRemove(count)'));
+      body = body.replace(
+        'pool.randomRemove(count)',
+        "[game.players.indexOf(player) === 0 ? 'shen_zhaoyun' : 'shen_lvbu']",
+      );
+    }
+    await route.fulfill({
+      response,
+      body,
     });
+  });
   if (process.env.ENGINE_VERIFY_SELECTION_HTTP === '1')
     await context.route('**/engine/setup/**', async (route) => {
       const response = await route.fetch();
@@ -88,9 +106,33 @@ async function choosing(frame) {
     () =>
       partyEngine._status.event?.name === 'chooseButton' &&
       partyEngine._status.paused &&
-      document.querySelector('.dialog .button.character'),
+      document.querySelector('.dialog:not(.removing) .button.character'),
     {},
     { timeout: 15000 },
+  );
+}
+async function retainedTeammateChoice(frame, name) {
+  await frame.waitForFunction((name) => {
+    const buttons = [...document.querySelectorAll('.dialog:not(.removing) .button.character')];
+    const taken = buttons.find((button) => button.link === name);
+    return (
+      buttons.length === 10 &&
+      buttons.filter((button) => button.classList.contains('selectable')).length === 9 &&
+      taken?.getAttribute('aria-disabled') === 'true' &&
+      taken.querySelector('.party-general-status')?.textContent.includes('队友已选')
+    );
+  }, name);
+  assert(
+    await frame.evaluate(() => {
+      const state = partyEngine.get.event().partyTeamChoice;
+      if (!state.preference) return true;
+      const first = document.querySelector('.dialog:not(.removing) .button.character');
+      return (
+        first?.link === state.preference &&
+        first.querySelector('.party-general-status')?.textContent.includes('我的点将')
+      );
+    }),
+    'the private point marker survives live updates and reconnects',
   );
 }
 async function request(phone, path, method = 'POST', body) {
@@ -122,11 +164,15 @@ try {
     const created = await request(owner, '/api/rooms', 'POST', { nickname: '选将恢复测试' });
     const code = created.room.code;
     await owner.goto(`${origin}/join/${code}`);
-    const count = { duel: 2, identity: 5, doudizhu: 3, versus: 4 }[mode];
+    const count =
+      mode === 'identity'
+        ? Number(process.env.ENGINE_VERIFY_IDENTITY_SEATS ?? 5)
+        : { duel: 2, doudizhu: 3, versus: 4 }[mode];
     await request(owner, `/api/rooms/${code}`, 'PUT', {
       mode,
       playerCount: count,
       generalPreset: process.env.ENGINE_VERIFY_PRESET ?? 'beginner',
+      allowGeneralSelection: lobbySelection,
       extensions: [],
     });
     await friend.goto(`${origin}/join/${code}`);
@@ -134,8 +180,32 @@ try {
       nickname: '等待选择测试',
     });
     await friend.reload();
-    if (count > 2) await request(owner, `/api/rooms/${code}/bots`, 'POST', { count: count - 2 });
-    for (const phone of [owner, friend]) {
+    const opponents = [];
+    if (mode === 'versus' && process.env.ENGINE_VERIFY_VERSUS_HUMANS === '4')
+      for (const nickname of ['另一队前手', '另一队后手']) {
+        const phone = await page(true);
+        await phone.goto(`${origin}/join/${code}`);
+        await request(phone, `/api/rooms/${code}/players`, 'POST', { nickname });
+        await phone.reload();
+        opponents.push(phone);
+      }
+    const phones = [owner, friend, ...opponents];
+    if (count > phones.length)
+      await request(owner, `/api/rooms/${code}/bots`, 'POST', { count: count - phones.length });
+    const preferences = process.env.ENGINE_VERIFY_SELECTION_GENERALS
+      ? process.env.ENGINE_VERIFY_SELECTION_GENERALS.split(',')
+      : process.env.ENGINE_VERIFY_SELECTION_GOD === '1'
+        ? ['shen_zhaoyun', 'shen_lvbu']
+        : process.env.ENGINE_VERIFY_PRESET === 'advanced'
+          ? ['re_sunquan', 're_liubei']
+          : ['liubei', 'zhaoyun'];
+    assert.equal(preferences.length, 2, 'selection probe needs two native general IDs');
+    if (lobbySelection)
+      for (const [index, phone] of [owner, friend].entries())
+        await request(phone, `/api/rooms/${code}/me/general`, 'PUT', {
+          general: preferences[index],
+        });
+    for (const phone of phones) {
       await phone.waitForFunction(() => !document.querySelector('#ready-button')?.disabled);
       await phone.locator('#ready-button').tap();
     }
@@ -143,13 +213,40 @@ try {
     await owner.locator('#start-button').tap();
     let ownerFrame = await table(owner),
       friendFrame = await table(friend);
+    const opponentFrames = await Promise.all(opponents.map(table));
     await choosing(ownerFrame);
-    await choosing(friendFrame);
+    if (mode !== 'identity') await choosing(friendFrame);
     const matchId = party.lobby.get(code).snapshot().matchId;
     const worker = computer
       .frames()
       .find((frame) => frame.url().endsWith(`/engine/worker/${matchId}`));
     assert(worker);
+    if (mode === 'identity') {
+      assert.equal(await worker.evaluate(() => partyEngine.game.zhu.playerid), created.playerId);
+      assert.equal(
+        await friendFrame.locator('.dialog:not(.removing) .button.character:visible').count(),
+        0,
+        'other seats wait for the lord reveal',
+      );
+      const lords = await worker.evaluate(
+        (friendPreference) =>
+          partyEngine.proof.roster.filter(
+            (name) => partyEngine.lib.character[name].isZhugong && name !== friendPreference,
+          ),
+        lobbySelection ? preferences[1] : null,
+      );
+      const lordOffers = await ownerFrame
+        .locator('.dialog:not(.removing) .button.character')
+        .evaluateAll((buttons) => buttons.map((button) => button.link));
+      const scale = (process.env.ENGINE_VERIFY_PRESET ?? 'beginner') === 'beginner' ? 1 : 2;
+      assert.equal(lordOffers.length, 5 * scale, 'lord candidate total follows room preset');
+      assert.equal(
+        lordOffers.filter((name) => lords.includes(name)).length,
+        Math.min(lords.length, 3 * scale),
+        'available native lords fill their category before random supplementation',
+      );
+      assert.equal(new Set(lordOffers).size, lordOffers.length);
+    }
     await worker.evaluate(async () => {
       const { publicLogText } = await import('/engine/runtime/observer.js');
       const log = partyEngine.game.log;
@@ -158,14 +255,111 @@ try {
         if (publicLogText(args)) partyEngine.proof.observerNativeLogs++;
         return log.apply(this, args);
       };
+      if (partyEngine.setup.settings.mode === 'versus') {
+        const { game, get } = partyEngine;
+        // Observe real native quantities only; no card values/deck/outcomes.
+        partyEngine.proof.versus = { dealt: [], draws: [], deathDraws: [] };
+        for (const player of game.players) {
+          const directgain = player.directgain;
+          player.directgain = function (cards, ...args) {
+            if (get.event()?.name === 'gameDraw')
+              partyEngine.proof.versus.dealt.push({ seat: this.seatNum, count: cards.length });
+            return directgain.call(this, cards, ...args);
+          };
+          const phaseDraw = player.phaseDraw;
+          player.phaseDraw = function (...args) {
+            const event = phaseDraw.apply(this, args);
+            partyEngine.proof.versus.draws.push({
+              seat: this.seatNum,
+              turn: game.phaseNumber,
+              count: event.num,
+            });
+            return event;
+          };
+          const draw = player.draw;
+          player.draw = function (...args) {
+            const event = get.event();
+            if (event?.name === 'versusDraw')
+              partyEngine.proof.versus.deathDraws.push({
+                count: typeof args[0] === 'number' ? args[0] : 1,
+                sameSide: event.getParent('die').player.side === this.side,
+              });
+            return draw.apply(this, args);
+          };
+        }
+      }
     });
+    const delegatedChoice =
+      mode === 'versus' &&
+      (await ownerFrame.evaluate(() =>
+        Boolean(partyEngine._status.event.partyTeamChoice?.aiTeammate),
+      ));
+    if (delegatedChoice)
+      assert.deepEqual(
+        await ownerFrame.evaluate(() => partyEngine._status.event.selectButton),
+        [2, 2],
+      );
     const offers = await ownerFrame
-      .locator('.dialog .button.character')
+      .locator('.dialog:not(.removing) .button.character')
       .evaluateAll((buttons) => buttons.map((button) => button.link));
+    if (mode === 'versus') {
+      assert.equal(offers.length, 10, 'the original shared pool stays visible');
+      await ownerFrame.waitForFunction(() =>
+        document
+          .querySelector('.dialog:not(.removing) .caption')
+          ?.textContent.includes('你是 1 号位'),
+      );
+      if (process.env.ENGINE_VERIFY_VERSUS_TEAMMATES === '1') {
+        const friendOffers = await friendFrame
+          .locator('.dialog:not(.removing) .button.character')
+          .evaluateAll((buttons) => buttons.map((button) => button.link));
+        assert.equal(friendOffers.length, 10);
+        assert(
+          offers.every((name) => friendOffers.includes(name)),
+          'teammates see the same ten generals before confirming',
+        );
+        if (opponentFrames.length === 2) {
+          const otherOffers = await Promise.all(
+            opponentFrames.map((frame) =>
+              frame
+                .locator('.dialog:not(.removing) .button.character')
+                .evaluateAll((buttons) => buttons.map((button) => button.link)),
+            ),
+          );
+          assert(otherOffers.every((pool) => pool.length === 10));
+          assert(
+            otherOffers[0].every((name) => otherOffers[1].includes(name)),
+            'the other team also shares ten generals',
+          );
+          assert(
+            offers.every((name) => !otherOffers[0].includes(name)),
+            "teams cannot see or choose each other's pool",
+          );
+        }
+      }
+    }
+    if (lobbySelection) {
+      assert.equal(offers[0], preferences[0], 'lobby preference stays first, including if taken');
+      if (mode === 'versus')
+        await ownerFrame.waitForFunction((name) => {
+          const point = [
+            ...document.querySelectorAll('.dialog:not(.removing) .button.character'),
+          ].find((button) => button.link === name);
+          return point?.querySelector('.party-general-status')?.textContent.includes('我的点将');
+        }, preferences[0]);
+      assert.equal(
+        await ownerFrame.evaluate(() => 'generalSelections' in partyEngine.setup),
+        false,
+      );
+    }
     const oldTime = await ownerFrame.evaluate(() => performance.timeOrigin);
     const choiceDeadline = await worker.evaluate(
       (id) => partyEngine.lib.node.torespondtimeout[id],
       created.playerId,
+    );
+    const friendDeadline = await worker.evaluate(
+      (id) => partyEngine.lib.node.torespondtimeout[id],
+      joined.playerId,
     );
     // A physical native socket close (or poll DELETE) must retain the pending
     // selection during its original deadline and rebuild the same phone seat.
@@ -185,7 +379,7 @@ try {
     );
     assert.deepEqual(
       await ownerFrame
-        .locator('.dialog .button.character')
+        .locator('.dialog:not(.removing) .button.character')
         .evaluateAll((buttons) => buttons.map((button) => button.link)),
       offers,
     );
@@ -197,10 +391,58 @@ try {
     await choosing(ownerFrame);
     assert.deepEqual(
       await ownerFrame
-        .locator('.dialog .button.character')
+        .locator('.dialog:not(.removing) .button.character')
         .evaluateAll((buttons) => buttons.map((button) => button.link)),
       offers,
     );
+    const conflict = mode === 'versus' && testConflict;
+    const crossPreferenceChoice = conflict && lobbySelection;
+    const selectableOffers = await ownerFrame
+      .locator('.dialog:not(.removing) .button.character.selectable')
+      .evaluateAll((buttons) => buttons.map((button) => button.link));
+    const chosenGeneral = crossPreferenceChoice ? preferences[1] : selectableOffers[0];
+    assert(chosenGeneral, 'at least one unclaimed general is selectable');
+    if (conflict) {
+      assert.equal(process.env.ENGINE_VERIFY_VERSUS_TEAMMATES, '1');
+      assert.equal(opponents.length, 2, 'keep the other team pending while retrying a duplicate');
+      // Two genuine native UI confirmations choose the same shared general.
+      // Hold the second outgoing result once to reproduce an in-flight race;
+      // cards, AI decisions, damage and outcomes remain completely native.
+      await friendFrame.evaluate((name) => {
+        const { game } = partyEngine;
+        const send = game.send;
+        let delayed;
+        game.send = function (command, ...args) {
+          if (command === 'result' && args[0]?.links?.[0] === name) {
+            delayed = () => send.call(game, command, ...args);
+            game.send = send;
+            return;
+          }
+          return send.call(this, command, ...args);
+        };
+        partyEngine.flushSharedConflict = () => {
+          delayed();
+          delete partyEngine.flushSharedConflict;
+        };
+      }, chosenGeneral);
+      // Match the native link exactly; different generals can share a name.
+      const conflictIndex = await friendFrame
+        .locator('.dialog:not(.removing) .button.character')
+        .evaluateAll(
+          (buttons, name) => buttons.findIndex((button) => button.link === name),
+          chosenGeneral,
+        );
+      assert(conflictIndex >= 0);
+      await friendFrame
+        .locator('.dialog:not(.removing) .button.character')
+        .nth(conflictIndex)
+        .tap();
+      await friendFrame
+        .locator('.control > div')
+        .filter({ hasText: /^确定$/ })
+        .first()
+        .tap();
+    }
     if (process.env.ENGINE_VERIFY_SELECTION_TIMEOUT === '1') {
       // Exercise the exact native timeout actions without waiting 65 seconds;
       // offers/rules/AI remain native, and no cards/HP/outcome are injected.
@@ -210,7 +452,21 @@ try {
         player.ws.ws.close();
       }, created.playerId);
     } else {
-      await ownerFrame.locator('.dialog .button.character').first().tap();
+      const index = await ownerFrame
+        .locator('.dialog:not(.removing) .button.character')
+        .evaluateAll(
+          (buttons, name) => buttons.findIndex((button) => button.link === name),
+          chosenGeneral,
+        );
+      assert(index >= 0);
+      await ownerFrame.locator('.dialog:not(.removing) .button.character').nth(index).tap();
+      if (delegatedChoice) {
+        await ownerFrame
+          .locator('.dialog:not(.removing) .button.character.selectable:not(.selected)')
+          .first()
+          .tap();
+        assert.equal(await ownerFrame.evaluate(() => partyEngine.ui.selected.buttons.length), 2);
+      }
       await ownerFrame
         .locator('.control > div')
         .filter({ hasText: /^确定$/ })
@@ -219,33 +475,155 @@ try {
     }
     await worker.waitForFunction((id) => {
       const value = partyEngine.lib.node.torespond[id];
-      return value && !value._noname_waiting && value !== '_noname_waiting';
+      return (
+        (value && !value._noname_waiting && value !== '_noname_waiting') ||
+        partyEngine.lib.playerOL[id].name
+      );
     }, created.playerId);
+    if (conflict) {
+      await friendFrame.evaluate(() => partyEngine.flushSharedConflict());
+      await choosing(friendFrame);
+      const remaining = await friendFrame
+        .locator('.dialog:not(.removing) .button.character')
+        .evaluateAll((buttons) => buttons.map((button) => button.link));
+      assert.equal(remaining.length, 10);
+      assert(remaining.includes(chosenGeneral), 'the losing submission still sees the taken card');
+      await retainedTeammateChoice(friendFrame, chosenGeneral);
+      assert.equal(
+        await worker.evaluate((id) => partyEngine.lib.node.torespondtimeout[id], joined.playerId),
+        friendDeadline,
+        'a conflicting result cannot extend the native deadline',
+      );
+    }
+    const teammateVisible =
+      mode === 'versus' &&
+      process.env.ENGINE_VERIFY_VERSUS_TEAMMATES === '1' &&
+      process.env.ENGINE_VERIFY_SELECTION_TIMEOUT !== '1';
+    if (teammateVisible) {
+      await friendFrame.waitForFunction(
+        () =>
+          document
+            .querySelector('.dialog:not(.removing) .caption')
+            ?.textContent.includes('队友是 1 号位（已选') && partyEngine._status.paused,
+      );
+      const remainingOffers = await friendFrame
+        .locator('.dialog:not(.removing) .button.character')
+        .evaluateAll((buttons) => buttons.map((button) => button.link));
+      assert.equal(remainingOffers.length, 10);
+      assert(remainingOffers.includes(chosenGeneral));
+      await retainedTeammateChoice(friendFrame, chosenGeneral);
+      assert(
+        remainingOffers.every((name) => offers.includes(name)),
+        'live update retains the entire original shared pool',
+      );
+      for (const frame of opponentFrames) {
+        await choosing(frame);
+        assert.match(
+          await frame.locator('.dialog:not(.removing) .caption').first().textContent(),
+          /正在选将/,
+        );
+        assert.equal(
+          await frame.evaluate(
+            (id) => Boolean(partyEngine.lib.playerOL[id].name),
+            created.playerId,
+          ),
+          false,
+          'opponents do not receive a confirmed general before the table reveal',
+        );
+      }
+    }
     await owner.reload();
     ownerFrame = await table(owner);
     await ownerFrame.waitForFunction(() => partyEngine._status.gameStarted);
     assert.equal(
-      await ownerFrame.locator('.dialog .button.character:visible').count(),
+      await ownerFrame.locator('.dialog:not(.removing) .button.character:visible').count(),
       0,
       'completed choice is not replayed',
     );
     await friend.reload();
     friendFrame = await table(friend);
     await choosing(friendFrame);
+    if (teammateVisible) {
+      assert.match(
+        await friendFrame.locator('.dialog:not(.removing) .caption').first().textContent(),
+        /你是 4 号位，队友是 1 号位（已选/,
+        'confirmed teammate survives native selection refresh without restarting the deadline',
+      );
+      const remainingOffers = await friendFrame
+        .locator('.dialog:not(.removing) .button.character')
+        .evaluateAll((buttons) => buttons.map((button) => button.link));
+      assert.equal(remainingOffers.length, 10);
+      assert(remainingOffers.includes(chosenGeneral));
+      await retainedTeammateChoice(friendFrame, chosenGeneral);
+      assert(
+        remainingOffers.every((name) => offers.includes(name)),
+        'refresh restores all ten cards and the taken marker',
+      );
+      assert.equal(
+        await worker.evaluate((id) => partyEngine.lib.node.torespondtimeout[id], joined.playerId),
+        friendDeadline,
+        'teammate update and refresh retain original deadline',
+      );
+    }
     assert.equal(await friendFrame.evaluate(() => partyEngine.setup.playerId), joined.playerId);
-    await friendFrame.locator('.dialog .button.character').first().tap();
+    if (mode === 'identity')
+      assert.equal(
+        await friendFrame.locator('.dialog:not(.removing) .button.character').count(),
+        (process.env.ENGINE_VERIFY_PRESET ?? 'beginner') === 'beginner' ? 3 : 6,
+        'non-lord candidate total follows room preset',
+      );
+    if (lobbySelection) {
+      const remainingOffers = await friendFrame
+        .locator('.dialog:not(.removing) .button.character')
+        .evaluateAll((buttons) => buttons.map((button) => button.link));
+      if (mode !== 'versus' || remainingOffers.includes(preferences[1]))
+        assert.equal(remainingOffers[0], preferences[1]);
+      if (mode === 'identity') {
+        assert.equal(
+          await friendFrame.evaluate(() => partyEngine.game.zhu.name),
+          preferences[0],
+          'lord is visible while others choose',
+        );
+        assert.equal(remainingOffers.includes(preferences[0]), false);
+      }
+    }
+    await friendFrame.locator('.dialog:not(.removing) .button.character.selectable').first().tap();
+    if (delegatedChoice)
+      await friendFrame
+        .locator('.dialog:not(.removing) .button.character.selectable:not(.selected)')
+        .first()
+        .tap();
     await friendFrame
       .locator('.control > div')
       .filter({ hasText: /^确定$/ })
       .first()
       .tap();
+    for (const [index, frame] of opponentFrames.entries()) {
+      if (index > 0)
+        await frame.waitForFunction(
+          () =>
+            document.querySelectorAll('.dialog:not(.removing) .button.character.selectable')
+              .length === 9,
+        );
+      await frame.locator('.dialog:not(.removing) .button.character.selectable').first().tap();
+      await frame
+        .locator('.control > div')
+        .filter({ hasText: /^确定$/ })
+        .first()
+        .tap();
+    }
     let groupRecovered = false;
     for (
       let attempt = 0;
       attempt < 100 && !(await worker.evaluate(() => partyEngine.proof.started));
       attempt++
     ) {
-      for (const frame of [ownerFrame, friendFrame]) {
+      for (const frame of [ownerFrame, friendFrame, ...opponentFrames]) {
+        const keep = frame.locator('#party-luck-cards button[data-action="keep"]');
+        if (await keep.isVisible()) {
+          await keep.tap();
+          continue;
+        }
         let groupFrame = frame;
         let buttons = groupFrame
           .locator('.dialog:not(.removing)')
@@ -275,6 +653,13 @@ try {
             playerId,
           );
           const groups = await buttons.evaluateAll((items) => items.map((item) => item.link));
+          const expectedGroups = process.env.ENGINE_VERIFY_SELECTION_GROUPS?.split(',');
+          if (expectedGroups)
+            assert.deepEqual(
+              groups.map((link) => link[2].slice(6)).sort(),
+              expectedGroups.slice().sort(),
+              'native faction choices follow the current roster',
+            );
           const before = await frame.evaluate(() => performance.timeOrigin);
           await frame.evaluate(() => partyEngine.game.ws.close());
           await participant.waitForFunction(
@@ -380,9 +765,26 @@ try {
       await new Promise((resolve) => setTimeout(resolve, 100));
     }
     await worker.waitForFunction(() => partyEngine.proof.started, {}, { timeout: 20000 });
+    if (crossPreferenceChoice) {
+      assert.equal(
+        await worker.evaluate((id) => partyEngine.lib.playerOL[id].name, created.playerId),
+        preferences[1],
+        "a human can select their teammate's lobby preference",
+      );
+      assert.equal(
+        await worker.evaluate((id) => partyEngine.lib.playerOL[id].name, joined.playerId),
+        preferences[0],
+      );
+    }
+    assert.equal(
+      await worker.evaluate(
+        () => new Set(partyEngine.game.players.map((player) => player.name)).size,
+      ),
+      count,
+    );
     if (process.env.ENGINE_VERIFY_SELECTION_GOD === '1')
       assert(groupRecovered, 'real native group selection reconnected');
-    for (const frame of [ownerFrame, friendFrame]) {
+    for (const frame of [ownerFrame, friendFrame, ...opponentFrames]) {
       await frame.waitForFunction(() => partyEngine.game.me?.countCards('h') > 0);
       await frame.evaluate(() => {
         partyEngine.lib.config.game_speed = 'vvfast';
@@ -395,6 +797,24 @@ try {
       partyEngine.lib.config.duration = 100;
     });
     await worker.waitForFunction(() => partyEngine.proof.ended, {}, { timeout: 150000 });
+    if (mode === 'versus') {
+      const quantities = await worker.evaluate(() => partyEngine.proof.versus);
+      assert.deepEqual(quantities.dealt, [
+        { seat: 1, count: 4 },
+        { seat: 2, count: 4 },
+        { seat: 3, count: 4 },
+        { seat: 4, count: 5 },
+      ]);
+      assert.deepEqual(quantities.draws[0], { seat: 1, turn: 1, count: 1 });
+      assert(quantities.draws.slice(1).every((draw) => draw.count === 2));
+      assert(quantities.deathDraws.length > 0, 'natural death exercises native teammate reward');
+      assert(quantities.deathDraws.every((draw) => draw.count === 1 && draw.sameSide));
+      assert.equal(
+        await worker.evaluate(() => new Set(partyEngine.game.players.map((p) => p.side)).size),
+        1,
+        'native completion leaves only the winning side',
+      );
+    }
     const preview = engine.observe(code).observer;
     assert(preview.logTotal > 12, 'public history exceeds the old twelve-action limit');
     const history = [];
@@ -438,6 +858,7 @@ try {
     await owner.waitForFunction(() => !document.querySelector('#leave-button').disabled);
     await request(owner, `/api/rooms/${code}/me`, 'DELETE');
     await request(friend, `/api/rooms/${code}/me`, 'DELETE');
+    for (const phone of opponents) await request(phone, `/api/rooms/${code}/me`, 'DELETE');
     results.push({
       mode,
       seatAndOffersRetained: true,
@@ -447,11 +868,24 @@ try {
       nativeLogCoverage: true,
       deadlineUnchanged: true,
       groupChoiceRecovered: groupRecovered,
+      checkedFactionOptions: process.env.ENGINE_VERIFY_SELECTION_GROUPS?.split(','),
       timeoutNativeAI: process.env.ENGINE_VERIFY_SELECTION_TIMEOUT === '1',
+      lobbyPointFirst: lobbySelection,
+      lordFirstWithNativePool: mode === 'identity',
+      identityCandidateCounts: mode === 'identity',
+      versusNativeQuantities: mode === 'versus',
+      confirmedTeammateRecovered: teammateVisible,
+      sharedTeamPool: mode === 'versus',
+      takenGeneralRetained: teammateVisible,
+      aiTeammateDelegated: delegatedChoice,
+      sharedGeneralConflictRecovered: conflict,
+      sharedPreferenceExchange: crossPreferenceChoice,
+      opponentsChoicePrivate: teammateVisible && opponents.length === 2,
     });
     console.log(mode, 'selection reconnect, native deal and natural end passed');
     await owner.context().close();
     await friend.context().close();
+    for (const phone of opponents) await phone.context().close();
   }
   assert.deepEqual(errors, []);
   await writeFile(

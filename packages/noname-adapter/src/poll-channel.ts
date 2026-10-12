@@ -27,7 +27,7 @@ export class PollChannel {
   constructor(
     id: string,
     playerId: string,
-    private readonly disconnected: () => void,
+    private readonly disconnected: (code: number) => void,
     readonly lightweight = false,
   ) {
     this.id = id;
@@ -63,7 +63,7 @@ export class PollChannel {
     this.reason = reason;
     clearTimeout(this.flush);
     this.flush = undefined;
-    this.disconnected();
+    this.disconnected(code);
     this.pending?.();
     this.push();
   }

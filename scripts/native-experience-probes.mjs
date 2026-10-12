@@ -1,5 +1,32 @@
 import assert from 'node:assert/strict';
 
+/** Compare the visible native phase highlight with its authoritative player. */
+export async function verifyTurnIndicator(worker, frame) {
+  for (let attempt = 0; attempt < 5; attempt++) {
+    await worker.waitForFunction(() =>
+      partyEngine._status.currentPhase?.classList.contains('glow_phase'),
+    );
+    const current = await worker.evaluate(() => partyEngine._status.currentPhase.playerid);
+    await frame.waitForFunction((id) => {
+      const { game, _status } = partyEngine;
+      const player = partyEngine.lib.playerOL[id];
+      const badge = player?.querySelector('.party-turn-badge');
+      return (
+        _status.currentPhase === player &&
+        player?.classList.contains('glow_phase') &&
+        badge?.textContent === '回合中' &&
+        getComputedStyle(badge).display !== 'none' &&
+        badge.getBoundingClientRect().width > 0 &&
+        [...game.players, ...game.dead].filter((other) => other.classList.contains('glow_phase'))
+          .length === 1
+      );
+    }, current);
+    if (await worker.evaluate((id) => partyEngine._status.currentPhase?.playerid === id, current))
+      return { matchesNativePhase: true, visibleBadgeCount: 1 };
+  }
+  assert.fail('native phase kept changing before indicator verification');
+}
+
 /** Real native constructors/serialization, isolated from the running phase. */
 export async function verifyChoicePrompts(worker, frame) {
   const actorId = await frame.evaluate(() => partyEngine.game.me.playerid);
@@ -339,20 +366,26 @@ export async function verifyChoicePrompts(worker, frame) {
 
 export async function verifyLateVoices(frame) {
   const proof = await frame.evaluate(async () => {
-    const { game, audio, proof } = partyEngine;
+    const { game, audio, proof, setup } = partyEngine;
     await audio.unlock();
     const before = proof.audio.dropped;
+    const loaded = performance.getEntriesByType('resource').map((entry) => entry.name);
+    const delayedPath = setup.audioFiles.find(
+      (path) => path.startsWith('skill/') && !loaded.some((url) => url.endsWith(`/audio/${path}`)),
+    );
+    if (!delayedPath)
+      throw new Error('No unused authorized voice is available for the delay probe');
     let played = 0;
     const nativeFetch = window.fetch;
     window.fetch = async (...args) => {
-      if (String(args[0]).includes('audio/skill/luanwu1.mp3'))
+      if (String(args[0]).endsWith(`/audio/${delayedPath}`))
         await new Promise((resolve) => setTimeout(resolve, 2200));
       return nativeFetch(...args);
     };
     try {
       for (let count = 0; count < 20; count++)
         game.playAudio({
-          path: 'skill/luanwu1',
+          path: delayedPath,
           onPlay: () => {
             played++;
           },

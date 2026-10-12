@@ -25,6 +25,45 @@ function code(expected: string) {
   return (error: unknown) => error instanceof AppError && error.code === expected;
 }
 
+test('规则端中断不静默回房：恢复期锁原局，失败无胜负，房主显式回房后才能再准备', async () => {
+  let emit: (event: EngineEvent) => void = () => {};
+  const engine: EngineAdapter = {
+    ...fakeEngine(),
+    matchId: () => 'original-match',
+    subscribe: (listener) => {
+      emit = listener;
+      return () => {};
+    },
+  };
+  const { room, owner } = ownedRoom(engine);
+  room.updateSettings(
+    { mode: 'duel', playerCount: 2, generalPreset: 'beginner', extensions: [] },
+    owner.token,
+  );
+  const friend = room.join('朋友');
+  room.connect(owner.token);
+  room.connect(friend.token);
+  room.setReady(owner.token, true);
+  room.setReady(friend.token, true);
+  await room.start(owner.token);
+  emit({ type: 'recovering', roomCode: room.code, deadline: 20000 });
+  assert.equal(room.snapshot().phase, 'playing');
+  assert.equal(room.snapshot().matchRecovery?.deadline, 20000);
+  emit({ type: 'recovered', roomCode: room.code });
+  assert.equal(room.snapshot().matchRecovery, undefined);
+  emit({ type: 'failed', roomCode: room.code, code: 'worker-disconnected' });
+  assert.equal(room.snapshot().phase, 'finished');
+  assert.equal(room.snapshot().matchFailure?.code, 'worker-disconnected');
+  assert.equal(room.snapshot().matchId, 'original-match');
+  assert.equal(room.snapshot().players.length, 2);
+  await assert.rejects(room.start(owner.token), code('ROOM_LOCKED'));
+  assert.throws(() => room.returnToWaiting(friend.token), code('OWNER_REQUIRED'));
+  room.returnToWaiting(owner.token);
+  assert.equal(room.snapshot().phase, 'waiting');
+  assert.equal(room.snapshot().matchFailure, undefined);
+  assert(room.snapshot().players.every((player) => !player.ready));
+});
+
 test('服务不预建房间，玩家建房自动成为参赛房主，会话不能同时占两间房', () => {
   const lobby = new LobbyStore(fakeEngine());
   assert.deepEqual(lobby.list(), []);
@@ -121,6 +160,98 @@ test('满房仍能恢复本人及房主身份，公开数据不含会话 token',
   assert.throws(() => room.join('张飞'), code('ROOM_FULL'));
   assert.equal(JSON.stringify(room.snapshot()).includes(owner.token), false);
   assert.throws(() => room.join('\u0000坏昵称'), code('INVALID_NICKNAME'));
+});
+
+test('大厅点将默认关闭、按真人会话保留且不重复，更换档位或关闭后清除', () => {
+  const { room, owner } = ownedRoom();
+  const friend = room.join('朋友');
+  const other = ownedRoom().owner;
+  const settings = { mode: 'identity', playerCount: 5, generalPreset: 'beginner', extensions: [] };
+  assert.equal(room.snapshot().settings.allowGeneralSelection, false);
+  assert.throws(
+    () => room.setGeneralChoice(owner.token, 'zhaoyun'),
+    code('GENERAL_SELECTION_DISABLED'),
+  );
+  assert.throws(
+    () => room.updateSettings({ ...settings, allowGeneralSelection: true }, friend.token),
+    code('OWNER_REQUIRED'),
+  );
+  for (const value of [null, 'true', 1])
+    assert.throws(
+      () => room.updateSettings({ ...settings, allowGeneralSelection: value }, owner.token),
+      code('INVALID_GENERAL_SELECTION'),
+    );
+  room.updateSettings({ ...settings, allowGeneralSelection: true }, owner.token);
+  assert.equal(room.generalChoice(owner.token).available.length, 27);
+  for (const token of [undefined, other.token])
+    assert.throws(() => room.setGeneralChoice(token, 'zhaoyun'), code('PLAYER_REQUIRED'));
+  for (const general of [undefined, 1, '', 'shen_zhaoyun', 'not_a_general'])
+    assert.throws(() => room.setGeneralChoice(owner.token, general), code('INVALID_GENERAL'));
+  room.connect(owner.token);
+  room.connect(friend.token);
+  room.setReady(owner.token, true);
+  room.setReady(friend.token, true);
+  room.setGeneralChoice(owner.token, 'zhaoyun');
+  assert(room.snapshot().players.every((player) => !player.ready));
+  assert.equal(room.generalChoice(owner.token).selected, 'zhaoyun');
+  assert.equal(room.generalChoice(friend.token).available.includes('zhaoyun'), false);
+  assert.throws(() => room.setGeneralChoice(friend.token, 'zhaoyun'), code('GENERAL_TAKEN'));
+  assert.equal(JSON.stringify(room.snapshot()).includes('zhaoyun'), false);
+  const revision = room.snapshot().revision;
+  room.setGeneralChoice(owner.token, 'zhaoyun');
+  assert.equal(room.snapshot().revision, revision);
+  room.updateSettings(settings, owner.token);
+  assert.equal(
+    room.generalChoice(owner.token).selected,
+    'zhaoyun',
+    'older setting payload preserves the switch',
+  );
+  room.setGeneralChoice(owner.token, null);
+  room.setGeneralChoice(friend.token, 'zhaoyun');
+  room.leave(friend.token);
+  assert.equal(room.generalChoice(owner.token).available.length, 27);
+  room.setGeneralChoice(owner.token, 'caocao');
+  room.updateSettings({ ...settings, generalPreset: 'advanced' }, owner.token);
+  assert.equal(room.generalChoice(owner.token).selected, null);
+  assert.equal(room.generalChoice(owner.token).available.length, 96);
+  assert.throws(() => room.setGeneralChoice(owner.token, 'shen_zhaoyun'), code('INVALID_GENERAL'));
+  room.setGeneralChoice(owner.token, 'caoang');
+  room.updateSettings(
+    { ...settings, generalPreset: 'advanced', allowGeneralSelection: false },
+    owner.token,
+  );
+  room.updateSettings(
+    { ...settings, generalPreset: 'advanced', allowGeneralSelection: true },
+    owner.token,
+  );
+  assert.equal(room.generalChoice(owner.token).selected, null);
+});
+
+test('点将只交给本房真实引擎启动配置，对局开始后不能改点将', async () => {
+  let received: MatchSetup | undefined;
+  const { room, owner } = ownedRoom(
+    fakeEngine(async (setup) => {
+      received = setup;
+    }),
+  );
+  room.updateSettings(
+    {
+      mode: 'duel',
+      playerCount: 2,
+      generalPreset: 'beginner',
+      extensions: [],
+      allowGeneralSelection: true,
+    },
+    owner.token,
+  );
+  room.addBots(1, owner.token);
+  room.setGeneralChoice(owner.token, 'zhaoyun');
+  room.connect(owner.token);
+  room.setReady(owner.token, true);
+  await room.start(owner.token);
+  assert.deepEqual(received?.generalSelections, { [owner.playerId]: 'zhaoyun' });
+  assert.equal(received?.settings.allowGeneralSelection, true);
+  assert.throws(() => room.setGeneralChoice(owner.token, null), code('ROOM_LOCKED'));
 });
 
 test('匿名电脑连接不占席位；多标签与刷新断线保留房主，最后连接关闭撤销准备', () => {
@@ -295,16 +426,21 @@ test('混合席位与固定原生 AI 策略传给引擎，所有真人在线准�
   assert.equal(JSON.stringify(received).includes(owner.token), false);
 });
 
-test('进阶档只开放阴、雷分组和指定的 12 神将', async () => {
+test('经典进阶只授权96个原生ID，加载依赖不会开放整包或神将', async () => {
   const config = JSON.parse(
     await readFile(new URL('../config/roster-presets.json', import.meta.url), 'utf8'),
   );
   const advanced = config.presets.find((preset: { id: string }) => preset.id === 'advanced');
-  assert.deepEqual(advanced.completePacks, ['refresh']);
-  assert.deepEqual(advanced.packGroups.shenhua, ['shenhua_yin', 'shenhua_lei']);
-  assert.equal(new Set(advanced.additionalCharacters).size, 12);
-  assert.equal(advanced.completePacks.includes('extra'), false);
-  assert.equal(advanced.completePacks.includes('shenhua'), false);
+  assert.equal(advanced.name, '经典进阶96将');
+  assert.equal(new Set(advanced.characters).size, 96);
+  assert.deepEqual(advanced.enabledPacks, ['refresh', 'shenhua', 'sp', 'yijiang']);
+  assert.deepEqual(advanced.completePacks, []);
+  assert.deepEqual(advanced.packGroups, {});
+  assert.deepEqual(advanced.additionalCharacters, []);
+  assert.equal(
+    advanced.characters.some((id: string) => id.startsWith('shen_')),
+    false,
+  );
 });
 
 test('原生结束后只有房主能回房，释放旧局并重置真人准备，保留席位再次开始', async () => {

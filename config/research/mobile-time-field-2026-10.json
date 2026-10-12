@@ -1,0 +1,5952 @@
+{
+  "schemaVersion": 1,
+  "title": "三国杀移动版欢乐斗地主·时光场公开客户端目录",
+  "researchOnly": true,
+  "addedToRuntime": true,
+  "observedDate": "2026-10-11",
+  "count": 326,
+  "scope": "公开客户端固定目录的326项候选名单；不代表商业服务器当日开放状态或账号权益。2026-10-12已完成固定无名杀映射审查，258项进入独立运行将池，其余68项保留缺项原因；本研究名录本身不直接授权武将。",
+  "source": {
+    "officialDownloadPage": "https://www.sanguosha.cn/",
+    "officialApkUrl": "https://download.sanguosha.cn/sgswx/sgs460.apk",
+    "clientVersion": "4.6.0",
+    "clientVersionEvidence": "官网首页下载链接旁明确标注4.6.0，与sgs460.apk文件名一致。",
+    "packedConfigVersion": "20260911569",
+    "retrieval": "只读取公开APK的ZIP索引和必要资产Range；离线解码数据，未安装、运行或登录客户端。",
+    "verification": "加载容器ECC2的长度和stored payload CRC通过；config包MD5与原始cfg一致，XXTEA解出的ZIP全部成员CRC通过。",
+    "files": [
+      {
+        "apkPath": "assets/res/config/config3.zip",
+        "zipEntry": {
+          "localHeaderOffset": 292772040,
+          "compressedBytes": 262796,
+          "bytes": 262796,
+          "compressionMethod": 0
+        },
+        "bytes": 262796,
+        "md5": "68656191fa0d10a9d40bdaba2eb167a1",
+        "sha256": "5ec31d5477ad938412e58efadcc8bb6e351484bf719f3cb447fd9e490460f5be",
+        "memberCrcVerified": true
+      },
+      {
+        "apkPath": "assets/res/config/config4.zip",
+        "zipEntry": {
+          "localHeaderOffset": 293034904,
+          "compressedBytes": 111484,
+          "bytes": 111484,
+          "compressionMethod": 0
+        },
+        "bytes": 111484,
+        "md5": "0a3ab939bdfdb09f490c7ce9ad3456bb",
+        "sha256": "54cf4590354c7504b2c64bba1db5047fef8f81cfbdb4e616483a70b89605c254",
+        "memberCrcVerified": true
+      },
+      {
+        "apkPath": "assets/res/config/config5.zip",
+        "zipEntry": {
+          "localHeaderOffset": 293146456,
+          "compressedBytes": 695360,
+          "bytes": 695360,
+          "compressionMethod": 0
+        },
+        "bytes": 695360,
+        "md5": "6b077b0bba5f0f48841268b9030e6b3a",
+        "sha256": "c8080f2bbc6da095297072947ea09810339d408f3d6ef65b2571bd771b783714",
+        "memberCrcVerified": true
+      },
+      {
+        "member": "happyfight.lua",
+        "archive": "config12.zip",
+        "bytes": 42986,
+        "sha256": "a528854455347088914332048553c88e47e6a38b32e1500162f762494e38071a"
+      },
+      {
+        "member": "ModeCfg.lua",
+        "archive": "config4.zip",
+        "bytes": 270518,
+        "sha256": "8d289b361b2f74a18662390f97603f83cca0fd4c91749168154384bcd0a047b8"
+      },
+      {
+        "member": "ChrCfgData.lua",
+        "archive": "config5.zip",
+        "bytes": 25732,
+        "sha256": "fbd661c9f4af550b0bbc425dc51d3b95566b12dec0bb3ae265894c683cae48cd"
+      },
+      {
+        "member": "CharacterData.lua",
+        "archive": "config5.zip",
+        "bytes": 1283866,
+        "sha256": "134dc104081f27586882208c59f78e82141373c209d314797433fbb60a430271"
+      },
+      {
+        "member": "SpellData.lua",
+        "archive": "config5.zip",
+        "bytes": 1733768,
+        "sha256": "180b0cf4761092a7232a899b98103e4a34542f80bcd690fbc631337bb4a4dae8"
+      },
+      {
+        "member": "chrPoolTypeConfig.lua",
+        "archive": "config4.zip",
+        "bytes": 24746,
+        "sha256": "b8653a49df0237cce070d2f18fa4a5f2249b026962e27bc09764b3d0472db966"
+      },
+      {
+        "apkPath": "assets/res/hotfix2/game.lib",
+        "zipEntry": {
+          "localHeaderOffset": 368465655,
+          "compressedBytes": 10374081,
+          "bytes": 10583100,
+          "compressionMethod": 8
+        },
+        "bytes": 10583100,
+        "sha256": "f05ce44d873ac9fff6a286fd141a9ecc2ebb7afa35ed966c901d41c728d3d75d",
+        "containerCrcVerified": true
+      },
+      {
+        "apkPath": "assets/res/config/cfg",
+        "zipEntry": {
+          "localHeaderOffset": 290499886,
+          "compressedBytes": 522,
+          "bytes": 2905,
+          "compressionMethod": 8
+        },
+        "bytes": 2905,
+        "sha256": "a465d1e34435f9c68fc7358c0eee4f612b6068d9c96b558d5d1721aec59b8cfc"
+      },
+      {
+        "container": "assets/res/hotfix2/game.lib",
+        "module": "app.config.GameModeConfig",
+        "moduleSha256": "76ee1f7bc653333becade8111bb3b19f4ed578f28d64f381d7e4c94c924a963b",
+        "methods": [
+          {
+            "name": "MODEL_HAPPY_FIGHT=58",
+            "originalLuaLines": [71, 71]
+          }
+        ]
+      },
+      {
+        "container": "assets/res/hotfix2/game.lib",
+        "module": "app.data.GameModeData",
+        "moduleSha256": "15823bb97d37f64a7f687b4c0a49fe29627b7a8904eaa1e80b2e05b6b880dd0d",
+        "methods": [
+          {
+            "name": "getJiangChiDataByGameEx",
+            "originalLuaLines": [289, 412]
+          },
+          {
+            "name": "getJiangChiData",
+            "originalLuaLines": [720, 1055]
+          }
+        ]
+      },
+      {
+        "container": "assets/res/hotfix2/game.lib",
+        "module": "app.ui.table.AllowJinJiangDlg",
+        "moduleSha256": "8778dcb64b93cc8a7094024d549431c86ea27916bc47037aed8ef993328fbf15",
+        "methods": [
+          {
+            "name": "initData2",
+            "originalLuaLines": [128, 228]
+          },
+          {
+            "name": "getForbiddenChrList",
+            "originalLuaLines": [537, 631]
+          },
+          {
+            "name": "initDataByChrPoolType",
+            "originalLuaLines": [664, 868]
+          }
+        ]
+      }
+    ]
+  },
+  "derivation": {
+    "modeId": 58,
+    "sectionId": 7,
+    "sectionName": "时光场",
+    "ruleId": 70,
+    "uiCategoryId": 17,
+    "gameEx": [1, 4, 5, 10, 22],
+    "gameExMin": 4195378,
+    "baseCandidateCountBeforeUiFilter": 309,
+    "explicitRuleCandidateCount": 211,
+    "explicitRuleIds": [
+      70, 71, 72, 73, 100, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 116, 117,
+      118, 119, 121, 122, 123, 124, 125, 126, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 139,
+      167, 171, 185, 187, 188, 202, 203, 204, 205, 207, 210, 211, 212, 299, 300, 301, 302, 303, 304,
+      305, 306, 307, 308, 310, 311, 312, 313, 314, 315, 316, 317, 318, 319, 343, 345, 347, 348, 349,
+      350, 360, 361, 362, 363, 364, 365, 367, 370, 371, 372, 374, 375, 376, 380, 381, 382, 383, 384,
+      385, 386, 387, 388, 389, 390, 391, 393, 395, 400, 401, 402, 403, 404, 405, 406, 407, 408, 409,
+      410, 411, 412, 413, 414, 415, 416, 417, 418, 419, 420, 421, 422, 423, 424, 425, 426, 427, 428,
+      429, 430, 431, 432, 433, 434, 436, 437, 438, 439, 440, 441, 442, 443, 444, 445, 446, 447, 449,
+      450, 451, 452, 454, 455, 456, 457, 458, 459, 460, 461, 463, 465, 466, 467, 468, 469, 470, 471,
+      472, 473, 474, 475, 481, 482, 483, 484, 485, 486, 487, 488, 489, 490, 491, 492, 493, 498, 499,
+      500, 501, 502, 512, 520, 521, 522, 523, 526, 529, 30001, 30005, 30006, 30007, 30008, 30009,
+      30010, 30011, 30012, 30013, 30014
+    ],
+    "overlapCountBeforeUiFilter": 16,
+    "unionCountBeforeUiFilter": 504,
+    "uiExcludedExTypes": [6, 11, 12, 13, 16, 17, 20, 21, 22, 23, 25, 28, 29, 30, 31],
+    "excludedFromUnionCount": 178,
+    "excludedFromUnionByExType": {
+      "22": 178
+    },
+    "catalogCount": 326,
+    "nativeMethod": "app.data.GameModeData:getJiangChiDataByGameEx",
+    "verifiedLogic": "ModeCfg[58].SectionS[7]以RuleId=70和chrPoolType=17绑定时光场。GameModeData先收集gameEx包含的ExType且ExType非0的角色，再合并对应规则enableChrList，按官方ID去重；将池全部页使用chrPoolType[17][1].exceptExType过滤。309 + 211 - 16 = 504；目录过滤掉其中ExType=22的178项，得到326。",
+    "uiBoundary": "本版MODEL_HAPPY_FIGHT=58在getJiangChiData走默认getJiangChiDataByGameEx分支；返回isExMap=true。全部页按exceptExType筛除，分类页从该候选集合按ExType分组，八类ExType集合互不重叠。getForbiddenChrList读取banChrMap作为额外关闭项，本规则banChrList为空；没有按年代猜补整包或把当前所有同分类角色一并加入。",
+    "ruleBanChrListCount": 0
+  },
+  "categories": [
+    {
+      "id": "myth",
+      "name": "神话再临",
+      "exTypes": [1, 4, 5],
+      "count": 75
+    },
+    {
+      "id": "limit-break",
+      "name": "界限突破",
+      "exTypes": [26],
+      "count": 54
+    },
+    {
+      "id": "famous-generals",
+      "name": "一将成名",
+      "exTypes": [10],
+      "count": 56
+    },
+    {
+      "id": "famous-limit-break",
+      "name": "界一将成名",
+      "exTypes": [27],
+      "count": 12
+    },
+    {
+      "id": "heroes",
+      "name": "乱世英杰",
+      "exTypes": [15],
+      "count": 14
+    },
+    {
+      "id": "sp",
+      "name": "SP",
+      "exTypes": [9],
+      "count": 97
+    },
+    {
+      "id": "gods",
+      "name": "神将",
+      "exTypes": [7],
+      "count": 9
+    },
+    {
+      "id": "rare",
+      "name": "稀有专属",
+      "exTypes": [8, 19],
+      "count": 9
+    }
+  ],
+  "validation": {
+    "observedCategoryCountsMatchPublicVideo": true,
+    "observedVideoCategoryCounts": {
+      "myth": 75,
+      "limit-break": 54,
+      "famous-generals": 56,
+      "famous-limit-break": 12,
+      "heroes": 14,
+      "sp": 97
+    },
+    "remainingCategoryCountsFromConfig": {
+      "gods": 9,
+      "rare": 9
+    },
+    "videoSources": [
+      {
+        "url": "https://www.bilibili.com/video/BV1Ms8B6vEip/",
+        "time": "00:15–00:20",
+        "observed": "全部326"
+      },
+      {
+        "url": "https://www.bilibili.com/video/BV1xs8p6JEdo/",
+        "time": "00:03 / 00:08 / 00:53",
+        "observed": "全部41/326；75、54、56、12"
+      },
+      {
+        "url": "https://www.bilibili.com/video/BV1Ntbj6cErW/",
+        "time": "00:00 / 00:08",
+        "observed": "乱世英杰14、SP97；全部40/326"
+      }
+    ],
+    "visibleEnabledSubset": {
+      "visibleEnabledSubsetCount": 78,
+      "exactNameMatches": 78,
+      "notExactNameMatches": []
+    },
+    "visibleGraySubset": {
+      "source": "https://xianhua.sanguosha.cn/postDetails?id=12788600",
+      "createdAt": "2026-08-21 22:34:18",
+      "images": [
+        "https://cf-resources.sanguosha.cn/9816dc6bacd2f3aec67959bd6ea303d4.jpeg",
+        "https://cf-resources.sanguosha.cn/d4cedc3d170802def0623cd7d1854368.jpeg"
+      ],
+      "observedCounter": "291/326",
+      "visibleGraySubsetCount": 35,
+      "exactNameMatches": 35,
+      "matchedOfficialIds": [
+        70, 104, 124, 132, 137, 205, 345, 349, 350, 372, 406, 409, 414, 425, 428, 432, 439, 449,
+        456, 458, 466, 468, 469, 471, 484, 487, 520, 521, 523, 526, 30005, 30006, 30007, 30013,
+        30014
+      ],
+      "status": "35个灰色目录项逐名与本集合匹配；该画面291+35=326，不把灰色状态推定为官方排除。"
+    },
+    "missingOfficialCharacterMetadata": 0,
+    "missingOfficialSkillMetadata": 0,
+    "unnamedOfficialSkillIds": [16042]
+  },
+  "limitations": [
+    "该名录固定于官网下载APK内的配置版本20260911569，不冒称2026-10-11服务器活动下发配置。",
+    "326是此公开配置与客户端合并/过滤规则得到的目录候选总数；个人禁用、未拥有、灰色目录项及临时可用状态不等同于官方从目录排除。",
+    "技能名直接取同版CharacterData.Spell和SpellData.Name；可获得技能另列acquiredSkills。名称不证明与无名杀现成角色机制相同，也不证明实际活动使用重制前技能。",
+    "尚未逐名验证326角色当前实战可用性；马云騄等角色的重制差异和实际活动技能需另外核对。曹纯不在本配置推导的326候选中，不依据模糊灰色画面或年份猜测补入。"
+  ],
+  "entries": [
+    {
+      "officialId": 1,
+      "name": "刘备",
+      "category": "myth",
+      "exType": 1,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 31,
+          "name": "仁德"
+        },
+        {
+          "officialId": 32,
+          "name": "激将"
+        }
+      ]
+    },
+    {
+      "officialId": 2,
+      "name": "关羽",
+      "category": "myth",
+      "exType": 1,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 16042,
+          "name": null,
+          "note": "原始SpellData无Name字段；保留原始ID，不推定展示名。"
+        },
+        {
+          "officialId": 33,
+          "name": "武圣"
+        }
+      ]
+    },
+    {
+      "officialId": 3,
+      "name": "张飞",
+      "category": "myth",
+      "exType": 1,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 34,
+          "name": "咆哮"
+        }
+      ]
+    },
+    {
+      "officialId": 4,
+      "name": "诸葛亮",
+      "category": "myth",
+      "exType": 1,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 35,
+          "name": "观星"
+        },
+        {
+          "officialId": 36,
+          "name": "空城"
+        }
+      ]
+    },
+    {
+      "officialId": 5,
+      "name": "赵云",
+      "category": "myth",
+      "exType": 1,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 37,
+          "name": "龙胆"
+        }
+      ]
+    },
+    {
+      "officialId": 6,
+      "name": "马超",
+      "category": "myth",
+      "exType": 1,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 70,
+          "name": "马术"
+        },
+        {
+          "officialId": 38,
+          "name": "铁骑"
+        }
+      ]
+    },
+    {
+      "officialId": 7,
+      "name": "黄月英",
+      "category": "myth",
+      "exType": 1,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 39,
+          "name": "集智"
+        },
+        {
+          "officialId": 40,
+          "name": "奇才"
+        }
+      ]
+    },
+    {
+      "officialId": 8,
+      "name": "孙权",
+      "category": "myth",
+      "exType": 1,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 53,
+          "name": "制衡"
+        },
+        {
+          "officialId": 54,
+          "name": "救援"
+        }
+      ]
+    },
+    {
+      "officialId": 9,
+      "name": "甘宁",
+      "category": "myth",
+      "exType": 1,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 57,
+          "name": "奇袭"
+        }
+      ]
+    },
+    {
+      "officialId": 10,
+      "name": "吕蒙",
+      "category": "myth",
+      "exType": 1,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 63,
+          "name": "克己"
+        }
+      ]
+    },
+    {
+      "officialId": 11,
+      "name": "黄盖",
+      "category": "myth",
+      "exType": 1,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 62,
+          "name": "苦肉"
+        }
+      ]
+    },
+    {
+      "officialId": 12,
+      "name": "周瑜",
+      "category": "myth",
+      "exType": 1,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 55,
+          "name": "英姿"
+        },
+        {
+          "officialId": 56,
+          "name": "反间"
+        }
+      ]
+    },
+    {
+      "officialId": 13,
+      "name": "大乔",
+      "category": "myth",
+      "exType": 1,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 60,
+          "name": "国色"
+        },
+        {
+          "officialId": 61,
+          "name": "流离"
+        }
+      ]
+    },
+    {
+      "officialId": 14,
+      "name": "陆逊",
+      "category": "myth",
+      "exType": 1,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 58,
+          "name": "谦逊"
+        },
+        {
+          "officialId": 59,
+          "name": "连营"
+        }
+      ]
+    },
+    {
+      "officialId": 15,
+      "name": "曹操",
+      "category": "myth",
+      "exType": 1,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 42,
+          "name": "奸雄"
+        },
+        {
+          "officialId": 43,
+          "name": "护驾"
+        }
+      ]
+    },
+    {
+      "officialId": 16,
+      "name": "司马懿",
+      "category": "myth",
+      "exType": 1,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 47,
+          "name": "反馈"
+        },
+        {
+          "officialId": 48,
+          "name": "鬼才"
+        }
+      ]
+    },
+    {
+      "officialId": 17,
+      "name": "夏侯惇",
+      "category": "myth",
+      "exType": 1,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 49,
+          "name": "刚烈"
+        }
+      ]
+    },
+    {
+      "officialId": 18,
+      "name": "张辽",
+      "category": "myth",
+      "exType": 1,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 44,
+          "name": "突袭"
+        }
+      ]
+    },
+    {
+      "officialId": 19,
+      "name": "许褚",
+      "category": "myth",
+      "exType": 1,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 50,
+          "name": "裸衣"
+        }
+      ]
+    },
+    {
+      "officialId": 20,
+      "name": "郭嘉",
+      "category": "myth",
+      "exType": 1,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 51,
+          "name": "天妒"
+        },
+        {
+          "officialId": 52,
+          "name": "遗计"
+        }
+      ]
+    },
+    {
+      "officialId": 21,
+      "name": "甄姬",
+      "category": "myth",
+      "exType": 1,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 45,
+          "name": "洛神"
+        },
+        {
+          "officialId": 46,
+          "name": "倾国"
+        }
+      ]
+    },
+    {
+      "officialId": 22,
+      "name": "华佗",
+      "category": "myth",
+      "exType": 1,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 64,
+          "name": "急救"
+        },
+        {
+          "officialId": 65,
+          "name": "青囊"
+        }
+      ]
+    },
+    {
+      "officialId": 23,
+      "name": "吕布",
+      "category": "myth",
+      "exType": 1,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 66,
+          "name": "无双"
+        }
+      ]
+    },
+    {
+      "officialId": 24,
+      "name": "貂蝉",
+      "category": "myth",
+      "exType": 1,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 67,
+          "name": "闭月"
+        },
+        {
+          "officialId": 68,
+          "name": "离间"
+        }
+      ]
+    },
+    {
+      "officialId": 25,
+      "name": "孙尚香",
+      "category": "myth",
+      "exType": 1,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 41,
+          "name": "枭姬"
+        },
+        {
+          "officialId": 69,
+          "name": "结姻"
+        }
+      ]
+    },
+    {
+      "officialId": 26,
+      "name": "黄忠",
+      "category": "myth",
+      "exType": 4,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 71,
+          "name": "烈弓"
+        }
+      ]
+    },
+    {
+      "officialId": 27,
+      "name": "魏延",
+      "category": "myth",
+      "exType": 4,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 72,
+          "name": "狂骨"
+        }
+      ]
+    },
+    {
+      "officialId": 28,
+      "name": "夏侯渊",
+      "category": "myth",
+      "exType": 4,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 73,
+          "name": "神速"
+        }
+      ]
+    },
+    {
+      "officialId": 29,
+      "name": "曹仁",
+      "category": "myth",
+      "exType": 4,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 74,
+          "name": "据守"
+        }
+      ]
+    },
+    {
+      "officialId": 30,
+      "name": "小乔",
+      "category": "myth",
+      "exType": 4,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 75,
+          "name": "天香"
+        },
+        {
+          "officialId": 1200,
+          "name": "红颜"
+        }
+      ]
+    },
+    {
+      "officialId": 31,
+      "name": "周泰",
+      "category": "myth",
+      "exType": 4,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 77,
+          "name": "不屈"
+        }
+      ]
+    },
+    {
+      "officialId": 32,
+      "name": "张角",
+      "category": "myth",
+      "exType": 4,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 78,
+          "name": "雷击"
+        },
+        {
+          "officialId": 79,
+          "name": "鬼道"
+        },
+        {
+          "officialId": 80,
+          "name": "黄天"
+        }
+      ]
+    },
+    {
+      "officialId": 33,
+      "name": "于吉",
+      "category": "myth",
+      "exType": 4,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 81,
+          "name": "蛊惑"
+        }
+      ]
+    },
+    {
+      "officialId": 34,
+      "name": "典韦",
+      "category": "myth",
+      "exType": 5,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 91,
+          "name": "强袭"
+        }
+      ]
+    },
+    {
+      "officialId": 35,
+      "name": "荀彧",
+      "category": "myth",
+      "exType": 5,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 92,
+          "name": "驱虎"
+        },
+        {
+          "officialId": 93,
+          "name": "节命"
+        }
+      ]
+    },
+    {
+      "officialId": 36,
+      "name": "庞统",
+      "category": "myth",
+      "exType": 5,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 94,
+          "name": "连环"
+        },
+        {
+          "officialId": 95,
+          "name": "涅槃"
+        }
+      ]
+    },
+    {
+      "officialId": 37,
+      "name": "卧龙诸葛",
+      "category": "myth",
+      "exType": 5,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 96,
+          "name": "八阵"
+        },
+        {
+          "officialId": 97,
+          "name": "火计"
+        },
+        {
+          "officialId": 98,
+          "name": "看破"
+        }
+      ]
+    },
+    {
+      "officialId": 38,
+      "name": "太史慈",
+      "category": "myth",
+      "exType": 5,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 99,
+          "name": "天义"
+        }
+      ]
+    },
+    {
+      "officialId": 39,
+      "name": "庞德",
+      "category": "myth",
+      "exType": 5,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 70,
+          "name": "马术"
+        },
+        {
+          "officialId": 100,
+          "name": "猛进"
+        }
+      ]
+    },
+    {
+      "officialId": 40,
+      "name": "颜良文丑",
+      "category": "myth",
+      "exType": 5,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 101,
+          "name": "双雄"
+        }
+      ]
+    },
+    {
+      "officialId": 41,
+      "name": "袁绍",
+      "category": "myth",
+      "exType": 5,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 102,
+          "name": "乱击"
+        },
+        {
+          "officialId": 103,
+          "name": "血裔"
+        }
+      ]
+    },
+    {
+      "officialId": 42,
+      "name": "徐晃",
+      "category": "myth",
+      "exType": 5,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 104,
+          "name": "断粮"
+        }
+      ]
+    },
+    {
+      "officialId": 43,
+      "name": "曹丕",
+      "category": "myth",
+      "exType": 5,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 105,
+          "name": "行殇"
+        },
+        {
+          "officialId": 106,
+          "name": "放逐"
+        },
+        {
+          "officialId": 107,
+          "name": "颂威"
+        }
+      ]
+    },
+    {
+      "officialId": 44,
+      "name": "孙坚",
+      "category": "myth",
+      "exType": 5,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 108,
+          "name": "英魂"
+        }
+      ]
+    },
+    {
+      "officialId": 45,
+      "name": "董卓",
+      "category": "myth",
+      "exType": 5,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 109,
+          "name": "酒池"
+        },
+        {
+          "officialId": 110,
+          "name": "肉林"
+        },
+        {
+          "officialId": 111,
+          "name": "崩坏"
+        },
+        {
+          "officialId": 112,
+          "name": "暴虐"
+        }
+      ]
+    },
+    {
+      "officialId": 46,
+      "name": "祝融",
+      "category": "myth",
+      "exType": 5,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 113,
+          "name": "巨象"
+        },
+        {
+          "officialId": 114,
+          "name": "烈刃"
+        }
+      ]
+    },
+    {
+      "officialId": 47,
+      "name": "孟获",
+      "category": "myth",
+      "exType": 5,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 115,
+          "name": "祸首"
+        },
+        {
+          "officialId": 116,
+          "name": "再起"
+        }
+      ]
+    },
+    {
+      "officialId": 48,
+      "name": "贾诩",
+      "category": "myth",
+      "exType": 5,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 117,
+          "name": "完杀"
+        },
+        {
+          "officialId": 118,
+          "name": "乱武"
+        },
+        {
+          "officialId": 119,
+          "name": "帷幕"
+        }
+      ]
+    },
+    {
+      "officialId": 49,
+      "name": "鲁肃",
+      "category": "myth",
+      "exType": 5,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 120,
+          "name": "好施"
+        },
+        {
+          "officialId": 121,
+          "name": "缔盟"
+        }
+      ]
+    },
+    {
+      "officialId": 50,
+      "name": "张郃",
+      "category": "myth",
+      "exType": 5,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 122,
+          "name": "巧变"
+        }
+      ]
+    },
+    {
+      "officialId": 51,
+      "name": "邓艾",
+      "category": "myth",
+      "exType": 5,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 123,
+          "name": "屯田"
+        },
+        {
+          "officialId": 124,
+          "name": "凿险"
+        }
+      ],
+      "acquiredSkills": [
+        {
+          "officialId": 139,
+          "name": "急袭"
+        }
+      ]
+    },
+    {
+      "officialId": 52,
+      "name": "姜维",
+      "category": "myth",
+      "exType": 5,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 125,
+          "name": "挑衅"
+        },
+        {
+          "officialId": 126,
+          "name": "志继"
+        }
+      ],
+      "acquiredSkills": [
+        {
+          "officialId": 35,
+          "name": "观星"
+        }
+      ]
+    },
+    {
+      "officialId": 53,
+      "name": "刘禅",
+      "category": "myth",
+      "exType": 5,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 127,
+          "name": "享乐"
+        },
+        {
+          "officialId": 128,
+          "name": "放权"
+        },
+        {
+          "officialId": 129,
+          "name": "若愚"
+        }
+      ],
+      "acquiredSkills": [
+        {
+          "officialId": 32,
+          "name": "激将"
+        }
+      ]
+    },
+    {
+      "officialId": 54,
+      "name": "孙策",
+      "category": "myth",
+      "exType": 5,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 130,
+          "name": "激昂"
+        },
+        {
+          "officialId": 131,
+          "name": "魂姿"
+        },
+        {
+          "officialId": 132,
+          "name": "制霸"
+        }
+      ],
+      "acquiredSkills": [
+        {
+          "officialId": 55,
+          "name": "英姿"
+        },
+        {
+          "officialId": 108,
+          "name": "英魂"
+        }
+      ]
+    },
+    {
+      "officialId": 55,
+      "name": "张昭张纮",
+      "category": "myth",
+      "exType": 5,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 133,
+          "name": "直谏"
+        },
+        {
+          "officialId": 134,
+          "name": "固政"
+        }
+      ]
+    },
+    {
+      "officialId": 56,
+      "name": "左慈",
+      "category": "myth",
+      "exType": 5,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 135,
+          "name": "化身"
+        },
+        {
+          "officialId": 136,
+          "name": "新生"
+        }
+      ]
+    },
+    {
+      "officialId": 57,
+      "name": "蔡文姬",
+      "category": "myth",
+      "exType": 5,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 137,
+          "name": "悲歌"
+        },
+        {
+          "officialId": 138,
+          "name": "断肠"
+        }
+      ]
+    },
+    {
+      "officialId": 214,
+      "name": "华雄",
+      "category": "myth",
+      "exType": 1,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 495,
+          "name": "耀武"
+        }
+      ]
+    },
+    {
+      "officialId": 215,
+      "name": "袁术",
+      "category": "myth",
+      "exType": 1,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 11242,
+          "name": "妄尊"
+        },
+        {
+          "officialId": 11243,
+          "name": "同疾"
+        }
+      ]
+    },
+    {
+      "officialId": 362,
+      "name": "王基",
+      "category": "myth",
+      "exType": 5,
+      "membership": "both",
+      "skills": [
+        {
+          "officialId": 273,
+          "name": "奇制"
+        },
+        {
+          "officialId": 274,
+          "name": "进趋"
+        }
+      ]
+    },
+    {
+      "officialId": 416,
+      "name": "严颜",
+      "category": "myth",
+      "exType": 5,
+      "membership": "both",
+      "skills": [
+        {
+          "officialId": 141,
+          "name": "拒战"
+        }
+      ]
+    },
+    {
+      "officialId": 417,
+      "name": "王平",
+      "category": "myth",
+      "exType": 5,
+      "membership": "both",
+      "skills": [
+        {
+          "officialId": 11106,
+          "name": "飞军"
+        },
+        {
+          "officialId": 143,
+          "name": "兵略"
+        }
+      ]
+    },
+    {
+      "officialId": 418,
+      "name": "陆绩",
+      "category": "myth",
+      "exType": 5,
+      "membership": "both",
+      "skills": [
+        {
+          "officialId": 144,
+          "name": "怀橘"
+        },
+        {
+          "officialId": 145,
+          "name": "遗礼"
+        },
+        {
+          "officialId": 146,
+          "name": "整论"
+        }
+      ]
+    },
+    {
+      "officialId": 419,
+      "name": "孙亮",
+      "category": "myth",
+      "exType": 5,
+      "membership": "both",
+      "skills": [
+        {
+          "officialId": 147,
+          "name": "溃诛"
+        },
+        {
+          "officialId": 148,
+          "name": "掣政"
+        },
+        {
+          "officialId": 149,
+          "name": "立军"
+        }
+      ]
+    },
+    {
+      "officialId": 420,
+      "name": "蒯越蒯良",
+      "category": "myth",
+      "exType": 5,
+      "membership": "both",
+      "skills": [
+        {
+          "officialId": 150,
+          "name": "荐降"
+        },
+        {
+          "officialId": 151,
+          "name": "审时"
+        }
+      ]
+    },
+    {
+      "officialId": 421,
+      "name": "许攸",
+      "category": "myth",
+      "exType": 5,
+      "membership": "both",
+      "skills": [
+        {
+          "officialId": 152,
+          "name": "成略"
+        },
+        {
+          "officialId": 153,
+          "name": "恃才"
+        },
+        {
+          "officialId": 154,
+          "name": "寸目"
+        }
+      ]
+    },
+    {
+      "officialId": 422,
+      "name": "卢植",
+      "category": "myth",
+      "exType": 5,
+      "membership": "both",
+      "skills": [
+        {
+          "officialId": 155,
+          "name": "明任"
+        },
+        {
+          "officialId": 156,
+          "name": "贞良"
+        }
+      ]
+    },
+    {
+      "officialId": 456,
+      "name": "毌丘俭",
+      "category": "myth",
+      "exType": 5,
+      "membership": "both",
+      "skills": [
+        {
+          "officialId": 11137,
+          "name": "征荣"
+        },
+        {
+          "officialId": 11138,
+          "name": "鸿举"
+        }
+      ],
+      "acquiredSkills": [
+        {
+          "officialId": 11139,
+          "name": "清侧"
+        }
+      ]
+    },
+    {
+      "officialId": 457,
+      "name": "陈到",
+      "category": "myth",
+      "exType": 5,
+      "membership": "both",
+      "skills": [
+        {
+          "officialId": 157,
+          "name": "往烈"
+        }
+      ]
+    },
+    {
+      "officialId": 458,
+      "name": "诸葛瞻",
+      "category": "myth",
+      "exType": 5,
+      "membership": "both",
+      "skills": [
+        {
+          "officialId": 158,
+          "name": "罪论"
+        },
+        {
+          "officialId": 159,
+          "name": "父荫"
+        }
+      ]
+    },
+    {
+      "officialId": 459,
+      "name": "周妃",
+      "category": "myth",
+      "exType": 5,
+      "membership": "both",
+      "skills": [
+        {
+          "officialId": 160,
+          "name": "良姻"
+        },
+        {
+          "officialId": 161,
+          "name": "箜声"
+        }
+      ]
+    },
+    {
+      "officialId": 463,
+      "name": "陆抗",
+      "category": "myth",
+      "exType": 5,
+      "membership": "both",
+      "skills": [
+        {
+          "officialId": 162,
+          "name": "谦节"
+        },
+        {
+          "officialId": 163,
+          "name": "决堰"
+        },
+        {
+          "officialId": 164,
+          "name": "破势"
+        }
+      ],
+      "acquiredSkills": [
+        {
+          "officialId": 165,
+          "name": "怀柔"
+        }
+      ]
+    },
+    {
+      "officialId": 465,
+      "name": "张绣",
+      "category": "myth",
+      "exType": 5,
+      "membership": "both",
+      "skills": [
+        {
+          "officialId": 170,
+          "name": "雄乱"
+        },
+        {
+          "officialId": 171,
+          "name": "从谏"
+        }
+      ]
+    },
+    {
+      "officialId": 466,
+      "name": "郝昭",
+      "category": "myth",
+      "exType": 5,
+      "membership": "both",
+      "skills": [
+        {
+          "officialId": 166,
+          "name": "镇骨"
+        }
+      ]
+    },
+    {
+      "officialId": 467,
+      "name": "仲帝袁术",
+      "category": "myth",
+      "exType": 5,
+      "membership": "both",
+      "skills": [
+        {
+          "officialId": 11140,
+          "name": "庸肆"
+        },
+        {
+          "officialId": 11141,
+          "name": "伪帝"
+        }
+      ]
+    },
+    {
+      "officialId": 100,
+      "name": "界袁术",
+      "category": "limit-break",
+      "exType": 26,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 757,
+          "name": "庸肆"
+        },
+        {
+          "officialId": 758,
+          "name": "觊玺"
+        }
+      ],
+      "acquiredSkills": [
+        {
+          "officialId": 11242,
+          "name": "妄尊"
+        }
+      ]
+    },
+    {
+      "officialId": 171,
+      "name": "界华雄",
+      "category": "limit-break",
+      "exType": 26,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 696,
+          "name": "耀武"
+        }
+      ]
+    },
+    {
+      "officialId": 210,
+      "name": "界周泰",
+      "category": "limit-break",
+      "exType": 26,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 466,
+          "name": "不屈"
+        },
+        {
+          "officialId": 467,
+          "name": "奋激"
+        }
+      ]
+    },
+    {
+      "officialId": 211,
+      "name": "界于吉",
+      "category": "limit-break",
+      "exType": 26,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 469,
+          "name": "蛊惑"
+        }
+      ],
+      "acquiredSkills": [
+        {
+          "officialId": 470,
+          "name": "缠怨"
+        }
+      ]
+    },
+    {
+      "officialId": 212,
+      "name": "界张角",
+      "category": "limit-break",
+      "exType": 26,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 755,
+          "name": "雷击"
+        },
+        {
+          "officialId": 79,
+          "name": "鬼道"
+        },
+        {
+          "officialId": 80,
+          "name": "黄天"
+        }
+      ]
+    },
+    {
+      "officialId": 299,
+      "name": "界刘备",
+      "category": "limit-break",
+      "exType": 26,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 699,
+          "name": "仁德"
+        },
+        {
+          "officialId": 32,
+          "name": "激将"
+        }
+      ]
+    },
+    {
+      "officialId": 300,
+      "name": "界关羽",
+      "category": "limit-break",
+      "exType": 26,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 16042,
+          "name": null,
+          "note": "原始SpellData无Name字段；保留原始ID，不推定展示名。"
+        },
+        {
+          "officialId": 685,
+          "name": "武圣"
+        },
+        {
+          "officialId": 11040,
+          "name": "义绝"
+        }
+      ]
+    },
+    {
+      "officialId": 301,
+      "name": "界张飞",
+      "category": "limit-break",
+      "exType": 26,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 697,
+          "name": "咆哮"
+        },
+        {
+          "officialId": 11249,
+          "name": "厉勇"
+        }
+      ]
+    },
+    {
+      "officialId": 302,
+      "name": "界赵云",
+      "category": "limit-break",
+      "exType": 26,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 37,
+          "name": "龙胆"
+        },
+        {
+          "officialId": 11032,
+          "name": "涯角"
+        }
+      ]
+    },
+    {
+      "officialId": 303,
+      "name": "界马超",
+      "category": "limit-break",
+      "exType": 26,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 70,
+          "name": "马术"
+        },
+        {
+          "officialId": 704,
+          "name": "铁骑"
+        }
+      ]
+    },
+    {
+      "officialId": 305,
+      "name": "界甘宁",
+      "category": "limit-break",
+      "exType": 26,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 57,
+          "name": "奇袭"
+        },
+        {
+          "officialId": 708,
+          "name": "奋威"
+        }
+      ]
+    },
+    {
+      "officialId": 306,
+      "name": "界吕蒙",
+      "category": "limit-break",
+      "exType": 26,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 63,
+          "name": "克己"
+        },
+        {
+          "officialId": 709,
+          "name": "勤学"
+        }
+      ],
+      "acquiredSkills": [
+        {
+          "officialId": 304,
+          "name": "攻心"
+        }
+      ]
+    },
+    {
+      "officialId": 307,
+      "name": "界黄盖",
+      "category": "limit-break",
+      "exType": 26,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 710,
+          "name": "苦肉"
+        },
+        {
+          "officialId": 711,
+          "name": "诈降"
+        }
+      ]
+    },
+    {
+      "officialId": 308,
+      "name": "界周瑜",
+      "category": "limit-break",
+      "exType": 26,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 712,
+          "name": "英姿"
+        },
+        {
+          "officialId": 713,
+          "name": "反间"
+        }
+      ]
+    },
+    {
+      "officialId": 310,
+      "name": "界陆逊",
+      "category": "limit-break",
+      "exType": 26,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 715,
+          "name": "谦逊"
+        },
+        {
+          "officialId": 716,
+          "name": "连营"
+        }
+      ]
+    },
+    {
+      "officialId": 311,
+      "name": "界曹操",
+      "category": "limit-break",
+      "exType": 26,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 11033,
+          "name": "奸雄"
+        },
+        {
+          "officialId": 43,
+          "name": "护驾"
+        }
+      ]
+    },
+    {
+      "officialId": 312,
+      "name": "界司马懿",
+      "category": "limit-break",
+      "exType": 26,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 718,
+          "name": "反馈"
+        },
+        {
+          "officialId": 719,
+          "name": "鬼才"
+        }
+      ]
+    },
+    {
+      "officialId": 313,
+      "name": "界夏侯惇",
+      "category": "limit-break",
+      "exType": 26,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 720,
+          "name": "刚烈"
+        },
+        {
+          "officialId": 11150,
+          "name": "清俭"
+        }
+      ]
+    },
+    {
+      "officialId": 314,
+      "name": "界张辽",
+      "category": "limit-break",
+      "exType": 26,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 11034,
+          "name": "突袭"
+        }
+      ]
+    },
+    {
+      "officialId": 315,
+      "name": "界许褚",
+      "category": "limit-break",
+      "exType": 26,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 11035,
+          "name": "裸衣"
+        }
+      ]
+    },
+    {
+      "officialId": 316,
+      "name": "界郭嘉",
+      "category": "limit-break",
+      "exType": 26,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 51,
+          "name": "天妒"
+        },
+        {
+          "officialId": 11036,
+          "name": "遗计"
+        }
+      ]
+    },
+    {
+      "officialId": 318,
+      "name": "界华佗",
+      "category": "limit-break",
+      "exType": 26,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 64,
+          "name": "急救"
+        },
+        {
+          "officialId": 693,
+          "name": "青囊"
+        }
+      ]
+    },
+    {
+      "officialId": 319,
+      "name": "界吕布",
+      "category": "limit-break",
+      "exType": 26,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 66,
+          "name": "无双"
+        },
+        {
+          "officialId": 11043,
+          "name": "利驭"
+        }
+      ]
+    },
+    {
+      "officialId": 400,
+      "name": "界黄月英",
+      "category": "limit-break",
+      "exType": 26,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 687,
+          "name": "集智"
+        },
+        {
+          "officialId": 688,
+          "name": "奇才"
+        }
+      ]
+    },
+    {
+      "officialId": 401,
+      "name": "界诸葛亮",
+      "category": "limit-break",
+      "exType": 26,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 686,
+          "name": "观星"
+        },
+        {
+          "officialId": 36,
+          "name": "空城"
+        }
+      ]
+    },
+    {
+      "officialId": 402,
+      "name": "界孙权",
+      "category": "limit-break",
+      "exType": 26,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 689,
+          "name": "制衡"
+        },
+        {
+          "officialId": 690,
+          "name": "救援"
+        }
+      ]
+    },
+    {
+      "officialId": 403,
+      "name": "界孙尚香",
+      "category": "limit-break",
+      "exType": 26,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 691,
+          "name": "结姻"
+        },
+        {
+          "officialId": 41,
+          "name": "枭姬"
+        }
+      ]
+    },
+    {
+      "officialId": 404,
+      "name": "界甄姬",
+      "category": "limit-break",
+      "exType": 26,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 692,
+          "name": "洛神"
+        },
+        {
+          "officialId": 46,
+          "name": "倾国"
+        }
+      ]
+    },
+    {
+      "officialId": 405,
+      "name": "界貂蝉",
+      "category": "limit-break",
+      "exType": 26,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 68,
+          "name": "离间"
+        },
+        {
+          "officialId": 695,
+          "name": "闭月"
+        }
+      ]
+    },
+    {
+      "officialId": 424,
+      "name": "界伊籍",
+      "category": "limit-break",
+      "exType": 26,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 11056,
+          "name": "机捷"
+        },
+        {
+          "officialId": 11057,
+          "name": "急援"
+        }
+      ]
+    },
+    {
+      "officialId": 429,
+      "name": "界卧龙诸葛",
+      "category": "limit-break",
+      "exType": 26,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 96,
+          "name": "八阵"
+        },
+        {
+          "officialId": 11061,
+          "name": "火计"
+        },
+        {
+          "officialId": 11062,
+          "name": "看破"
+        }
+      ]
+    },
+    {
+      "officialId": 430,
+      "name": "界典韦",
+      "category": "limit-break",
+      "exType": 26,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 11063,
+          "name": "强袭"
+        }
+      ]
+    },
+    {
+      "officialId": 431,
+      "name": "界荀彧",
+      "category": "limit-break",
+      "exType": 26,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 92,
+          "name": "驱虎"
+        },
+        {
+          "officialId": 11064,
+          "name": "节命"
+        }
+      ]
+    },
+    {
+      "officialId": 434,
+      "name": "界庞德",
+      "category": "limit-break",
+      "exType": 26,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 70,
+          "name": "马术"
+        },
+        {
+          "officialId": 364,
+          "name": "鞬出"
+        }
+      ]
+    },
+    {
+      "officialId": 436,
+      "name": "界庞统",
+      "category": "limit-break",
+      "exType": 26,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 11069,
+          "name": "连环"
+        },
+        {
+          "officialId": 11070,
+          "name": "涅槃"
+        }
+      ]
+    },
+    {
+      "officialId": 437,
+      "name": "界颜良文丑",
+      "category": "limit-break",
+      "exType": 26,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 11071,
+          "name": "双雄"
+        }
+      ]
+    },
+    {
+      "officialId": 438,
+      "name": "界袁绍",
+      "category": "limit-break",
+      "exType": 26,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 11072,
+          "name": "乱击"
+        },
+        {
+          "officialId": 103,
+          "name": "血裔"
+        }
+      ]
+    },
+    {
+      "officialId": 443,
+      "name": "界徐晃",
+      "category": "limit-break",
+      "exType": 26,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 380,
+          "name": "断粮"
+        },
+        {
+          "officialId": 381,
+          "name": "截辎"
+        }
+      ]
+    },
+    {
+      "officialId": 444,
+      "name": "界孟获",
+      "category": "limit-break",
+      "exType": 26,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 115,
+          "name": "祸首"
+        },
+        {
+          "officialId": 11077,
+          "name": "再起"
+        }
+      ]
+    },
+    {
+      "officialId": 445,
+      "name": "界祝融",
+      "category": "limit-break",
+      "exType": 26,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 113,
+          "name": "巨象"
+        },
+        {
+          "officialId": 11078,
+          "name": "烈刃"
+        }
+      ]
+    },
+    {
+      "officialId": 450,
+      "name": "界曹丕",
+      "category": "limit-break",
+      "exType": 26,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 11085,
+          "name": "行殇"
+        },
+        {
+          "officialId": 11086,
+          "name": "放逐"
+        },
+        {
+          "officialId": 107,
+          "name": "颂威"
+        }
+      ]
+    },
+    {
+      "officialId": 451,
+      "name": "界孙坚",
+      "category": "limit-break",
+      "exType": 26,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 108,
+          "name": "英魂"
+        },
+        {
+          "officialId": 11087,
+          "name": "破虏"
+        }
+      ]
+    },
+    {
+      "officialId": 452,
+      "name": "界董卓",
+      "category": "limit-break",
+      "exType": 26,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 11088,
+          "name": "酒池"
+        },
+        {
+          "officialId": 110,
+          "name": "肉林"
+        },
+        {
+          "officialId": 111,
+          "name": "崩坏"
+        },
+        {
+          "officialId": 112,
+          "name": "暴虐"
+        }
+      ]
+    },
+    {
+      "officialId": 472,
+      "name": "界邓艾",
+      "category": "limit-break",
+      "exType": 26,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 11098,
+          "name": "屯田"
+        },
+        {
+          "officialId": 124,
+          "name": "凿险"
+        }
+      ],
+      "acquiredSkills": [
+        {
+          "officialId": 139,
+          "name": "急袭"
+        }
+      ]
+    },
+    {
+      "officialId": 473,
+      "name": "界姜维",
+      "category": "limit-break",
+      "exType": 26,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 11099,
+          "name": "挑衅"
+        },
+        {
+          "officialId": 11107,
+          "name": "志继"
+        }
+      ],
+      "acquiredSkills": [
+        {
+          "officialId": 686,
+          "name": "观星"
+        }
+      ]
+    },
+    {
+      "officialId": 474,
+      "name": "界蔡文姬",
+      "category": "limit-break",
+      "exType": 26,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 11100,
+          "name": "悲歌"
+        },
+        {
+          "officialId": 138,
+          "name": "断肠"
+        }
+      ]
+    },
+    {
+      "officialId": 481,
+      "name": "界孙策",
+      "category": "limit-break",
+      "exType": 26,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 130,
+          "name": "激昂"
+        },
+        {
+          "officialId": 11118,
+          "name": "魂姿"
+        },
+        {
+          "officialId": 132,
+          "name": "制霸"
+        }
+      ],
+      "acquiredSkills": [
+        {
+          "officialId": 712,
+          "name": "英姿"
+        },
+        {
+          "officialId": 108,
+          "name": "英魂"
+        }
+      ]
+    },
+    {
+      "officialId": 482,
+      "name": "界张昭张纮",
+      "category": "limit-break",
+      "exType": 26,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 11119,
+          "name": "直谏"
+        },
+        {
+          "officialId": 134,
+          "name": "固政"
+        }
+      ]
+    },
+    {
+      "officialId": 483,
+      "name": "界刘禅",
+      "category": "limit-break",
+      "exType": 26,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 127,
+          "name": "享乐"
+        },
+        {
+          "officialId": 11120,
+          "name": "放权"
+        },
+        {
+          "officialId": 129,
+          "name": "若愚"
+        }
+      ],
+      "acquiredSkills": [
+        {
+          "officialId": 32,
+          "name": "激将"
+        }
+      ]
+    },
+    {
+      "officialId": 30008,
+      "name": "界黄忠",
+      "category": "limit-break",
+      "exType": 26,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 297,
+          "name": "烈弓"
+        }
+      ]
+    },
+    {
+      "officialId": 30009,
+      "name": "界魏延",
+      "category": "limit-break",
+      "exType": 26,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 295,
+          "name": "狂骨"
+        },
+        {
+          "officialId": 296,
+          "name": "奇谋"
+        }
+      ]
+    },
+    {
+      "officialId": 30010,
+      "name": "界夏侯渊",
+      "category": "limit-break",
+      "exType": 26,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 363,
+          "name": "神速"
+        }
+      ]
+    },
+    {
+      "officialId": 30011,
+      "name": "界曹仁",
+      "category": "limit-break",
+      "exType": 26,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 370,
+          "name": "据守"
+        },
+        {
+          "officialId": 371,
+          "name": "解围"
+        }
+      ]
+    },
+    {
+      "officialId": 30012,
+      "name": "界小乔",
+      "category": "limit-break",
+      "exType": 26,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 382,
+          "name": "天香"
+        },
+        {
+          "officialId": 1199,
+          "name": "红颜"
+        }
+      ]
+    },
+    {
+      "officialId": 151,
+      "name": "曹植",
+      "category": "famous-generals",
+      "exType": 10,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 401,
+          "name": "落英"
+        },
+        {
+          "officialId": 402,
+          "name": "酒诗"
+        }
+      ]
+    },
+    {
+      "officialId": 152,
+      "name": "高顺",
+      "category": "famous-generals",
+      "exType": 10,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 403,
+          "name": "陷阵"
+        },
+        {
+          "officialId": 404,
+          "name": "禁酒"
+        }
+      ]
+    },
+    {
+      "officialId": 153,
+      "name": "陈宫",
+      "category": "famous-generals",
+      "exType": 10,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 405,
+          "name": "明策"
+        },
+        {
+          "officialId": 406,
+          "name": "智迟"
+        }
+      ]
+    },
+    {
+      "officialId": 154,
+      "name": "法正",
+      "category": "famous-generals",
+      "exType": 10,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 407,
+          "name": "恩怨"
+        },
+        {
+          "officialId": 408,
+          "name": "眩惑"
+        }
+      ]
+    },
+    {
+      "officialId": 155,
+      "name": "凌统",
+      "category": "famous-generals",
+      "exType": 10,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 409,
+          "name": "旋风"
+        }
+      ]
+    },
+    {
+      "officialId": 156,
+      "name": "马谡",
+      "category": "famous-generals",
+      "exType": 10,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 236,
+          "name": "散谣"
+        },
+        {
+          "officialId": 237,
+          "name": "制蛮"
+        }
+      ]
+    },
+    {
+      "officialId": 157,
+      "name": "吴国太",
+      "category": "famous-generals",
+      "exType": 10,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 412,
+          "name": "甘露"
+        },
+        {
+          "officialId": 413,
+          "name": "补益"
+        }
+      ]
+    },
+    {
+      "officialId": 158,
+      "name": "徐盛",
+      "category": "famous-generals",
+      "exType": 10,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 414,
+          "name": "破军"
+        }
+      ]
+    },
+    {
+      "officialId": 160,
+      "name": "于禁",
+      "category": "famous-generals",
+      "exType": 10,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 238,
+          "name": "节钺"
+        }
+      ]
+    },
+    {
+      "officialId": 161,
+      "name": "张春华",
+      "category": "famous-generals",
+      "exType": 10,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 418,
+          "name": "绝情"
+        },
+        {
+          "officialId": 419,
+          "name": "伤逝"
+        }
+      ]
+    },
+    {
+      "officialId": 162,
+      "name": "曹彰",
+      "category": "famous-generals",
+      "exType": 10,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 420,
+          "name": "将驰"
+        }
+      ]
+    },
+    {
+      "officialId": 163,
+      "name": "王异",
+      "category": "famous-generals",
+      "exType": 10,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 421,
+          "name": "贞烈"
+        },
+        {
+          "officialId": 422,
+          "name": "秘计"
+        }
+      ]
+    },
+    {
+      "officialId": 164,
+      "name": "荀攸",
+      "category": "famous-generals",
+      "exType": 10,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 423,
+          "name": "奇策"
+        },
+        {
+          "officialId": 424,
+          "name": "智愚"
+        }
+      ]
+    },
+    {
+      "officialId": 165,
+      "name": "关兴张苞",
+      "category": "famous-generals",
+      "exType": 10,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 425,
+          "name": "父魂"
+        }
+      ],
+      "acquiredSkills": [
+        {
+          "officialId": 33,
+          "name": "武圣"
+        },
+        {
+          "officialId": 34,
+          "name": "咆哮"
+        }
+      ]
+    },
+    {
+      "officialId": 166,
+      "name": "廖化",
+      "category": "famous-generals",
+      "exType": 10,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 426,
+          "name": "当先"
+        },
+        {
+          "officialId": 427,
+          "name": "伏枥"
+        }
+      ]
+    },
+    {
+      "officialId": 168,
+      "name": "步练师",
+      "category": "famous-generals",
+      "exType": 10,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 754,
+          "name": "安恤"
+        },
+        {
+          "officialId": 430,
+          "name": "追忆"
+        }
+      ]
+    },
+    {
+      "officialId": 169,
+      "name": "程普",
+      "category": "famous-generals",
+      "exType": 10,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 431,
+          "name": "疬火"
+        },
+        {
+          "officialId": 432,
+          "name": "醇醪"
+        }
+      ]
+    },
+    {
+      "officialId": 170,
+      "name": "韩当",
+      "category": "famous-generals",
+      "exType": 10,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 433,
+          "name": "弓骑"
+        },
+        {
+          "officialId": 434,
+          "name": "解烦"
+        }
+      ]
+    },
+    {
+      "officialId": 172,
+      "name": "刘表",
+      "category": "famous-generals",
+      "exType": 10,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 436,
+          "name": "自守"
+        },
+        {
+          "officialId": 437,
+          "name": "宗室"
+        }
+      ]
+    },
+    {
+      "officialId": 173,
+      "name": "钟会",
+      "category": "famous-generals",
+      "exType": 10,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 438,
+          "name": "权计"
+        },
+        {
+          "officialId": 439,
+          "name": "自立"
+        }
+      ],
+      "acquiredSkills": [
+        {
+          "officialId": 440,
+          "name": "排异"
+        }
+      ]
+    },
+    {
+      "officialId": 174,
+      "name": "曹冲",
+      "category": "famous-generals",
+      "exType": 10,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 441,
+          "name": "称象"
+        },
+        {
+          "officialId": 442,
+          "name": "仁心"
+        }
+      ]
+    },
+    {
+      "officialId": 175,
+      "name": "郭淮",
+      "category": "famous-generals",
+      "exType": 10,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 443,
+          "name": "精策"
+        }
+      ]
+    },
+    {
+      "officialId": 176,
+      "name": "满宠",
+      "category": "famous-generals",
+      "exType": 10,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 444,
+          "name": "峻刑"
+        },
+        {
+          "officialId": 445,
+          "name": "御策"
+        }
+      ]
+    },
+    {
+      "officialId": 177,
+      "name": "关平",
+      "category": "famous-generals",
+      "exType": 10,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 446,
+          "name": "龙吟"
+        }
+      ]
+    },
+    {
+      "officialId": 178,
+      "name": "简雍",
+      "category": "famous-generals",
+      "exType": 10,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 447,
+          "name": "巧说"
+        },
+        {
+          "officialId": 448,
+          "name": "纵适"
+        }
+      ]
+    },
+    {
+      "officialId": 179,
+      "name": "刘封",
+      "category": "famous-generals",
+      "exType": 10,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 449,
+          "name": "陷嗣"
+        }
+      ]
+    },
+    {
+      "officialId": 180,
+      "name": "潘璋马忠",
+      "category": "famous-generals",
+      "exType": 10,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 450,
+          "name": "夺刀"
+        },
+        {
+          "officialId": 451,
+          "name": "暗箭"
+        }
+      ]
+    },
+    {
+      "officialId": 181,
+      "name": "虞翻",
+      "category": "famous-generals",
+      "exType": 10,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 452,
+          "name": "纵玄"
+        },
+        {
+          "officialId": 453,
+          "name": "直言"
+        }
+      ]
+    },
+    {
+      "officialId": 182,
+      "name": "朱然",
+      "category": "famous-generals",
+      "exType": 10,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 454,
+          "name": "胆守"
+        }
+      ]
+    },
+    {
+      "officialId": 183,
+      "name": "伏皇后",
+      "category": "famous-generals",
+      "exType": 10,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 455,
+          "name": "惴恐"
+        },
+        {
+          "officialId": 456,
+          "name": "求援"
+        }
+      ]
+    },
+    {
+      "officialId": 184,
+      "name": "李儒",
+      "category": "famous-generals",
+      "exType": 10,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 751,
+          "name": "绝策"
+        },
+        {
+          "officialId": 750,
+          "name": "灭计"
+        },
+        {
+          "officialId": 752,
+          "name": "焚城"
+        }
+      ]
+    },
+    {
+      "officialId": 186,
+      "name": "徐庶",
+      "category": "famous-generals",
+      "exType": 10,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 462,
+          "name": "无言"
+        },
+        {
+          "officialId": 463,
+          "name": "举荐"
+        }
+      ]
+    },
+    {
+      "officialId": 189,
+      "name": "马岱",
+      "category": "famous-generals",
+      "exType": 10,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 474,
+          "name": "潜袭"
+        },
+        {
+          "officialId": 70,
+          "name": "马术"
+        }
+      ]
+    },
+    {
+      "officialId": 320,
+      "name": "公孙瓒",
+      "category": "famous-generals",
+      "exType": 10,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 729,
+          "name": "趫猛"
+        },
+        {
+          "officialId": 204,
+          "name": "义从"
+        }
+      ]
+    },
+    {
+      "officialId": 321,
+      "name": "曹真",
+      "category": "famous-generals",
+      "exType": 10,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 477,
+          "name": "司敌"
+        }
+      ]
+    },
+    {
+      "officialId": 322,
+      "name": "韩浩史涣",
+      "category": "famous-generals",
+      "exType": 10,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 478,
+          "name": "慎断"
+        },
+        {
+          "officialId": 479,
+          "name": "勇略"
+        }
+      ]
+    },
+    {
+      "officialId": 323,
+      "name": "陈群",
+      "category": "famous-generals",
+      "exType": 10,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 480,
+          "name": "定品"
+        },
+        {
+          "officialId": 481,
+          "name": "法恩"
+        }
+      ]
+    },
+    {
+      "officialId": 324,
+      "name": "吴懿",
+      "category": "famous-generals",
+      "exType": 10,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 482,
+          "name": "奔袭"
+        }
+      ]
+    },
+    {
+      "officialId": 325,
+      "name": "周仓",
+      "category": "famous-generals",
+      "exType": 10,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 483,
+          "name": "忠勇"
+        }
+      ]
+    },
+    {
+      "officialId": 326,
+      "name": "张松",
+      "category": "famous-generals",
+      "exType": 10,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 484,
+          "name": "强识"
+        },
+        {
+          "officialId": 485,
+          "name": "献图"
+        }
+      ]
+    },
+    {
+      "officialId": 327,
+      "name": "孙鲁班",
+      "category": "famous-generals",
+      "exType": 10,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 486,
+          "name": "谮毁"
+        },
+        {
+          "officialId": 487,
+          "name": "骄矜"
+        }
+      ]
+    },
+    {
+      "officialId": 328,
+      "name": "朱桓",
+      "category": "famous-generals",
+      "exType": 10,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 11079,
+          "name": "奋励"
+        },
+        {
+          "officialId": 11080,
+          "name": "平寇"
+        }
+      ]
+    },
+    {
+      "officialId": 329,
+      "name": "顾雍",
+      "category": "famous-generals",
+      "exType": 10,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 489,
+          "name": "慎行"
+        },
+        {
+          "officialId": 490,
+          "name": "秉壹"
+        }
+      ]
+    },
+    {
+      "officialId": 330,
+      "name": "沮授",
+      "category": "famous-generals",
+      "exType": 10,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 491,
+          "name": "渐营"
+        },
+        {
+          "officialId": 492,
+          "name": "矢北"
+        }
+      ]
+    },
+    {
+      "officialId": 331,
+      "name": "蔡夫人",
+      "category": "famous-generals",
+      "exType": 10,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 493,
+          "name": "窃听"
+        },
+        {
+          "officialId": 494,
+          "name": "献州"
+        }
+      ]
+    },
+    {
+      "officialId": 332,
+      "name": "曹叡",
+      "category": "famous-generals",
+      "exType": 10,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 730,
+          "name": "恢拓"
+        },
+        {
+          "officialId": 731,
+          "name": "明鉴"
+        },
+        {
+          "officialId": 732,
+          "name": "兴衰"
+        }
+      ]
+    },
+    {
+      "officialId": 333,
+      "name": "曹休",
+      "category": "famous-generals",
+      "exType": 10,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 760,
+          "name": "千驹"
+        },
+        {
+          "officialId": 761,
+          "name": "倾袭"
+        }
+      ]
+    },
+    {
+      "officialId": 334,
+      "name": "钟繇",
+      "category": "famous-generals",
+      "exType": 10,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 1620,
+          "name": "活墨"
+        },
+        {
+          "officialId": 1621,
+          "name": "佐定"
+        }
+      ]
+    },
+    {
+      "officialId": 335,
+      "name": "刘谌",
+      "category": "famous-generals",
+      "exType": 10,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 736,
+          "name": "战绝"
+        },
+        {
+          "officialId": 737,
+          "name": "勤王"
+        }
+      ]
+    },
+    {
+      "officialId": 336,
+      "name": "夏侯氏",
+      "category": "famous-generals",
+      "exType": 10,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 738,
+          "name": "樵拾"
+        },
+        {
+          "officialId": 739,
+          "name": "燕语"
+        }
+      ]
+    },
+    {
+      "officialId": 337,
+      "name": "张嶷",
+      "category": "famous-generals",
+      "exType": 10,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 740,
+          "name": "怃戎"
+        },
+        {
+          "officialId": 741,
+          "name": "矢志"
+        }
+      ]
+    },
+    {
+      "officialId": 338,
+      "name": "孙休",
+      "category": "famous-generals",
+      "exType": 10,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 742,
+          "name": "宴诛"
+        },
+        {
+          "officialId": 743,
+          "name": "兴学"
+        },
+        {
+          "officialId": 744,
+          "name": "诏缚"
+        }
+      ]
+    },
+    {
+      "officialId": 339,
+      "name": "朱治",
+      "category": "famous-generals",
+      "exType": 10,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 745,
+          "name": "安国"
+        }
+      ]
+    },
+    {
+      "officialId": 340,
+      "name": "全琮",
+      "category": "famous-generals",
+      "exType": 10,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 759,
+          "name": "邀名"
+        }
+      ]
+    },
+    {
+      "officialId": 341,
+      "name": "公孙渊",
+      "category": "famous-generals",
+      "exType": 10,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 747,
+          "name": "怀异"
+        }
+      ]
+    },
+    {
+      "officialId": 342,
+      "name": "郭图逢纪",
+      "category": "famous-generals",
+      "exType": 10,
+      "membership": "gameEx",
+      "skills": [
+        {
+          "officialId": 748,
+          "name": "急攻"
+        },
+        {
+          "officialId": 749,
+          "name": "饰非"
+        }
+      ]
+    },
+    {
+      "officialId": 167,
+      "name": "界马岱",
+      "category": "famous-limit-break",
+      "exType": 27,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 70,
+          "name": "马术"
+        },
+        {
+          "officialId": 11076,
+          "name": "潜袭"
+        }
+      ]
+    },
+    {
+      "officialId": 185,
+      "name": "界法正",
+      "category": "famous-limit-break",
+      "exType": 27,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 460,
+          "name": "恩怨"
+        },
+        {
+          "officialId": 1590,
+          "name": "眩惑"
+        }
+      ]
+    },
+    {
+      "officialId": 187,
+      "name": "界王异",
+      "category": "famous-limit-break",
+      "exType": 27,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 471,
+          "name": "贞烈"
+        },
+        {
+          "officialId": 472,
+          "name": "秘计"
+        }
+      ]
+    },
+    {
+      "officialId": 188,
+      "name": "界关兴张苞",
+      "category": "famous-limit-break",
+      "exType": 27,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 473,
+          "name": "父魂"
+        }
+      ],
+      "acquiredSkills": [
+        {
+          "officialId": 685,
+          "name": "武圣"
+        },
+        {
+          "officialId": 697,
+          "name": "咆哮"
+        }
+      ]
+    },
+    {
+      "officialId": 491,
+      "name": "界徐盛",
+      "category": "famous-limit-break",
+      "exType": 27,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 11146,
+          "name": "破军"
+        }
+      ]
+    },
+    {
+      "officialId": 492,
+      "name": "界吴国太",
+      "category": "famous-limit-break",
+      "exType": 27,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 11147,
+          "name": "甘露"
+        },
+        {
+          "officialId": 413,
+          "name": "补益"
+        }
+      ]
+    },
+    {
+      "officialId": 493,
+      "name": "界高顺",
+      "category": "famous-limit-break",
+      "exType": 27,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 11148,
+          "name": "陷阵"
+        },
+        {
+          "officialId": 11149,
+          "name": "禁酒"
+        }
+      ]
+    },
+    {
+      "officialId": 500,
+      "name": "界于禁",
+      "category": "famous-limit-break",
+      "exType": 27,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 11175,
+          "name": "节钺"
+        }
+      ]
+    },
+    {
+      "officialId": 501,
+      "name": "界曹植",
+      "category": "famous-limit-break",
+      "exType": 27,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 401,
+          "name": "落英"
+        },
+        {
+          "officialId": 11176,
+          "name": "酒诗"
+        },
+        {
+          "officialId": 11177,
+          "name": "成章"
+        }
+      ]
+    },
+    {
+      "officialId": 502,
+      "name": "界凌统",
+      "category": "famous-limit-break",
+      "exType": 27,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 11178,
+          "name": "旋风"
+        }
+      ]
+    },
+    {
+      "officialId": 512,
+      "name": "界钟会",
+      "category": "famous-limit-break",
+      "exType": 27,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 11189,
+          "name": "权计"
+        },
+        {
+          "officialId": 439,
+          "name": "自立"
+        }
+      ],
+      "acquiredSkills": [
+        {
+          "officialId": 440,
+          "name": "排异"
+        }
+      ]
+    },
+    {
+      "officialId": 529,
+      "name": "界公孙瓒",
+      "category": "famous-limit-break",
+      "exType": 27,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 11214,
+          "name": "义从"
+        },
+        {
+          "officialId": 729,
+          "name": "趫猛"
+        }
+      ]
+    },
+    {
+      "officialId": 380,
+      "name": "郭皇后",
+      "category": "heroes",
+      "exType": 15,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 762,
+          "name": "矫诏"
+        },
+        {
+          "officialId": 763,
+          "name": "殚心"
+        }
+      ]
+    },
+    {
+      "officialId": 381,
+      "name": "李严",
+      "category": "heroes",
+      "exType": 15,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 764,
+          "name": "督粮"
+        },
+        {
+          "officialId": 765,
+          "name": "腹鳞"
+        }
+      ]
+    },
+    {
+      "officialId": 382,
+      "name": "孙登",
+      "category": "heroes",
+      "exType": 15,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 766,
+          "name": "匡弼"
+        }
+      ]
+    },
+    {
+      "officialId": 383,
+      "name": "刘虞",
+      "category": "heroes",
+      "exType": 15,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 767,
+          "name": "止戈"
+        },
+        {
+          "officialId": 768,
+          "name": "宗祚"
+        }
+      ]
+    },
+    {
+      "officialId": 384,
+      "name": "岑昏",
+      "category": "heroes",
+      "exType": 15,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 769,
+          "name": "极奢"
+        },
+        {
+          "officialId": 770,
+          "name": "链祸"
+        }
+      ]
+    },
+    {
+      "officialId": 385,
+      "name": "孙资刘放",
+      "category": "heroes",
+      "exType": 15,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 771,
+          "name": "瑰藻"
+        },
+        {
+          "officialId": 11060,
+          "name": "讥谀"
+        }
+      ]
+    },
+    {
+      "officialId": 386,
+      "name": "黄皓",
+      "category": "heroes",
+      "exType": 15,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 773,
+          "name": "寝情"
+        },
+        {
+          "officialId": 774,
+          "name": "贿生"
+        }
+      ]
+    },
+    {
+      "officialId": 387,
+      "name": "张让",
+      "category": "heroes",
+      "exType": 15,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 775,
+          "name": "滔乱"
+        }
+      ]
+    },
+    {
+      "officialId": 388,
+      "name": "辛宪英",
+      "category": "heroes",
+      "exType": 15,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 776,
+          "name": "忠鉴"
+        },
+        {
+          "officialId": 777,
+          "name": "才识"
+        }
+      ]
+    },
+    {
+      "officialId": 389,
+      "name": "吴苋",
+      "category": "heroes",
+      "exType": 15,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 778,
+          "name": "福绵"
+        },
+        {
+          "officialId": 779,
+          "name": "怠宴"
+        }
+      ]
+    },
+    {
+      "officialId": 390,
+      "name": "徐氏",
+      "category": "heroes",
+      "exType": 15,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 780,
+          "name": "问卦"
+        },
+        {
+          "officialId": 781,
+          "name": "伏诛"
+        }
+      ]
+    },
+    {
+      "officialId": 391,
+      "name": "曹节",
+      "category": "heroes",
+      "exType": 15,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 782,
+          "name": "守玺"
+        },
+        {
+          "officialId": 783,
+          "name": "惠民"
+        }
+      ]
+    },
+    {
+      "officialId": 393,
+      "name": "秦宓",
+      "category": "heroes",
+      "exType": 15,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 790,
+          "name": "谏征"
+        },
+        {
+          "officialId": 791,
+          "name": "专对"
+        },
+        {
+          "officialId": 792,
+          "name": "天辩"
+        }
+      ]
+    },
+    {
+      "officialId": 395,
+      "name": "蔡邕",
+      "category": "heroes",
+      "exType": 15,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 795,
+          "name": "辟撰"
+        },
+        {
+          "officialId": 796,
+          "name": "通博"
+        }
+      ]
+    },
+    {
+      "officialId": 72,
+      "name": "伏完",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 603,
+          "name": "谋溃"
+        }
+      ]
+    },
+    {
+      "officialId": 73,
+      "name": "刘协",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 604,
+          "name": "天命"
+        },
+        {
+          "officialId": 605,
+          "name": "密诏"
+        }
+      ]
+    },
+    {
+      "officialId": 103,
+      "name": "SP孙尚香",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 250,
+          "name": "良助"
+        },
+        {
+          "officialId": 251,
+          "name": "返乡"
+        }
+      ],
+      "acquiredSkills": [
+        {
+          "officialId": 41,
+          "name": "枭姬"
+        }
+      ]
+    },
+    {
+      "officialId": 104,
+      "name": "杨修",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 205,
+          "name": "啖酪"
+        },
+        {
+          "officialId": 206,
+          "name": "鸡肋"
+        }
+      ]
+    },
+    {
+      "officialId": 105,
+      "name": "SP庞德",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 70,
+          "name": "马术"
+        },
+        {
+          "officialId": 282,
+          "name": "决死"
+        }
+      ]
+    },
+    {
+      "officialId": 106,
+      "name": "SP关羽",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 33,
+          "name": "武圣"
+        },
+        {
+          "officialId": 207,
+          "name": "单骑"
+        }
+      ],
+      "acquiredSkills": [
+        {
+          "officialId": 70,
+          "name": "马术"
+        },
+        {
+          "officialId": 249,
+          "name": "怒斩"
+        }
+      ]
+    },
+    {
+      "officialId": 107,
+      "name": "SP马超",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 286,
+          "name": "追击"
+        },
+        {
+          "officialId": 287,
+          "name": "誓仇"
+        }
+      ]
+    },
+    {
+      "officialId": 108,
+      "name": "SP赵云",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 37,
+          "name": "龙胆"
+        },
+        {
+          "officialId": 208,
+          "name": "冲阵"
+        }
+      ]
+    },
+    {
+      "officialId": 109,
+      "name": "SP貂蝉",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 209,
+          "name": "离魂"
+        },
+        {
+          "officialId": 67,
+          "name": "闭月"
+        }
+      ]
+    },
+    {
+      "officialId": 110,
+      "name": "SP贾诩",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 283,
+          "name": "缜略"
+        },
+        {
+          "officialId": 284,
+          "name": "间书"
+        },
+        {
+          "officialId": 285,
+          "name": "拥嫡"
+        }
+      ]
+    },
+    {
+      "officialId": 111,
+      "name": "SP曹仁",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 372,
+          "name": "伪溃"
+        },
+        {
+          "officialId": 373,
+          "name": "励战"
+        }
+      ]
+    },
+    {
+      "officialId": 112,
+      "name": "SP蔡文姬",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 264,
+          "name": "陈情"
+        },
+        {
+          "officialId": 265,
+          "name": "默识"
+        }
+      ]
+    },
+    {
+      "officialId": 113,
+      "name": "陈琳",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 212,
+          "name": "笔伐"
+        },
+        {
+          "officialId": 213,
+          "name": "颂词"
+        }
+      ]
+    },
+    {
+      "officialId": 114,
+      "name": "曹洪",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 214,
+          "name": "援护"
+        }
+      ]
+    },
+    {
+      "officialId": 116,
+      "name": "夏侯霸",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 218,
+          "name": "豹变"
+        }
+      ],
+      "acquiredSkills": [
+        {
+          "officialId": 125,
+          "name": "挑衅"
+        },
+        {
+          "officialId": 34,
+          "name": "咆哮"
+        },
+        {
+          "officialId": 73,
+          "name": "神速"
+        }
+      ]
+    },
+    {
+      "officialId": 117,
+      "name": "大乔小乔",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 822,
+          "name": "星舞"
+        },
+        {
+          "officialId": 220,
+          "name": "落雁"
+        }
+      ],
+      "acquiredSkills": [
+        {
+          "officialId": 61,
+          "name": "流离"
+        },
+        {
+          "officialId": 75,
+          "name": "天香"
+        }
+      ]
+    },
+    {
+      "officialId": 118,
+      "name": "诸葛恪",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 221,
+          "name": "傲才"
+        },
+        {
+          "officialId": 222,
+          "name": "黩武"
+        }
+      ]
+    },
+    {
+      "officialId": 119,
+      "name": "张宝",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 223,
+          "name": "咒缚"
+        },
+        {
+          "officialId": 224,
+          "name": "影兵"
+        }
+      ]
+    },
+    {
+      "officialId": 121,
+      "name": "乐进",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 2100,
+          "name": "骁果"
+        }
+      ]
+    },
+    {
+      "officialId": 122,
+      "name": "曹昂",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 225,
+          "name": "慷忾"
+        }
+      ]
+    },
+    {
+      "officialId": 123,
+      "name": "诸葛瑾",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 501,
+          "name": "缓释"
+        },
+        {
+          "officialId": 502,
+          "name": "弘援"
+        },
+        {
+          "officialId": 503,
+          "name": "明哲"
+        }
+      ]
+    },
+    {
+      "officialId": 124,
+      "name": "张星彩",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 226,
+          "name": "甚贤"
+        },
+        {
+          "officialId": 227,
+          "name": "枪舞"
+        }
+      ]
+    },
+    {
+      "officialId": 125,
+      "name": "祖茂",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 228,
+          "name": "引兵"
+        },
+        {
+          "officialId": 819,
+          "name": "绝地"
+        }
+      ]
+    },
+    {
+      "officialId": 126,
+      "name": "丁奉",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 2103,
+          "name": "短兵"
+        },
+        {
+          "officialId": 2104,
+          "name": "奋迅"
+        }
+      ]
+    },
+    {
+      "officialId": 128,
+      "name": "马良",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 383,
+          "name": "自书"
+        },
+        {
+          "officialId": 384,
+          "name": "应援"
+        }
+      ]
+    },
+    {
+      "officialId": 129,
+      "name": "诸葛诞",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 232,
+          "name": "功獒"
+        },
+        {
+          "officialId": 233,
+          "name": "举义"
+        }
+      ],
+      "acquiredSkills": [
+        {
+          "officialId": 111,
+          "name": "崩坏"
+        },
+        {
+          "officialId": 239,
+          "name": "威重"
+        }
+      ]
+    },
+    {
+      "officialId": 130,
+      "name": "程昱",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 1616,
+          "name": "设伏"
+        },
+        {
+          "officialId": 1617,
+          "name": "贲育"
+        }
+      ]
+    },
+    {
+      "officialId": 131,
+      "name": "何太后",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 240,
+          "name": "鸩毒"
+        },
+        {
+          "officialId": 241,
+          "name": "戚乱"
+        }
+      ]
+    },
+    {
+      "officialId": 133,
+      "name": "李丰",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 243,
+          "name": "屯储"
+        },
+        {
+          "officialId": 244,
+          "name": "输粮"
+        }
+      ]
+    },
+    {
+      "officialId": 134,
+      "name": "朱灵",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 11082,
+          "name": "战意"
+        }
+      ]
+    },
+    {
+      "officialId": 135,
+      "name": "孙鲁育",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 11073,
+          "name": "穆穆"
+        },
+        {
+          "officialId": 11074,
+          "name": "魅步"
+        }
+      ],
+      "acquiredSkills": [
+        {
+          "officialId": 11075,
+          "name": "止息"
+        }
+      ]
+    },
+    {
+      "officialId": 136,
+      "name": "文聘",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 248,
+          "name": "镇卫"
+        }
+      ]
+    },
+    {
+      "officialId": 137,
+      "name": "孙皓",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 252,
+          "name": "残蚀"
+        },
+        {
+          "officialId": 253,
+          "name": "仇海"
+        },
+        {
+          "officialId": 254,
+          "name": "归命"
+        }
+      ]
+    },
+    {
+      "officialId": 139,
+      "name": "SP姜维",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 255,
+          "name": "困奋"
+        },
+        {
+          "officialId": 257,
+          "name": "逢亮"
+        }
+      ],
+      "acquiredSkills": [
+        {
+          "officialId": 125,
+          "name": "挑衅"
+        },
+        {
+          "officialId": 256,
+          "name": "困奋"
+        }
+      ]
+    },
+    {
+      "officialId": 304,
+      "name": "SP徐庶",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 705,
+          "name": "诛害"
+        },
+        {
+          "officialId": 706,
+          "name": "潜心"
+        }
+      ],
+      "acquiredSkills": [
+        {
+          "officialId": 707,
+          "name": "荐言"
+        }
+      ]
+    },
+    {
+      "officialId": 317,
+      "name": "李典",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 725,
+          "name": "恂恂"
+        },
+        {
+          "officialId": 726,
+          "name": "忘隙"
+        }
+      ]
+    },
+    {
+      "officialId": 343,
+      "name": "张鲁",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 259,
+          "name": "义舍"
+        },
+        {
+          "officialId": 260,
+          "name": "布施"
+        },
+        {
+          "officialId": 261,
+          "name": "米道"
+        }
+      ]
+    },
+    {
+      "officialId": 345,
+      "name": "士燮",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 262,
+          "name": "避乱"
+        },
+        {
+          "officialId": 263,
+          "name": "礼下"
+        }
+      ]
+    },
+    {
+      "officialId": 347,
+      "name": "蹋顿",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 275,
+          "name": "乱战"
+        }
+      ]
+    },
+    {
+      "officialId": 348,
+      "name": "严白虎",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 276,
+          "name": "雉盗"
+        },
+        {
+          "officialId": 277,
+          "name": "寄篱"
+        }
+      ]
+    },
+    {
+      "officialId": 349,
+      "name": "关索",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 278,
+          "name": "征南"
+        },
+        {
+          "officialId": 279,
+          "name": "撷芳"
+        }
+      ],
+      "acquiredSkills": [
+        {
+          "officialId": 33,
+          "name": "武圣"
+        },
+        {
+          "officialId": 426,
+          "name": "当先"
+        },
+        {
+          "officialId": 237,
+          "name": "制蛮"
+        }
+      ]
+    },
+    {
+      "officialId": 350,
+      "name": "王朗",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 280,
+          "name": "鼓舌"
+        },
+        {
+          "officialId": 281,
+          "name": "激词"
+        }
+      ]
+    },
+    {
+      "officialId": 360,
+      "name": "司马朗",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 269,
+          "name": "郡兵"
+        },
+        {
+          "officialId": 270,
+          "name": "去疾"
+        }
+      ]
+    },
+    {
+      "officialId": 361,
+      "name": "SP黄月英",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 271,
+          "name": "机巧"
+        },
+        {
+          "officialId": 272,
+          "name": "玲珑"
+        }
+      ],
+      "acquiredSkills": [
+        {
+          "officialId": 40,
+          "name": "奇才"
+        }
+      ]
+    },
+    {
+      "officialId": 363,
+      "name": "步骘",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 288,
+          "name": "弘德"
+        },
+        {
+          "officialId": 289,
+          "name": "定叛"
+        }
+      ]
+    },
+    {
+      "officialId": 364,
+      "name": "李通",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 290,
+          "name": "推锋"
+        }
+      ]
+    },
+    {
+      "officialId": 365,
+      "name": "糜竺",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 291,
+          "name": "资援"
+        },
+        {
+          "officialId": 292,
+          "name": "巨贾"
+        }
+      ]
+    },
+    {
+      "officialId": 367,
+      "name": "赵襄",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 298,
+          "name": "芳魂"
+        },
+        {
+          "officialId": 299,
+          "name": "扶汉"
+        }
+      ]
+    },
+    {
+      "officialId": 370,
+      "name": "马忠",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 360,
+          "name": "抚蛮"
+        }
+      ]
+    },
+    {
+      "officialId": 371,
+      "name": "阚泽",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 361,
+          "name": "下书"
+        },
+        {
+          "officialId": 362,
+          "name": "宽释"
+        }
+      ]
+    },
+    {
+      "officialId": 372,
+      "name": "王允",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 365,
+          "name": "连计"
+        },
+        {
+          "officialId": 366,
+          "name": "谋逞"
+        }
+      ],
+      "acquiredSkills": [
+        {
+          "officialId": 367,
+          "name": "矜功"
+        }
+      ]
+    },
+    {
+      "officialId": 374,
+      "name": "麹义",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 374,
+          "name": "伏骑"
+        },
+        {
+          "officialId": 375,
+          "name": "骄恣"
+        }
+      ]
+    },
+    {
+      "officialId": 375,
+      "name": "戏志才",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 51,
+          "name": "天妒"
+        },
+        {
+          "officialId": 376,
+          "name": "先辅"
+        },
+        {
+          "officialId": 377,
+          "name": "筹策"
+        }
+      ]
+    },
+    {
+      "officialId": 376,
+      "name": "孙乾",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 378,
+          "name": "谦雅"
+        },
+        {
+          "officialId": 379,
+          "name": "说盟"
+        }
+      ]
+    },
+    {
+      "officialId": 406,
+      "name": "刘焉",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 801,
+          "name": "图射"
+        },
+        {
+          "officialId": 802,
+          "name": "立牧"
+        }
+      ]
+    },
+    {
+      "officialId": 407,
+      "name": "潘濬",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 803,
+          "name": "观微"
+        },
+        {
+          "officialId": 804,
+          "name": "公清"
+        }
+      ]
+    },
+    {
+      "officialId": 408,
+      "name": "赵统赵广",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 11030,
+          "name": "翊赞"
+        },
+        {
+          "officialId": 11031,
+          "name": "龙渊"
+        }
+      ]
+    },
+    {
+      "officialId": 409,
+      "name": "董允",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 358,
+          "name": "秉正"
+        },
+        {
+          "officialId": 359,
+          "name": "舍宴"
+        }
+      ]
+    },
+    {
+      "officialId": 410,
+      "name": "吕虔",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 815,
+          "name": "威虏"
+        },
+        {
+          "officialId": 816,
+          "name": "赠刀"
+        }
+      ]
+    },
+    {
+      "officialId": 411,
+      "name": "sp庞统",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 808,
+          "name": "过论"
+        },
+        {
+          "officialId": 809,
+          "name": "送丧"
+        }
+      ],
+      "acquiredSkills": [
+        {
+          "officialId": 810,
+          "name": "展骥"
+        }
+      ]
+    },
+    {
+      "officialId": 412,
+      "name": "sp太史慈",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 811,
+          "name": "击虚"
+        }
+      ]
+    },
+    {
+      "officialId": 413,
+      "name": "鲁芝",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 799,
+          "name": "清忠"
+        },
+        {
+          "officialId": 800,
+          "name": "卫境"
+        }
+      ]
+    },
+    {
+      "officialId": 414,
+      "name": "马云騄",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 266,
+          "name": "凤魄"
+        },
+        {
+          "officialId": 70,
+          "name": "马术"
+        }
+      ]
+    },
+    {
+      "officialId": 415,
+      "name": "张梁",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 817,
+          "name": "集军"
+        },
+        {
+          "officialId": 818,
+          "name": "方统"
+        }
+      ]
+    },
+    {
+      "officialId": 423,
+      "name": "刘琦",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 1121,
+          "name": "问计"
+        },
+        {
+          "officialId": 1122,
+          "name": "屯江"
+        }
+      ]
+    },
+    {
+      "officialId": 426,
+      "name": "李傕",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 11058,
+          "name": "狼袭"
+        },
+        {
+          "officialId": 820,
+          "name": "亦算"
+        }
+      ]
+    },
+    {
+      "officialId": 427,
+      "name": "郭汜",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 821,
+          "name": "贪狈"
+        },
+        {
+          "officialId": 11059,
+          "name": "伺盗"
+        }
+      ]
+    },
+    {
+      "officialId": 428,
+      "name": "徐荣",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 826,
+          "name": "凶镬"
+        },
+        {
+          "officialId": 827,
+          "name": "杀绝"
+        }
+      ]
+    },
+    {
+      "officialId": 432,
+      "name": "SP司马昭",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 11065,
+          "name": "怠攻"
+        },
+        {
+          "officialId": 11066,
+          "name": "昭心"
+        }
+      ]
+    },
+    {
+      "officialId": 433,
+      "name": "王元姬",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 11067,
+          "name": "谦冲"
+        },
+        {
+          "officialId": 11068,
+          "name": "尚俭"
+        }
+      ],
+      "acquiredSkills": [
+        {
+          "officialId": 119,
+          "name": "帷幕"
+        },
+        {
+          "officialId": 503,
+          "name": "明哲"
+        }
+      ]
+    },
+    {
+      "officialId": 441,
+      "name": "张济",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 824,
+          "name": "掠命"
+        },
+        {
+          "officialId": 825,
+          "name": "屯军"
+        }
+      ]
+    },
+    {
+      "officialId": 442,
+      "name": "樊稠",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 823,
+          "name": "兴乱"
+        }
+      ]
+    },
+    {
+      "officialId": 446,
+      "name": "严畯",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 797,
+          "name": "观潮"
+        },
+        {
+          "officialId": 798,
+          "name": "逊贤"
+        }
+      ]
+    },
+    {
+      "officialId": 447,
+      "name": "杜畿",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 11104,
+          "name": "安东"
+        },
+        {
+          "officialId": 11105,
+          "name": "应势"
+        }
+      ]
+    },
+    {
+      "officialId": 449,
+      "name": "卑弥呼",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 392,
+          "name": "纵傀"
+        },
+        {
+          "officialId": 393,
+          "name": "骨疽"
+        },
+        {
+          "officialId": 394,
+          "name": "拜假"
+        }
+      ],
+      "acquiredSkills": [
+        {
+          "officialId": 395,
+          "name": "蚕食"
+        }
+      ]
+    },
+    {
+      "officialId": 454,
+      "name": "吕岱",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 813,
+          "name": "勤国"
+        }
+      ]
+    },
+    {
+      "officialId": 455,
+      "name": "周鲂",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 812,
+          "name": "断发"
+        },
+        {
+          "officialId": 11089,
+          "name": "诱敌"
+        }
+      ]
+    },
+    {
+      "officialId": 460,
+      "name": "刘繇",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 814,
+          "name": "戡难"
+        }
+      ]
+    },
+    {
+      "officialId": 461,
+      "name": "曹婴",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 11090,
+          "name": "凌人"
+        },
+        {
+          "officialId": 11091,
+          "name": "伏间"
+        }
+      ],
+      "acquiredSkills": [
+        {
+          "officialId": 105,
+          "name": "行殇"
+        },
+        {
+          "officialId": 42,
+          "name": "奸雄"
+        }
+      ]
+    },
+    {
+      "officialId": 470,
+      "name": "审配",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 11083,
+          "name": "守邺"
+        },
+        {
+          "officialId": 11084,
+          "name": "烈直"
+        }
+      ]
+    },
+    {
+      "officialId": 471,
+      "name": "张琪瑛",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 1321,
+          "name": "法箓"
+        },
+        {
+          "officialId": 1322,
+          "name": "真仪"
+        },
+        {
+          "officialId": 1323,
+          "name": "点化"
+        }
+      ]
+    },
+    {
+      "officialId": 475,
+      "name": "沙摩柯",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 12016,
+          "name": "蒺藜"
+        }
+      ]
+    },
+    {
+      "officialId": 484,
+      "name": "胡金定",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 11121,
+          "name": "仁释"
+        },
+        {
+          "officialId": 11122,
+          "name": "武缘"
+        },
+        {
+          "officialId": 11123,
+          "name": "怀子"
+        }
+      ]
+    },
+    {
+      "officialId": 485,
+      "name": "许贡",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 11134,
+          "name": "表召"
+        },
+        {
+          "officialId": 831,
+          "name": "业仇"
+        }
+      ]
+    },
+    {
+      "officialId": 486,
+      "name": "张恭",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 11135,
+          "name": "遣信"
+        },
+        {
+          "officialId": 1313,
+          "name": "镇行"
+        }
+      ]
+    },
+    {
+      "officialId": 487,
+      "name": "吕凯",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 1314,
+          "name": "图南"
+        },
+        {
+          "officialId": 1315,
+          "name": "闭境"
+        }
+      ]
+    },
+    {
+      "officialId": 488,
+      "name": "卫温诸葛直",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 11136,
+          "name": "浮海"
+        }
+      ]
+    },
+    {
+      "officialId": 489,
+      "name": "张翼",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 11244,
+          "name": "执义"
+        }
+      ]
+    },
+    {
+      "officialId": 490,
+      "name": "贾逵",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 11204,
+          "name": "通渠"
+        },
+        {
+          "officialId": 11205,
+          "name": "挽澜"
+        }
+      ]
+    },
+    {
+      "officialId": 498,
+      "name": "董承",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 11172,
+          "name": "承诏"
+        }
+      ]
+    },
+    {
+      "officialId": 499,
+      "name": "杨仪",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 11173,
+          "name": "度断"
+        },
+        {
+          "officialId": 11174,
+          "name": "共损"
+        }
+      ]
+    },
+    {
+      "officialId": 520,
+      "name": "邓芝",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 11191,
+          "name": "急盟"
+        },
+        {
+          "officialId": 11192,
+          "name": "率言"
+        }
+      ]
+    },
+    {
+      "officialId": 526,
+      "name": "苏飞",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 11202,
+          "name": "诤荐"
+        },
+        {
+          "officialId": 11203,
+          "name": "告援"
+        }
+      ]
+    },
+    {
+      "officialId": 30001,
+      "name": "诸葛果",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 1622,
+          "name": "祈禳"
+        },
+        {
+          "officialId": 1623,
+          "name": "羽化"
+        }
+      ]
+    },
+    {
+      "officialId": 30006,
+      "name": "陶谦",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 11007,
+          "name": "招祸"
+        },
+        {
+          "officialId": 11008,
+          "name": "义襄"
+        },
+        {
+          "officialId": 11009,
+          "name": "揖让"
+        }
+      ]
+    },
+    {
+      "officialId": 30007,
+      "name": "刘晔",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 11010,
+          "name": "破橹"
+        },
+        {
+          "officialId": 11011,
+          "name": "筹略"
+        }
+      ]
+    },
+    {
+      "officialId": 30014,
+      "name": "司马徽",
+      "category": "sp",
+      "exType": 9,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 386,
+          "name": "荐杰"
+        },
+        {
+          "officialId": 387,
+          "name": "称好"
+        },
+        {
+          "officialId": 388,
+          "name": "隐士"
+        }
+      ]
+    },
+    {
+      "officialId": 202,
+      "name": "神吕蒙",
+      "category": "gods",
+      "exType": 7,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 303,
+          "name": "涉猎"
+        },
+        {
+          "officialId": 304,
+          "name": "攻心"
+        }
+      ]
+    },
+    {
+      "officialId": 203,
+      "name": "神周瑜",
+      "category": "gods",
+      "exType": 7,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 305,
+          "name": "琴音"
+        },
+        {
+          "officialId": 306,
+          "name": "业炎"
+        }
+      ]
+    },
+    {
+      "officialId": 204,
+      "name": "神诸葛亮",
+      "category": "gods",
+      "exType": 7,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 307,
+          "name": "七星"
+        },
+        {
+          "officialId": 308,
+          "name": "狂风"
+        },
+        {
+          "officialId": 309,
+          "name": "大雾"
+        }
+      ]
+    },
+    {
+      "officialId": 205,
+      "name": "神曹操",
+      "category": "gods",
+      "exType": 7,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 310,
+          "name": "归心"
+        },
+        {
+          "officialId": 311,
+          "name": "飞影"
+        }
+      ]
+    },
+    {
+      "officialId": 207,
+      "name": "神赵云",
+      "category": "gods",
+      "exType": 7,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 316,
+          "name": "绝境"
+        },
+        {
+          "officialId": 317,
+          "name": "龙魂"
+        }
+      ]
+    },
+    {
+      "officialId": 439,
+      "name": "神刘备",
+      "category": "gods",
+      "exType": 7,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 172,
+          "name": "龙怒"
+        },
+        {
+          "officialId": 173,
+          "name": "结营"
+        }
+      ]
+    },
+    {
+      "officialId": 440,
+      "name": "神陆逊",
+      "category": "gods",
+      "exType": 7,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 174,
+          "name": "军略"
+        },
+        {
+          "officialId": 175,
+          "name": "摧克"
+        },
+        {
+          "officialId": 176,
+          "name": "绽火"
+        }
+      ]
+    },
+    {
+      "officialId": 468,
+      "name": "神张辽",
+      "category": "gods",
+      "exType": 7,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 11142,
+          "name": "夺锐"
+        },
+        {
+          "officialId": 178,
+          "name": "止啼"
+        }
+      ]
+    },
+    {
+      "officialId": 469,
+      "name": "神甘宁",
+      "category": "gods",
+      "exType": 7,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 179,
+          "name": "魄袭"
+        },
+        {
+          "officialId": 180,
+          "name": "劫营"
+        }
+      ]
+    },
+    {
+      "officialId": 70,
+      "name": "孙茹",
+      "category": "rare",
+      "exType": 8,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 11006,
+          "name": "影箭"
+        },
+        {
+          "officialId": 600,
+          "name": "释衅"
+        }
+      ]
+    },
+    {
+      "officialId": 71,
+      "name": "凌操",
+      "category": "rare",
+      "exType": 8,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 602,
+          "name": "独进"
+        }
+      ]
+    },
+    {
+      "officialId": 132,
+      "name": "留赞",
+      "category": "rare",
+      "exType": 8,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 242,
+          "name": "奋音"
+        }
+      ]
+    },
+    {
+      "officialId": 425,
+      "name": "马钧",
+      "category": "rare",
+      "exType": 8,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 11046,
+          "name": "精械"
+        },
+        {
+          "officialId": 11047,
+          "name": "巧思"
+        }
+      ]
+    },
+    {
+      "officialId": 521,
+      "name": "郑玄",
+      "category": "rare",
+      "exType": 8,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 954,
+          "name": "整经"
+        }
+      ]
+    },
+    {
+      "officialId": 522,
+      "name": "星张辽",
+      "category": "rare",
+      "exType": 19,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 11195,
+          "name": "威风"
+        }
+      ]
+    },
+    {
+      "officialId": 523,
+      "name": "星甘宁",
+      "category": "rare",
+      "exType": 19,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 11196,
+          "name": "锦帆"
+        },
+        {
+          "officialId": 11197,
+          "name": "射却"
+        }
+      ]
+    },
+    {
+      "officialId": 30005,
+      "name": "祢衡",
+      "category": "rare",
+      "exType": 8,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 11004,
+          "name": "狂才"
+        },
+        {
+          "officialId": 11005,
+          "name": "舌剑"
+        }
+      ]
+    },
+    {
+      "officialId": 30013,
+      "name": "庞德公",
+      "category": "rare",
+      "exType": 8,
+      "membership": "enableChrList",
+      "skills": [
+        {
+          "officialId": 11013,
+          "name": "评才"
+        },
+        {
+          "officialId": 11014,
+          "name": "隐世"
+        }
+      ]
+    }
+  ],
+  "runtimeRoster": "mobile-time-field-2026-10"
+}

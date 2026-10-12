@@ -53,6 +53,8 @@ export class PlayerTransport extends EventTarget {
   streamQueue = [];
   streamPending = new Map();
   pingId = 0;
+  nativeProbes = new Map();
+  probeFailures = 0;
   constructor(url) {
     super();
     this.url = url;
@@ -72,11 +74,59 @@ export class PlayerTransport extends EventTarget {
         },
       );
     queueMicrotask(() => this.start());
-    window.addEventListener('pagehide', () => this.close(), { once: true });
+    window.addEventListener(
+      'pagehide',
+      () => {
+        this.pageLeaving = true;
+        this.close();
+      },
+      {
+        once: true,
+        signal: this.abort.signal,
+      },
+    );
   }
   emit(type, event) {
     this[`on${type}`]?.call(this, event);
     this.dispatchEvent(event);
+  }
+  deliver(data) {
+    if (globalThis.partyEngine?.setup?.connectionRecovery) {
+      // Only the transport consumes these replies; native game frames are intact.
+      try {
+        const packet = JSON.parse(data);
+        if (packet[0] === 'partyPong') {
+          const pending = this.nativeProbes.get(packet[1]);
+          if (pending) {
+            clearTimeout(pending.timer);
+            this.nativeProbes.delete(packet[1]);
+            pending.resolve();
+          }
+          return;
+        }
+      } catch {
+        /* Native parser handles its own game frames. */
+      }
+    }
+    this.emit('message', new MessageEvent('message', { data }));
+    window.dispatchEvent(new Event('party-table-update'));
+  }
+  probe() {
+    const id = ++this.pingId;
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        this.nativeProbes.delete(id);
+        reject(new Error('牌桌连接无响应'));
+      }, 8000);
+      this.nativeProbes.set(id, { resolve, reject, timer });
+      try {
+        this.send(JSON.stringify(['partyPing', id]));
+      } catch (error) {
+        clearTimeout(timer);
+        this.nativeProbes.delete(id);
+        reject(error);
+      }
+    });
   }
   async request(method, body, query = '', retry = true) {
     let failure;
@@ -251,8 +301,7 @@ export class PlayerTransport extends EventTarget {
       this.emit('open', new Event('open'));
     };
     socket.onmessage = (event) => {
-      this.emit('message', new MessageEvent('message', { data: event.data }));
-      window.dispatchEvent(new Event('party-table-update'));
+      this.deliver(event.data);
     };
     socket.onerror = () => {
       if (this.readyState === 0) fallback();
@@ -299,8 +348,7 @@ export class PlayerTransport extends EventTarget {
               performance.now() -
               arrivedAt;
           try {
-            this.emit('message', new MessageEvent('message', { data: message.data }));
-            window.dispatchEvent(new Event('party-table-update'));
+            this.deliver(message.data);
             // Keep delivery age available through native promise callbacks too.
             await nextBrowserTask();
           } finally {
@@ -387,7 +435,11 @@ export class PlayerTransport extends EventTarget {
       if (this.readyState !== 1) return;
       this.outgoing.shift();
       this.outgoingBytes -= action.bytes;
-      if (action.route === this.route && action.transport === this.networkTransport())
+      if (
+        action.route === this.route &&
+        action.transport === this.networkTransport() &&
+        !(globalThis.partyEngine?.setup?.connectionRecovery && !this.lightweight)
+      )
         this.reportNetwork(performance.now() - action.began);
       window.dispatchEvent(new Event('party-action-ack'));
     }
@@ -457,7 +509,11 @@ export class PlayerTransport extends EventTarget {
       let transport = this.networkTransport();
       try {
         const local = window.parent?.partyLan;
-        if (this.polling && this.route !== 'local' && local?.connected) {
+        if (globalThis.partyEngine?.setup?.connectionRecovery && !this.lightweight) {
+          await this.probe();
+          route = this.route;
+          transport = this.networkTransport();
+        } else if (this.polling && this.route !== 'local' && local?.connected) {
           const result = await local.request('GET', '/ping');
           if (result.status !== 200) throw new Error('Local connection unavailable');
           this.setRoute(local.route ?? 'lan');
@@ -481,24 +537,58 @@ export class PlayerTransport extends EventTarget {
         }
         if (route === this.route && transport === this.networkTransport())
           this.reportNetwork(performance.now() - began);
+        this.probeFailures = 0;
       } catch {
-        if (!this.abort.signal.aborted) this.reportNetwork(undefined, true);
+        if (!this.abort.signal.aborted) {
+          this.reportNetwork(undefined, true);
+          if (globalThis.partyEngine?.setup?.connectionRecovery && ++this.probeFailures >= 2)
+            this.close(4000, '牌桌连接无响应，正在恢复原座位');
+        }
       } finally {
         deadline.clear();
         running = false;
       }
     };
-    this.networkTimer = setInterval(measure, 8000);
+    this.networkTimer = setInterval(measure, 5000);
     this.measureNetwork = measure;
     window.addEventListener('online', measure, { signal: this.abort.signal });
-    document.addEventListener('visibilitychange', measure, { signal: this.abort.signal });
+    window.addEventListener(
+      'offline',
+      () => {
+        if (!globalThis.partyEngine?.setup?.connectionRecovery) return;
+        this.reportNetwork(undefined, true);
+        this.close(4000, '网络已断开，正在恢复原座位');
+      },
+      { signal: this.abort.signal },
+    );
+    document.addEventListener(
+      'visibilitychange',
+      () => {
+        if (!document.hidden && globalThis.partyEngine?.setup?.connectionRecovery)
+          window.parent?.postMessage(
+            { type: 'party-checking', matchId: globalThis.partyEngine.setup.id },
+            location.origin,
+          );
+        void measure();
+      },
+      { signal: this.abort.signal },
+    );
     void measure();
   }
   finish(code, reason) {
     if (this.readyState === 3) return;
     this.readyState = 3;
     clearInterval(this.networkTimer);
+    for (const entry of this.nativeProbes.values()) {
+      clearTimeout(entry.timer);
+      entry.reject(new Error('Connection closed'));
+    }
+    this.nativeProbes.clear();
     this.abort.abort();
+    if (this.socket) {
+      this.socket.onopen = this.socket.onclose = this.socket.onerror = this.socket.onmessage = null;
+      this.socket.close();
+    }
     this.stopStream();
     this.outgoing = [];
     this.outgoingBytes = 0;

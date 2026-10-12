@@ -1,30 +1,67 @@
 import assert from 'node:assert/strict';
 
-export async function chooseGeneral(frame, worker) {
+export async function chooseGeneral(frame, worker, options = {}) {
+  const gesture = options.mouse ? 'click' : 'tap';
+  const tapChoice = async (locator) => {
+    try {
+      await locator[gesture]({ timeout: 2000 });
+    } catch (error) {
+      // A simultaneous teammate confirmation may replace this exact dialog
+      // between isVisible and tap. Retry only when that control disappeared.
+      if (await locator.isVisible()) throw error;
+    }
+  };
   await frame.waitForFunction(
     () =>
       globalThis.partyEngine?._status.event?.name === 'chooseButton' && partyEngine._status.paused,
     {},
     { timeout: 120000 },
   );
-  await frame.locator('.dialog .button.character').first().tap();
-  const confirm = frame
-    .locator('.control > div')
-    .filter({ hasText: /^确定$/ })
-    .first();
-  if (await confirm.isVisible()) await confirm.tap();
+  let inspectedLuck = false;
   for (
     let attempt = 0;
-    attempt < 100 && !(await worker.evaluate(() => partyEngine.proof.started));
+    attempt < 300 && !(await worker.evaluate(() => partyEngine.proof.started));
     attempt++
   ) {
+    if (await frame.evaluate(() => globalThis.partyEngine?.luckState?.active)) {
+      if (options.onLuck && !inspectedLuck) {
+        inspectedLuck = true;
+        frame = (await options.onLuck(frame, worker)) ?? frame;
+      }
+      const keep = frame.locator('#party-luck-cards button[data-action="keep"]');
+      if (await keep.isVisible()) await keep[gesture]();
+      await new Promise((resolve) => setTimeout(resolve, 150));
+      continue;
+    }
+    const confirm = frame
+      .locator('.control:not(.removing) > div')
+      .filter({ hasText: /^确定$/ })
+      .first();
+    // Shared-pool confirmations can race with a teammate or native AI. The
+    // losing submission receives another native general choice, with the same
+    // deadline; finish that real UI instead of assuming one dialog per seat.
+    if (
+      !(await frame.evaluate(
+        () => partyEngine._status.event?.name === 'chooseButton' && partyEngine._status.paused,
+      ))
+    ) {
+      await new Promise((resolve) => setTimeout(resolve, 150));
+      continue;
+    }
+    const generalChoice = frame.locator(
+      '.dialog:not(.removing) .button.character.selectable:not(.selected)',
+    );
+    if (await generalChoice.first().isVisible()) {
+      await tapChoice(generalChoice.first());
+      if (await confirm.isVisible()) await tapChoice(confirm);
+    }
     const groupChoice = frame
-      .locator('.dialog')
+      .locator('.dialog:not(.removing)')
       .filter({ hasText: '请选择你的势力' })
       .locator('.button');
     if (await groupChoice.first().isVisible()) {
-      await groupChoice.first().tap();
-      if (await confirm.isVisible()) await confirm.tap();
+      await tapChoice(groupChoice.first());
+      if (await confirm.isVisible()) await tapChoice(confirm);
     }
     await new Promise((resolve) => setTimeout(resolve, 150));
   }

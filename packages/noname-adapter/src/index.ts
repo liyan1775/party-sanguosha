@@ -1,4 +1,4 @@
-import type { EngineStatus, RoomSettings } from '../../shared/src/contracts.js';
+import type { EngineStatus, MatchFailureCode, RoomSettings } from '../../shared/src/contracts.js';
 
 export interface MatchSetup {
   roomCode: string;
@@ -7,6 +7,8 @@ export interface MatchSetup {
   seats: { id: string; nickname: string; kind: 'human' | 'bot' }[];
   /** 复用上游完整原生 AI 决策；不是玩家可调的难度或对人类仇视程度。 */
   aiPolicy: 'strongest-native';
+  /** Private lobby preferences; only the rule worker receives the complete map. */
+  generalSelections?: Record<string, string>;
 }
 
 /** 只有适配器收到真实引擎的确认后，房间才能进入 playing。 */
@@ -18,7 +20,11 @@ export interface EngineAdapter {
   release?(roomCode: string): void;
 }
 
-export type EngineEvent = { type: 'status' } | { type: 'ended' | 'failed'; roomCode: string };
+export type EngineEvent =
+  | { type: 'status' }
+  | { type: 'ended' | 'recovered'; roomCode: string }
+  | { type: 'failed'; roomCode: string; code?: MatchFailureCode }
+  | { type: 'recovering'; roomCode: string; deadline: number };
 
 export class NonameAdapter implements EngineAdapter {
   status(): EngineStatus {

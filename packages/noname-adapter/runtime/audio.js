@@ -29,6 +29,10 @@ export function installAudio() {
   const AudioContext = window.AudioContext || window.webkitAudioContext;
   let context;
   let muted = localStorage.getItem('party_sound_muted') === 'true';
+  const savedVolume = localStorage.getItem('party_sound_volume');
+  let level = savedVolume === null ? 35 : Number(savedVolume);
+  if (!Number.isFinite(level) || level < 0 || level > 100) level = 35;
+  let output;
   let generation = 0;
   let activeReads = 0;
   const waitingReads = [];
@@ -87,8 +91,9 @@ export function installAudio() {
         {
           type: 'party-audio',
           matchId: setup.id,
-          enabled: !muted && context?.state === 'running',
-          muted,
+          enabled: !muted && level > 0 && context?.state === 'running',
+          muted: muted || level === 0,
+          volume: level,
         },
         location.origin,
       );
@@ -99,6 +104,11 @@ export function installAudio() {
       return;
     }
     context ??= new AudioContext();
+    if (!output) {
+      output = context.createGain();
+      output.gain.value = level / 100;
+      output.connect(context.destination);
+    }
     context.onstatechange = state;
     if (context.state === 'running') {
       state();
@@ -109,7 +119,7 @@ export function installAudio() {
       await context.resume();
       const source = context.createBufferSource();
       source.buffer = context.createBuffer(1, 1, context.sampleRate);
-      source.connect(context.destination);
+      source.connect(output);
       source.start();
     } catch {
       /* The visible sound button permits another trusted tap. */
@@ -117,7 +127,16 @@ export function installAudio() {
     state();
   }
   globalThis.partyEngine.audio = {
+    setVolume(value) {
+      if (!Number.isFinite(value)) return;
+      level = Math.round(Math.max(0, Math.min(100, value)));
+      localStorage.setItem('party_sound_volume', String(level));
+      if (output) output.gain.setValueAtTime(level / 100, context.currentTime);
+      if (!level) discardPending();
+      state();
+    },
     async setEnabled(enabled) {
+      if (enabled && level === 0) this.setVolume(35);
       muted = !enabled;
       localStorage.setItem('party_sound_muted', String(muted));
       if (muted) discardPending();
@@ -125,11 +144,7 @@ export function installAudio() {
       state();
     },
     async toggle() {
-      muted = context?.state === 'running' && !muted;
-      localStorage.setItem('party_sound_muted', String(muted));
-      if (muted) discardPending();
-      else await unlock();
-      state();
+      await this.setEnabled(!(context?.state === 'running' && !muted && level > 0));
     },
     unlock,
     warm,
@@ -161,7 +176,13 @@ export function installAudio() {
           };
     const path = /\.(mp3|ogg)$/.test(options.path ?? '') ? options.path : `${options.path}.mp3`;
     const handle = document.createElement('audio');
-    if (setup.role !== 'player' || muted || context?.state !== 'running' || !available.has(path))
+    if (
+      setup.role !== 'player' ||
+      muted ||
+      !level ||
+      context?.state !== 'running' ||
+      !available.has(path)
+    )
       return handle;
     if (
       !proof.booted ||
@@ -199,6 +220,7 @@ export function installAudio() {
       .then((decoded) => {
         if (
           muted ||
+          !level ||
           stopped ||
           document.hidden ||
           context.state !== 'running' ||
@@ -211,13 +233,11 @@ export function installAudio() {
         }
         source = context.createBufferSource();
         source.buffer = decoded;
-        const volume = context.createGain();
-        volume.gain.value = (lib.config.volumn_audio ?? 6) / 8;
-        source.connect(volume).connect(context.destination);
+        source.connect(output);
         sources.add(source);
         source.onended = () => {
           sources.delete(source);
-          volume.disconnect();
+          source.disconnect();
           options.onEnded?.(new Event('ended'));
         };
         options.onCanPlay?.(new Event('canplay'));

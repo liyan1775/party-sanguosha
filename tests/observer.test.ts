@@ -6,7 +6,13 @@ import type { MatchSetup } from '../packages/noname-adapter/src/index.js';
 const setup: MatchSetup = {
   roomCode: 'ABC123',
   ownerPlayerId: 'human',
-  settings: { mode: 'duel', playerCount: 2, generalPreset: 'beginner', extensions: [] },
+  settings: {
+    mode: 'duel',
+    playerCount: 2,
+    generalPreset: 'beginner',
+    allowGeneralSelection: false,
+    extensions: [],
+  },
   seats: [
     { id: 'human', nickname: '<b>玩家</b>', kind: 'human' },
     { id: 'bot', nickname: 'AI', kind: 'bot' },
@@ -20,6 +26,7 @@ test('观察者历史去重、分页、房间白名单与容量边界', () => {
     const state = sanitizeObserver(
       {
         round: 1,
+        deckCount: 73,
         players: [
           { id: 'human', nickname: 'forged', controller: 'bot', storage: 'SECRET' },
           { id: 'bot', controller: 'human' },
@@ -37,6 +44,7 @@ test('观察者历史去重、分页、房间白名单与容量边界', () => {
     assert.equal(state.players[0]!.controller, undefined);
     assert.equal(state.players[1]!.controller, 'bot');
     assert(!JSON.stringify(state).includes('SECRET'));
+    assert.equal(state.deckCount, 73);
     journal.append(state);
     journal.append(state);
   }

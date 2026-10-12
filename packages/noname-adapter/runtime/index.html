@@ -83,6 +83,45 @@
       .hp:not(.text) > .shield {
         background-color: #398aca !important;
       }
+      #arena .dialog.party-background-dialog {
+        visibility: hidden !important;
+        pointer-events: none !important;
+      }
+      #arena .player.glow_phase {
+        /* Native phase glow remains separate from selection/target highlights. */
+        outline: 3px solid #f3c55b;
+        outline-offset: 2px;
+      }
+      #arena .dialog.party-focused-dialog {
+        background: #19251ff5;
+        border: 1px solid #d3bc82;
+        border-radius: 10px;
+        box-shadow: 0 4px 20px #0008;
+      }
+      #arena .player > .party-turn-badge {
+        display: none;
+        width: auto;
+        height: auto;
+        opacity: 1;
+        box-shadow: none;
+        position: absolute;
+        top: -14px;
+        left: 6px;
+        z-index: 6;
+        padding: 2px 7px;
+        border: 1px solid #ffe29a;
+        border-radius: 5px;
+        background: #70420b;
+        color: #fff4cd;
+        font:
+          700 13px/1.3 system-ui,
+          sans-serif;
+        text-shadow: none;
+        pointer-events: none;
+      }
+      #arena .player.glow_phase > .party-turn-badge {
+        display: block;
+      }
     </style>
     <script type="importmap">
       {

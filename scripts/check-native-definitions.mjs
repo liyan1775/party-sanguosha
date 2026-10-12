@@ -2,14 +2,18 @@ import assert from 'node:assert/strict';
 import { readFile, readdir, mkdir, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import ts from 'typescript';
+import { readNativeData } from './native-data.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const settings = JSON.parse(await readFile(`${root}/config/roster-presets.json`, 'utf8'));
 const engine = `${root}/.local/noname/${settings.engineCandidate}`;
+const nativeData = await readNativeData(root);
 const packs = new Map();
 const skills = new Map();
 const cards = new Map();
 const choiceDefinitions = new Map();
+const dependencies = new Map();
+const generalRoots = [];
 const key = (name) => name.getText().replace(/^['"]|['"]$/g, '');
 function strings(node) {
   const values = new Set();
@@ -105,12 +109,8 @@ for (const preset of settings.presets) {
     ...preset.definitionPacks.characters.map((name) => `character/${name}`),
     ...preset.definitionPacks.cards.map((name) => `card/${name}`),
   ]);
-  const roster = new Set(preset.additionalCharacters);
-  for (const pack of preset.completePacks)
-    for (const id of packs.get(`character/${pack}`).characters.keys()) roster.add(id);
-  for (const [pack, groups] of Object.entries(preset.packGroups))
-    for (const group of groups)
-      for (const id of strings(packs.get(`character/${pack}`).groups.get(group))) roster.add(id);
+  const roster = new Set(nativeData.rosters.get(preset.id));
+  assert.equal(roster.size, preset.characters.length, `${preset.id}: duplicate whitelist entry`);
   const visited = new Set();
   function follow(id, registry, from) {
     const definitions = registry.get(id);
@@ -121,42 +121,62 @@ for (const preset of settings.presets) {
       `${preset.id}: ${from} needs ${id} from ${definitions.map((item) => item.pack)}`,
     );
     const identity = `${definition.pack}:${id}`;
-    if (visited.has(identity)) return;
+    if (visited.has(identity)) return identity;
     visited.add(identity);
     choiceDefinitions.set(identity, { id, ...definition });
+    const edges = new Set();
+    dependencies.set(identity, edges);
     for (const reference of references(definition.node)) {
-      follow(reference, skills, id);
-      follow(reference, cards, id);
+      for (const registry of [skills, cards]) {
+        const child = follow(reference, registry, id);
+        if (child) edges.add(child);
+      }
     }
+    return identity;
   }
   for (const id of roster) {
-    const character = [...packs.values()]
-      .find((pack) => pack.characters.has(id))
-      ?.characters.get(id);
-    assert(character, `Missing native character ${id}`);
-    const list = character.initializer.properties.find(
-      (property) => key(property.name) === 'skills',
-    );
-    assert(list, `Missing native skill list ${id}`);
-    for (const skill of strings(list.initializer)) {
+    const character = nativeData.character(preset, id);
+    const roots = [];
+    for (const skill of character.skills) {
       assert(skills.has(skill), `Missing native skill ${id}:${skill}`);
-      follow(skill, skills, id);
+      roots.push(follow(skill, skills, id));
     }
+    generalRoots.push({ preset: preset.id, general: id, roots });
+  }
+  // Include every enabled physical card and its native skill closure, keeping
+  // definition-only dependencies distinct from the approved physical piles.
+  for (const [id, definitions] of cards) {
+    if (preset.cardPile.excludedCards.includes(id)) continue;
+    if (definitions.some((item) => preset.cardPile.packs.includes(item.pack.slice(5))))
+      follow(id, cards, 'card pile');
   }
   console.log(
     `${preset.id}: ${roster.size} generals, ${visited.size} static skill/card dependencies verified`,
   );
 }
-
-// Audit the playable rosters' static dependency closure and the standard deck.
+// Audit the playable rosters and both approved decks' static dependency closure.
 // A newly introduced parameterless response cannot silently inherit “牌”.
-for (const [id, definitions] of cards) {
-  const definition = definitions.find((item) => item.pack === 'card/standard');
-  if (definition) choiceDefinitions.set(`${definition.pack}:${id}`, { id, ...definition });
-}
 const choiceAudit = [];
 const visibilityAudit = [];
+const interactionAudit = [];
 for (const { id, pack, node } of choiceDefinitions.values()) {
+  const text = node.getText();
+  const pileNames = /\blib\.inpile\b|\bget\.inpileVCardList\b|\bget\.inpile\(/.test(text);
+  const pileNatures = /\blib\.inpile_nature\b/.test(text);
+  const optionPicker =
+    ts.isObjectLiteralExpression(node.initializer) &&
+    node.initializer.properties.some(
+      (property) => property.name && key(property.name) === 'chooseButton',
+    );
+  if (pileNames || pileNatures || optionPicker)
+    interactionAudit.push({
+      pack,
+      id,
+      pileNames,
+      pileNatures,
+      optionPicker,
+      line: node.getSourceFile().getLineAndCharacterOfPosition(node.getStart()).line + 1,
+    });
   const handMaterials = /getCards\(["']h["']|viewHandcard|showHandcards/.test(node.getText());
   function visit(item) {
     if (
@@ -225,6 +245,40 @@ await writeFile(
     2,
   ),
 );
+const relatedGenerals = generalRoots
+  .map(({ preset, general, roots }) => {
+    const seen = new Set();
+    const visit = (identity) => {
+      if (!identity || seen.has(identity)) return;
+      seen.add(identity);
+      for (const child of dependencies.get(identity) ?? []) visit(child);
+    };
+    roots.forEach(visit);
+    return {
+      preset,
+      general,
+      interactions: interactionAudit
+        .filter(({ pack, id }) => seen.has(`${pack}:${id}`))
+        .map(({ pack, id }) => `${pack}:${id}`),
+    };
+  })
+  .filter(({ interactions }) => interactions.length);
+await writeFile(
+  `${root}/.runtime/native-interaction-audit.json`,
+  JSON.stringify(
+    {
+      engine: settings.engineCandidate,
+      scope: 'Static approved-roster dependencies; dynamic skill paths still need real play.',
+      generals: relatedGenerals,
+      definitions: interactionAudit,
+    },
+    null,
+    2,
+  ),
+);
 console.log(
   `Choice audit: ${choiceDefinitions.size} static definitions, ${choiceAudit.length} choice sites; generic responses reviewed`,
+);
+console.log(
+  `Interaction audit: ${interactionAudit.filter((item) => item.pileNames || item.pileNatures).length} pile-catalog definitions, ${interactionAudit.filter((item) => item.optionPicker).length} option-picker definitions; ${new Set(relatedGenerals.map((item) => item.general)).size} related generals`,
 );

@@ -4,20 +4,33 @@ import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { networkInterfaces } from 'node:os';
 import { once } from 'node:events';
-import { chromium } from '@playwright/test';
+import { chromium, webkit } from '@playwright/test';
 import { createPartyServer } from '../apps/server/src/server.ts';
 import { NativeNonameService } from '../packages/noname-adapter/src/service.ts';
 import { createPublicGateway } from '../apps/server/src/public-gateway.ts';
 import { APP_VERSION } from '../packages/shared/src/contracts.ts';
 import { chooseGeneral, playOneAction } from './native-ui-actions.mjs';
+import { verifyLuckCards, verifyConnectionAndEmotions } from './native-connection-luck-probes.mjs';
 import { verifyNativePrivateChoices } from './native-private-choices.mjs';
+import { launchBackgroundBrowser, observeBackgroundPage } from './native-background-browser.mjs';
+import { verifyPartyFeedback } from './native-party-feedback-probes.mjs';
 import {
   verifyChoicePrompts,
   verifyLateVoices,
   observeActionDelivery,
+  verifyTurnIndicator,
 } from './native-experience-probes.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
+const expectedDeck = JSON.parse(
+  await readFile(`${root}/config/native-card-inventory.json`, 'utf8'),
+).combinations.find(
+  (pile) =>
+    pile.id ===
+    ((process.env.ENGINE_VERIFY_PRESET ?? 'beginner') === 'beginner'
+      ? 'standard'
+      : 'standard-extra-no-muniu'),
+);
 const party = process.env.ENGINE_VERIFY_EXISTING_URL
   ? null
   : createPartyServer({
@@ -64,10 +77,50 @@ assert(
 );
 const playerOrigin = (index) => (index < lanPlayers ? lanOrigin : origin);
 const permittedOrigins = [origin, `http://127.0.0.1:${port}`, ...(lanPlayers ? [lanOrigin] : [])];
-const browser = await chromium.launch({
-  channel: process.env.E2E_BROWSER_CHANNEL ?? 'msedge',
-  args: ['--disable-background-timer-throttling', '--disable-renderer-backgrounding'],
-});
+const background = process.env.ENGINE_VERIFY_BACKGROUND === '1';
+assert(!background || party, 'Background verification requires an isolated service');
+const backgroundBrowser = background ? await launchBackgroundBrowser(root) : null;
+const browser =
+  backgroundBrowser?.browser ??
+  (await chromium.launch({
+    channel: process.env.E2E_BROWSER_CHANNEL ?? 'msedge',
+    args: ['--disable-background-timer-throttling', '--disable-renderer-backgrounding'],
+  }));
+const playerBrowserName = process.env.ENGINE_VERIFY_PLAYER_BROWSER ?? 'chromium';
+assert(['chromium', 'webkit'].includes(playerBrowserName), 'Unsupported player browser');
+const legacyWebKitEvaluation = process.env.ENGINE_VERIFY_WEBKIT_LEGACY_EVAL === '1';
+assert(
+  !legacyWebKitEvaluation ||
+    (party &&
+      playerBrowserName === 'webkit' &&
+      process.env.ENGINE_VERIFY_WEBKIT_MODULE &&
+      process.env.ENGINE_VERIFY_CACHE === '1' &&
+      process.env.ENGINE_VERIFY_PRELOAD !== '1'),
+  'Old WebKit evaluation requires an isolated custom WebKit package; cache/preload assertions are unavailable',
+);
+const webkitLauncher = process.env.ENGINE_VERIFY_WEBKIT_MODULE
+  ? (await import(process.env.ENGINE_VERIFY_WEBKIT_MODULE)).webkit
+  : webkit;
+const playerBrowser = playerBrowserName === 'webkit' ? await webkitLauncher.launch() : browser;
+const audioSupported = playerBrowserName !== 'webkit' || process.platform !== 'win32';
+const touchSwipeSupported = playerBrowserName === 'chromium';
+const browserProof = {
+  worker: {
+    name: 'chromium',
+    version: browser.version(),
+    backgroundPolicy: background
+      ? 'normal timers; genuine hidden tab; intensive grace reduced to 10 seconds'
+      : 'timer throttling disabled for regular QA; visibility emulated by Playwright',
+  },
+  player: { name: playerBrowserName, version: playerBrowser.version() },
+  audioPlayback: audioSupported ? 'tested' : 'unsupported on Windows WebKit',
+  touchSwipe: touchSwipeSupported ? 'tested via CDP' : 'unsupported without CDP',
+  physicalPhone: false,
+  documentCsp: legacyWebKitEvaluation
+    ? 'removed only from isolated mobile test documents'
+    : 'unchanged',
+  httpCache: legacyWebKitEvaluation ? 'disabled by old evaluation document routing' : 'available',
+};
 const faults = [],
   missing = new Set(),
   external = new Set(),
@@ -75,11 +128,26 @@ const faults = [],
 const closingRooms = new Set();
 const artifactRoot = `.runtime/native-runtime/${new Date().toISOString().replaceAll(':', '-').replaceAll('.', '-')}`;
 await mkdir(artifactRoot, { recursive: true });
-// This fixture exercises Android/WeChat branches; it is still desktop Edge,
-// and cannot certify a physical phone's browser or WeChat version.
+const experience = process.env.ENGINE_VERIFY_EXPERIENCE === '1';
+if (experience)
+  assert(
+    party && playerBrowserName === 'chromium',
+    'experience faults require an isolated Chromium service',
+  );
+process.env.PARTY_EXPERIENCE_OUTPUT = artifactRoot;
+const pointDisplay = process.env.ENGINE_VERIFY_VERSUS_POINT_DISPLAY === '1';
+if (pointDisplay)
+  assert(
+    party && process.env.ENGINE_VERIFY_CACHE !== '1',
+    'point display uses an isolated routed fixture',
+  );
+// These are desktop browser engines with mobile/WeChat UA and touch emulation;
+// they cannot certify a physical phone's browser or WeChat version.
 const mobileUserAgent =
   process.env.ENGINE_VERIFY_USER_AGENT ??
-  'Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.6367.179 Mobile Safari/537.36 MicroMessenger/8.0.50.2700';
+  (playerBrowserName === 'webkit'
+    ? 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 MicroMessenger/8.0.50'
+    : 'Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.6367.179 Mobile Safari/537.36 MicroMessenger/8.0.50.2700');
 const presets = JSON.parse(await readFile(`${root}/config/roster-presets.json`, 'utf8')).presets;
 async function privateHandIds(worker, viewerId) {
   return worker.evaluate((id) => {
@@ -184,20 +252,37 @@ async function observePublicDisplay(frame) {
 }
 
 async function page(mobile, remote = false) {
-  const context = await browser.newContext(
-    mobile
-      ? {
-          viewport:
-            process.env.ENGINE_VERIFY_PORTRAIT === '1'
-              ? { width: 390, height: 844 }
-              : { width: 844, height: 390 },
-          isMobile: true,
-          hasTouch: true,
-          userAgent: mobileUserAgent,
-        }
-      : {},
-  );
+  const context =
+    !mobile && background
+      ? browser.contexts()[0]
+      : await (mobile ? playerBrowser : browser).newContext(
+          mobile
+            ? {
+                viewport:
+                  process.env.ENGINE_VERIFY_PORTRAIT === '1'
+                    ? { width: 390, height: 844 }
+                    : { width: 844, height: 390 },
+                isMobile: true,
+                hasTouch: true,
+                ...(legacyWebKitEvaluation ? { bypassCSP: true } : {}),
+                userAgent: mobileUserAgent,
+              }
+            : {},
+        );
   contexts.push(context);
+  if (mobile && legacyWebKitEvaluation)
+    await context.route(
+      (url) => /^\/engine\/player\/|^\/join\/|^\/$/.test(url.pathname),
+      async (route) => {
+        if (route.request().resourceType() !== 'document') return route.continue();
+        // Playwright 1.42's WebKit evaluation helper cannot run under lobby CSP.
+        // This isolated test adjustment leaves worker CSP and all scripts intact.
+        const response = await route.fetch();
+        const headers = response.headers();
+        delete headers['content-security-policy'];
+        await route.fulfill({ response, headers });
+      },
+    );
   if (mobile && (process.env.ENGINE_VERIFY_NO_RTC === '1' || remote))
     await context.addInitScript(() => {
       globalThis.RTCPeerConnection = undefined;
@@ -229,6 +314,26 @@ async function page(mobile, remote = false) {
         await route.abort();
       } else if (
         !mobile &&
+        pointDisplay &&
+        new URL(route.request().url()).pathname === '/engine/runtime/mode.js'
+      ) {
+        const headers = { ...route.request().headers() };
+        delete headers['if-none-match'];
+        delete headers['if-modified-since'];
+        const response = await route.fetch({ headers });
+        const source = await response.text();
+        assert(source.includes('const seats = setup.seats.slice().randomSort();'));
+        // Reproduce the reported fourth-seat human with three native AI seats.
+        // Only seat order is fixed; the shared pool, choices and game stay native.
+        await route.fulfill({
+          response,
+          body: source.replace(
+            'const seats = setup.seats.slice().randomSort();',
+            'const seats = setup.seats.slice(); seats.push(seats.shift());',
+          ),
+        });
+      } else if (
+        !mobile &&
         process.env.ENGINE_VERIFY_PRIVATE &&
         new URL(route.request().url()).pathname === '/engine/runtime/mode.js'
       ) {
@@ -239,12 +344,12 @@ async function page(mobile, remote = false) {
         const response = await route.fetch({ headers });
         const source = await response.text();
         const hero = process.env.ENGINE_VERIFY_PRIVATE === 'poxi' ? 'shen_ganning' : 'shen_lvmeng';
-        assert(source.includes('pool.randomRemove(choiceCount)'));
+        assert(source.includes('pool.randomRemove(count)'));
         await route.fulfill({
           response,
           body: source
             .replace(
-              'pool.randomRemove(choiceCount)',
+              'pool.randomRemove(count)',
               `[['${hero}', 're_caocao', 're_liubei'][game.players.indexOf(player)]]`,
             )
             .replace(
@@ -286,6 +391,7 @@ async function page(mobile, remote = false) {
         const response = await route.fetch();
         const setup = await response.json();
         setup.preset = {
+          ...setup.preset,
           completePacks: [],
           packGroups:
             process.env.ENGINE_VERIFY_JUDGE_FIXTURE === '1'
@@ -301,11 +407,14 @@ async function page(mobile, remote = false) {
                 : ['shen_zhaoyun', 'shen_lvbu'],
           definitionPacks: setup.preset.definitionPacks,
         };
+        setup.preset.characters = [...setup.preset.additionalCharacters];
         await route.fulfill({ response, json: setup });
       } else await route.continue();
     });
   const page = await context.newPage();
+  if (!mobile && background) observeBackgroundPage(page);
   if (mobile && process.env.ENGINE_VERIFY_COLD_MOBILE_KBPS) {
+    assert.equal(playerBrowserName, 'chromium', 'CDP network throttling requires Chromium');
     const bandwidth = Number(process.env.ENGINE_VERIFY_COLD_MOBILE_KBPS);
     assert(Number.isFinite(bandwidth) && bandwidth >= 20 && bandwidth <= 10000);
     const network = await context.newCDPSession(page);
@@ -319,16 +428,32 @@ async function page(mobile, remote = false) {
     });
   }
   page.packRequests = new Set();
+  page.lobbyPackRequests = new Set();
   page.largeFontRequests = new Set();
   page.on('request', (request) => {
     const path = new URL(request.url()).pathname.replace(/\/core\/[a-f0-9]{40}\//, '/core/');
     if (!permittedOrigins.includes(new URL(request.url()).origin)) external.add(request.url());
-    if (/^\/engine\/core\/(?:character|card)\/[^/]+\.js$/.test(path)) page.packRequests.add(path);
+    if (/^\/engine\/core\/(?:character|card)\/[^/]+\.js$/.test(path)) {
+      // Waiting-room warming may begin with the room's initial beginner preset
+      // before this fixture switches pools. Audit actual game imports separately.
+      if (request.frame().url().includes('/engine/')) page.packRequests.add(path);
+      else page.lobbyPackRequests.add(path);
+    }
     if (/^\/engine\/core\/font\/(?!suits\.)/.test(path)) page.largeFontRequests.add(path);
   });
   page.on('pageerror', (error) => {
     faults.push(String(error));
     console.log('browser error:', String(error).slice(0, 300));
+  });
+  page.on('console', (message) => {
+    // Native event execution catches errors internally; these still fail QA.
+    if (
+      message.type() === 'error' &&
+      /\b(?:TypeError|SyntaxError|ReferenceError):/.test(message.text())
+    ) {
+      faults.push(message.text().slice(0, 800));
+      console.log('native script error:', message.text().slice(0, 800));
+    }
   });
   page.on('dialog', async (dialog) => {
     faults.push(dialog.message());
@@ -351,6 +476,23 @@ const results = [];
 try {
   let computer = await page(false);
   await computer.goto(`http://127.0.0.1:${port}/server`);
+  let foreground;
+  if (background) {
+    await computer.evaluate(() => {
+      globalThis.partyBackgroundControl = { ticks: 0, last: performance.now(), maxGap: 0 };
+      setInterval(() => {
+        const state = globalThis.partyBackgroundControl;
+        const now = performance.now();
+        state.maxGap = Math.max(state.maxGap, now - state.last);
+        state.last = now;
+        state.ticks++;
+      }, 250);
+    });
+    foreground = await computer.context().newPage();
+    await foreground.goto('about:blank');
+    await foreground.bringToFront();
+    assert.equal(await computer.evaluate(() => document.visibilityState), 'hidden');
+  }
   if (process.env.ENGINE_VERIFY_LEGACY_HOST === '1')
     await computer.locator('footer').evaluate((footer) => {
       footer.textContent = '聚会三国杀 v0.4.1';
@@ -400,11 +542,25 @@ try {
         ? Number(process.env.ENGINE_VERIFY_IDENTITY_SEATS ?? 5)
         : { duel: 2, doudizhu: 3, versus: 4 }[mode];
     const humanCount = Math.min(playerCount, Number(process.env.ENGINE_VERIFY_HUMANS ?? 1));
+    if (pointDisplay) {
+      assert.equal(mode, 'versus');
+      assert.equal(humanCount, 1);
+    }
     await phone.evaluate(
-      async ({ code, mode, playerCount, preset }) => {
+      async ({ code, mode, playerCount, preset, pointDisplay }) => {
         const base = `/api/rooms/${code}`;
         for (const [path, method, body] of [
-          [base, 'PUT', { mode, playerCount, generalPreset: preset, extensions: [] }],
+          [
+            base,
+            'PUT',
+            {
+              mode,
+              playerCount,
+              generalPreset: preset,
+              allowGeneralSelection: pointDisplay,
+              extensions: [],
+            },
+          ],
         ]) {
           const response = await fetch(path, {
             method,
@@ -414,7 +570,13 @@ try {
           if (!response.ok) throw new Error(await response.text());
         }
       },
-      { code, mode, playerCount, preset: process.env.ENGINE_VERIFY_PRESET ?? 'beginner' },
+      {
+        code,
+        mode,
+        playerCount,
+        preset: process.env.ENGINE_VERIFY_PRESET ?? 'beginner',
+        pointDisplay,
+      },
     );
     for (let index = 1; index < humanCount; index++) {
       const friend = await page(
@@ -439,6 +601,15 @@ try {
         },
         { code, count: playerCount - humanCount },
       );
+    if (pointDisplay)
+      await phone.evaluate(async (code) => {
+        const response = await fetch(`/api/rooms/${code}/me/general`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ general: 'liubei' }),
+        });
+        if (!response.ok) throw new Error(`fixture point failed: ${response.status}`);
+      }, code);
     for (const participant of phones) {
       if (process.env.ENGINE_VERIFY_PRELOAD === '1')
         await participant.waitForFunction(
@@ -591,8 +762,124 @@ try {
       await observeJudgeDisplay(frame);
       await observePublicDisplay(frame);
     }
-    await Promise.all(gameFrames.map((frame) => chooseGeneral(frame, worker)));
+    let pointDisplayProof;
+    if (pointDisplay) {
+      await gameFrame.waitForFunction(() => {
+        const buttons = [...document.querySelectorAll('.dialog:not(.removing) .button.character')];
+        const point = buttons[0];
+        return (
+          partyEngine._status.paused &&
+          buttons.length === 10 &&
+          point?.link === 'liubei' &&
+          point.querySelector('.party-general-status')?.textContent.includes('队友已选')
+        );
+      });
+      pointDisplayProof = await gameFrame.evaluate(() => {
+        const buttons = [...document.querySelectorAll('.dialog:not(.removing) .button.character')];
+        const point = buttons[0];
+        return {
+          total: buttons.length,
+          selectable: buttons.filter((button) => button.classList.contains('selectable')).length,
+          pointFirst: point.link === 'liubei',
+          pointMarked: point
+            .querySelector('.party-general-status')
+            .textContent.includes('我的点将'),
+          teammateMarked: point
+            .querySelector('.party-general-status')
+            .textContent.includes('队友已选'),
+          disabled:
+            point.getAttribute('aria-disabled') === 'true' &&
+            !point.classList.contains('selectable'),
+          teammateInTitle: document
+            .querySelector('.dialog:not(.removing) .caption')
+            .textContent.includes('队友是 1 号位（已选刘备）'),
+        };
+      });
+      assert.deepEqual(pointDisplayProof, {
+        total: 10,
+        selectable: 9,
+        pointFirst: true,
+        pointMarked: true,
+        teammateMarked: true,
+        disabled: true,
+        teammateInTitle: true,
+      });
+      await gameFrame.waitForFunction(() => {
+        const dialog = document.querySelector('.dialog:not(.removing)');
+        return (
+          dialog && !dialog.style.transitionProperty && getComputedStyle(dialog).opacity === '1'
+        );
+      });
+      await phone.screenshot({ path: `${artifactRoot}/${mode}-point-display.png` });
+      await gameFrame.locator('.dialog:not(.removing) .button.character').first().tap();
+      assert.equal(
+        await gameFrame.evaluate(() => partyEngine.ui.selected.buttons.length),
+        0,
+        'touching the teammate-taken point cannot select it',
+      );
+    }
+    await Promise.all(
+      gameFrames.map((frame, index) =>
+        chooseGeneral(frame, worker, experience && index === 0 ? { onLuck: verifyLuckCards } : {}),
+      ),
+    );
+    gameFrame = phone.frames().find((frame) => frame.url().includes('/engine/player/'));
     await worker.waitForFunction(() => partyEngine.proof.started, {}, { timeout: 25000 });
+    const deckAudit = await worker.evaluate(() => {
+      const { lib, game, _status, proof, setup } = partyEngine;
+      const counts = new Map();
+      // Return aggregate original-template counts only, never draw order,
+      // physical IDs, remaining draw cards or private hands.
+      for (const info of lib.card.list) {
+        const key = info[2] + ':' + (info[3] || '');
+        counts.set(key, (counts.get(key) || 0) + 1);
+      }
+      return {
+        configured: [...lib.config.cards],
+        online: [...lib.configOL.cardPack],
+        total: lib.card.list.length,
+        counts: Object.fromEntries([...counts].sort(([a], [b]) => a.localeCompare(b, 'en'))),
+        inpile: [...lib.inpile].sort(),
+        natures: [...lib.inpile_nature].sort(),
+        pileId: setup.preset.cardPile?.id,
+        fixedPile: Boolean(game.fixedPile),
+        mode: _status.mode,
+        started: proof.started,
+      };
+    });
+    assert.deepEqual(deckAudit.configured, expectedDeck.packs);
+    assert.deepEqual(deckAudit.online, expectedDeck.packs);
+    assert.equal(deckAudit.total, expectedDeck.total);
+    assert.deepEqual(
+      deckAudit.counts,
+      Object.fromEntries(
+        expectedDeck.cards.map((card) => [card.id + ':' + (card.nature || ''), card.count]),
+      ),
+    );
+    assert(!deckAudit.inpile.includes('muniu'));
+    assert.equal(deckAudit.fixedPile, false);
+    assert.equal(deckAudit.started, true);
+    deckAudit.playerCatalogs = await Promise.all(
+      gameFrames.map((frame) =>
+        frame.evaluate(() => ({
+          inpile: [...partyEngine.lib.inpile].sort(),
+          natures: [...partyEngine.lib.inpile_nature].sort(),
+        })),
+      ),
+    );
+    for (const catalog of deckAudit.playerCatalogs) {
+      assert.deepEqual(
+        catalog.inpile,
+        deckAudit.inpile,
+        'first-entry skill card names match the worker',
+      );
+      assert.deepEqual(
+        catalog.natures,
+        deckAudit.natures,
+        'first-entry skill natures match the worker',
+      );
+    }
+    console.log(mode, 'verified native deck:', deckAudit.total, 'cards');
     await gameFrame
       .locator('.dialog .button.character')
       .first()
@@ -610,6 +897,18 @@ try {
         ),
       ),
     );
+    const experienceProof = experience
+      ? await verifyConnectionAndEmotions(phone, worker, phones, artifactRoot)
+      : undefined;
+    if (experience) {
+      gameFrame = phone.frames().find((frame) => frame.url().includes('/engine/player/'));
+      for (let index = 0; index < phones.length; index++)
+        gameFrames[index] = phones[index]
+          .frames()
+          .find((frame) => frame.url().includes('/engine/player/'));
+      await observeJudgeDisplay(gameFrame);
+      await observePublicDisplay(gameFrame);
+    }
     if (process.env.ENGINE_VERIFY_PORTRAIT === '1') {
       const sameFrame = await phone.locator('#game-frame').getAttribute('src');
       assert(
@@ -664,7 +963,9 @@ try {
       ),
     }));
     loadingProof.packRequests = [...phone.packRequests].sort();
+    loadingProof.lobbyPackRequests = [...phone.lobbyPackRequests].sort();
     loadingProof.largeFontRequests = [...phone.largeFontRequests].sort();
+    loadingProof.deckAudit = deckAudit;
     loadingProof.health = await gameFrame.evaluate(() =>
       partyEngine.game.players.map((player) => ({
         visible:
@@ -712,10 +1013,7 @@ try {
     assert(loadingProof.mobilePortraitBytes > 0, 'native selection/table use the small portraits');
     if (process.env.ENGINE_VERIFY_EXPERIENCE === '1')
       loadingProof.choicePrompts = await verifyChoicePrompts(worker, gameFrame);
-    const expectedSpeed =
-      process.env.ENGINE_VERIFY_PRESET === 'advanced'
-        ? { value: 'fast', duration: 500 }
-        : { value: 'slow', duration: 1000 };
+    const expectedSpeed = { value: 'slow', duration: 1000 };
     assert.deepEqual(loadingProof.speed, expectedSpeed);
     assert.equal(
       loadingProof.resources.filter((entry) => entry.path.startsWith('/engine/bundle/')).length,
@@ -734,27 +1032,33 @@ try {
     await gameFrame.waitForFunction(
       () => partyEngine.audio && document.querySelector('#engine-loading').hidden,
     );
-    // Real browser audio decoding/playback, using the same entry as native cards.
-    await gameFrame.evaluate(async () => {
-      await partyEngine.audio.unlock();
-      partyEngine.game.playCardAudio({ name: 'sha' }, 'male');
-    });
-    await gameFrame.waitForFunction(() => partyEngine.proof.audio.played > 0);
-    await phone.locator('#match-sound').tap();
-    const mutedCount = await gameFrame.evaluate(() => {
-      const count = partyEngine.proof.audio.played;
-      partyEngine.game.playCardAudio({ name: 'sha' }, 'male');
-      return count;
-    });
-    await gameFrame.waitForTimeout(100);
-    assert.equal(
-      await gameFrame.evaluate(() => partyEngine.proof.audio.played),
-      mutedCount,
-      'mute prevents playback',
-    );
-    await phone.locator('#match-sound').tap();
-    if (process.env.ENGINE_VERIFY_EXPERIENCE === '1')
-      loadingProof.expiredVoices = await verifyLateVoices(gameFrame);
+    if (audioSupported) {
+      // Real browser audio decoding/playback, using the same entry as native cards.
+      await gameFrame.evaluate(async () => {
+        await partyEngine.audio.unlock();
+        partyEngine.game.playCardAudio({ name: 'sha' }, 'male');
+      });
+      await gameFrame.waitForFunction(() => partyEngine.proof.audio.played > 0);
+      await phone.locator('#match-sound').tap();
+      const mutedCount = await gameFrame.evaluate(() => {
+        const count = partyEngine.proof.audio.played;
+        partyEngine.game.playCardAudio({ name: 'sha' }, 'male');
+        return count;
+      });
+      await gameFrame.waitForTimeout(100);
+      assert.equal(
+        await gameFrame.evaluate(() => partyEngine.proof.audio.played),
+        mutedCount,
+        'mute prevents playback',
+      );
+      await phone.locator('#match-sound').tap();
+      if (process.env.ENGINE_VERIFY_EXPERIENCE === '1')
+        loadingProof.expiredVoices = await verifyLateVoices(gameFrame);
+    } else {
+      // Windows Playwright WebKit has no usable audio codec. Do not call this a
+      // successful playback test; keep phone audio in the physical-device list.
+      await phone.locator('#match-sound').tap();
+    }
     for (const frame of gameFrames) {
       const boundary = await frame.evaluate(() => ({
         swipe: partyEngine.lib.config.swipe,
@@ -763,6 +1067,7 @@ try {
       assert.deepEqual(boundary, { swipe: false, menu: 'undefined' });
     }
     for (const participant of phones) {
+      if (!touchSwipeSupported) break;
       const box = await participant.locator('#game-frame').boundingBox();
       const touch = await participant.context().newCDPSession(participant);
       const point = { x: box.x + box.width / 2, y: box.y + 20 };
@@ -851,6 +1156,7 @@ try {
         },
       };
     }, concealedAtSource);
+    if (pointDisplay) initial.pointDisplay = pointDisplayProof;
     assert.equal(
       initial.secure,
       new URL(playerOrigin(0)).protocol === 'https:' ||
@@ -988,6 +1294,14 @@ try {
       hostInSeats: partyEngine.game.players.includes(partyEngine.game.me),
       chars: partyEngine.game.players.map((player) => player.name),
       rosterLength: partyEngine.proof.roster.length,
+      rosterExact:
+        partyEngine.proof.roster.length === partyEngine.setup.preset.characters.length &&
+        partyEngine.proof.roster.every((name) =>
+          partyEngine.setup.preset.characters.includes(name),
+        ),
+      selectedFromRoster: partyEngine.game.players.every((player) =>
+        partyEngine.proof.roster.includes(player.name),
+      ),
       additionalPresent: partyEngine.setup.preset.additionalCharacters.every((name) =>
         partyEngine.proof.roster.includes(name),
       ),
@@ -1003,6 +1317,8 @@ try {
         : {}),
     }));
     assert.equal(seatProof.hostInSeats, false);
+    assert.equal(seatProof.rosterExact, true);
+    assert.equal(seatProof.selectedFromRoster, true);
     assert.equal(seatProof.count, playerCount);
     assert.equal(
       seatProof.rosterLength,
@@ -1010,9 +1326,8 @@ try {
         process.env.ENGINE_VERIFY_JUDGE_FIXTURE === '1' ||
         process.env.ENGINE_VERIFY_COMPARE_FIXTURE === '1'
         ? 2
-        : process.env.ENGINE_VERIFY_PRESET === 'advanced'
-          ? 156
-          : 33,
+        : presets.find((preset) => preset.id === (process.env.ENGINE_VERIFY_PRESET ?? 'beginner'))
+            .characters.length,
     );
     assert(seatProof.additionalPresent);
     if (process.env.ENGINE_VERIFY_LEGACY_HOST === '1')
@@ -1087,6 +1402,19 @@ try {
       };
     }, created.room.code);
     assert.equal(publicView.computerSeat, null);
+    if (process.env.ENGINE_VERIFY_FEEDBACK_DASHBOARD === '1') {
+      const spectator = await page(true);
+      loadingProof.partyFeedback = await verifyPartyFeedback({
+        phone,
+        worker,
+        spectator,
+        code: created.room.code,
+        matchId: await gameFrame.evaluate(() => partyEngine.setup.id),
+        mode,
+        playerCount,
+      });
+      await spectator.close();
+    }
     assert.equal(publicView.observer.players.length, playerCount);
     assert(
       publicView.observer.players.every(
@@ -1255,6 +1583,7 @@ try {
       );
     }
     if (process.env.ENGINE_VERIFY_RECONNECT) {
+      loadingProof.turnIndicator = await verifyTurnIndicator(worker, gameFrame);
       previousJudgeDisplays.push(await gameFrame.evaluate(() => partyJudgeDisplayProof));
       if (process.env.ENGINE_VERIFY_RECONNECT === 'socket') {
         await gameFrame.evaluate(() => {
@@ -1292,6 +1621,9 @@ try {
       );
       assert.equal(reconnectProof.ownId, created.playerId);
       assert.equal(reconnectProof.hiddenLeak, false);
+      loadingProof.turnIndicatorAfterReconnect = await verifyTurnIndicator(worker, resumed);
+      await resumed.waitForTimeout(600);
+      await phone.screenshot({ path: `${artifactRoot}/${mode}-turn-restored.png` });
       await observeJudgeDisplay(resumed);
       await observePublicDisplay(resumed);
       if (process.env.ENGINE_VERIFY_CACHE === '1') {
@@ -1301,7 +1633,12 @@ try {
             .filter((entry) => new URL(entry.name).pathname.startsWith('/engine/bundle/'))
             .map((entry) => entry.transferSize),
         );
-        assert.deepEqual(cached, [0], 'refresh reuses the full engine bundle from the phone cache');
+        if (!legacyWebKitEvaluation)
+          assert.deepEqual(
+            cached,
+            [0],
+            'refresh reuses the full engine bundle from the phone cache',
+          );
         loadingProof.warmBundleTransferred = cached[0];
       }
       console.log(mode, 'same-seat refresh reconnected');
@@ -1309,18 +1646,53 @@ try {
     const activeGames = phones.map((participant) =>
       participant.frames().find((frame) => frame.url().includes('/engine/player/')),
     );
+    if (background) {
+      await foreground.bringToFront();
+      assert.equal(await worker.evaluate(() => document.visibilityState), 'hidden');
+      console.log(mode, 'verifying native rule timers after 35 seconds in background');
+      await new Promise((resolve) => setTimeout(resolve, 35000));
+      loadingProof.backgroundClock = await worker.evaluate(async () => {
+        const gaps = [];
+        for (let count = 0; count < 6; count++) {
+          const began = performance.now();
+          await new Promise((resolve) => setTimeout(resolve, 200));
+          gaps.push(Math.round(performance.now() - began));
+        }
+        return { visibility: document.visibilityState, ...partyEngine.proof.ruleClock, gaps };
+      });
+      loadingProof.backgroundControl = await computer.evaluate(() => ({
+        ...globalThis.partyBackgroundControl,
+        elapsedSinceTick: Math.round(performance.now() - globalThis.partyBackgroundControl.last),
+      }));
+      assert.equal(loadingProof.backgroundClock.visibility, 'hidden');
+      assert.equal(loadingProof.backgroundClock.source, 'local-service');
+      assert(loadingProof.backgroundClock.gaps.every((gap) => gap >= 190 && gap < 3000));
+      assert(
+        loadingProof.backgroundControl.maxGap > 800 ||
+          loadingProof.backgroundControl.elapsedSinceTick > 800,
+        'unmodified parent browser timers must actually be throttled',
+      );
+      console.log(mode, 'background rule clock', JSON.stringify(loadingProof.backgroundClock));
+    }
     await worker.evaluate(() => {
       partyEngine.lib.config.game_speed = 'vvfast';
       partyEngine.lib.config.duration = 100;
     });
-    for (const activeGame of activeGames) {
+    for (const [index, activeGame] of activeGames.entries()) {
       await activeGame.evaluate(() => {
         partyEngine.lib.config.game_speed = 'vvfast';
         partyEngine.lib.config.duration = 100;
       });
-      await activeGame.evaluate(() => {
-        if (!partyEngine._status.auto) partyEngine.ui.click.auto();
-      });
+      if (process.env.ENGINE_VERIFY_FEEDBACK_DASHBOARD === '1') {
+        if (!(await activeGame.evaluate(() => partyEngine._status.auto)))
+          await phones[index].locator('#match-auto').tap();
+        await phones[index].waitForFunction(
+          () => document.querySelector('#match-auto').getAttribute('aria-pressed') === 'true',
+        );
+      } else
+        await activeGame.evaluate(() => {
+          if (!partyEngine._status.auto) partyEngine.ui.click.auto();
+        });
     }
     for (
       let elapsed = 0;
@@ -1383,8 +1755,9 @@ try {
       assert.equal(display.wuguConcealed, 0, 'all rendered 五谷丰登 cards are public');
       assert.equal(display.deadIncorrect, 0, 'dead identity text matches the revealed identity');
     }
-    for (const audio of ended.audio)
-      assert.equal(audio.failures, 0, 'local audio decodes without failures');
+    if (audioSupported)
+      for (const audio of ended.audio)
+        assert.equal(audio.failures, 0, 'local audio decodes without failures');
     if (mode === 'identity')
       assert(
         ended.publicDisplay.some((display) => display.deadBeforeEnd > 0),
@@ -1501,9 +1874,27 @@ try {
       ),
     );
     closingRooms.add(code);
+    if (playerBrowserName === 'webkit')
+      // Finish waiting-room warming before navigating away. Windows WebKit can
+      // report a cancelled unload fetch as an access-control page error.
+      for (const participant of phones)
+        await participant.waitForFunction(
+          () =>
+            document.querySelector('#engine-preload')?.textContent.includes('本局通用素材已准备好'),
+          {},
+          { timeout: 180000 },
+        );
     await phone.locator('#leave-button').tap();
     for (const friend of phones.slice(1)) await friend.locator('#leave-button').tap();
-    results.push({ mode, loadingProof, initial, encodedPrivacy, seatProof, ended });
+    results.push({
+      mode,
+      loadingProof,
+      initial,
+      encodedPrivacy,
+      seatProof,
+      ended,
+      experienceProof,
+    });
     console.log(mode, 'completed native game and returned to lobby');
   }
   assert.deepEqual(faults, []);
@@ -1513,6 +1904,8 @@ try {
     Object.entries(process.env).filter(([key]) => key.startsWith('ENGINE_VERIFY_')),
   );
   const variant = [
+    playerBrowserName,
+    background ? 'background' : '',
     process.env.ENGINE_VERIFY_PRESET ?? 'beginner',
     process.env.ENGINE_VERIFY_MODES?.replaceAll(',', '-') ?? 'all-modes',
     `${process.env.ENGINE_VERIFY_IDENTITY_SEATS ?? 5}seats`,
@@ -1543,6 +1936,7 @@ try {
         verifiedAt: new Date().toISOString(),
         parameters,
         mobileUserAgent,
+        browserProof,
         results,
         missing: [...missing],
         external: [...external],
@@ -1612,7 +2006,9 @@ try {
       await page.screenshot({ path: `${artifactRoot}/failure-${i}.png` }).catch(() => {});
   throw error;
 } finally {
-  await browser.close();
+  if (playerBrowser !== browser) await playerBrowser.close();
+  if (backgroundBrowser) await backgroundBrowser.close();
+  else await browser.close();
   gateway?.close();
   party?.stop();
 }

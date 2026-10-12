@@ -12,10 +12,14 @@ export async function buildNativeEngine(root) {
   if (JSON.parse(info).commit !== candidate.commit) throw new Error('Pinned engine mismatch');
   const output = resolve(root, 'dist/engine');
   const coreBase = '(globalThis.partyAssetBase ?? "/engine/core/")';
+  const compatibility = resolve(
+    root,
+    'packages/noname-adapter/runtime/browser-compatibility.js',
+  ).replaceAll('\\', '/');
   await mkdir(output, { recursive: true });
   const result = await build({
     stdin: {
-      contents: `export * from './noname.js'; export { default as browserReady } from './noname/init/browser.js'; export { boot } from './noname/init/index.js'; export { device } from './noname/util/index.js'; export { loadBuildInfo } from './noname/util/meta.js';`,
+      contents: `import ${JSON.stringify(compatibility)}; export * from './noname.js'; export { default as browserReady } from './noname/init/browser.js'; export { boot } from './noname/init/index.js'; export { device } from './noname/util/index.js'; export { loadBuildInfo } from './noname/util/meta.js';`,
       resolveDir: engine,
       sourcefile: 'party-browser-entry.js',
     },

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
-import { lib, game, get, _status } from 'noname';
+import { lib, game, ui, get, _status } from 'noname';
+import { markPublicLogCards } from './privacy.js';
 
 /** Only cards already disclosed to everyone, never private ordering/skill data. */
 export function observerCardVisible(card) {
@@ -9,10 +10,33 @@ export function observerCardVisible(card) {
   for (let event = get.event(), depth = 0; event && depth < 32 && !seen.has(event); depth++) {
     seen.add(event);
     if (event.partyShownCompareCards?.includes(card)) return true;
+    if (event.partyShownYanxiCards?.includes(card)) return true;
+    if (event.partyShownGuhuoCards?.includes(card)) return true;
+    // The physical bluff stays face down until its native showCards child.
+    // A use/respond ancestor already contains that card during challenges.
     if (
-      ['useCard', 'respond', 'discard', 'showCards'].includes(event.name) &&
+      ['reguhuo_guess', 'old_guhuo_guess'].includes(event.name) &&
+      event._trigger?.cards?.includes(card)
+    )
+      return false;
+    // recast publishes its exact materials before its loseToDiscardpile child
+    // starts, and suppresses that child's duplicate log. Its replacement draw
+    // and any other recastable hand cards are outside event.cards.
+    if (
+      ['useCard', 'respond', 'discard', 'showCards', 'recast'].includes(event.name) &&
       event.cards?.includes(card)
     )
+      return true;
+    // Native simultaneous discard announces these exact face-up materials
+    // before event.cards is filled and before the cards enter the discard pile.
+    if (
+      event.name === 'loseAsync' &&
+      event.type === 'discard' &&
+      event.visible === true &&
+      event.lose_list?.some((entry) => Array.isArray(entry[1]) && entry[1].includes(card))
+    )
+      return true;
+    if (event.name === 'loseToDiscardpile' && !event.blank && event.cards?.includes(card))
       return true;
     if (
       event.name === 'useCard' &&
@@ -34,6 +58,7 @@ function controller(player) {
   const seat = globalThis.partyEngine?.setup?.seats?.find((seat) => seat.id === player.playerid);
   if (seat?.kind === 'bot') return 'bot';
   if (!player.ws || player.ws.closed) return 'offline';
+  if (player.ws.ws?.interrupted) return 'reconnecting';
   return player.isAuto ? 'auto' : 'human';
 }
 function playerLabel(player) {
@@ -45,6 +70,7 @@ function playerLabel(player) {
 }
 /** Native game.log is the publication boundary; project its arguments explicitly. */
 export function publicLogText(args) {
+  markPublicLogCards(args);
   function valueText(value) {
     const type = get.itemtype(value);
     if (type === 'player') return playerLabel(value);
@@ -74,6 +100,7 @@ export function publicObserverState(recent = []) {
     round: game.roundNumber || 0,
     currentPlayerId: _status.currentPhase?.playerid ?? null,
     ended: !!_status.over,
+    ...(ui?.cardPile ? { deckCount: ui.cardPile.childElementCount } : {}),
     players: players.map((player) => ({
       id: player.playerid,
       nickname: player.nickname,
@@ -122,15 +149,17 @@ export function installObserver(publish) {
       controls.set(player.playerid, next);
       if (!before || before === next || next === 'bot' || _status.over) continue;
       const label =
-        next === 'offline'
-          ? globalThis.partyEngine.proof.started
-            ? '断线，后续选择由原生 AI 接管'
-            : '断线，保留未完成选择至原截止时间'
-          : next === 'auto'
-            ? '开启原生托管'
-            : before === 'offline'
-              ? '重新连接，恢复手动操作'
-              : '恢复手动操作';
+        next === 'reconnecting'
+          ? '连接中断，等待原座位重连'
+          : next === 'offline'
+            ? globalThis.partyEngine.proof.started
+              ? '断线，后续选择由原生 AI 接管'
+              : '断线，保留未完成选择至原截止时间'
+            : next === 'auto'
+              ? '开启原生托管'
+              : ['offline', 'reconnecting'].includes(before)
+                ? '重新连接，恢复手动操作'
+                : '恢复手动操作';
       record(`${playerLabel(player)} · ${label}`);
     }
   }

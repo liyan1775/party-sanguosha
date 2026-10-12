@@ -7,6 +7,7 @@ import { WebSocketServer } from 'ws';
 import {
   APP_ID,
   APP_VERSION,
+  GENERAL_PRESETS,
   type ExtensionInfo,
   type RoomInfo,
   type ServerInfo,
@@ -333,7 +334,7 @@ export function createPartyServer(options: ServerOptions) {
     }
 
     const roomRoute =
-      /^\/api\/rooms\/([A-F0-9]{6})(?:\/(players(?:\/[\w-]+)?|me(?:\/ready)?|start|rematch|bots|events))?$/.exec(
+      /^\/api\/rooms\/([A-F0-9]{6})(?:\/(players(?:\/[\w-]+)?|me(?:\/(?:ready|general))?|start|rematch|bots|events))?$/.exec(
         url.pathname,
       );
     if (roomRoute) {
@@ -358,6 +359,16 @@ export function createPartyServer(options: ServerOptions) {
         case 'PUT me/ready':
           room.setReady(playerToken, (await readBody(request)).ready);
           json(response, 200, room.snapshot());
+          return;
+        case 'GET me/general':
+          json(response, 200, room.generalChoice(playerToken));
+          return;
+        case 'PUT me/general':
+          json(
+            response,
+            200,
+            room.setGeneralChoice(playerToken, (await readBody(request)).general),
+          );
           return;
         case 'PUT ':
           room.updateSettings(await readBody(request), playerToken);
@@ -450,6 +461,11 @@ export function createPartyServer(options: ServerOptions) {
       '/assets/table.js': { file: 'table.js', mime: 'text/javascript; charset=utf-8' },
       '/assets/table.css': { file: 'table.css', mime: 'text/css; charset=utf-8' },
     };
+    for (const preset of GENERAL_PRESETS)
+      assets[`/assets/generals-${preset.id}.json`] = {
+        file: `generals-${preset.id}.json`,
+        mime: 'application/json; charset=utf-8',
+      };
     const asset =
       assets[url.pathname] ??
       (/^\/(server|join\/[A-F0-9]{6})?$/.test(url.pathname)

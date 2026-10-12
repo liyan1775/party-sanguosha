@@ -17,6 +17,28 @@ export function sanitizeObserver(value: unknown, setup: MatchSetup): ObserverSta
     updatedAt: Date.now(),
     round: count(data.round),
     ended: data.ended === true,
+    ...(setup.settings.mode === 'identity' &&
+    data.identityCounts &&
+    ['zhu', 'zhong', 'fan', 'nei'].every(
+      (role) =>
+        Number.isSafeInteger(
+          data.identityCounts![role as keyof NonNullable<ObserverState['identityCounts']>],
+        ) &&
+        data.identityCounts![role as keyof NonNullable<ObserverState['identityCounts']>] >= 0 &&
+        data.identityCounts![role as keyof NonNullable<ObserverState['identityCounts']>] <= 8,
+    )
+      ? {
+          identityCounts: {
+            zhu: data.identityCounts.zhu,
+            zhong: data.identityCounts.zhong,
+            fan: data.identityCounts.fan,
+            nei: data.identityCounts.nei,
+          },
+        }
+      : {}),
+    ...(Number.isSafeInteger(data.deckCount) && data.deckCount! >= 0 && data.deckCount! <= 10000
+      ? { deckCount: data.deckCount }
+      : {}),
     currentPlayerId: setup.seats.some((seat) => seat.id === data.currentPlayerId)
       ? data.currentPlayerId
       : null,
@@ -38,7 +60,8 @@ export function sanitizeObserver(value: unknown, setup: MatchSetup): ObserverSta
           turnedOver: player.turnedOver === true,
           ...(seat.kind === 'bot'
             ? { controller: 'bot' as const }
-            : player.controller && ['human', 'auto', 'offline'].includes(player.controller)
+            : player.controller &&
+                ['human', 'auto', 'offline', 'reconnecting'].includes(player.controller)
               ? { controller: player.controller }
               : {}),
           equipment: Array.isArray(player.equipment)
@@ -64,7 +87,7 @@ export function sanitizeObserver(value: unknown, setup: MatchSetup): ObserverSta
   };
 }
 
-/** Per-match public text only. Previews stay small; earlier pages are local-only. */
+/** Per-match public text only; shared by authorized history and public spectating. */
 export class ObserverJournal {
   private entries: ObserverLogPage['entries'] = [];
   private total = 0;

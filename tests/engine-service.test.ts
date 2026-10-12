@@ -8,12 +8,55 @@ import { createPartyServer } from '../apps/server/src/server.js';
 import { NativeNonameService } from '../packages/noname-adapter/src/service.js';
 import { PollChannel } from '../packages/noname-adapter/src/poll-channel.js';
 import { createServer } from 'node:http';
+import { copyFile, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { resolve, relative } from 'node:path';
 import type { TestContext } from 'node:test';
 import type { MatchSetup } from '../packages/noname-adapter/src/index.js';
+import { GENERAL_PRESETS } from '../packages/shared/src/contracts.js';
 
-async function fixture(t: TestContext) {
+test('单局冻结原生将池与牌堆，刷新沿用快照，非法新配置不能释放已有对局', async (t) => {
   const root = fileURLToPath(new URL('../', import.meta.url));
-  const engine = new NativeNonameService(process.env.PARTY_ENGINE_TEST_ROOT ?? root);
+  const parent = resolve(root, '.runtime');
+  await mkdir(parent, { recursive: true });
+  const temporary = await mkdtemp(resolve(parent, 'roster-snapshot-'));
+  t.after(async () => {
+    const child = relative(parent, temporary);
+    assert(child.startsWith('roster-snapshot-') && !child.includes('..'));
+    await rm(temporary, { recursive: true, force: true });
+  });
+  await mkdir(resolve(temporary, 'config'), { recursive: true });
+  await mkdir(resolve(temporary, '.local/noname/v1.11.6/game'), { recursive: true });
+  await copyFile(
+    resolve(root, 'config/noname-candidate.json'),
+    resolve(temporary, 'config/noname-candidate.json'),
+  );
+  const path = resolve(temporary, 'config/roster-presets.json');
+  const config = JSON.parse(await readFile(resolve(root, 'config/roster-presets.json'), 'utf8'));
+  await writeFile(path, JSON.stringify(config));
+  await writeFile(
+    resolve(temporary, 'config/noname-lab-assets.json'),
+    JSON.stringify({ assets: [], portraitAliases: {} }),
+  );
+  await writeFile(resolve(temporary, '.local/noname/v1.11.6/game/config.json'), '{}');
+  const f = await fixture(t, temporary);
+  const url = `${f.base}/engine/setup/${f.id}?role=player`;
+  const first = await (await fetch(url, { headers: { Cookie: f.ownerCookie } })).json();
+  config.presets[0].characters = ['outside-roster'];
+  config.presets[0].cardPile = config.presets[1].cardPile;
+  await writeFile(path, JSON.stringify(config));
+  const restored = await (await fetch(url, { headers: { Cookie: f.ownerCookie } })).json();
+  assert.equal(restored.rosterPolicy, true);
+  assert.equal(restored.cardPilePolicy, true);
+  assert.equal(restored.preset.characters.length, 27);
+  assert.equal(restored.preset.cardPile.cardCount, 108);
+  assert.deepEqual(restored.preset, first.preset);
+  await assert.rejects(f.engine.start(f.setup), /牌堆配置/);
+  assert.equal(f.engine.matchId(f.room.code), f.id);
+});
+
+async function fixture(t: TestContext, engineRoot?: string) {
+  const root = fileURLToPath(new URL('../', import.meta.url));
+  const engine = new NativeNonameService(engineRoot ?? process.env.PARTY_ENGINE_TEST_ROOT ?? root);
   const party = createPartyServer({ port: 0, webRoot: `${root}/apps/web`, adapter: engine });
   await new Promise<void>((resolve) => party.server.listen(0, '127.0.0.1', resolve));
   const address = party.server.address();
@@ -37,12 +80,19 @@ async function fixture(t: TestContext) {
   const setup: MatchSetup = {
     roomCode: room.code,
     ownerPlayerId: room.ownerId,
-    settings: { mode: 'duel', playerCount: 2, generalPreset: 'beginner', extensions: [] },
+    settings: {
+      mode: 'duel',
+      playerCount: 2,
+      generalPreset: 'beginner',
+      allowGeneralSelection: true,
+      extensions: [],
+    },
     seats: [
       { id: room.ownerId, nickname: '玩家', kind: 'human' },
       { id: 'bot-test', nickname: 'AI', kind: 'bot' },
     ],
     aiPolicy: 'strongest-native',
+    generalSelections: { [room.ownerId]: 'zhaoyun' },
   };
   const started = engine.start(setup);
   void started.catch(() => {});
@@ -52,8 +102,381 @@ async function fixture(t: TestContext) {
       origin,
       headers: { Cookie: cookie },
     });
-  return { base, engine, party, id, room, ownerCookie, workerCookie, started, socket };
+  return { base, engine, party, id, room, ownerCookie, workerCookie, started, socket, setup };
 }
+
+test('手机记录只给本局入座真人：分页沿用公开投影，不发送手牌、牌堆或私有技能数据', async (t) => {
+  const f = await fixture(t);
+  const worker = f.socket('worker', f.workerCookie);
+  await once(worker, 'open');
+  const created = await fetch(`${f.base}/api/rooms`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ nickname: '旁人' }),
+  });
+  const outsiderCookie = created.headers.get('set-cookie')!.split(';')[0]!;
+  for (const Cookie of ['', f.workerCookie, outsiderCookie])
+    assert.equal(
+      (await fetch(`${f.base}/engine/history/${f.id}`, { headers: { Cookie } })).status,
+      403,
+    );
+  const state = {
+    players: [],
+    recent: Array.from({ length: 32 }, (_, i) => `展示牌 ${i + 1}`),
+    logStart: 1,
+    logTotal: 32,
+    deckCount: 91,
+    deck: 'SECRET',
+    hand: 'SECRET',
+    storage: 'SECRET',
+  };
+  worker.send(JSON.stringify({ type: 'observer', state }));
+  await new Promise((resolve) => setTimeout(resolve, 25));
+  const response = await fetch(`${f.base}/engine/history/${f.id}?before=12`, {
+    headers: { Cookie: f.ownerCookie },
+  });
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get('cache-control'), 'no-store');
+  const page = await response.json();
+  assert.equal(page.deckCount, 91);
+  assert.equal(page.total, 32);
+  assert.equal(page.entries.length, 11);
+  assert.equal(page.entries.at(-1).sequence, 11);
+  assert(!JSON.stringify(page).includes('SECRET'));
+  for (const before of ['0', 'NaN', '1.2'])
+    assert.equal(
+      (
+        await fetch(`${f.base}/engine/history/${f.id}?before=${before}`, {
+          headers: { Cookie: f.ownerCookie },
+        })
+      ).status,
+      400,
+    );
+  f.engine.release(f.room.code);
+  assert.equal(
+    (await fetch(`${f.base}/engine/history/${f.id}`, { headers: { Cookie: f.ownerCookie } }))
+      .status,
+    403,
+  );
+});
+
+test('后来者公开观战只读同房当前公开投影和分页，不授予私有通道、席位或房主权限', async (t) => {
+  const f = await fixture(t);
+  const worker = f.socket('worker', f.workerCookie);
+  await once(worker, 'open');
+  t.after(() => worker.terminate());
+  let privateConnections = 0;
+  worker.on('message', (bytes) => {
+    if (JSON.parse(bytes.toString()).type === 'connect') privateConnections++;
+  });
+  const path = `${f.base}/engine/observe/${f.id}?room=${f.room.code}`;
+  assert.equal((await fetch(path)).status, 200);
+  assert.equal((await (await fetch(path)).json()).observer, null);
+  worker.send(
+    JSON.stringify({
+      type: 'observer',
+      state: {
+        round: 2,
+        ended: false,
+        deckCount: 91,
+        currentPlayerId: f.room.ownerId,
+        players: [
+          {
+            id: f.room.ownerId,
+            general: '赵云',
+            identity: '身份未公开',
+            hp: 3,
+            maxHp: 4,
+            handCount: 5,
+            equipment: ['诸葛连弩'],
+            judgments: [],
+            hand: ['SECRET'],
+            storage: 'SECRET',
+            token: 'SECRET',
+          },
+        ],
+        recent: Array.from({ length: 100 }, (_, index) => `公开动作 ${index + 1}`),
+        logStart: 1,
+        logTotal: 100,
+        hand: 'SECRET',
+        deck: 'SECRET',
+        storage: 'SECRET',
+        choices: 'SECRET',
+        token: 'SECRET',
+      },
+    }),
+  );
+  await new Promise((resolve) => setTimeout(resolve, 25));
+  const response = await fetch(path + '&before=13', { headers: { 'X-Party-Ingress': 'public' } });
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get('cache-control'), 'no-store');
+  assert.equal(response.headers.get('set-cookie'), null);
+  const page = await response.json();
+  assert.equal(page.matchId, f.id);
+  assert.equal(page.roomCode, f.room.code);
+  assert.equal(page.observer.deckCount, 91);
+  assert.equal(page.observer.players[0].handCount, 5);
+  assert.equal(page.observer.players[0].identity, '身份未公开');
+  assert.equal(page.entries.length, 12);
+  assert.equal(page.entries.at(-1).sequence, 12);
+  assert(!JSON.stringify(page).includes('SECRET'));
+  assert(!JSON.stringify(page).includes(f.ownerCookie.split('=')[1]!));
+  for (const field of ['networks', 'setup', 'views', 'generalSelections', 'assetBase'])
+    assert(!(field in page));
+  assert.equal((await fetch(path, { method: 'HEAD' })).status, 200);
+  assert.equal(
+    (
+      await fetch(path, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'result', id: f.room.ownerId }),
+      })
+    ).status,
+    405,
+  );
+  assert.equal((await fetch(`${f.base}/engine/observe/${f.id}`)).status, 400);
+  assert.equal((await fetch(`${f.base}/engine/observe/${f.id}?room=OTHER`)).status, 409);
+  for (const before of ['0', '-1', 'NaN', '1.2'])
+    assert.equal((await fetch(path + `&before=${before}`)).status, 400);
+  for (const route of ['setup', 'player', 'view', 'table', 'table-setup', 'history'])
+    assert.equal(
+      (await fetch(`${f.base}/engine/${route}/${f.id}?role=player&seat=${f.room.ownerId}`)).status,
+      403,
+    );
+  assert.equal(
+    (
+      await fetch(`${f.base}/engine/poll/${f.id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ open: true, channel: randomUUID() }),
+      })
+    ).status,
+    403,
+  );
+  const denied = f.socket('player');
+  assert.match(String((await once(denied, 'error'))[0]), /403/);
+  const ownerDenied = await fetch(`${f.base}/api/rooms/${f.room.code}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(f.setup.settings),
+  });
+  assert.equal(ownerDenied.status, 403);
+  assert.equal(privateConnections, 0);
+  assert.equal(f.party.lobby.get(f.room.code).snapshot().players.length, 1);
+  assert.deepEqual(await (await fetch(`${f.base}/api/me`)).json(), {
+    playerId: null,
+    roomCode: null,
+  });
+  f.engine.release(f.room.code);
+  assert.equal((await fetch(path)).status, 409);
+});
+
+test('规则连接短断线保留原局：同执行实例恢复，玩家动作保序，其他实例不能接管', async (t) => {
+  const f = await fixture(t);
+  const execution = randomUUID();
+  const events: any[] = [];
+  f.engine.subscribe((event) => events.push(event));
+  const worker = f.socket(`worker?execution=${execution}`, f.workerCookie);
+  await once(worker, 'open');
+  const clock = f.socket(`clock?execution=${execution}`, f.workerCookie);
+  await once(clock, 'open');
+  const phone = f.socket('player', f.ownerCookie);
+  await once(phone, 'open');
+  worker.send(JSON.stringify({ type: 'started' }));
+  await f.started;
+  const disconnected = once(worker, 'close');
+  worker.terminate();
+  await disconnected;
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  assert(events.some((event) => event.type === 'recovering'));
+  assert(!events.some((event) => event.type === 'failed'));
+  phone.send(JSON.stringify(['auto']));
+  phone.send(JSON.stringify(['unauto']));
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  const other = f.socket(`worker?execution=${randomUUID()}`, f.workerCookie);
+  assert.equal((await once(other, 'close'))[0], 1008);
+  const resumed = f.socket(`worker?execution=${execution}`, f.workerCookie);
+  const messages: any[] = [];
+  resumed.on('message', (bytes) => messages.push(JSON.parse(bytes.toString())));
+  await once(resumed, 'open');
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  assert.deepEqual(
+    messages
+      .filter((message) => message.type === 'message')
+      .map((message) => JSON.parse(message.data)[0]),
+    ['auto', 'unauto'],
+  );
+  assert.equal(f.engine.matchId(f.room.code), f.id);
+  assert(events.some((event) => event.type === 'recovered'));
+  assert(!events.some((event) => event.type === 'failed'));
+  f.engine.release(f.room.code);
+});
+
+test('原生转化技能网关继续拒绝手机提交动态代码，WebSocket与HTTP均不转发', async (t) => {
+  const f = await fixture(t);
+  const worker = f.socket('worker', f.workerCookie);
+  await once(worker, 'open');
+  const received: string[] = [];
+  worker.on('message', (data) => received.push(data.toString()));
+  for (const marker of ['_noname_func:() => {}', '_noname_event:{}', true]) {
+    const phone = f.socket('player', f.ownerCookie);
+    await once(phone, 'open');
+    const close = once(phone, 'close');
+    phone.send(
+      JSON.stringify([
+        'result',
+        { bool: true, _sendskill: ['forged_backup', { filterCard: marker }] },
+      ]),
+    );
+    assert.equal((await close)[0], 1008);
+  }
+  const channel = randomUUID();
+  const path = `${f.base}/engine/poll/${f.id}`;
+  const headers = { Cookie: f.ownerCookie, 'Content-Type': 'application/json' };
+  assert.equal(
+    (await fetch(path, { method: 'POST', headers, body: JSON.stringify({ open: true, channel }) }))
+      .status,
+    200,
+  );
+  const response = await fetch(path, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({
+      channel,
+      sequence: 1,
+      data: JSON.stringify([
+        'result',
+        { _sendskill: ['forged_backup', { filterCard: '_noname_func:() => {}' }] },
+      ]),
+    }),
+  });
+  assert.equal(response.status, 403);
+  assert(
+    received.every((value) => !value.includes('forged_backup')),
+    'client code never reaches the native rule host',
+  );
+});
+
+test('手气卡、心跳、表情和投降网关仍按本人认证，字段白名单拒绝代码和异常次数', async (t) => {
+  const f = await fixture(t);
+  const worker = f.socket('worker', f.workerCookie);
+  await once(worker, 'open');
+  const received: any[] = [];
+  worker.on('message', (data) => received.push(JSON.parse(data.toString())));
+  const headers = { Cookie: f.ownerCookie, 'Content-Type': 'application/json' };
+  const path = `${f.base}/engine/poll/${f.id}`;
+  const channel = randomUUID();
+  await fetch(path, { method: 'POST', headers, body: JSON.stringify({ open: true, channel }) });
+  const packets = [
+    ['partyPing', 1],
+    ['partyLuck', 'epoch', 0, 'refresh'],
+    ['throwEmotion', '_noname_player:bot-test', 'flower'],
+    ['partySurrender', 'request', ''],
+    ['partySurrender', 'approve', 'vote-epoch'],
+    ['partySurrender', 'reject', 'vote-epoch'],
+  ];
+  for (const [index, packet] of packets.entries()) {
+    assert.equal(
+      (
+        await fetch(path, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ channel, sequence: index + 1, data: JSON.stringify(packet) }),
+        })
+      ).status,
+      200,
+    );
+  }
+  const forwarded = received.filter((packet) => packet.type === 'message');
+  assert.equal(forwarded.length, packets.length);
+  assert(forwarded.every((packet) => packet.id === f.room.ownerId));
+  assert.deepEqual(
+    forwarded.map((packet) => JSON.parse(packet.data)),
+    packets,
+  );
+  const rejectedPackets = [
+    ['partyLuck', 'epoch', 8, 'refresh'],
+    ['partyLuck', '_noname_func:() => {}', 0, 'refresh'],
+    ['partyLuck', '_noname_event:{}', 0, 'refresh'],
+    ['partyLuck', 'epoch', 1, 'setHand'],
+    ['throwEmotion', '_noname_func:() => {}', 'egg'],
+    ['throwEmotion', '_noname_player:bot-test', '../../bad'],
+    ['partyPing', '1'],
+    ['partySurrender', 'request', 'forged-epoch'],
+    ['partySurrender', 'approve', ''],
+    ['partySurrender', 'win', 'vote-epoch'],
+    ['partySurrender', 'approve', 'vote-epoch', 'other-player'],
+    ['partySurrender', 'approve', '_noname_func:() => {}'],
+  ];
+  for (const data of [
+    ...rejectedPackets.map((packet) => JSON.stringify(packet)),
+    JSON.stringify(['result', { bool: false, label: '_noname_func:() => {}' }]).replace(
+      '_noname_func:',
+      '\\u005fnoname_func:',
+    ),
+    JSON.stringify(['result', { bool: false, label: '_noname_event:{}' }]).replace(
+      '_noname_event:',
+      '\\u005fnoname_event:',
+    ),
+  ]) {
+    const channel = randomUUID();
+    await fetch(path, { method: 'POST', headers, body: JSON.stringify({ open: true, channel }) });
+    assert.equal(
+      (
+        await fetch(path, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ channel, sequence: 1, data }),
+        })
+      ).status,
+      403,
+    );
+  }
+  assert.equal(received.filter((packet) => packet.type === 'message').length, packets.length);
+  const denied = await fetch(path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ open: true, channel: randomUUID() }),
+  });
+  assert.equal(denied.status, 403);
+});
+
+test('规则时钟仅限本机宿主：手机与公网不能连接，房间释放清理时钟', async (t) => {
+  const f = await fixture(t);
+  for (const cookie of ['', f.ownerCookie]) {
+    const denied = f.socket('clock', cookie);
+    const error = once(denied, 'error');
+    assert.match(String((await error)[0]), /403/);
+  }
+  const workerSetup = await (
+    await fetch(`${f.base}/engine/setup/${f.id}?role=worker`, {
+      headers: { Cookie: f.workerCookie },
+    })
+  ).json();
+  assert.equal(workerSetup.ruleClock, true);
+  const phoneSetup = await (
+    await fetch(`${f.base}/engine/setup/${f.id}?role=player`, {
+      headers: { Cookie: f.ownerCookie },
+    })
+  ).json();
+  assert.equal(phoneSetup.ruleClock, false);
+  const publicClock = new WebSocket(
+    `${f.base.replace('http:', 'ws:')}/engine/socket/${f.id}/clock`,
+    {
+      origin: f.base,
+      headers: { Cookie: f.workerCookie, 'X-Party-Ingress': 'public' },
+    },
+  );
+  assert.match(String((await once(publicClock, 'error'))[0]), /403/);
+  const clock = f.socket('clock', f.workerCookie);
+  await once(clock, 'open');
+  const fired = once(clock, 'message');
+  clock.send(JSON.stringify({ type: 'schedule', id: -1, delay: 5, repeat: false }));
+  assert.deepEqual(JSON.parse((await fired)[0].toString()), { type: 'clock', id: -1 });
+  const close = once(clock, 'close');
+  f.engine.release(f.room.code);
+  assert.equal((await close)[0], 1000);
+});
 
 test('轻量网关：本机按席位镜像，手机只收自己的声明状态，过期或伪造操作不进入原生规则', async (t) => {
   const f = await fixture(t);
@@ -249,6 +672,17 @@ test('静态引擎资源可压缩和重新验证，私有设置始终禁止缓�
   const settings = await setup.json();
   if (f.engine.status().preload) {
     assert.equal(setup.status, 200);
+    assert.equal(
+      'generalSelections' in settings,
+      false,
+      'phones never receive lobby preference maps',
+    );
+    const ruleSetup = await (
+      await fetch(`${f.base}/engine/setup/${f.id}?role=worker`, {
+        headers: { Cookie: f.workerCookie },
+      })
+    ).json();
+    assert.deepEqual(ruleSetup.generalSelections, { [f.room.ownerId]: 'zhaoyun' });
     const pinned = await fetch(`${f.base}${settings.assetBase}card/standard.js`);
     assert.match(pinned.headers.get('cache-control')!, /immutable/);
   } else {
@@ -298,6 +732,19 @@ test('大厅预加载清单仅有固定公共素材，武将档切换补齐定�
   }
   const beginner = await (await fetch(`${f.base}/engine/preload`)).json();
   const advanced = await (await fetch(`${f.base}/engine/preload?preset=advanced&mode=duel`)).json();
+  assert.deepEqual(
+    beginner.assets
+      .filter((url: string) => /\/character\/(?!rank|replace|perfectPairs)/.test(url))
+      .map((url: string) => url.split('/').at(-1)),
+    ['standard.js', 'refresh.js', 'sp.js', 'old.js'],
+  );
+  for (const preset of GENERAL_PRESETS.filter((entry) => entry.official)) {
+    const response = await fetch(`${f.base}/engine/preload?preset=${preset.id}`);
+    assert.equal(response.status, 200);
+    const list = await response.json();
+    assert(list.assets.length > beginner.assets.length);
+    assert(!JSON.stringify(list).includes('/setup/'));
+  }
   assert(advanced.assets.length > beginner.assets.length);
   assert(
     beginner.assets.every((url: string) =>
@@ -323,7 +770,15 @@ test('大厅预加载清单仅有固定公共素材，武将档切换补齐定�
       headers: { Cookie: f.ownerCookie },
     })
   ).json();
-  assert.equal(Object.keys(setup.mobilePortraits).length, 189);
+  assert.equal(Object.keys(setup.mobilePortraits).length, 27);
+  assert.deepEqual(Object.keys(setup.mobilePortraits).sort(), [...setup.preset.characters].sort());
+  assert(!Object.keys(setup.portraitAliases).some((id) => !setup.preset.characters.includes(id)));
+  assert(setup.audioFiles.includes('skill/longdan_sha1.mp3'));
+  assert(!setup.audioFiles.some((path: string) => path.includes('olwushen')));
+  const audioManifest = JSON.parse(
+    await readFile(new URL('../config/noname-lab-assets.json', import.meta.url), 'utf8'),
+  );
+  assert.deepEqual(setup.audioFiles, audioManifest.audioFilesByPreset.beginner);
   const image = await fetch(f.base + Object.values(setup.mobilePortraits)[0]);
   assert.equal(image.headers.get('content-type'), 'image/webp');
   assert.match(image.headers.get('cache-control')!, /immutable/);
@@ -776,7 +1231,13 @@ test('局域网桥接保持逐席认证、跨房间隔离和动作去重，授�
   const pending = f.engine.start({
     roomCode: other.code,
     ownerPlayerId: other.ownerId,
-    settings: { mode: 'duel', playerCount: 2, generalPreset: 'beginner', extensions: [] },
+    settings: {
+      mode: 'duel',
+      playerCount: 2,
+      generalPreset: 'beginner',
+      allowGeneralSelection: false,
+      extensions: [],
+    },
     seats: [
       { id: other.ownerId, nickname: '另一桌', kind: 'human' },
       { id: 'other-bot', nickname: 'AI', kind: 'bot' },

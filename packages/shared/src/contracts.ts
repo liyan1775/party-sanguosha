@@ -1,5 +1,9 @@
+export { GENERAL_PRESETS } from './general-presets.js';
+import type { GeneralPresetId } from './general-presets.js';
+export type { GeneralPresetId } from './general-presets.js';
+
 export const APP_ID = 'party-sanguosha';
-export const APP_VERSION = '0.6.3';
+export const APP_VERSION = '0.7.9';
 
 export const MODES = [
   {
@@ -21,7 +25,7 @@ export const MODES = [
     name: '2v2',
     minPlayers: 4,
     maxPlayers: 4,
-    description: '两人一队，默契配合，4 人',
+    description: 'OL 常规 2v2，1、4 位与 2、3 位各一队，4 人',
   },
   {
     id: 'duel',
@@ -34,13 +38,6 @@ export const MODES = [
 
 export type ModeId = (typeof MODES)[number]['id'];
 
-export const GENERAL_PRESETS = [
-  { id: 'beginner', name: '新手档', description: '标准包，适合一起熟悉规则' },
-  { id: 'advanced', name: '进阶档', description: '界限突破 + 阴 + 雷 + 神话再临 12 神将' },
-] as const;
-
-export type GeneralPresetId = (typeof GENERAL_PRESETS)[number]['id'];
-
 export interface ExtensionInfo {
   id: string;
   name: string;
@@ -52,7 +49,23 @@ export interface RoomSettings {
   mode: ModeId;
   playerCount: number;
   generalPreset: GeneralPresetId;
+  allowGeneralSelection: boolean;
   extensions: string[];
+}
+
+/** Only the requesting seated human's preference, never a public room snapshot. */
+export interface GeneralChoiceView {
+  selected: string | null;
+  available: string[];
+}
+
+/** Loading, lord-first selection, and each human's possible faction deadline. */
+export function matchStartTimeout(settings: RoomSettings, humanCount: number): number {
+  return (
+    150000 +
+    (settings.mode === 'identity' ? 2 : 1) * 65000 +
+    (settings.generalPreset !== 'beginner' ? humanCount * 65000 : 0)
+  );
 }
 
 export interface PlayerView {
@@ -69,6 +82,29 @@ export interface EngineStatus {
   message: string;
   preload?: boolean;
   lightweight?: boolean;
+  cardPilePolicy?: boolean;
+  connectionRecovery?: boolean;
+  luckCards?: boolean;
+  surrender?: boolean;
+  playerHistory?: boolean;
+  experience?: boolean;
+  publicSpectating?: boolean;
+}
+
+/** Explicit consent only; identity votes do not contain roles or factions. */
+export interface SurrenderState {
+  kind: 'surrender' | 'end';
+  available: boolean;
+  cooldownMs: number;
+  notice: string;
+  vote: {
+    epoch: string;
+    initiator: string;
+    remainingMs: number;
+    eligible: boolean;
+    voted: boolean;
+    participants: { id: string; nickname: string; approved: boolean }[];
+  } | null;
 }
 
 export interface RoomView {
@@ -80,7 +116,23 @@ export interface RoomView {
   players: PlayerView[];
   ownerId: string | null;
   engine: EngineStatus;
+  matchFailure?: { code: MatchFailureCode; at: number };
+  matchRecovery?: { deadline: number };
 }
+
+export type MatchFailureCode =
+  | 'worker-disconnected'
+  | 'clock-disconnected'
+  | 'runtime-error'
+  | 'startup-timeout'
+  | 'protocol-error';
+export const MATCH_FAILURE_MESSAGES: Record<MatchFailureCode, string> = {
+  'worker-disconnected': '电脑规则连接已中断，原牌局未能恢复。请保持电脑服务页开启。',
+  'clock-disconnected': '电脑规则计时连接已中断，原牌局未能恢复。请检查电脑服务。',
+  'runtime-error': '电脑执行牌局时发生异常，本局已中断。',
+  'startup-timeout': '开局等待超过期限，请检查电脑服务页和玩家连接。',
+  'protocol-error': '电脑规则通信发生异常，本局已中断。',
+};
 
 export interface RoomSummary {
   code: string;
@@ -128,12 +180,21 @@ export interface ApiError {
   error: { code: string; message: string };
 }
 
-/** Explicit public projection for the local observer; never native serialized state. */
+export interface IdentityCounts {
+  zhu: number;
+  zhong: number;
+  fan: number;
+  nei: number;
+}
+
+/** Explicit public projection for an observer; never native serialized state. */
 export interface ObserverState {
   updatedAt: number;
   round: number;
   currentPlayerId: string | null;
   ended: boolean;
+  deckCount?: number;
+  identityCounts?: IdentityCounts | null;
   players: {
     id: string;
     nickname: string;
@@ -146,7 +207,7 @@ export interface ObserverState {
     dead: boolean;
     linked: boolean;
     turnedOver: boolean;
-    controller?: 'human' | 'auto' | 'offline' | 'bot';
+    controller?: 'human' | 'auto' | 'offline' | 'reconnecting' | 'bot';
     equipment: string[];
     judgments: string[];
   }[];

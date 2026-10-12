@@ -28,8 +28,9 @@ export async function api<T>(
   method = 'GET',
   body?: unknown,
   headers: Record<string, string> = {},
+  timeoutMs = path.endsWith('/start') ? 190000 : 20000,
 ): Promise<T> {
-  const deadline = requestDeadline(undefined, path.endsWith('/start') ? 190000 : 20000);
+  const deadline = requestDeadline(undefined, timeoutMs);
   try {
     const response = await fetch(path, {
       method,
@@ -56,14 +57,18 @@ export function frame(
   title: string,
   subtitle: string,
   body: string,
+  artwork = '',
 ): void {
   app.className = layout;
   app.innerHTML = `
-    <header class="masthead"><a class="brand" href="/" aria-label="聚会三国杀首页"><span class="seal">杀</span><span>聚会三国杀<small>一桌朋友，一场好戏</small></span></a><span id="connection" class="connection">正在连接</span></header>
-    <section class="intro"><p class="eyebrow">${eyebrow}</p><h1>${title}</h1><p>${subtitle}</p></section>
+    <a class="skip-link" href="#lobby-content">跳到主要内容</a>
+    <header class="masthead"><a class="brand" href="/" aria-label="聚会三国杀首页"><span class="seal">杀</span><span>聚会三国杀<small>以牌会友 · 尽兴而归</small></span></a><nav class="masthead-nav" aria-label="大厅导航"><a href="/" ${layout.includes('home-layout') ? 'aria-current="page"' : ''}>聚会大厅</a>${layout.includes('home-layout') ? '<a href="#lobby-guide">玩法与武将</a>' : ''}</nav><span id="connection" class="connection" role="status">正在连接</span></header>
+    <section class="page-hero"><div class="intro"><p class="eyebrow">${eyebrow}</p><h1>${title}</h1><p>${subtitle}</p></div>${artwork}</section>
+    <div id="lobby-content" tabindex="-1">
     <div id="message" class="message" role="alert" hidden></div>
     ${body}
-    <footer>聚会三国杀 v${APP_VERSION} · 扫码开房 · AI 补位 · 手机对局</footer>`;
+    </div>
+    <footer><span>一桌朋友，一场好戏。</span><span>聚会三国杀 v${APP_VERSION} · 扫码开房 · AI 补位 · 手机对局</span></footer>`;
 }
 
 export function message(text: string, success = false): void {
@@ -83,6 +88,7 @@ export async function perform(
   render: () => void = () => {},
 ): Promise<void> {
   button.dataset.busy = 'true';
+  button.setAttribute('aria-busy', 'true');
   button.disabled = true;
   message('');
   try {
@@ -91,6 +97,7 @@ export async function perform(
     message(error instanceof Error ? error.message : '操作失败，请重试。');
   } finally {
     delete button.dataset.busy;
+    button.removeAttribute('aria-busy');
     button.disabled = false;
     render();
   }

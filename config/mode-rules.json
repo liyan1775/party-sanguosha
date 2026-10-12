@@ -10,11 +10,35 @@
     "landlordSkills": ["feiyang", "bahu"],
     "candidateEngineMode": "doudizhu",
     "candidateEngineVariant": "normal",
-    "candidateFeiyangVersion": "online"
+    "candidateFeiyangVersion": "online",
+    "generalChoices": { "landlord": 10, "farmer": 6 }
   },
   "versus": {
     "players": 4,
     "teams": [2, 2],
+    "variant": "ol-standard",
+    "randomSeats": true,
+    "teamSeats": [
+      [1, 4],
+      [2, 3]
+    ],
+    "turnOrder": [1, 2, 3, 4],
+    "initialHandCards": [4, 4, 4, 5],
+    "firstTurnDrawReduction": 1,
+    "generalChoicesPerTeam": 10,
+    "sharedTeamGeneralPool": true,
+    "confirmedGeneralVisibleToTeammate": true,
+    "claimedGeneralRemainsVisible": true,
+    "optionalTeammateDeathDraw": 1,
+    "killRewardCards": 0,
+    "friendlyKillDiscardAll": false,
+    "replacementGenerals": false,
+    "winCondition": "all-enemies-dead",
+    "sources": [
+      "https://gw-staging.sanguosha.com/mode",
+      "https://www.sanguosha.com/news/20240531_3096_4916",
+      "https://www.sanguosha.com/news/20170628_3298_5618"
+    ],
     "candidateEngineMode": "versus",
     "candidateEngineVariant": "2v2"
   },

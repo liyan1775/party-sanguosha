@@ -7,7 +7,10 @@ import { WebSocket, WebSocketServer } from 'ws';
 import type { EngineAdapter, EngineEvent, MatchSetup } from './index.js';
 import {
   APP_VERSION,
+  GENERAL_PRESETS,
+  matchStartTimeout,
   type EngineStatus,
+  type MatchFailureCode,
   type ObserverState,
   type PlayerNetwork,
 } from '../../shared/src/contracts.js';
@@ -18,19 +21,31 @@ import { PollChannel } from './poll-channel.js';
 import { LanBridge } from './lan-bridge.js';
 import { sanitizeTable, tableAction } from './table.js';
 import type { TableState } from '../../shared/src/table.js';
+import { validateCardPile, type CardPile } from '../runtime/card-pile.js';
+import { RuleClock } from './rule-clock.js';
 
 type Match = {
   id: string;
   setup: MatchSetup;
+  preset: RosterPreset;
   state: 'starting' | 'playing' | 'ended' | 'failed';
   host?: WebSocket;
+  clock?: WebSocket;
+  clockController?: RuleClock;
+  executionId?: string;
+  recoveryTimer?: NodeJS.Timeout;
+  recoveryDeadline?: number;
+  recovering: Set<'worker' | 'clock'>;
   players: Map<string, WebSocket | PollChannel>;
   tables: Map<string, WebSocket | PollChannel>;
   views: Set<string>;
   viewTimers: Map<string, NodeJS.Timeout>;
   tableStates: Map<string, TableState>;
   polling: Map<string, PollChannel>;
-  pendingPlayers: { id: string; source: WebSocket | PollChannel; data: string }[];
+  pendingPlayers: {
+    packet: { type: string; id: string; data?: string };
+    source?: WebSocket | PollChannel;
+  }[];
   pendingPlayerBytes: number;
   observer: ObserverState | null;
   journal: ObserverJournal;
@@ -39,11 +54,17 @@ type Match = {
   reject: (error: Error) => void;
   timer: NodeJS.Timeout;
 };
+type RosterPreset = {
+  id: string;
+  characters: string[];
+  cardPile: CardPile;
+  definitionPacks: { characters: string[]; cards: string[] };
+};
 type Membership = (roomCode: string, token?: string) => { id: string } | undefined;
 type Portraits = {
   commit: string;
   hash: string;
-  files: Record<string, { sha256: string }>;
+  files: Record<string, { sha256: string; version?: string }>;
   characters: Record<string, string>;
 };
 const cookie = (request: IncomingMessage, name: string) =>
@@ -78,6 +99,39 @@ function safeMessage(data: string): boolean {
   if (data.length > 131072) return false;
   try {
     const message: unknown = JSON.parse(data);
+    // Check decoded strings too; JSON Unicode escapes must not smuggle native
+    // executable markers past a data-only command's early whitelist return.
+    const decoded = JSON.stringify(message);
+    if (decoded.includes('_noname_func:') || decoded.includes('_noname_event:')) return false;
+    if (Array.isArray(message)) {
+      if (message[0] === 'partyPing')
+        return message.length === 2 && Number.isSafeInteger(message[1]) && message[1] > 0;
+      if (message[0] === 'partyLuck')
+        return (
+          message.length === 4 &&
+          typeof message[1] === 'string' &&
+          /^[\w-]{1,80}$/.test(message[1]) &&
+          Number.isSafeInteger(message[2]) &&
+          message[2] >= 0 &&
+          message[2] <= 3 &&
+          ['refresh', 'keep'].includes(message[3])
+        );
+      if (message[0] === 'partySurrender')
+        return (
+          message.length === 3 &&
+          typeof message[2] === 'string' &&
+          (message[1] === 'request'
+            ? message[2] === ''
+            : ['approve', 'reject'].includes(message[1]) && /^[\w-]{1,80}$/.test(message[2]))
+        );
+      if (message[0] === 'throwEmotion')
+        return (
+          (message.length === 3 || (message.length === 4 && typeof message[3] === 'boolean')) &&
+          typeof message[1] === 'string' &&
+          /^_noname_player:[\w-]{1,80}$/.test(message[1]) &&
+          ['flower', 'egg', 'wine', 'shoe'].includes(message[2])
+        );
+    }
     // These are native player actions. Configuration, arbitrary execution,
     // deck inspection and the upstream room host protocol are never accepted.
     if (
@@ -94,6 +148,15 @@ function safeMessage(data: string): boolean {
         'dataSync',
         'syncHandcard',
       ].includes(message[0])
+    )
+      return false;
+    // Native chooseButton factories run on the authenticated rule worker.
+    // Even a code-free _sendskill must not replace its authoritative definition.
+    if (
+      ['result', 'tempResult'].includes(message[0]) &&
+      message[1] &&
+      typeof message[1] === 'object' &&
+      Object.hasOwn(message[1], '_sendskill')
     )
       return false;
     return !data.includes('_noname_func:') && !data.includes('_noname_event:');
@@ -204,6 +267,13 @@ export class NativeNonameService implements EngineAdapter {
       ready,
       preload: assets,
       lightweight: false,
+      cardPilePolicy: true,
+      connectionRecovery: true,
+      luckCards: true,
+      surrender: true,
+      playerHistory: true,
+      publicSpectating: true,
+      experience: true,
       message: ready
         ? '无名杀已就绪，真人准备后可以开始对局。'
         : assets
@@ -233,13 +303,25 @@ export class NativeNonameService implements EngineAdapter {
     );
   }
   start(setup: MatchSetup): Promise<void> {
+    const presets = JSON.parse(
+      readFileSync(resolve(this.projectRoot, 'config/roster-presets.json'), 'utf8'),
+    ) as { presets: RosterPreset[] };
+    const preset = presets.presets.find((item) => item.id === setup.settings.generalPreset);
+    if (!preset?.characters.length) return Promise.reject(new Error('缺少武将白名单'));
+    try {
+      validateCardPile(preset);
+    } catch (error) {
+      return Promise.reject(error);
+    }
     this.release(setup.roomCode);
     return new Promise((resolveStart, reject) => {
       const id = randomUUID();
       const match: Match = {
         id,
         setup: structuredClone(setup),
+        preset: structuredClone(preset),
         state: 'starting',
+        recovering: new Set(),
         players: new Map(),
         tables: new Map(),
         views: new Set(),
@@ -253,21 +335,45 @@ export class NativeNonameService implements EngineAdapter {
         networks: new Map(),
         resolve: resolveStart,
         reject,
-        timer: setTimeout(() => this.fail(match), 180000),
+        timer: setTimeout(
+          () => this.fail(match, 'startup-timeout'),
+          matchStartTimeout(
+            setup.settings,
+            setup.seats.filter((seat) => seat.kind === 'human').length,
+          ),
+        ),
       };
       this.matches.set(id, match);
       this.publishJobs();
     });
   }
-  private fail(match: Match) {
+  private fail(match: Match, code: MatchFailureCode = 'runtime-error') {
+    if (this.matches.get(match.id) !== match) return;
     if (match.state === 'failed' || match.state === 'ended') return;
     const wasStarting = match.state === 'starting';
     match.state = 'failed';
     match.pendingPlayers = [];
     match.pendingPlayerBytes = 0;
     clearTimeout(match.timer);
+    clearTimeout(match.recoveryTimer);
+    match.recovering.clear();
+    match.clockController?.close();
+    match.clock?.close(1000);
+    match.host?.close(1000);
     if (wasStarting) match.reject(new Error('Native rule worker unavailable'));
-    this.emit({ type: 'failed', roomCode: match.setup.roomCode });
+    // Fixed lifecycle metadata only: no exception stack, native payload,
+    // nickname, cards, identities, choices or session credentials.
+    console.warn(
+      JSON.stringify({
+        event: 'match-failed',
+        at: new Date().toISOString(),
+        roomCode: match.setup.roomCode,
+        matchId: match.id,
+        mode: match.setup.settings.mode,
+        code,
+      }),
+    );
+    this.emit({ type: 'failed', roomCode: match.setup.roomCode, code });
     for (const player of match.players.values()) player.close(1011, '对局服务已中断');
     for (const player of match.tables.values()) player.close(1011, '对局服务已中断');
   }
@@ -278,8 +384,11 @@ export class NativeNonameService implements EngineAdapter {
       match.pendingPlayers = [];
       match.pendingPlayerBytes = 0;
       clearTimeout(match.timer);
+      clearTimeout(match.recoveryTimer);
+      match.clockController?.close();
       if (match.state === 'starting') match.reject(new Error('对局已由电脑结束'));
       match.host?.close(1000);
+      match.clock?.close(1000);
       for (const player of match.players.values()) player.close(1000);
       for (const player of match.tables.values()) player.close(1000);
       for (const timer of match.viewTimers.values()) clearTimeout(timer);
@@ -369,22 +478,22 @@ export class NativeNonameService implements EngineAdapter {
     const previous = clients.get(playerId);
     previous?.close(1000, '已在另一页面继续对局');
     if (!lightweight && previous instanceof WebSocket)
-      send(match.host, { type: 'close', id: playerId });
+      this.sendHost(match, { type: 'close', id: playerId });
     channel = new PollChannel(
       id,
       playerId,
-      () => {
+      (code) => {
         if (clients.get(playerId) !== channel) return;
         clients.delete(playerId);
         if (lightweight) this.tableDisconnected(match, playerId);
-        else send(match.host, { type: 'close', id: playerId });
+        else this.sendHost(match, { type: code === 1008 ? 'close' : 'disconnect', id: playerId });
       },
       lightweight,
     );
     match.polling.set(id, channel);
     clients.set(playerId, channel);
     if (lightweight) this.tableConnected(match, playerId);
-    else send(match.host, { type: 'connect', id: playerId });
+    else this.sendHost(match, { type: 'connect', id: playerId });
     return channel;
   }
   private forwardPlayer(
@@ -394,19 +503,86 @@ export class NativeNonameService implements EngineAdapter {
     data: string,
   ): boolean {
     if (match.players.get(id) !== source || source.readyState !== 1) return false;
+    return this.sendHost(match, { type: 'message', id, data }, source);
+  }
+  private sendHost(
+    match: Match,
+    packet: { type: string; id: string; data?: string },
+    source?: WebSocket | PollChannel,
+  ): boolean {
     if (match.host?.readyState === WebSocket.OPEN) {
-      send(match.host, { type: 'message', id, data });
+      send(match.host, packet);
       return true;
     }
-    // Phones can load before the rule iframe, especially on LAN. Acknowledged
-    // initialization must not disappear while the worker is still starting.
-    if (match.state !== 'starting') return false;
-    const bytes = Buffer.byteLength(data);
-    if (match.pendingPlayers.length >= 512 || match.pendingPlayerBytes + bytes > 4 * 1024 * 1024)
+    if (match.state !== 'starting' && !(match.state === 'playing' && match.executionId))
       return false;
-    match.pendingPlayers.push({ id, source, data });
+    // Before the very first worker connection, rebuild only the current seat
+    // set on open; superseded initialization is checked against its source.
+    if (!match.host && packet.type !== 'message') return true;
+    const bytes = Buffer.byteLength(JSON.stringify(packet));
+    if (match.pendingPlayers.length >= 512 || match.pendingPlayerBytes + bytes > 4 * 1024 * 1024) {
+      if (!source) this.fail(match, 'protocol-error');
+      return false;
+    }
+    match.pendingPlayers.push({ packet, ...(source ? { source } : {}) });
     match.pendingPlayerBytes += bytes;
     return true;
+  }
+  private ruleDisconnected(
+    match: Match,
+    role: 'worker' | 'clock',
+    socket: WebSocket,
+    code: number,
+  ): void {
+    if (!this.matches.has(match.id) || ['failed', 'ended'].includes(match.state)) return;
+    if ((role === 'worker' ? match.host : match.clock) !== socket) return;
+    if (!match.executionId || [1000, 1008, 4000].includes(code)) {
+      this.fail(match, role === 'worker' ? 'worker-disconnected' : 'clock-disconnected');
+      return;
+    }
+    match.recovering.add(role);
+    if (match.recoveryTimer) return;
+    match.recoveryDeadline = Date.now() + 20000;
+    console.info(
+      JSON.stringify({
+        event: 'match-recovering',
+        at: new Date().toISOString(),
+        roomCode: match.setup.roomCode,
+        matchId: match.id,
+        role,
+        closeCode: code,
+      }),
+    );
+    this.emit({
+      type: 'recovering',
+      roomCode: match.setup.roomCode,
+      deadline: match.recoveryDeadline,
+    });
+    match.recoveryTimer = setTimeout(
+      () =>
+        this.fail(
+          match,
+          match.recovering.has('worker') ? 'worker-disconnected' : 'clock-disconnected',
+        ),
+      20000,
+    );
+    match.recoveryTimer.unref();
+  }
+  private ruleRecovered(match: Match, role: 'worker' | 'clock'): void {
+    match.recovering.delete(role);
+    if (match.recovering.size || !match.recoveryTimer) return;
+    clearTimeout(match.recoveryTimer);
+    delete match.recoveryTimer;
+    delete match.recoveryDeadline;
+    console.info(
+      JSON.stringify({
+        event: 'match-recovered',
+        at: new Date().toISOString(),
+        roomCode: match.setup.roomCode,
+        matchId: match.id,
+      }),
+    );
+    this.emit({ type: 'recovered', roomCode: match.setup.roomCode });
   }
   private action(match: Match, channel: PollChannel, sequence: unknown, data: unknown) {
     channel.touch();
@@ -474,7 +650,7 @@ export class NativeNonameService implements EngineAdapter {
     this.heartbeat.unref();
     server.on('upgrade', (request, socket, head) => {
       const url = new URL(request.url ?? '/', 'http://localhost');
-      const route = /^\/engine\/socket\/([\w-]+)\/(worker|player|view)$/.exec(url.pathname);
+      const route = /^\/engine\/socket\/([\w-]+)\/(worker|player|view|clock)$/.exec(url.pathname);
       if (!route) return;
       const match = route && this.matches.get(route[1]!);
       let sameOrigin = false;
@@ -488,9 +664,9 @@ export class NativeNonameService implements EngineAdapter {
       const allowed =
         match &&
         sameOrigin &&
-        (route![2] === 'worker' || route![2] === 'view'
+        (route![2] === 'worker' || route![2] === 'view' || route![2] === 'clock'
           ? this.hostAuthorized(request) &&
-            (route![2] === 'worker' || (!!viewId && match.views.has(viewId)))
+            (route![2] !== 'view' || (!!viewId && match.views.has(viewId)))
           : seat &&
             match.setup.seats.some(
               (candidate) => candidate.kind === 'human' && candidate.id === seat.id,
@@ -502,19 +678,47 @@ export class NativeNonameService implements EngineAdapter {
       wss.handleUpgrade(request, socket, head, (ws) => {
         alive.add(ws);
         ws.on('pong', () => alive.add(ws));
-        if (route![2] === 'worker') {
+        if (route![2] === 'worker' || route![2] === 'clock') {
+          const execution = url.searchParams.get('execution') ?? undefined;
+          if (
+            (execution && !/^[a-f0-9-]{36}$/.test(execution)) ||
+            (match.executionId && execution !== match.executionId)
+          ) {
+            ws.close(1008);
+            return;
+          }
+          if (execution) match.executionId = execution;
+        }
+        if (route![2] === 'clock') {
+          if (match.clock?.readyState === WebSocket.OPEN) {
+            ws.close(1008);
+            return;
+          }
+          match.clock = ws;
+          if (match.clockController) match.clockController.bind(ws);
+          else match.clockController = new RuleClock(ws, Boolean(match.executionId));
+          this.ruleRecovered(match, 'clock');
+          ws.on('close', (code) => this.ruleDisconnected(match, 'clock', ws, code));
+        } else if (route![2] === 'worker') {
           if (match.host?.readyState === WebSocket.OPEN) {
             ws.close(1008);
             return;
           }
           match.host = ws;
           for (const id of match.players.keys()) send(ws, { type: 'connect', id });
-          for (const packet of match.pendingPlayers)
-            if (match.players.get(packet.id) === packet.source && packet.source.readyState === 1)
-              send(ws, { type: 'message', id: packet.id, data: packet.data });
+          for (const { packet, source } of match.pendingPlayers)
+            if (!source || (match.players.get(packet.id) === source && source.readyState === 1))
+              send(ws, packet);
           match.pendingPlayers = [];
           match.pendingPlayerBytes = 0;
+          this.ruleRecovered(match, 'worker');
           ws.on('message', (bytes) => {
+            if (
+              this.matches.get(match.id) !== match ||
+              match.host !== ws ||
+              match.state === 'failed'
+            )
+              return;
             try {
               const message = JSON.parse(bytes.toString()) as {
                 type: string;
@@ -541,12 +745,10 @@ export class NativeNonameService implements EngineAdapter {
                 this.emit({ type: 'ended', roomCode: match.setup.roomCode });
               } else if (message.type === 'failed') this.fail(match);
             } catch {
-              this.fail(match);
+              this.fail(match, 'protocol-error');
             }
           });
-          ws.on('close', () => {
-            if (match.host === ws && this.matches.has(match.id)) this.fail(match);
-          });
+          ws.on('close', (code) => this.ruleDisconnected(match, 'worker', ws, code));
         } else {
           const id = viewId ?? seat!.id;
           const lightweight = route![2] === 'player' && url.searchParams.get('client') === 'light';
@@ -609,11 +811,11 @@ export class NativeNonameService implements EngineAdapter {
           if (previous) {
             previous.close(1000, '已在另一页面继续对局');
             if (!lightweight && previous instanceof WebSocket)
-              send(match.host, { type: 'close', id });
+              this.sendHost(match, { type: 'close', id });
           }
           clients.set(id, ws);
           if (lightweight) this.tableConnected(match, id);
-          else send(match.host, { type: 'connect', id });
+          else this.sendHost(match, { type: 'connect', id });
           ws.on('message', (bytes) => {
             const data = bytes.toString();
             if (clients.get(id) !== ws || !this.matches.has(match.id)) return;
@@ -659,11 +861,11 @@ export class NativeNonameService implements EngineAdapter {
             }
             if (!this.forwardPlayer(match, id, ws, data)) ws.close(1011, '对局服务暂时不可用');
           });
-          ws.on('close', () => {
+          ws.on('close', (code) => {
             if (clients.get(id) !== ws) return;
             clients.delete(id);
             if (lightweight) this.tableDisconnected(match, id);
-            else send(match.host, { type: 'close', id });
+            else this.sendHost(match, { type: code === 1008 ? 'close' : 'disconnect', id });
           });
         }
       });
@@ -843,7 +1045,7 @@ export class NativeNonameService implements EngineAdapter {
         const preset = url.searchParams.get('preset') ?? 'beginner';
         const mode = url.searchParams.get('mode') ?? 'identity';
         if (
-          !['beginner', 'advanced'].includes(preset) ||
+          !GENERAL_PRESETS.some((entry) => entry.id === preset) ||
           !['identity', 'duel', 'doudizhu', 'versus'].includes(mode)
         ) {
           json(response, 400, {});
@@ -948,7 +1150,8 @@ export class NativeNonameService implements EngineAdapter {
       if (portrait) {
         if (
           !this.portraits ||
-          portrait[1] !== this.portraits.hash ||
+          (portrait[1] !== this.portraits.hash &&
+            portrait[1] !== this.portraits.files[portrait[2]!]?.version) ||
           !this.portraits.files[portrait[2]!]
         ) {
           json(response, 404, {});
@@ -1041,6 +1244,61 @@ export class NativeNonameService implements EngineAdapter {
         }
         return true;
       }
+      const observeRoute = /^\/engine\/observe\/([\w-]+)$/.exec(url.pathname);
+      if (observeRoute) {
+        const match = this.matches.get(observeRoute[1]!);
+        const roomCode = url.searchParams.get('room');
+        if (!roomCode) {
+          json(response, 400, { error: { message: '请从房间链接进入观战。' } });
+          return true;
+        }
+        if (!match || match.setup.roomCode !== roomCode) {
+          json(response, 409, { error: { message: '这一局已经释放，请刷新房间查看当前牌局。' } });
+          return true;
+        }
+        const before = url.searchParams.has('before')
+          ? Number(url.searchParams.get('before'))
+          : undefined;
+        if (before !== undefined && (!Number.isSafeInteger(before) || before < 1)) {
+          json(response, 400, { error: { message: '公开记录页码无效。' } });
+          return true;
+        }
+        // This endpoint never opens a native client, grants a seat, or exposes
+        // setup/network details. Both fields have already passed the deliberate
+        // public whitelist used by the computer observer and public journal.
+        json(response, 200, {
+          ...match.journal.page(match.id, before),
+          roomCode: match.setup.roomCode,
+          observer: match.observer,
+        });
+        return true;
+      }
+      const historyRoute = /^\/engine\/history\/([\w-]+)$/.exec(url.pathname);
+      if (historyRoute) {
+        const match = this.matches.get(historyRoute[1]!);
+        const seat =
+          match && this.membership(match.setup.roomCode, cookie(request, 'party_player'));
+        if (
+          !match ||
+          !seat ||
+          !match.setup.seats.some((item) => item.id === seat.id && item.kind === 'human')
+        ) {
+          json(response, 403, {});
+          return true;
+        }
+        const before = url.searchParams.has('before')
+          ? Number(url.searchParams.get('before'))
+          : undefined;
+        if (before !== undefined && (!Number.isSafeInteger(before) || before < 1)) {
+          json(response, 400, {});
+          return true;
+        }
+        json(response, 200, {
+          ...match.journal.page(match.id, before),
+          deckCount: match.observer?.deckCount ?? null,
+        });
+        return true;
+      }
       const matchRoute = /^\/engine\/(setup|worker|player|view)\/([\w-]+)$/.exec(url.pathname);
       if (matchRoute) {
         const match = this.matches.get(matchRoute[2]!);
@@ -1063,19 +1321,32 @@ export class NativeNonameService implements EngineAdapter {
           return true;
         }
         if (matchRoute[1] === 'setup') {
-          const presets = JSON.parse(
-            await readFile(resolve(this.projectRoot, 'config/roster-presets.json'), 'utf8'),
-          );
           const config = JSON.parse(await readFile(this.engineFile('game/config.json'), 'utf8'));
           const assets = JSON.parse(
             await readFile(resolve(this.projectRoot, 'config/noname-lab-assets.json'), 'utf8'),
+          );
+          const portraitNames = new Set(
+            match.preset.characters.flatMap((name) => [
+              name,
+              ...(assets.portraitVariants?.[name] ?? []),
+            ]),
           );
           json(response, 200, {
             id: match.id,
             serverVersion: APP_VERSION,
             selectionRecovery: true,
+            connectionRecovery: true,
+            luckCards: true,
+            surrender: true,
+            emotions: true,
+            experience: true,
+            rosterPolicy: true,
+            cardPilePolicy: true,
+            ruleClock: worker,
+            ruleRecovery: worker,
             tablePresentation: true,
             ...match.setup,
+            generalSelections: worker ? match.setup.generalSelections : undefined,
             role: worker ? 'worker' : 'player',
             playerId: worker ? null : view ? viewId : seat!.id,
             tableView: view,
@@ -1084,21 +1355,27 @@ export class NativeNonameService implements EngineAdapter {
             playerNetwork: request.headers['x-party-ingress'] === 'public' ? 'internet' : 'lan',
             choicePrompts: true,
             assetBase: `/engine/core/${this.assetVersion}/`,
-            preset: presets.presets.find(
-              (preset: { id: string }) => preset.id === match.setup.settings.generalPreset,
+            preset: match.preset,
+            portraitAliases: Object.fromEntries(
+              Object.entries(assets.portraitAliases ?? {}).filter(([name]) =>
+                portraitNames.has(name),
+              ),
             ),
-            portraitAliases: assets.portraitAliases ?? {},
             mobilePortraits: this.portraits
               ? Object.fromEntries(
-                  Object.entries(this.portraits.characters).map(([name, file]) => [
-                    name,
-                    `/engine/portraits/${this.portraits!.hash}/${file}`,
-                  ]),
+                  Object.entries(this.portraits.characters)
+                    .filter(([name]) => portraitNames.has(name))
+                    .map(([name, file]) => [
+                      name,
+                      `/engine/portraits/${this.portraits!.files[file]!.version ?? this.portraits!.hash}/${file}`,
+                    ]),
                 )
               : {},
-            audioFiles: assets.assets
-              .filter((entry: { path: string }) => entry.path.startsWith('audio/'))
-              .map((entry: { path: string }) => entry.path.slice(6)),
+            audioFiles:
+              assets.audioFilesByPreset?.[match.preset.id] ??
+              assets.assets
+                .filter((entry: { path: string }) => entry.path.startsWith('audio/'))
+                .map((entry: { path: string }) => entry.path.slice(6)),
             config,
           });
         } else {
@@ -1159,14 +1436,23 @@ export class NativeNonameService implements EngineAdapter {
           ![
             'bootstrap.js',
             'mode.js',
+            'roster-policy.js',
+            'card-pile.js',
             'relay.js',
+            'rule-clock.js',
+            'rule-socket.js',
             'privacy.js',
             'controls.js',
             'audio.js',
             'player-transport.js',
             'prompts.js',
             'observer.js',
+            'public-summary.js',
             'selection-recovery.js',
+            'connection-recovery.js',
+            'luck-cards.js',
+            'surrender.js',
+            'emotions.js',
             'table-projection.js',
             'table-presentation.js',
           ].includes(name)

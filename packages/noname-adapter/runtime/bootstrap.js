@@ -134,6 +134,14 @@ try {
     }
   }
   globalThis.partyAssetBase = setup.assetBase ?? '/engine/core/';
+  if (role === 'worker' && setup.ruleClock) {
+    // Install before the engine/sandbox capture timer functions. Phone timers
+    // stay native, and older running services keep their existing protocol.
+    const { connectRuleClock } = await import('./rule-clock.js');
+    const clock = await connectRuleClock(id, setup.ruleRecovery === true);
+    proof.ruleClock = clock.proof;
+    clock.socket.addEventListener('close', () => fail(new Error('电脑规则计时连接已中断')));
+  }
   progress('modules', '正在载入游戏引擎，首次进入可能需要稍等…');
   // Dynamic imports keep the initial status and retry UI alive even when the
   // module graph fails to download or the browser lacks required features.
@@ -171,25 +179,32 @@ try {
   localStorage.setItem(`${lib.configprefix}loadtime`, '120000');
   lib.init.reset = () => fail(new Error('引擎载入超时，请检查 Wi-Fi 和电脑服务页后重试。'));
   const config = setup.config;
-  const packs = [
+  const legacyPacks = [
     ...new Set([
       ...setup.preset.completePacks,
       ...Object.keys(setup.preset.packGroups),
       ...(setup.preset.additionalCharacters.length ? ['extra'] : []),
     ]),
   ];
+  const packs = setup.rosterPolicy ? (setup.preset.enabledPacks ?? legacyPacks) : legacyPacks;
   const mode = setup.settings.mode === 'duel' ? 'single' : setup.settings.mode;
   const definitions = setup.preset.definitionPacks ?? { characters: packs, cards: ['standard'] };
+  // Old running services retain standard108 and cannot serve this module.
+  const cardPacks = setup.cardPilePolicy
+    ? (await import('./card-pile.js')).validateCardPile(setup.preset).packs
+    : ['standard'];
   Object.assign(config, {
     mode,
     characters: packs,
-    cards: ['standard'],
+    cards: cardPacks,
     extensions: [],
     extension_auto_import: false,
     plays: [],
     show_splash: 'off',
     totouched: true,
-    touchscreen: true,
+    // Native cards/buttons bind only one input event. A desktop mouse must
+    // receive click handlers; phone/tablet touch keeps the original gestures.
+    touchscreen: navigator.maxTouchPoints > 0 && matchMedia('(pointer: coarse)').matches,
     phonelayout: true,
     compatible: false,
     background_music: 'music_off',
@@ -198,7 +213,7 @@ try {
     volumn_audio: 6,
     animation: role === 'player' && !setup.tableView,
     low_performance: role !== 'player' || Boolean(setup.tableView),
-    game_speed: setup.settings.generalPreset === 'beginner' ? 'slow' : 'fast',
+    game_speed: 'slow',
     duration: setup.settings.generalPreset === 'beginner' ? 1000 : 500,
     sync_speed: true,
     swipe: false,
@@ -218,11 +233,14 @@ try {
     card_font: 'default',
     version: '1.11.6',
     auto_confirm: false,
+    wuxie_self: false,
+    glow_phase: 'yellow',
     identity_mode: 'normal',
     doudizhu_mode: 'normal',
     versus_mode: '2v2',
     single_mode: 'dianjiang',
     show_config: false,
+    show_cardpile_number: true,
   });
   Object.assign(config.mode_config.global, {
     player_number: setup.settings.playerCount,
@@ -287,6 +305,12 @@ try {
   installPrivacy();
   installControls();
   installAudio();
+  if (setup.experience) (await import('./public-summary.js')).installPublicSummary();
+  if (setup.emotions) (await import('./emotions.js')).installEmotions();
+  if (role !== 'worker' && setup.connectionRecovery)
+    (await import('./connection-recovery.js')).installConnectionRecovery();
+  if (role !== 'worker' && setup.luckCards) (await import('./luck-cards.js')).installLuckCards();
+  if (role !== 'worker' && setup.surrender) (await import('./surrender.js')).installSurrender();
   if (role === 'worker' && setup.tablePresentation)
     (await import('./table-presentation.js')).installTablePresentation();
   installPrompts();

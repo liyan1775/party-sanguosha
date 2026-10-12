@@ -16,7 +16,7 @@ function globals(t: TestContext, values: Record<string, unknown>) {
   }
 }
 async function runtime(name: string) {
-  const source = (
+  let source = (
     await readFile(
       new URL(`../packages/noname-adapter/runtime/${name}.js`, import.meta.url),
       'utf8',
@@ -27,10 +27,318 @@ async function runtime(name: string) {
       "import { withChoiceDisclosure } from './privacy.js';",
       'const { withChoiceDisclosure } = globalThis.nativeFixture;',
     );
+  if (source.includes("import { markPublicLogCards } from './privacy.js';")) {
+    const privacy = (
+      await readFile(
+        new URL('../packages/noname-adapter/runtime/privacy.js', import.meta.url),
+        'utf8',
+      )
+    ).replace(/import \{([^}]+)\} from 'noname';/, 'const {$1} = globalThis.nativeFixture;');
+    source = source.replace(
+      "'./privacy.js'",
+      `'data:text/javascript;base64,${Buffer.from(privacy).toString('base64')}#${Math.random()}'`,
+    );
+  }
   return import(
     `data:text/javascript;base64,${Buffer.from(source).toString('base64')}#${Math.random()}`
   );
 }
+
+test('原生转化技能：点击技能打开选项，选项、材料和目标仍须明确确认；AI保持原生行为', async (t) => {
+  let submitted = 0;
+  let finished = 0;
+  let closed = 0;
+  let empty = true;
+  const autoConfirm = (_event: unknown, _state: unknown) => {};
+  const otherHook = (_event: unknown, _state: unknown) => {};
+  const skills: Record<string, unknown> = {
+    conversion: { chooseButton: { backup: () => ({}) } },
+    generated: { sourceSkill: 'conversion', viewAs: { name: 'sha' } },
+    material: { direct: true, viewAs: { name: 'sha' } },
+    backup: { chooseButton: {}, viewAs: { name: 'sha' } },
+    ordinary: {},
+  };
+  const lib = { hooks: { checkEnd: [autoConfirm, otherHook] } };
+  const setup = { role: 'player' };
+  const confirmations: string[] = [];
+  const status: any = {};
+  let cancelled: unknown[] = [];
+  let confirmDuringCancel: unknown;
+  const ui: any = {
+    confirm: { close: () => closed++ },
+    create: { confirm: (value: string) => confirmations.push(value) },
+    click: {
+      ok: () => submitted++,
+      cancel: (...args: unknown[]) => {
+        cancelled = args;
+        confirmDuringCancel = ui.confirm;
+        return 'native cancellation';
+      },
+    },
+  };
+  globals(t, {
+    partyEngine: { setup },
+    nativeFixture: {
+      lib,
+      game: {},
+      ui,
+      get: { info: (skill: string) => skills[skill], noSelected: () => empty },
+      _status: status,
+    },
+  });
+  const { installHumanConfirmation } = await runtime('controls');
+  installHumanConfirmation();
+  assert(!lib.hooks.checkEnd.includes(autoConfirm));
+  assert(lib.hooks.checkEnd.includes(otherHook), 'unrelated native hooks are retained');
+  const run = (name: string, skill: string, ok = true, mine = true) => {
+    const event = { name, skill, skillDialog: true, isMine: () => mine, finish: () => finished++ };
+    for (const hook of lib.hooks.checkEnd) hook(event, { ok });
+    return event;
+  };
+  assert.equal(run('chooseToUse', 'conversion').skillDialog, false);
+  run('chooseToRespond', 'conversion');
+  assert.equal(submitted, 2, 'both native use and response can open their option picker');
+  for (const [name, skill, ok, mine] of [
+    ['chooseButton', 'conversion', true, true],
+    ['chooseToUse', 'conversion', false, true],
+    ['chooseToUse', 'conversion', true, false],
+    ['chooseToUse', 'material', true, true],
+    ['chooseToUse', 'backup', true, true],
+    ['chooseToUse', 'ordinary', true, true],
+    ['chooseToUse', '', true, true],
+  ] as const)
+    run(name, skill, ok, mine);
+  empty = false;
+  run('chooseToUse', 'conversion');
+  assert.equal(submitted, 2, 'selected options, cards and targets are never auto-submitted');
+  assert.equal(closed, 2);
+  assert.equal(finished, 2, 'only the rule worker runs the native option/backup factory');
+  const choice = {
+    name: 'chooseToUse',
+    skill: 'generated',
+    _backupevent: 'generated',
+    isMine: () => true,
+    timeout: 'original deadline',
+  };
+  for (const ok of [false, true]) for (const hook of lib.hooks.checkEnd) hook(choice, { ok });
+  assert.deepEqual(confirmations, ['c', 'oc'], 'generated material choices always allow cancel');
+  status.event = choice;
+  ui.confirm = {
+    close: () => {
+      closed++;
+      delete ui.confirm;
+    },
+  };
+  const button = {};
+  assert.equal(ui.click.cancel(button), 'native cancellation');
+  assert.deepEqual(cancelled, [button], 'native cancel receives the original button');
+  assert.equal(confirmDuringCancel, undefined, 'stale confirm closes before native restore/check');
+  assert.equal(choice.timeout, 'original deadline');
+  assert.equal(submitted, 2, 'cancel never submits an action');
+  assert.equal(closed, 3);
+  lib.hooks.checkEnd = [autoConfirm, otherHook];
+  setup.role = 'worker';
+  installHumanConfirmation();
+  assert.deepEqual(lib.hooks.checkEnd, [autoConfirm, otherHook]);
+});
+
+test('转化规则只从电脑原生定义发往当前选择者；刷新重放同一规则且不重新计时', async (t) => {
+  const sent: { player: string; args: unknown[] }[] = [];
+  const waiting: Record<string, unknown> = {};
+  let waits = 0;
+  class Player {
+    constructor(public playerid: string) {}
+    ws: object = {};
+    send(...args: unknown[]) {
+      sent.push({ player: this.playerid, args });
+    }
+    wait() {
+      waits++;
+      waiting[this.playerid] = '_noname_waiting';
+    }
+    unwait(result: unknown) {
+      waiting[this.playerid] = result;
+    }
+  }
+  const actor = new Player('actor');
+  const other = new Player('other');
+  const originalSet = [['type', 'phase']];
+  let applied: unknown[] = [];
+  const nativeCallback = (...args: unknown[]) => {
+    applied = args;
+  };
+  class Choice {
+    name = 'chooseToUse';
+    player = actor;
+    skill = 'conversion_backup';
+    _backup: object | undefined = {};
+    openskilldialog = '请选择转化材料';
+    restore() {
+      this._backup = undefined;
+      this.skill = '';
+    }
+    send() {
+      this.player.send(nativeCallback, this.name, [], originalSet, 'encoded parent', { stat: {} });
+      other.send(nativeCallback, this.name, [], originalSet, 'other parent', {});
+      this.player.wait();
+      return this;
+    }
+  }
+  const rule = {
+    sourceSkill: 'conversion',
+    filterCard: () => true,
+    viewAs: { name: 'sha', nature: 'fire' },
+  };
+  class Client {
+    id = 'actor';
+    close() {}
+  }
+  const lib = {
+    skill: { conversion: { chooseButton: { backup: () => rule } }, conversion_backup: rule },
+    element: { GameEvent: Choice, Player, Client },
+    playerOL: { actor, other },
+    node: { torespond: waiting },
+    message: { server: { reinited() {} } },
+  };
+  const choice = new Choice();
+  globals(t, {
+    partyEngine: { setup: { role: 'worker' }, proof: { started: true } },
+    nativeFixture: {
+      lib,
+      get: { event: () => choice },
+      withChoiceDisclosure: (_event: unknown, send: () => unknown) => send(),
+    },
+  });
+  (await runtime('controls')).installRuleSkillChoices();
+  (await runtime('selection-recovery')).installSelectionRecovery();
+  assert.equal(choice.send(), choice);
+  assert.equal(waits, 1);
+  const request = sent[0]!.args;
+  assert.equal(request[1], 'chooseToUse', 'native event identity remains recoverable');
+  assert.deepEqual(request[3], [
+    ...originalSet,
+    ['_backupevent', choice.skill],
+    ['openskilldialog', choice.openskilldialog],
+  ]);
+  assert.equal(request[4], 'encoded parent');
+  assert.deepEqual(request[6], { rule: ['conversion_backup', rule] });
+  assert.equal(request[7], nativeCallback);
+  assert.equal(sent[1]!.args[0], nativeCallback, 'another seat never receives the actor backup');
+  assert.equal(sent[1]!.args.length, 6);
+  assert.deepEqual(originalSet, [['type', 'phase']], 'the original native request is not mutated');
+  // Execute the trusted outbound callback as a freshly reconstructed phone.
+  lib.skill.conversion_backup = { ...rule, viewAs: { name: 'jiu', nature: '' } };
+  (request[0] as (...args: unknown[]) => void)(...request.slice(1));
+  assert.equal(lib.skill.conversion_backup, rule);
+  assert.deepEqual(applied, request.slice(1, 6));
+  // Changing the worker's later rule must not change the retained request.
+  lib.skill.conversion_backup = { ...rule, viewAs: { name: 'jiu', nature: '' } };
+  const client = new Client();
+  actor.ws = client;
+  lib.message.server.reinited.call(client);
+  assert.equal(sent.length, 3);
+  assert.deepEqual(sent[2]!.args, request);
+  assert.equal(waits, 1, 'replay keeps the original timeout');
+  actor.unwait({ bool: true });
+  lib.message.server.reinited.call(client);
+  assert.equal(sent.length, 3);
+  choice._backup = undefined;
+  choice.send();
+  assert.equal(sent[3]!.args[0], nativeCallback, 'ordinary choices keep their native callback');
+  assert.equal(sent[3]!.args.length, 6);
+});
+
+test('原生转化选择值保留闭包；刷新按同一已选颜色重建且拒绝客户端覆盖规则', async (t) => {
+  const sent: unknown[][] = [];
+  let closed = 0;
+  let resumed = 0;
+  let received = 0;
+  class Player {
+    playerid = 'actor';
+    ws = { close: () => closed++ };
+    applySkills() {}
+    send(...args: unknown[]) {
+      sent.push(args);
+    }
+    wait() {}
+    unwait(_result?: unknown) {
+      received++;
+    }
+    chooseToUse() {
+      return new Choice();
+    }
+  }
+  const actor = new Player();
+  class Choice {
+    player = actor;
+    name = 'chooseToUse';
+    skill = '';
+    buttoned = 'conversion';
+    _args = [];
+    _set: [string, unknown][] = [['type', 'phase']];
+    _result = { links: ['red'] };
+    _backup: object | undefined;
+    _modparent: unknown;
+    _backupevent = '';
+    set(key: string, value: unknown) {
+      Object.assign(this, { [key]: value });
+    }
+    backup(skill: string) {
+      this.skill = skill;
+      this._backup = {};
+      return this;
+    }
+    send() {
+      actor.send(() => {}, this.name, this._args, this._set, 'original parent', {});
+      actor.wait();
+    }
+  }
+  const backup = (links: string[]) => ({
+    sourceSkill: 'conversion',
+    filterCard: (card: { color: string }) => card.color === links[0],
+  });
+  const lib = {
+    skill: { conversion: { chooseButton: { backup } }, conversion_backup: backup(['red']) },
+    element: { Player, GameEvent: Choice },
+  };
+  const status = { eventManager: { tempEvent: undefined as Choice | undefined } };
+  globals(t, {
+    partyEngine: { setup: { role: 'worker' } },
+    nativeFixture: {
+      lib,
+      game: { me: actor, resume: () => resumed++ },
+      ui: {},
+      get: {},
+      _status: status,
+    },
+  });
+  (await runtime('controls')).installRuleSkillChoices();
+  const choice = new Choice();
+  choice.backup('conversion_backup');
+  choice._result = { links: ['black'] };
+  choice.send();
+  const request = sent[0]!;
+  assert.deepEqual(request[6], {
+    recipe: { skill: 'conversion_backup', source: 'conversion', input: ['red'] },
+  });
+  assert.equal(actor.send, Player.prototype.send, 'the actor send override is temporary');
+  lib.skill.conversion_backup = backup(['black']);
+  (request[0] as (...args: unknown[]) => void)(...request.slice(1));
+  assert(lib.skill.conversion_backup.filterCard({ color: 'red' }));
+  assert(!lib.skill.conversion_backup.filterCard({ color: 'black' }));
+  assert.equal(status.eventManager.tempEvent, undefined);
+  assert.equal(resumed, 1);
+  (request[0] as (...args: unknown[]) => void)(...request.slice(1));
+  assert(
+    lib.skill.conversion_backup.filterCard({ color: 'red' }),
+    'recovery recreates the original closure',
+  );
+  actor.unwait({ bool: true, _sendskill: ['conversion_backup', {}] });
+  assert.equal(closed, 1);
+  assert.equal(received, 0, 'client backup definitions never reach native unwait');
+  actor.unwait({ bool: true });
+  assert.equal(received, 1);
+});
 
 test('原生技能选择刷新：原请求与期限保留，换席位、已提交和超时不重放', async (t) => {
   const sent: { id: string; name: string; parent: string }[] = [];
@@ -188,6 +496,348 @@ test('原生视频编号弹窗：刷新先恢复本人私有弹窗，保留有�
   assert.equal(sent.length, 1, 'closed private dialogs cannot reappear for later choices');
 });
 
+test('火攻弃牌刷新：仅恢复仍打开且已公开的展示牌，沿用原编号和等待', async (t) => {
+  const sent: unknown[][] = [];
+  const waiting: Record<string, unknown> = {};
+  let waits = 0;
+  let connected = true;
+  let known = true;
+  class Player {
+    playerid = 'actor';
+    ws: object = {};
+    send(...args: unknown[]) {
+      sent.push(args);
+    }
+    wait() {
+      waits++;
+      waiting.actor = '_noname_waiting';
+    }
+    unwait(result: unknown) {
+      waiting.actor = result;
+    }
+  }
+  const actor = new Player();
+  const shown = { isKnownBy: (receiver: unknown) => known && receiver === actor };
+  const parent: any = { name: 'huogong', player: actor, cards2: [shown], videoId: 7 };
+  class Choice {
+    player = actor;
+    name = 'chooseToDiscard';
+    getParent(name: string) {
+      return name === 'huogong' ? parent : undefined;
+    }
+    send() {
+      actor.send(() => {}, this.name);
+      actor.wait();
+    }
+  }
+  class Client {
+    id = 'actor';
+    close() {
+      actor.unwait('ai');
+    }
+  }
+  const lib = {
+    element: { Player, GameEvent: Choice, Client },
+    playerOL: { actor },
+    node: { torespond: waiting },
+    message: { server: { reinited() {} } },
+  };
+  globals(t, {
+    partyEngine: { proof: { started: true } },
+    nativeFixture: {
+      lib,
+      get: { event: () => choice, idDialog: () => ({ isConnected: connected }) },
+      withChoiceDisclosure: (_event: unknown, send: () => unknown) => send(),
+    },
+  });
+  (await runtime('selection-recovery')).installSelectionRecovery();
+  const choice = new Choice();
+  choice.send();
+  sent.length = 0;
+  const client = new Client();
+  actor.ws = client;
+  lib.message.server.reinited.call(client);
+  assert.equal(sent.length, 2);
+  assert.deepEqual(sent[0]!.slice(1), [[shown], 7]);
+  assert.equal(sent[1]![1], 'chooseToDiscard');
+  assert.equal(waits, 1);
+  for (const reason of ['closed', 'hidden', 'other-actor', 'other-choice', 'extra-material']) {
+    connected = reason !== 'closed';
+    known = reason !== 'hidden';
+    parent.player = reason === 'other-actor' ? {} : actor;
+    parent.cards2 = reason === 'extra-material' ? [shown, shown] : [shown];
+    choice.name = reason === 'other-choice' ? 'chooseCard' : 'chooseToDiscard';
+    sent.length = 0;
+    lib.message.server.reinited.call(client);
+    assert.equal(sent.length, 1, reason);
+  }
+  actor.unwait({ bool: true });
+  sent.length = 0;
+  lib.message.server.reinited.call(client);
+  assert.equal(sent.length, 0, '已提交不重弹');
+});
+
+test('宴戏公开池刷新：本人恢复原猜牌、旁人恢复三明牌，关闭／非公开材料不重建', async (t) => {
+  const sent: unknown[][] = [];
+  const waiting: Record<string, unknown> = {};
+  let waits = 0;
+  let connected = true;
+  const publicDialog = {
+    videoId: 17,
+    get isConnected() {
+      return connected;
+    },
+  };
+  class Player {
+    ws: object = {};
+    constructor(public playerid: string) {}
+    send(...args: unknown[]) {
+      sent.push(args);
+    }
+    wait() {
+      waits++;
+      waiting[this.playerid] = '_noname_waiting';
+    }
+    unwait(result: unknown) {
+      waiting[this.playerid] = result;
+    }
+  }
+  const actor = new Player('actor');
+  const viewer = new Player('viewer');
+  const cards = [{ cardid: 'public1' }, { cardid: 'public2' }, { cardid: 'public3' }];
+  const privateHand = { cardid: 'private4' };
+  const parent: any = {
+    name: 'yanxi',
+    player: actor,
+    target: viewer,
+    partyShownYanxiCards: cards,
+    otherHand: [privateHand],
+  };
+  class Choice {
+    player = actor;
+    name = 'chooseButton';
+    _set: unknown[][] = [['dialog', 17]];
+    dialog: number | typeof publicDialog | undefined = publicDialog;
+    getParent(name: string) {
+      return name === 'yanxi' ? parent : undefined;
+    }
+    send() {
+      actor.send(() => {}, this.name);
+      actor.wait();
+    }
+  }
+  class Client {
+    constructor(public id: string) {}
+    close() {}
+  }
+  const lib = {
+    element: { Player, GameEvent: Choice, Client },
+    playerOL: { actor, viewer },
+    node: { torespond: waiting },
+    message: { server: { reinited() {} } },
+  };
+  const choice = new Choice();
+  globals(t, {
+    partyEngine: { proof: { started: true } },
+    nativeFixture: {
+      lib,
+      get: { event: () => choice, idDialog: () => publicDialog },
+      withChoiceDisclosure: (_event: unknown, send: () => unknown) => send(),
+    },
+  });
+  (await runtime('selection-recovery')).installSelectionRecovery();
+  choice.send();
+  const actorClient = new Client('actor');
+  actor.ws = actorClient;
+  sent.length = 0;
+  lib.message.server.reinited.call(actorClient);
+  assert.equal(sent.length, 2);
+  assert.deepEqual(sent[0]!.slice(1), [cards, 17, actor, viewer, true]);
+  assert.equal(sent[1]![1], 'chooseButton');
+  assert.equal(waits, 1);
+  const viewerClient = new Client('viewer');
+  viewer.ws = viewerClient;
+  sent.length = 0;
+  lib.message.server.reinited.call(viewerClient);
+  assert.equal(sent.length, 1);
+  assert.deepEqual(sent[0]!.slice(1), [cards, 17, actor, viewer, false]);
+  assert(!JSON.stringify(sent[0]![1]).includes(privateHand.cardid));
+  assert.equal(waits, 1, 'public pool restoration creates no new choice or wait');
+  sent.length = 0;
+  lib.message.server.reinited.call(new Client('viewer'));
+  assert.equal(sent.length, 0, 'only the bound reinitialized seat receives materials');
+  for (const boundary of [
+    'closed',
+    'not-published',
+    'wrong-choice',
+    'wrong-skill',
+    'no-video-id',
+    'other-dialog',
+  ]) {
+    connected = boundary !== 'closed';
+    parent.partyShownYanxiCards = boundary === 'not-published' ? [privateHand] : cards;
+    choice.name = boundary === 'wrong-choice' ? 'chooseToMove' : 'chooseButton';
+    parent.name = boundary === 'wrong-skill' ? 'privateSkill' : 'yanxi';
+    choice._set = boundary === 'no-video-id' ? [] : [['dialog', 17]];
+    choice.dialog = boundary === 'other-dialog' ? { videoId: 18, isConnected: true } : publicDialog;
+    sent.length = 0;
+    lib.message.server.reinited.call(actorClient);
+    assert.equal(sent.length, 1, boundary + ': pending request alone is retained');
+    sent.length = 0;
+    lib.message.server.reinited.call(viewerClient);
+    assert.equal(sent.length, 0, boundary + ': no other public dialog is guessed');
+  }
+  actor.unwait({ bool: true });
+  connected = false;
+  sent.length = 0;
+  lib.message.server.reinited.call(actorClient);
+  assert.equal(sent.length, 0, 'closed completed choices stay closed');
+});
+
+test('共享将池冲突重试：重发原请求的剩余候选，保留原等待与期限，已选和换席位拒绝', async (t) => {
+  const sent: unknown[][] = [];
+  const waiting: Record<string, unknown> = {};
+  let waits = 0;
+  class Player {
+    playerid = 'actor';
+    ws: object = {};
+    send(...args: unknown[]) {
+      sent.push(args);
+    }
+    wait() {
+      waits++;
+      waiting.actor = Object.assign(() => {}, { _noname_waiting: true });
+    }
+    unwait(result: unknown) {
+      waiting.actor = result;
+    }
+  }
+  class Choice {
+    send() {}
+  }
+  class Client {
+    close() {}
+  }
+  const actor = new Player();
+  const lib = {
+    element: { Player, GameEvent: Choice, Client },
+    playerOL: { actor },
+    node: { torespond: waiting },
+    message: { server: { reinited() {} } },
+  };
+  globals(t, {
+    partyEngine: { proof: { started: false } },
+    nativeFixture: {
+      lib,
+      get: { event: () => ({ name: 'chooseButtonOL' }) },
+      withChoiceDisclosure: (_event: unknown, send: () => unknown) => send(),
+    },
+  });
+  const recovery = (await runtime('selection-recovery')).installSelectionRecovery();
+  const callback = () => {};
+  const candidates = ['liubei', 'guanyu', 'zhangfei'];
+  const dialog = ['队友正在选将', [candidates, 'character']];
+  const args = [dialog, true, 1];
+  actor.wait();
+  actor.send(callback, args);
+  const originalWaiting = waiting.actor;
+  candidates.splice(0, 1);
+  dialog[0] = '队友已选刘备';
+  assert.equal(recovery.replay(new Player()), false, 'same ID cannot bypass the bound actor');
+  assert.equal(recovery.replay(actor), true);
+  assert.equal(sent.length, 2);
+  assert.equal(sent[1]![0], callback);
+  assert.equal(sent[1]![1], args);
+  assert.equal(waiting.actor, originalWaiting);
+  assert.equal(waits, 1, 'retry never calls wait or replaces the original timer');
+  actor.unwait({ bool: true, links: ['guanyu'] });
+  assert.equal(recovery.replay(actor), false);
+  actor.wait();
+  actor.send(callback, args);
+  actor.unwait('ai');
+  assert.equal(recovery.replay(actor), false, 'expired choice cannot reopen');
+});
+
+test('蛊惑质疑直发选择：断线恢复原请求，保留期限，其他弹窗及已提交／超时请求不重放', async (t) => {
+  const sent: unknown[][] = [];
+  const waiting: Record<string, unknown> = {};
+  let waits = 0;
+  let event = { name: 'chooseButtonOL', getParent: () => ({ name: 'reguhuo_guess' }) };
+  class Player {
+    playerid = 'challenger';
+    ws: object = {};
+    send(...args: unknown[]) {
+      sent.push(args);
+    }
+    wait() {
+      waits++;
+      waiting.challenger = Object.assign(() => {}, { _noname_waiting: true });
+    }
+    unwait(result: unknown) {
+      waiting.challenger = result;
+    }
+  }
+  class Choice {
+    send() {}
+  }
+  const actor = new Player();
+  class Client {
+    id = 'challenger';
+    close() {
+      actor.unwait('ai');
+    }
+  }
+  const lib = {
+    element: { Player, GameEvent: Choice, Client },
+    playerOL: { challenger: actor },
+    node: { torespond: waiting },
+    message: { server: { reinited() {} } },
+  };
+  globals(t, {
+    partyEngine: { proof: { started: true } },
+    nativeFixture: {
+      lib,
+      get: { event: () => event },
+      withChoiceDisclosure: (_event: unknown, send: () => unknown) => send(),
+    },
+  });
+  const recovery = (await runtime('selection-recovery')).installSelectionRecovery();
+  const chooseRemote = () => {};
+  const args = [['是否质疑', [['质疑', '不质疑'], 'textbutton']], true, 1];
+  const request = [chooseRemote, args, undefined, undefined, undefined];
+  const old = new Client();
+  actor.ws = old;
+  actor.wait();
+  const originalWaiting = waiting.challenger;
+  actor.send(...request);
+  // A later unrelated private dialog must not replace the original challenge.
+  event = { name: 'chooseButtonOL', getParent: () => ({ name: 'otherSkill' }) };
+  actor.send(() => {}, ['unrelated dialog'], undefined, undefined, undefined);
+  old.close();
+  assert.equal(waiting.challenger, originalWaiting);
+  const replacement = new Client();
+  lib.message.server.reinited.call(replacement);
+  assert.equal(sent.length, 2, 'unbound replacement cannot receive the request');
+  actor.ws = replacement;
+  lib.message.server.reinited.call(replacement);
+  assert.deepEqual(sent.at(-1), request);
+  assert.equal(waits, 1, 'reinit does not create a new wait or deadline');
+  actor.unwait({ bool: true, links: ['质疑'] });
+  assert.equal(recovery.replay(actor), false, 'submitted challenge stays closed');
+  event = { name: 'chooseButtonOL', getParent: () => ({ name: 'reguhuo_guess' }) };
+  actor.wait();
+  actor.send(...request);
+  actor.unwait('ai');
+  assert.equal(recovery.replay(actor), false, 'native timeout stays final');
+  event = { name: 'chooseButtonOL', getParent: () => ({ name: 'otherSkill' }) };
+  actor.wait();
+  actor.send(...request);
+  assert.equal(recovery.replay(actor), false, 'unreviewed direct choices are not retained');
+  event = { name: 'chooseButtonOL', getParent: () => ({ name: 'reguhuo_guess' }) };
+  actor.send(chooseRemote, args);
+  assert.equal(recovery.replay(actor), false, 'non-native dialog shape is not a challenge');
+});
+
 test('公开观战投影：暗手牌、私有 storage、未亮身份与私人选牌不进入观察者数据', async (t) => {
   const hiddenCard = { name: 'secret-card' };
   const player = {
@@ -266,7 +916,7 @@ test('公开日志捕捉短事件与虚拟牌，整局分批保留；暗牌、�
   const ordering = { kind: 'card', name: 'SECRET-DECK', position: 'o' };
   const shown = { kind: 'card', name: 'PUBLIC-CARD', position: 'h' };
   const virtual = { name: 'PUBLIC-VIRTUAL' };
-  let event: { name: string; cards?: unknown[]; card?: unknown } = { name: 'chooseToMove' };
+  let event: any = { name: 'chooseToMove' };
   let originalCalls = 0;
   class Client {
     close() {}
@@ -302,7 +952,10 @@ test('公开日志捕捉短事件与虚拟牌，整局分批保留；暗牌、�
         event: () => event,
         position: (card: { position: string }) => card.position,
         is: { shownCard: () => false },
-        itemtype: (value: { kind?: string }) => value?.kind,
+        itemtype: (value: any) =>
+          Array.isArray(value) && value.every((item) => item?.kind === 'card')
+            ? 'cards'
+            : value?.kind,
         translation: (value: string | { name: string }) =>
           typeof value === 'string' ? value : value.name,
       },
@@ -352,6 +1005,28 @@ test('公开日志捕捉短事件与虚拟牌，整局分批保留；暗牌、�
   assert(text.includes('PUBLIC-VIRTUAL') && text.includes('PUBLIC-CARD'));
   assert(text.includes('伤害') && text.includes('阵亡') && text.includes('短暂事件 0'));
   assert(!text.includes('SECRET') && !text.includes('nei'));
+  const revealed = [
+    { kind: 'card', name: 'PUBLIC-YANXI-HAND', position: 'h' },
+    { kind: 'card', name: 'PUBLIC-YANXI-TOP-1', position: 'c' },
+    { kind: 'card', name: 'PUBLIC-YANXI-TOP-2', position: 'c' },
+  ];
+  event = { name: 'yanxi', player: actor };
+  game.log(actor, '展示了', revealed);
+  update();
+  const displayed = journal.page('match').entries.at(-1)!.text;
+  assert(revealed.every((card) => displayed.includes(card.name)));
+  assert.equal(observerCardVisible(hidden), false);
+  assert.equal(observerCardVisible(ordering), false);
+  const bluff = {
+    name: 'reguhuo_guess',
+    _trigger: { cards: [hidden] },
+    getParent: () => ({ name: 'useCard', cards: [hidden] }),
+  };
+  event = { name: 'chooseButtonOL', getParent: () => bluff };
+  assert.equal(observerCardVisible(hidden), false, 'challenge does not reveal the bluff');
+  event = { name: 'showCards', cards: [hidden], getParent: () => bluff };
+  assert.equal(observerCardVisible(hidden), true, 'native reveal makes that material public');
+  event = { name: 'chooseToMove' };
   status.over = true;
   assert.equal(observerCardVisible(hidden), false, 'ending does not reveal concealed faces');
 });
@@ -927,6 +1602,8 @@ test('慢音频过期后不补播，静音后再开启也不会复活旧语音�
   let finishRead!: (value: unknown) => void;
   let reads = 0;
   let starts = 0;
+  let outputGain = 0;
+  const preferences = new Map<string, string>();
   const proof = { booted: false, audio: { dropped: 0, played: 0 } };
   const document = Object.assign(new EventTarget(), {
     hidden: false,
@@ -936,6 +1613,7 @@ test('慢音频过期后不补播，静音后再开启也不会复活旧语音�
     state = 'running';
     sampleRate = 48000;
     destination = {};
+    currentTime = 0;
     async resume() {}
     async close() {}
     createBuffer() {
@@ -946,7 +1624,14 @@ test('慢音频过期后不补播，静音后再开启也不会复活旧语音�
     }
     createGain() {
       return {
-        gain: { value: 0 },
+        gain: {
+          set value(value: number) {
+            outputGain = value;
+          },
+          setValueAtTime(value: number) {
+            outputGain = value;
+          },
+        },
         connect() {
           return this;
         },
@@ -960,6 +1645,7 @@ test('慢音频过期后不补播，静音后再开启也不会复活旧语音�
         connect() {
           return this;
         },
+        disconnect() {},
         start() {
           starts++;
         },
@@ -975,7 +1661,12 @@ test('慢音频过期后不补播，静音后再开启也不会复活旧语音�
     proof,
     deliveryAge: 0,
     audio: undefined as
-      { unlock(): Promise<void>; setEnabled(value: boolean): Promise<void> } | undefined,
+      | {
+          unlock(): Promise<void>;
+          setEnabled(value: boolean): Promise<void>;
+          setVolume(value: number): void;
+        }
+      | undefined,
   };
   globals(t, {
     window: Object.assign(new EventTarget(), { AudioContext }),
@@ -983,7 +1674,10 @@ test('慢音频过期后不补播，静音后再开启也不会复活旧语音�
     parent: { postMessage() {} },
     location: { origin: 'http://fixture' },
     performance: { now: () => now },
-    localStorage: { getItem: () => null, setItem() {} },
+    localStorage: {
+      getItem: (key: string) => preferences.get(key) ?? null,
+      setItem: (key: string, value: string) => preferences.set(key, value),
+    },
     nativeFixture: { lib: { assetURL: '/engine/core/', config: {} }, game },
     partyEngine: engine,
     fetch: () => {
@@ -995,6 +1689,12 @@ test('慢音频过期后不补播，静音后再开启也不会复活旧语音�
   });
   (await runtime('audio')).installAudio();
   await engine.audio!.unlock();
+  assert.equal(outputGain, 0.35, 'first use has a quieter master gain');
+  engine.audio!.setVolume(15);
+  assert.equal(outputGain, 0.15, 'the existing master output changes immediately');
+  assert.equal(preferences.get('party_sound_volume'), '15');
+  engine.audio!.setVolume(NaN);
+  assert.equal(outputGain, 0.15, 'invalid control values cannot corrupt the gain');
   game.playAudio('skill/test');
   assert.equal(reads, 0, 'boot replay does not fetch or play voices');
   proof.booted = true;

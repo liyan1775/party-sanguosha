@@ -66,6 +66,25 @@ function blobHash(bytes) {
   return createHash('sha1').update(`blob ${bytes.length}\0`).update(bytes).digest('hex');
 }
 
+async function downloadAsset(url, path) {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      const response = await fetch(url, { signal: AbortSignal.timeout(30000) });
+      if (!response.ok) {
+        await response.body?.cancel();
+        if (response.status !== 429 && response.status < 500)
+          throw new Error(`Asset download rejected: ${path} (${response.status})`);
+        throw new TypeError(`Asset download interrupted: ${path} (${response.status})`);
+      }
+      return Buffer.from(await response.arrayBuffer());
+    } catch (error) {
+      if (attempt >= 2 || !['TypeError', 'TimeoutError', 'AbortError'].includes(error.name))
+        throw new Error(`Cannot download pinned asset ${path}`, { cause: error });
+      await new Promise((resolve) => setTimeout(resolve, 500 * 2 ** attempt));
+    }
+  }
+}
+
 let next = 0;
 let downloaded = 0;
 await Promise.all(
@@ -74,7 +93,7 @@ await Promise.all(
       const entry = manifest.assets[next++];
       // The committed manifest contains upstream-relative assets only.
       if (
-        !/^(?:image\/(?:card|character|background)\/[^/]+\.(?:png|jpg)|audio\/(?:skill|die|effect|card\/(?:male|female))\/[\w.-]+\.mp3|LICENSE)$/.test(
+        !/^(?:image\/(?:card|character|background)\/[\p{L}\p{N}_.-]+\.(?:png|jpg)|audio\/(?:skill|die|effect|card\/(?:male|female))\/[\p{L}\p{N}_.-]+\.mp3|LICENSE)$/u.test(
           entry.path,
         )
       ) {
@@ -88,10 +107,7 @@ await Promise.all(
       if (present && present.length === entry.bytes && blobHash(present) === entry.gitBlobSha)
         continue;
       const url = `https://raw.githubusercontent.com/libnoname/noname/${manifest.commit}/apps/core/${entry.path}`;
-      const response = await fetch(url, { signal: AbortSignal.timeout(30000) });
-      if (!response.ok)
-        throw new Error(`Asset download failed: ${entry.path} (${response.status})`);
-      const bytes = Buffer.from(await response.arrayBuffer());
+      const bytes = await downloadAsset(url, entry.path);
       if (bytes.length !== entry.bytes || blobHash(bytes) !== entry.gitBlobSha) {
         throw new Error(`Asset checksum mismatch: ${entry.path}`);
       }

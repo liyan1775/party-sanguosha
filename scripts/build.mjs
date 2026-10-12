@@ -1,5 +1,5 @@
 import { build } from 'esbuild';
-import { mkdir, copyFile, writeFile } from 'node:fs/promises';
+import { mkdir, copyFile, readFile, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { buildNativeEngine } from './build-native-engine.mjs';
@@ -19,7 +19,12 @@ await build({
   sourcemap: false,
 });
 await copyFile(path.join(root, 'apps/web/index.html'), path.join(output, 'index.html'));
-await copyFile(path.join(root, 'apps/web/src/style.css'), path.join(output, 'style.css'));
+await build({
+  entryPoints: [path.join(root, 'apps/web/src/lobby-theme.css')],
+  outfile: path.join(output, 'style.css'),
+  bundle: true,
+  target: ['chrome91', 'safari16.4'],
+});
 await build({
   entryPoints: [path.join(root, 'apps/web/src/table-client.ts')],
   outfile: path.join(output, 'table.js'),
@@ -36,6 +41,19 @@ await build({
   target: ['chrome91', 'safari16.4'],
 });
 await copyFile(path.join(root, 'config/general-catalog.json'), path.join(output, 'generals.json'));
+const catalog = JSON.parse(await readFile(path.join(output, 'generals.json'), 'utf8'));
+const presets = JSON.parse(
+  await readFile(path.join(root, 'config/roster-presets.json'), 'utf8'),
+).presets;
+for (const preset of presets) {
+  await writeFile(
+    path.join(output, `generals-${preset.id}.json`),
+    JSON.stringify({
+      source: catalog.source,
+      characters: catalog.characters.filter((entry) => entry.preset === preset.id),
+    }),
+  );
+}
 const serverBuild = await build({
   entryPoints: [path.join(root, 'apps/server/src/main.ts')],
   outfile: path.join(root, 'dist/server/main.js'),

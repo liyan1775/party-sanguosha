@@ -1,10 +1,55 @@
 // SPDX-License-Identifier: GPL-3.0-only
-import { lib, get, _status } from 'noname';
+import { lib, game, ui, get, _status } from 'noname';
 
 let discloseChoice = (_event, send) => send();
 /** Reuse the native choice's narrow disclosure scope when replaying its request. */
 export function withChoiceDisclosure(event, send) {
   return discloseChoice(event, send);
+}
+
+function initCharacter(id, name, concealed) {
+  if (concealed) {
+    lib.character[name] = get.convertedCharacter(concealed);
+    lib.translate[name] = '未亮将';
+  }
+  lib.playerOL[id].init(name);
+}
+
+function hiddenCharacterName(id, index = 0) {
+  return `party_hidden_${id}${index ? '_secondary' : ''}`;
+}
+
+function concealedCharacter(group, hujia = 0) {
+  return {
+    sex: 'male',
+    group,
+    hp: 1,
+    maxHp: 1,
+    hujia,
+    skills: [],
+    hasHiddenSkill: true,
+    img: 'image/character/default_silhouette_male.jpg',
+  };
+}
+
+/** The owner and rule executor initialize the native character unchanged. */
+export function broadcastCharacterInit(player, name) {
+  return game.broadcastAll(initCharacter, player.playerid, name, null);
+}
+
+/** 宴戏 explicitly publishes these three cards, including two returned to the pile. */
+export function markPublicLogCards(args) {
+  const event = get.event();
+  if (
+    event?.name === 'yanxi' &&
+    args.length === 3 &&
+    args[0] === event.player &&
+    args[1] === '展示了' &&
+    Array.isArray(args[2]) &&
+    args[2].length === 3 &&
+    args[2].every((card) => get.itemtype(card) === 'card')
+  )
+    event.partyShownYanxiCards = args[2].slice();
 }
 
 /** Keep authoritative cards intact; redact while serializing for each receiver. */
@@ -43,6 +88,12 @@ export function installPrivacy() {
           add(button.link);
     } else if (['chooseToMove', 'chooseToMove_new'].includes(event.name)) add(event.list);
     else if (event.name === 'viewCards') add(event.cards);
+    else if (
+      event.name === 'chooseControl' &&
+      event.getParent?.()?.name === 'clanjieli' &&
+      Array.isArray(event.dialog)
+    )
+      add(event.dialog);
     choiceDisclosure = { player: event.player, cards };
     try {
       return send();
@@ -60,6 +111,61 @@ export function installPrivacy() {
     const previous = receiver;
     receiver = lib.playerOL?.[this.id];
     try {
+      if (args[0] === 'reinit' && args[2]?.players) {
+        // Native Player.getState omits storage. Reconnect both native versions even
+        // when no pending choice will send a later get.skillState snapshot.
+        const huashen = Object.fromEntries(
+          Object.keys(args[2].players).flatMap((id) => {
+            const player = lib.playerOL?.[id];
+            const storage = player?.storage?.rehuashen;
+            return storage ? [[id, player === receiver ? storage : publicHuashen(storage)]] : [];
+          }),
+        );
+        if (Object.keys(huashen).length) args[2] = { ...args[2], partyRehuashen: huashen };
+        const original = Object.fromEntries(
+          Object.keys(args[2].players).flatMap((id) => {
+            const player = lib.playerOL?.[id];
+            const storage = player?.storage?.huashen;
+            return storage
+              ? [[id, player === receiver ? storage : publicOriginalHuashen(storage)]]
+              : [];
+          }),
+        );
+        if (Object.keys(original).length) args[2] = { ...args[2], partyHuashen: original };
+      }
+      // v1.11.6 rehuashen.drawCharacter broadcasts real character IDs even
+      // though only the owner executes its animation. Match that exact native
+      // callback and its declared list, never arbitrary character selections.
+      const [callback, player, characters] = args;
+      if (
+        receiver &&
+        !_status.over &&
+        callback === initCharacter &&
+        player !== receiver.playerid &&
+        lib.character?.[characters]?.hasHiddenSkill
+      ) {
+        // A synthetic mirror-only definition reproduces the native unseen
+        // shell, without the real name, hidden skills or unrevealed base HP.
+        args[2] = hiddenCharacterName(player);
+        args[3] = concealedCharacter(
+          lib.character[characters].group,
+          lib.character[characters].hujia ?? 0,
+        );
+      }
+      if (
+        receiver &&
+        !_status.over &&
+        player !== receiver &&
+        typeof callback === 'function' &&
+        /["']huashen_card_["']/.test(Function.prototype.toString.call(callback)) &&
+        Array.isArray(characters) &&
+        characters.every(
+          (name) =>
+            player?.storage?.rehuashen?.character?.includes(name) ||
+            Object.hasOwn(player?.storage?.huashen?.owned ?? {}, name),
+        )
+      )
+        args[2] = characters.map(() => 'unknown');
       return send.apply(this, args);
     } finally {
       receiver = previous;
@@ -75,6 +181,124 @@ export function installPrivacy() {
       addressedTo = previous;
     }
   };
+  if (game?.log) {
+    const log = game.log;
+    game.log = function (...args) {
+      markPublicLogCards(args);
+      return log.apply(this, args);
+    };
+  }
+  const broadcastAll = game?.broadcastAll;
+  if (broadcastAll)
+    game.broadcastAll = function (...args) {
+      const event = get.event();
+      // Old 于吉 flips an existing face-down copy, without showCards or a new
+      // card argument. Publish exactly its one material at the native flip,
+      // after every challenge; keep the copy visually face down until native
+      // animation removes infohidden. Other broadcasts grant no disclosure.
+      if (
+        event?.name === 'old_guhuo_guess' &&
+        args.length === 2 &&
+        typeof args[0] === 'function' &&
+        args[1] === event.onEnd01 &&
+        typeof args[1] === 'function' &&
+        /_status\.old_guhuoNode\.listenTransition\(onEnd,\s*300\)/.test(String(args[0])) &&
+        event._trigger?.cards?.length === 1 &&
+        get.itemtype(event._trigger.cards[0]) === 'card'
+      ) {
+        const card = event._trigger.cards[0];
+        event.partyShownGuhuoCards = [card];
+        broadcastAll.call(
+          this,
+          function (card, player) {
+            const previous = _status.old_guhuoNode;
+            const node = (_status.old_guhuoNode = card.copy('thrown'));
+            node.classList.add('infohidden');
+            if (previous?.isConnected) {
+              node.classList.add('center');
+              node.style.cssText = previous.style.cssText;
+              previous.replaceWith(node);
+              const index = ui.thrown.indexOf(previous);
+              if (index >= 0) ui.thrown[index] = node;
+            } else {
+              // Arena reinit omits this transient face-down animation node.
+              node.style.transform = 'perspective(600px) rotateY(180deg) translateX(0)';
+              player.$throwordered2(node);
+            }
+          },
+          card,
+          event.player,
+        );
+        game.log(event.player, '展示了', [card]);
+      }
+      return broadcastAll.apply(this, args);
+    };
+  const showCharacter = lib.element.Player.prototype.$showCharacter;
+  if (showCharacter)
+    lib.element.Player.prototype.$showCharacter = function (index, ...args) {
+      const revealed = [0, 1]
+        .filter((value) => index === value || index === 2)
+        .map((value) => [value, hiddenCharacter(this, value)])
+        .filter((entry) => entry[1]);
+      if (revealed.length)
+        game.broadcast(
+          function (player, entries) {
+            for (const [value, name] of entries) {
+              player[value ? 'name2' : 'name1'] = name;
+              if (player.skin) player.skin[value ? 'name2' : 'name'] = name;
+              player.node[value ? 'avatar2' : 'avatar'].setBackground(name, 'character');
+              player.node[value ? 'name2' : 'name'].innerHTML = get.slimName(name);
+            }
+          },
+          this,
+          revealed,
+        );
+      // Native $showCharacter alone changes HP, skills, groups and classes.
+      // No re-init or rule state reset is performed on any player.
+      return showCharacter.call(this, index, ...args);
+    };
+  const reinit = lib.message?.client?.reinit;
+  if (reinit)
+    lib.message.client.reinit = function (config, state, ...args) {
+      // A refreshed mirror has never received the initial synthetic definition.
+      // Reconstruct only the declared unseen shell before native reinit calls
+      // player.init(name1); no hidden character or hidden skill is needed.
+      for (const [id, player] of Object.entries(state?.players ?? {}))
+        for (const index of [0, 1]) {
+          const name = player[index ? 'name2' : 'name1'];
+          if (player[index ? 'unseen2' : 'unseen'] && name === hiddenCharacterName(id, index)) {
+            lib.character[name] = get.convertedCharacter(
+              concealedCharacter(player.group, player.hujia ?? 0),
+            );
+            lib.translate[name] = '未亮将';
+          }
+        }
+      if ((state?.partyRehuashen || state?.partyHuashen) && !args[2]) {
+        const onreconnect = Array.isArray(args[3]) ? args[3].slice() : null;
+        args[3] = [
+          function () {
+            // The native loadModeAsync callback invokes this only after all
+            // players are rebuilt, before game.loop and the reinited reply.
+            // This is local mirror restoration, with no authoritative change,
+            // broadcast, new choice, wait or deadline extension.
+            for (const [key, values] of [
+              ['rehuashen', state.partyRehuashen],
+              ['huashen', state.partyHuashen],
+            ])
+              for (const [id, storage] of Object.entries(values ?? {})) {
+                const player = lib.playerOL?.[id];
+                if (!player || storage?.constructor !== Object) continue;
+                player.storage[key] = storage;
+                if (storage.current && !player.tempname.includes(storage.current))
+                  player.tempname.push(storage.current);
+                player.markSkill(key, null, null, true);
+              }
+            if (onreconnect?.length) return onreconnect[0].apply(this, onreconnect.slice(1));
+          },
+        ];
+      }
+      return reinit.call(this, config, state, ...args);
+    };
   for (const name of ['$compare', '$compareMultiple']) {
     const compare = lib.element.Player.prototype[name];
     lib.element.Player.prototype[name] = function (card, targets, cards, ...args) {
@@ -108,10 +332,34 @@ export function installPrivacy() {
     for (let depth = 0; event && depth < 32 && !seen.has(event); depth++) {
       seen.add(event);
       if (event.partyShownCompareCards?.includes(card)) return true;
+      if (event.name === 'yanxi' && event.partyShownYanxiCards?.includes(card)) return true;
+      if (event.partyShownGuhuoCards?.includes(card)) return true;
+      // 蛊惑's use/respond parent already holds the physical bluff material.
+      // It stays secret until the native showCards child or old-version flip.
       if (
-        ['useCard', 'respond', 'discard', 'showCards'].includes(event.name) &&
+        ['reguhuo_guess', 'old_guhuo_guess'].includes(event.name) &&
+        event._trigger?.cards?.includes(card)
+      )
+        return false;
+      // recast logs its declared materials before moving them to discard.
+      // Reveal only that event's cards, never the replacement draw or other
+      // recastable cards left in the hand.
+      if (
+        ['useCard', 'respond', 'discard', 'showCards', 'recast'].includes(event.name) &&
         event.cards?.includes(card)
       )
+        return true;
+      // discardMultiple logs each native lose_list before filling event.cards
+      // or moving the cards out of their owner's hand (e.g. 魄袭). Its explicit
+      // face-up discard list is already public; the remaining hands are not.
+      if (
+        event.name === 'loseAsync' &&
+        event.type === 'discard' &&
+        event.visible === true &&
+        event.lose_list?.some((entry) => Array.isArray(entry[1]) && entry[1].includes(card))
+      )
+        return true;
+      if (event.name === 'loseToDiscardpile' && !event.blank && event.cards?.includes(card))
         return true;
       // 五谷丰登 draws before the ordering move. Its native useCard parent
       // explicitly records the publicly displayed pool, unlike private 观星.
@@ -149,18 +397,112 @@ export function installPrivacy() {
     return visible(card) ? info.call(this, card) : ['none', 0, 'party_unknown', '', card.cardid];
   };
   const stringify = get.stringifiedResult;
+  function publicHuashen(storage) {
+    return {
+      character: Array.isArray(storage.character) ? storage.character.map(() => 'unknown') : [],
+      choosed: [],
+      map: {},
+      current: storage.current,
+      current2: storage.current2,
+    };
+  }
+  function publicOriginalHuashen(storage) {
+    return {
+      owned: Object.fromEntries(
+        Object.keys(storage.owned ?? {}).map((_, index) => [`unknown_${index}`, []]),
+      ),
+      choosed: [],
+      current: storage.current,
+      current2: storage.current2,
+    };
+  }
+  function hiddenCharacter(player, index) {
+    const name = player[index ? 'name2' : 'name1'];
+    return lib.character?.[name]?.hasHiddenSkill && player.isUnseen?.(index) ? name : undefined;
+  }
+  function publicCharacterState(player, state) {
+    if (state?.constructor !== Object) return state;
+    const hidden = [hiddenCharacter(player, 0), hiddenCharacter(player, 1)];
+    if (!hidden.some(Boolean)) return state;
+    const projected = { ...state };
+    for (const [index, name] of hidden.entries()) {
+      if (!name) continue;
+      const key = index ? 'name2' : 'name1';
+      if (key in projected) projected[key] = hiddenCharacterName(player.playerid, index);
+      if (projected.name === name) projected.name = 'unknown';
+    }
+    // Only native skills belonging to a still-concealed character are secret.
+    // Publicly acquired skills and an already revealed other general stay.
+    const secretSkills = new Set(
+      hidden.flatMap((name) => (name ? (lib.character[name].skills ?? []) : [])),
+    );
+    const publicSkills = new Set(player.skills ?? []);
+    for (const key of ['hiddenSkills', 'invisibleSkills'])
+      if (Array.isArray(projected[key]))
+        projected[key] = projected[key].filter(
+          (skill) => !secretSkills.has(skill) || publicSkills.has(skill),
+        );
+    if (projected.storage && ('rawHp' in projected.storage || 'rawMaxHp' in projected.storage)) {
+      projected.storage = { ...projected.storage };
+      delete projected.storage.rawHp;
+      delete projected.storage.rawMaxHp;
+    }
+    return projected;
+  }
   function privateState(item) {
-    if (get.mode() !== 'identity' || item?.constructor !== Object) return item;
+    if (item?.constructor !== Object) return item;
+    // markSkill broadcasts this live object directly, separately from a
+    // player snapshot. Preserve its public count and active transformation.
+    for (const player of Object.values(lib.playerOL ?? {})) {
+      if (player === receiver) continue;
+      if (item === player.storage?.rehuashen) return publicHuashen(item);
+      if (item === player.storage?.huashen) return publicOriginalHuashen(item);
+    }
     let sanitized;
+    const eventPlayer =
+      typeof item.player === 'string' && item.player.startsWith('_noname_player:')
+        ? lib.playerOL?.[item.player.slice(15)]
+        : item.player;
+    if (
+      ['reguhuo_guess', 'old_guhuo_guess'].includes(item.name) &&
+      eventPlayer !== receiver &&
+      'fake' in item
+    ) {
+      sanitized = { ...item };
+      delete sanitized.fake;
+    }
     for (const [id, state] of Object.entries(item)) {
       const player = lib.playerOL?.[id];
-      if (player && player !== receiver && !player.identityShown && state?.identity) {
+      if (!player || player === receiver) continue;
+      const publicState = publicCharacterState(player, state);
+      if (publicState !== state) {
+        sanitized ??= { ...item };
+        sanitized[id] = publicState;
+      }
+      if (get.mode() === 'identity' && !player.identityShown && state?.identity) {
         sanitized ??= { ...item };
         sanitized[id] = {
-          ...state,
+          ...(sanitized[id] ?? state),
           identity: 'unknown',
           shown: 0,
           identityNode: ['猜', 'unknown'],
+        };
+      }
+      // skillState carries storage for every seat on choices and reconnects;
+      // the same projection also handles already-encoded snapshot objects.
+      if (state?.storage?.rehuashen) {
+        sanitized ??= { ...item };
+        sanitized[id] = {
+          ...(sanitized[id] ?? state),
+          storage: { ...state.storage, rehuashen: publicHuashen(state.storage.rehuashen) },
+        };
+      }
+      if (state?.storage?.huashen) {
+        sanitized ??= { ...item };
+        const projected = sanitized[id] ?? state;
+        sanitized[id] = {
+          ...projected,
+          storage: { ...projected.storage, huashen: publicOriginalHuashen(state.storage.huashen) },
         };
       }
     }
@@ -213,4 +555,10 @@ export function installPrivacy() {
     }
     return stringify.call(this, item, ...args);
   };
+  const eventInfo = get.eventInfoOL;
+  if (eventInfo)
+    get.eventInfoOL = function (...args) {
+      const result = eventInfo.apply(this, args);
+      return receiver && !_status.over ? wireValue(result) : result;
+    };
 }

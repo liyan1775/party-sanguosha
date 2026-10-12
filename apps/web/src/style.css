@@ -183,6 +183,17 @@ h1 {
 .settings-body .mode-grid {
   grid-template-columns: repeat(4, 1fr);
 }
+.general-selection-setting {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 20px;
+}
+.general-selection-setting input {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+}
 .bot-controls {
   margin: 16px 0 22px;
   display: flex;
@@ -268,6 +279,23 @@ dialog {
 }
 dialog::backdrop {
   background: #15281c77;
+}
+
+.surrender-dialog {
+  width: min(440px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  overflow: auto;
+}
+.surrender-dialog p {
+  line-height: 1.7;
+}
+.surrender-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.surrender-actions .button {
+  flex: 1;
 }
 dialog .qr-frame {
   max-width: 280px;
@@ -432,6 +460,21 @@ input {
   color: var(--muted);
   line-height: 1.8;
   margin: 12px 0 0;
+}
+.settings-error {
+  color: var(--red);
+}
+.spectator-panel {
+  margin-bottom: 24px;
+}
+#spectator-refresh {
+  margin-block: 16px;
+}
+#spectator-status {
+  overflow-wrap: anywhere;
+}
+#spectator-table .observer-recent {
+  max-height: 420px;
 }
 .mode-grid {
   display: grid;
@@ -793,6 +836,26 @@ footer {
   flex-shrink: 0;
   white-space: nowrap;
 }
+.match-volume {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 4px;
+  color: #e0ddd2;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.match-volume input {
+  width: 70px;
+  min-height: 32px;
+  margin: 0;
+  padding: 0;
+  accent-color: #d9bd7e;
+}
+.match-volume output {
+  width: 32px;
+  font-variant-numeric: tabular-nums;
+}
 #game-frame-container {
   position: relative;
   flex: 1;
@@ -822,6 +885,33 @@ footer {
 .match-loading p {
   color: #d0dcd5;
   font-size: 14px;
+}
+.match-connection {
+  position: absolute;
+  z-index: 5;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(92%, 560px);
+  padding: 12px 16px;
+  border: 1px solid #d9bd7e;
+  border-radius: 10px;
+  background: #172723f2;
+  color: #faf7ee;
+  text-align: center;
+}
+.match-connection.blocking {
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+.match-connection p {
+  margin: 6px 0;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.connection-blocked {
+  pointer-events: none;
+  opacity: 0.55;
 }
 .general-guide {
   width: min(900px, calc(100% - 24px));
@@ -875,6 +965,11 @@ footer {
 }
 .guide-entry summary div {
   min-width: 0;
+}
+.guide-pick {
+  flex-shrink: 0;
+  margin-left: auto;
+  padding: 8px 10px;
 }
 .guide-entry strong,
 .guide-entry small,
@@ -1037,6 +1132,18 @@ footer {
 .observer-control {
   color: var(--green);
   font-weight: 600;
+}
+.match-records-dialog {
+  width: min(720px, calc(100vw - 24px));
+  max-height: calc(100dvh - 24px);
+  padding: 20px;
+}
+.match-records-dialog .observer-log {
+  margin-top: 12px;
+}
+.match-records-dialog .observer-recent {
+  max-height: min(420px, 45dvh);
+  overscroll-behavior: contain;
 }
 @media (max-width: 800px) {
   .console-stats {

@@ -1,51 +1,91 @@
 import {
+  MODES,
   findMode,
   type MembershipResult,
   type RoomSummary,
   type ServerInfo,
   type SessionView,
 } from '../../../packages/shared/src/contracts.js';
-import { action, api, connection, element, frame, perform, watchEvents } from './ui.js';
+import { api, app, element, frame, perform, watchEvents } from './ui.js';
 import { bindGeneralGuide, guideButton } from './general-guide.js';
 import { createAssetPreloader } from './engine-preloader.js';
+import { arrowIcon, heroArtwork, modeIcon } from './lobby-art.js';
 
-function roomList(rooms: RoomSummary[], serverPage: boolean): void {
+const joinable = (room: RoomSummary) =>
+  room.phase === 'waiting' && room.humanCount + room.botCount < room.playerCount;
+
+function createRoomList() {
   const list = element('#room-list');
-  list.replaceChildren();
-  element('#empty-rooms').hidden = rooms.length > 0;
-  element('#room-total').textContent = `${rooms.length} 间`;
-  for (const room of rooms) {
-    const item = document.createElement('li');
-    item.className = 'room-list-item';
-    const details = document.createElement('div');
-    const name = document.createElement('strong');
-    name.textContent = `${room.ownerNickname}的房间`;
-    const description = document.createElement('p');
-    description.textContent = `${findMode(room.mode)?.name} · ${room.humanCount} 真人 + ${room.botCount} AI / ${room.playerCount} 席 · ${room.code}`;
-    details.append(name, description);
-    const label = document.createElement(serverPage ? 'span' : 'a');
-    const canJoin = room.phase === 'waiting' && room.humanCount + room.botCount < room.playerCount;
-    label.textContent = canJoin ? '加入房间' : room.phase === 'waiting' ? '已满' : '对局中';
-    label.className = serverPage ? 'tag muted' : 'button secondary room-link';
-    if (label instanceof HTMLAnchorElement) label.href = `/join/${room.code}`;
-    if (serverPage && canJoin) label.textContent = '等朋友';
-    item.append(details, label);
-    list.append(item);
-  }
+  const entries = new Map<string, HTMLElement>();
+  return (rooms: RoomSummary[], onlyJoinable: boolean) => {
+    element('#room-total').textContent = `${rooms.length} 间`;
+    const visible = rooms.filter((room) => !onlyJoinable || joinable(room));
+    element('#empty-rooms').hidden = visible.length > 0;
+    const noAvailableRooms = onlyJoinable && rooms.length > 0;
+    element('#empty-room-title').textContent = noAvailableRooms
+      ? '这一刻，大家都已入席。'
+      : '第一桌，等你来开。';
+    element('#empty-room-hint').textContent = noAvailableRooms
+      ? '可以自己开一桌，或切回全部房间看看朋友。'
+      : '填个昵称，邀上朋友。人少也可以用 AI 补位。';
+    for (const [code, entry] of entries) {
+      if (!visible.some((room) => room.code === code)) {
+        entry.remove();
+        entries.delete(code);
+      }
+    }
+    visible.forEach((room, index) => {
+      let item = entries.get(room.code);
+      if (!item) {
+        item = document.createElement('li');
+        item.className = 'room-list-item';
+        item.dataset.roomCode = room.code;
+        // Only fixed interface markup goes through innerHTML; names remain textContent.
+        item.innerHTML =
+          '<span class="room-emblem"></span><div class="room-description"><strong></strong><p></p><span class="room-number"></span></div><div class="room-availability"><span class="room-state"></span><a class="button secondary room-link"></a></div>';
+        entries.set(room.code, item);
+      }
+      const emblem = item.querySelector<HTMLElement>('.room-emblem')!;
+      if (emblem.dataset.mode !== room.mode) {
+        emblem.innerHTML = modeIcon(room.mode);
+        emblem.dataset.mode = room.mode;
+      }
+      item.querySelector('strong')!.textContent = `${room.ownerNickname}的房间`;
+      item.querySelector('p')!.textContent =
+        `${findMode(room.mode)?.name} · ${room.humanCount} 真人 + ${room.botCount} AI / ${room.playerCount} 席`;
+      item.querySelector('.room-number')!.textContent = `房间 ${room.code}`;
+      const state = item.querySelector<HTMLElement>('.room-state')!;
+      state.classList.toggle('available', joinable(room));
+      state.textContent = joinable(room)
+        ? `还差 ${room.playerCount - room.humanCount - room.botCount} 位`
+        : room.phase === 'waiting'
+          ? '已满席'
+          : room.phase === 'finished'
+            ? '已结算'
+            : '对局中';
+      const link = item.querySelector<HTMLAnchorElement>('a')!;
+      link.textContent = joinable(room) ? '加入房间' : '查看房间';
+      link.href = `/join/${room.code}`;
+      // Do not replace unchanged rows: polling must not steal keyboard focus.
+      if (list.children[index] !== item) list.insertBefore(item, list.children[index] ?? null);
+    });
+  };
 }
-
-const listMarkup = `<section class="panel rooms-panel"><div class="panel-heading"><h2>朋友的房间</h2><span id="room-total" class="tag muted"></span></div><ul id="room-list" class="room-list"></ul><p id="empty-rooms" class="empty-rooms">还没有牌桌。第一位朋友可以先开一间。</p></section>`;
 
 export function showHomePage(info: ServerInfo, session: SessionView): void {
   frame(
     'player-layout home-layout',
     '朋友的聚会大厅',
-    '找张桌，一起玩。',
-    '自己开房，或者加入朋友的房间。无需注册账号。',
+    '一桌朋友，<br /><span>一场好戏。</span>',
+    '把三国的风云，带到朋友之间。<br class="desktop-break" />无需安装，填个昵称就能入席。',
     `
-    <section id="current-room" class="panel current-room" hidden><h2>你的座位还在</h2><p class="hint">刷新、回到主页后，可以继续返回原房间。</p><a id="return-room" class="button primary full-width" href="/">返回我的房间</a></section>
-    <section class="panel" id="create-panel"><div class="panel-heading"><h2>我来开一桌</h2><span class="tag">你是房主</span></div><form id="create-form"><label for="nickname">怎么称呼你</label><input id="nickname" name="nickname" placeholder="输入昵称，朋友才认得你" autocomplete="nickname" maxlength="32" required /><p class="hint">创建后你会自动入座，可以设置玩法、武将范围和 AI。昵称 1–16 个字。</p><button id="create-button" class="button primary full-width" type="submit">创建房间并入座</button></form></section>
-    <section class="panel guide-panel"><h2>上桌前看看</h2><p class="hint">新手档和进阶档的武将、技能都可以在这里查看。</p>${guideButton}<p id="engine-preload" class="hint" role="status" hidden></p></section>${listMarkup}`,
+    <div class="home-main" id="lobby-actions">
+      <section id="current-room" class="panel current-room" hidden><p class="section-index">继续这一局</p><h2>你的座位还在。</h2><p class="hint">朋友和牌桌都在原房间，随时可以回来。</p><a id="return-room" class="button primary full-width" href="/">返回我的房间${arrowIcon}</a></section>
+      <section class="panel create-panel" id="create-panel"><div class="panel-heading"><div><p class="section-index">从你开始</p><h2>我来开一桌</h2></div><span class="mini-seal" aria-hidden="true">邀</span></div><form id="create-form"><label for="nickname">怎么称呼你</label><input id="nickname" name="nickname" placeholder="取个朋友认得的昵称" autocomplete="nickname" maxlength="32" aria-describedby="nickname-hint" required /><p class="hint" id="nickname-hint">昵称 1–16 个字。创建后自动入座，成为房主。</p><button id="create-button" class="button primary full-width" type="submit">创建房间并入座${arrowIcon}</button><p class="create-note">玩法、武将和 AI，入座后由你安排。</p></form></section>
+      <section class="panel rooms-panel" id="friends-rooms"><div class="panel-heading"><div><p class="section-index">好戏正在发生</p><h2>朋友的房间</h2></div><span id="room-total" class="room-total">0 间</span></div><div class="room-filters" aria-label="筛选房间"><button type="button" data-room-filter="all" aria-pressed="true" aria-controls="room-list">全部房间</button><button type="button" data-room-filter="joinable" aria-pressed="false" aria-controls="room-list">可加入</button><span class="live-note">实时更新</span></div><ul id="room-list" class="room-list"></ul><div id="empty-rooms" class="empty-rooms"><span class="empty-symbol" aria-hidden="true">${modeIcon('identity')}</span><h3 id="empty-room-title">第一桌，等你来开。</h3><p id="empty-room-hint">填个昵称，邀上朋友。人少也可以用 AI 补位。</p></div></section>
+    </div>
+    <section class="lobby-discover" id="lobby-guide"><div class="discover-heading"><p class="section-index">随人数，选好戏</p><h2>各有玩法，同样尽兴。</h2><p class="hint">两个人也能开场，八个人正好热闹。</p></div><ul class="lobby-modes" aria-label="支持的玩法">${MODES.map((mode) => `<li><span class="lobby-mode-icon">${modeIcon(mode.id)}</span><strong>${mode.name}</strong><span>${mode.minPlayers === mode.maxPlayers ? mode.minPlayers : '5–8'} 人</span></li>`).join('')}</ul><div class="guide-panel"><div><h3>识英雄，知招式。</h3><p class="hint">标准27将、经典进阶96将与官方活动将池，上桌前先看看技能。</p></div>${guideButton}</div><p id="engine-preload" class="hint" role="status" hidden></p></section>`,
+    heroArtwork,
   );
   bindGeneralGuide();
   createAssetPreloader(
@@ -59,7 +99,25 @@ export function showHomePage(info: ServerInfo, session: SessionView): void {
       element<HTMLAnchorElement>('#return-room').href = `/join/${session.roomCode}`;
   };
   renderSession();
-  roomList(info.rooms, false);
+  let rooms = info.rooms;
+  let onlyJoinable = false;
+  const roomList = createRoomList();
+  const renderList = () => roomList(rooms, onlyJoinable);
+  renderList();
+  app.querySelectorAll<HTMLButtonElement>('[data-room-filter]').forEach((button) => {
+    button.addEventListener('click', () => {
+      onlyJoinable = button.dataset.roomFilter === 'joinable';
+      app
+        .querySelectorAll<HTMLButtonElement>('[data-room-filter]')
+        .forEach((filter) =>
+          filter.setAttribute(
+            'aria-pressed',
+            String((filter.dataset.roomFilter === 'joinable') === onlyJoinable),
+          ),
+        );
+      renderList();
+    });
+  });
   element<HTMLFormElement>('#create-form').addEventListener('submit', (event) => {
     event.preventDefault();
     void perform(element('#create-button'), async () => {
@@ -72,8 +130,9 @@ export function showHomePage(info: ServerInfo, session: SessionView): void {
   watchEvents(
     '/api/events',
     'lobby',
-    (rooms) => {
-      roomList(rooms as RoomSummary[], false);
+    (updatedRooms) => {
+      rooms = updatedRooms as RoomSummary[];
+      renderList();
       void api<SessionView>('/api/me')
         .then((updated) => {
           session = updated;

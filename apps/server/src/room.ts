@@ -1,17 +1,25 @@
 import { randomBytes, randomUUID } from 'node:crypto';
 import type { EngineAdapter } from '../../../packages/noname-adapter/src/index.js';
+import generalCatalog from '../../../config/general-catalog.json' with { type: 'json' };
 import {
   findMode,
   GENERAL_PRESETS,
   type ExtensionInfo,
   type GeneralPresetId,
+  type GeneralChoiceView,
   type PlayerView,
   type RoomSettings,
   type RoomView,
 } from '../../../packages/shared/src/contracts.js';
 import { AppError } from './errors.js';
 
-type Human = PlayerView & { kind: 'human'; token: string; connections: number; pollUntil: number };
+type Human = PlayerView & {
+  kind: 'human';
+  token: string;
+  connections: number;
+  pollUntil: number;
+  general: string | null;
+};
 type Bot = PlayerView & { kind: 'bot' };
 type Seat = Human | Bot;
 
@@ -23,11 +31,14 @@ export class RoomStore {
     mode: 'identity',
     playerCount: 5,
     generalPreset: 'beginner',
+    allowGeneralSelection: false,
     extensions: [],
   };
   private ownerId: string | null = null;
   private botSequence = 0;
   private startGeneration = 0;
+  private matchFailure: RoomView['matchFailure'];
+  private matchRecovery: RoomView['matchRecovery'];
   private readonly players = new Map<string, Seat>();
   private readonly listeners = new Set<(room: RoomView) => void>();
 
@@ -38,8 +49,18 @@ export class RoomStore {
     const unsubscribe = engine.subscribe?.((event) => {
       if (event.type === 'status') this.changed();
       else if (event.roomCode === this.code && ['starting', 'playing'].includes(this.phase)) {
-        this.phase = event.type === 'ended' ? 'finished' : 'waiting';
-        if (event.type === 'failed') this.resetReady();
+        if (event.type === 'recovering') this.matchRecovery = { deadline: event.deadline };
+        else if (event.type === 'recovered') this.matchRecovery = undefined;
+        else {
+          this.matchRecovery = undefined;
+          if (event.type === 'failed') {
+            this.matchFailure = { code: event.code ?? 'runtime-error', at: Date.now() };
+            // Keep an interrupted in-progress table visible until explicit
+            // return. It has no winner and must not silently become a new lobby.
+            this.phase = this.phase === 'playing' ? 'finished' : 'waiting';
+            this.resetReady();
+          } else this.phase = 'finished';
+        }
         this.changed();
       }
     });
@@ -58,6 +79,8 @@ export class RoomStore {
       players: [...this.players.values()].map((player) => this.publicPlayer(player)),
       ownerId: this.ownerId,
       engine: this.engine.status(),
+      ...(this.matchFailure ? { matchFailure: { ...this.matchFailure } } : {}),
+      ...(this.matchRecovery ? { matchRecovery: { ...this.matchRecovery } } : {}),
     };
   }
 
@@ -94,6 +117,7 @@ export class RoomStore {
       online: false,
       connections: 0,
       pollUntil: 0,
+      general: null,
     };
     this.players.set(player.id, player);
     this.ownerId ??= player.id;
@@ -162,6 +186,48 @@ export class RoomStore {
     this.changed();
   }
 
+  generalChoice(token?: string): GeneralChoiceView {
+    const player = this.human(token);
+    if (!player) throw new AppError(401, 'PLAYER_REQUIRED', '请先加入本房间。');
+    this.assertWaiting();
+    if (!this.settings.allowGeneralSelection)
+      throw new AppError(409, 'GENERAL_SELECTION_DISABLED', '房主尚未开放点将。');
+    const taken = new Set(
+      [...this.players.values()]
+        .filter((seat): seat is Human => seat.kind === 'human' && seat !== player)
+        .map((seat) => seat.general),
+    );
+    return {
+      selected: player.general,
+      available: generalCatalog.characters
+        .filter(
+          (general) => general.preset === this.settings.generalPreset && !taken.has(general.id),
+        )
+        .map((general) => general.id),
+    };
+  }
+
+  setGeneralChoice(token: string | undefined, general: unknown): GeneralChoiceView {
+    const choice = this.generalChoice(token);
+    if (general !== null && (typeof general !== 'string' || !choice.available.includes(general))) {
+      const inPreset = generalCatalog.characters.some(
+        (entry) => entry.preset === this.settings.generalPreset && entry.id === general,
+      );
+      throw new AppError(
+        inPreset ? 409 : 400,
+        inPreset ? 'GENERAL_TAKEN' : 'INVALID_GENERAL',
+        inPreset ? '这名武将已被其他玩家点将，请选择另一名。' : '请选择当前武将档内的武将。',
+      );
+    }
+    const player = this.human(token)!;
+    if (player.general !== general) {
+      player.general = general as string | null;
+      this.resetReady();
+      this.changed();
+    }
+    return this.generalChoice(token);
+  }
+
   updateSettings(input: unknown, ownerToken?: string): void {
     this.requireOwner(ownerToken);
     this.assertWaiting();
@@ -181,6 +247,8 @@ export class RoomStore {
     const extensions = [...new Set(body.extensions as string[])];
     if (!GENERAL_PRESETS.some((preset) => preset.id === body.generalPreset))
       throw new AppError(400, 'INVALID_PRESET', '请选择新手档或进阶档。');
+    if (body.allowGeneralSelection !== undefined && typeof body.allowGeneralSelection !== 'boolean')
+      throw new AppError(400, 'INVALID_GENERAL_SELECTION', '点将开关需要开启或关闭。');
     if (
       extensions.some(
         (id) =>
@@ -195,9 +263,14 @@ export class RoomStore {
       mode: mode.id,
       playerCount: body.playerCount as number,
       generalPreset: body.generalPreset as GeneralPresetId,
+      allowGeneralSelection:
+        (body.allowGeneralSelection as boolean | undefined) ?? this.settings.allowGeneralSelection,
       extensions,
     };
     if (JSON.stringify(next) === JSON.stringify(this.settings)) return;
+    if (!next.allowGeneralSelection || next.generalPreset !== this.settings.generalPreset)
+      for (const player of this.players.values())
+        if (player.kind === 'human') player.general = null;
     this.settings = next;
     // 缩小房间只裁掉多余 AI，绝不自动移出真人。
     for (const bot of [...this.players.values()].reverse()) {
@@ -219,6 +292,8 @@ export class RoomStore {
     )
       throw new AppError(409, 'PLAYERS_NOT_READY', '需要人数齐全且所有真人在线、已准备。');
     this.phase = 'starting';
+    this.matchFailure = undefined;
+    this.matchRecovery = undefined;
     const generation = ++this.startGeneration;
     try {
       const starting = this.engine.start({
@@ -227,6 +302,11 @@ export class RoomStore {
         settings: structuredClone(this.settings),
         seats: [...this.players.values()].map(({ id, nickname, kind }) => ({ id, nickname, kind })),
         aiPolicy: 'strongest-native',
+        generalSelections: Object.fromEntries(
+          [...this.players.values()]
+            .filter((player): player is Human => player.kind === 'human' && player.general !== null)
+            .map((player) => [player.id, player.general!]),
+        ),
       });
       this.changed();
       await starting;
@@ -266,6 +346,8 @@ export class RoomStore {
     this.startGeneration++;
     this.phase = 'waiting';
     this.engine.release?.(this.code);
+    this.matchFailure = undefined;
+    this.matchRecovery = undefined;
     this.resetReady();
     this.changed();
   }
@@ -285,6 +367,8 @@ export class RoomStore {
       throw new AppError(409, 'MATCH_NOT_FINISHED', '请等这一局结束后再返回房间。');
     this.engine.release?.(this.code);
     this.phase = 'waiting';
+    this.matchFailure = undefined;
+    this.matchRecovery = undefined;
     this.resetReady();
     this.changed();
   }

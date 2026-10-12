@@ -117,6 +117,60 @@ test('HTTP：玩家创建房间、房主参赛、跨房间权限隔离与 AI 管
   assert.equal(JSON.stringify(room).includes(owner.cookie.slice('party_player='.length)), false);
 });
 
+test('HTTP：大厅点将按本房会话授权，同时争抢只保留一份，公开快照不含偏好', async (t) => {
+  const { request, create } = await fixture(t);
+  const owner = await create('房主');
+  const other = await create('另一桌');
+  const path = `/api/rooms/${owner.data.room.code}`;
+  const join = await request(`${path}/players`, 'POST', { nickname: '朋友' });
+  const friendCookie = join.headers.get('set-cookie')!.split(';')[0]!;
+  const settings = {
+    mode: 'identity',
+    playerCount: 5,
+    generalPreset: 'beginner',
+    extensions: [],
+    allowGeneralSelection: true,
+  };
+  for (const cookie of ['', friendCookie, other.cookie])
+    assert.equal((await request(path, 'PUT', settings, cookie)).status, 403);
+  assert.equal((await request(`${path}/me/general`, 'GET', undefined, owner.cookie)).status, 409);
+  assert.equal((await request(path, 'PUT', settings, owner.cookie)).status, 200);
+  for (const cookie of ['', other.cookie]) {
+    assert.equal((await request(`${path}/me/general`, 'GET', undefined, cookie)).status, 401);
+    assert.equal(
+      (await request(`${path}/me/general`, 'PUT', { general: 'zhaoyun' }, cookie)).status,
+      401,
+    );
+  }
+  assert.equal(
+    (await request(`${path}/me/general`, 'PUT', { general: 'shen_zhaoyun' }, owner.cookie)).status,
+    400,
+  );
+  const raced = await Promise.all(
+    [owner.cookie, friendCookie].map((cookie) =>
+      request(`${path}/me/general`, 'PUT', { general: 'zhaoyun' }, cookie),
+    ),
+  );
+  assert.deepEqual(raced.map((response) => response.status).sort(), [200, 409]);
+  const choices = await Promise.all(
+    [owner.cookie, friendCookie].map(async (cookie) =>
+      (await request(`${path}/me/general`, 'GET', undefined, cookie)).json(),
+    ),
+  );
+  assert.equal(choices.filter((choice) => choice.selected === 'zhaoyun').length, 1);
+  assert.equal(JSON.stringify(await (await request(path)).json()).includes('zhaoyun'), false);
+  const winner = [owner.cookie, friendCookie][
+    raced.findIndex((response) => response.status === 200)
+  ]!;
+  assert.equal((await request(`${path}/me/general`, 'PUT', { general: null }, winner)).status, 200);
+  assert.equal(
+    (await request(`${path}/me/general`, 'GET', undefined, friendCookie)).headers.get(
+      'cache-control',
+    ),
+    'no-store',
+  );
+});
+
 test('HTTP：主页二维码、所有成员的房间二维码、邀请失效与本机控制文件隔离', async (t) => {
   const { party, base, request, create } = await fixture(t);
   const owner = await create('赵云');
