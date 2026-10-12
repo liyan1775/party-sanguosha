@@ -1,5 +1,9 @@
 # 正式无名杀适配
 
+v0.7.9接入层审查补丁：玩家序列化与公开记录共用publicCardVisible；补齐直接判定、公开获得／置于武将牌、批次置牌及虚拟装备的首次同步和恢复。公开放置记录只在同一拥有者x区域有效，私人再次放置／原生清除知情者撤销；虚拟显示牌只在对应原生渲染广播中授权，blankCard除外。定向消息的无主材料仅限显式参数，不扩散到父事件或storage；补齐shenhua:guhuo_guess的质疑保密及翻牌，原生技能、知情者、AI和入站卡牌保护保持。见ADR-039。
+
+原生广播创建的仍打开公开牌池在reinit确认后按原videoId和当前剩余按钮恢复，再重发原选择；不延长期限，私人／暗置／已关闭弹窗不重建。`ENGINE_VERIFY_ADAPTER_AUDIT=1 npm run engine:verify:table`独立三真人真实选将／发牌后，验证直接判定、公开交牌、单人／批次置牌、虚拟装备、其余手牌隐私、三端刷新、公开展示池及五谷丰登剩余牌池恢复／关闭。原生无懈请求用真实UI取消，取牌仍由原生规则执行；夹具不等于自然整局或微信真机。可加ENGINE_VERIFY_DESKTOP=1或ENGINE_VERIFY_HTTP=1；ENGINE_VERIFY_TABLE_BLUFF=re_yuji复核时光场另一版蛊惑，值1仍验证旧于吉。
+
 v0.7.9蒲元显示补丁：公开equip事件的显式cards材料在移入ui.special、知情者被原生lose清除后仍公开，首次addVirtualEquip广播正确重建装备牌面并移除未知牌遮罩。只覆盖明确visible=true的装备材料，其他手牌／私人排序及预编码事件继续过滤；原生技能和牌堆保持。
 
 `ENGINE_VERIFY_TABLE_PUYUAN=1 npm run engine:verify:table`在独立服务真实选将／发牌后触发原生phaseBefore及奇思，检查本人／对手首次装备文字与遮罩、恢复前后相同、后续直接装备及其余手牌隐私。首次检查前不刷新玩家页面；未注入牌堆或装备材料。可加ENGINE_VERIFY_DESKTOP=1或ENGINE_VERIFY_HTTP=1，仍属桌面Edge／手机视口与合成触摸，不代表微信真机验收。

@@ -20,7 +20,7 @@ async function runtime(name: string) {
       'utf8',
     )
   ).replace(/import \{([^}]+)\} from 'noname';/, 'const {$1} = globalThis.nativeFixture;');
-  if (source.includes("import { markPublicLogCards } from './privacy.js';")) {
+  if (source.includes("from './privacy.js';")) {
     const privacy = (
       await readFile(
         new URL('../packages/noname-adapter/runtime/privacy.js', import.meta.url),
@@ -258,7 +258,29 @@ test('公开装备、弃牌与重铸只揭示显式材料，移牌前日志与�
     assert(client.send(discarded)[0]!.includes('party_unknown'));
   }
   discarded.position = 'h';
-  for (const name of ['reguhuo_guess', 'old_guhuo_guess']) {
+  for (const name of ['equip', 'addJudge', 'gain', 'addToExpansion', 'lose']) {
+    event = { name, visible: true, cards: [discarded] };
+    assert.equal(observerCardVisible(discarded), true, `${name}: explicit public material`);
+    assert(client.send(discarded)[0]!.includes('public-discard'));
+    assert.equal(observerCardVisible(remaining), false, `${name}: remaining hand is private`);
+    for (const visible of [false, undefined]) {
+      event.visible = visible;
+      assert.equal(observerCardVisible(discarded), false, `${name}: no blanket publication`);
+      assert(client.send(discarded)[0]!.includes('party_unknown'));
+    }
+  }
+  for (const [type, field] of [
+    ['gain', 'gain_list'],
+    ['addToExpansion', 'lose_list'],
+  ]) {
+    event = { name: 'loseAsync', type, visible: true, [field!]: [[owner, [discarded]]] };
+    assert.equal(observerCardVisible(discarded), true);
+    assert(client.send(discarded)[0]!.includes('public-discard'));
+    assert(client.send(remaining)[0]!.includes('party_unknown'));
+    event.visible = false;
+    assert.equal(observerCardVisible(discarded), false, 'private multiple moves stay private');
+  }
+  for (const name of ['reguhuo_guess', 'old_guhuo_guess', 'guhuo_guess']) {
     const use = { name: 'useCard', cards: [ordering] };
     const challenge = { name, _trigger: use, getParent: () => use };
     event = { name: 'chooseButtonOL', getParent: () => challenge };
@@ -267,6 +289,298 @@ test('公开装备、弃牌与重铸只揭示显式材料，移牌前日志与�
     event = { name: 'showCards', cards: [ordering], getParent: () => challenge };
     assert.equal(observerCardVisible(ordering), true, `${name} publishes only at native reveal`);
   }
+});
+
+test('公开放置牌与虚拟装备按原生边界同步；刷新保留公开材料，私下转移及未知区域不获授权', async (t) => {
+  let event: any;
+  let display: Card;
+  class Card {
+    kind = 'card';
+    position = 's';
+    owner: Player | undefined;
+    classList = { contains: () => false, add() {}, remove() {} };
+    constructor(
+      public name: string,
+      public cardid: string,
+    ) {}
+    init() {}
+    clearKnowers() {}
+    isKnownBy(receiver: unknown) {
+      return this.owner === receiver;
+    }
+  }
+  class Client {
+    id = 'viewer';
+    send(...args: unknown[]) {
+      return args.map((value) => get.stringifiedResult(value));
+    }
+  }
+  class Player {
+    vcardsMap: any = { equips: [], judges: [] };
+    send() {}
+    getCards(zone: string) {
+      return [material, secret, unowned].filter(
+        (card) => card.owner === this && card.position === zone,
+      );
+    }
+    $addToExpansion(cards: Card[]) {
+      const existing = this.getCards('x');
+      for (const card of cards) {
+        if (existing.includes(card)) continue;
+        card.position = 'x';
+        card.owner = this;
+      }
+    }
+    $addVirtualEquip(virtual: any, cards: Card[]) {
+      display = new Card(virtual.name, 'display');
+      return game.broadcastAll(() => {}, this, display, true, virtual, cards);
+    }
+    $addVirtualJudge(virtual: any, cards: Card[]) {
+      return this.$addVirtualEquip(virtual, cards);
+    }
+  }
+  const actor = new Player(),
+    viewer = new Player(),
+    other = new Player();
+  const material = new Card('public-material', 'material');
+  const secret = new Card('SECRET', 'secret');
+  const unowned = new Card('UNOWNED-EXPANSION', 'unowned');
+  unowned.position = 'x';
+  const get: any = {
+    position: (card: Card) => card.position,
+    owner: (card: Card) => card.owner,
+    event: () => event,
+    itemtype: (value: any) => value?.kind,
+    cardInfoOL: (card: Card) =>
+      '_noname_card:' + JSON.stringify([card.cardid, 'heart', 8, card.name, '']),
+    cardInfo: (card: Card) => ['heart', 8, card.name, '', card.cardid],
+    stringifiedResult(value: any): any {
+      if (value instanceof Card) return get.cardInfoOL(value);
+      if (Array.isArray(value)) return value.map((item) => get.stringifiedResult(item));
+      return value;
+    },
+  };
+  const lib: any = {
+    card: { bagua: {}, lebu: {}, concealed: { blankCard: true } },
+    translate: {},
+    element: { Card, Client, Player },
+    playerOL: { viewer },
+  };
+  const client = new Client();
+  const game = {
+    players: [actor, viewer],
+    dead: [],
+    broadcastAll: (...args: unknown[]) => client.send(...args.slice(1)),
+  };
+  globals(t, { nativeFixture: { lib, get, game, _status: {} } });
+  const { installPrivacy, publicCardVisible } = await runtime('privacy');
+  installPrivacy();
+  event = { name: 'addToExpansion', player: actor, visible: true, cards: [material] };
+  actor.$addToExpansion([material]);
+  event = undefined;
+  assert.equal(publicCardVisible(material), true, 'public expansion survives reinit');
+  actor.$addToExpansion([material]);
+  assert.equal(
+    publicCardVisible(material),
+    true,
+    'native duplicate placement is a no-op, not a new private placement',
+  );
+  assert(client.send(material)[0].includes('public-material'));
+  assert.equal(publicCardVisible(unowned), false, 'an unknown owner grants no access');
+  material.position = 'h';
+  assert.equal(publicCardVisible(material), false, 'past public placement cannot reveal a hand');
+  material.position = 'x';
+  material.clearKnowers();
+  assert.equal(publicCardVisible(material), false, 'native knowledge reset revokes the placement');
+  material.position = 's';
+  event = { name: 'addToExpansion', player: actor, visible: true, cards: [material] };
+  actor.$addToExpansion([material]);
+  event = { name: 'addToExpansion', player: actor, visible: false, cards: [material] };
+  material.position = 's';
+  actor.$addToExpansion([material]);
+  event = undefined;
+  assert.equal(
+    publicCardVisible(material),
+    false,
+    'private replacement cannot reuse public authorization',
+  );
+  event = {
+    name: 'loseAsync',
+    type: 'addToExpansion',
+    visible: true,
+    lose_list: [[actor, [material]]],
+  };
+  other.$addToExpansion([secret]);
+  material.position = 's';
+  actor.$addToExpansion([material]);
+  event = undefined;
+  assert.equal(
+    publicCardVisible(material),
+    true,
+    'native multiple expansion placement survives recovery',
+  );
+  assert.equal(publicCardVisible(secret), false, 'another recipient or material is not authorized');
+  event = {
+    name: 'loseAsync',
+    type: 'addToExpansion',
+    visible: false,
+    lose_list: [[actor, [material]]],
+  };
+  material.position = 's';
+  actor.$addToExpansion([material]);
+  event = undefined;
+  assert.equal(
+    publicCardVisible(material),
+    false,
+    'private multiple placement revokes former publicity',
+  );
+  for (const [method, name] of [
+    ['$addVirtualEquip', 'bagua'],
+    ['$addVirtualJudge', 'lebu'],
+  ]) {
+    material.position = 's';
+    event = {
+      name: method === '$addVirtualEquip' ? 'equip' : 'addJudge',
+      visible: true,
+      cards: [material],
+    };
+    const result = (actor as any)[method!]({ name }, [material]);
+    assert(result[1].includes(name), 'native synthetic display card is public');
+    assert.equal(publicCardVisible(display!), false, 'render scope closes after the callback');
+    assert(client.send(secret)[0].includes('party_unknown'));
+  }
+  event = { name: 'addJudge', visible: false, cards: [material] };
+  assert(
+    actor.$addVirtualJudge({ name: 'concealed' }, [material])[1].includes('party_unknown'),
+    'blank native judgments do not acquire display authorization',
+  );
+  event = undefined;
+  actor.vcardsMap.equips = [{ name: 'bagua', cards: [material] }];
+  assert.equal(
+    publicCardVisible(material),
+    true,
+    'physical materials attached to public virtual equipment survive recovery',
+  );
+  assert.equal(publicCardVisible(secret), false);
+  actor.vcardsMap.equips = [];
+  actor.vcardsMap.judges = [{ name: 'concealed', cards: [material] }];
+  assert.equal(
+    publicCardVisible(material),
+    false,
+    'blank virtual judgments do not expose their materials',
+  );
+});
+
+test('重连只恢复原生广播仍有效的公开牌池，使用当前剩余牌；私人、暗置、已关闭和同编号替换的弹窗不恢复', async (t) => {
+  class Card {
+    kind = 'card';
+    position = 'o';
+    _knowers: string[] = [];
+    classList = { contains: () => false, add() {}, remove() {} };
+    constructor(
+      public name: string,
+      public cardid: string,
+    ) {}
+    init() {}
+    isKnownBy() {
+      return false;
+    }
+  }
+  const sent: unknown[][] = [];
+  class Client {
+    id = 'viewer';
+    send(...args: unknown[]) {
+      return args.map((value) => get.stringifiedResult(value));
+    }
+  }
+  class Player {
+    send(...args: unknown[]) {
+      sent.push(new Client().send(...args));
+    }
+  }
+  const viewer = new Player();
+  const first = new Card('PUBLIC-ONE', 'one'),
+    second = new Card('PUBLIC-TWO', 'two');
+  first._knowers = second._knowers = ['everyone'];
+  const secret = new Card('SECRET-POOL', 'secret');
+  const dialogs = new Map<number, any>();
+  const makeDialog = (id: number, cards: Card[], hidden = false) => {
+    const dialog = {
+      isConnected: true,
+      buttons: cards.map((link) => ({ link, classList: { contains: () => hidden } })),
+      content: { firstChild: { textContent: '当前原生公开牌池' } },
+      static: true,
+    };
+    dialogs.set(id, dialog);
+    return dialog;
+  };
+  const get: any = {
+    position: (card: Card) => card.position,
+    owner: () => undefined,
+    event: () => undefined,
+    itemtype: (value: any) => value?.kind,
+    idDialog: (id: number) => dialogs.get(id),
+    cardInfoOL: (card: Card) =>
+      '_noname_card:' + JSON.stringify([card.cardid, 'heart', 8, card.name, '']),
+    cardInfo: (card: Card) => ['heart', 8, card.name, '', card.cardid],
+    stringifiedResult(value: any): any {
+      if (value instanceof Card) return get.cardInfoOL(value);
+      if (Array.isArray(value)) return value.map((item) => get.stringifiedResult(item));
+      return value;
+    },
+  };
+  const game: any = {
+    broadcast() {},
+    broadcastAll(...args: unknown[]) {
+      return game.broadcast(...args);
+    },
+  };
+  const lib = { card: {}, translate: {}, element: { Card, Client, Player }, playerOL: { viewer } };
+  globals(t, { nativeFixture: { lib, get, game, _status: {} } });
+  const { installPrivacy, replayPublicDialogs } = await runtime('privacy');
+  installPrivacy();
+  function nativePool(cards: unknown[], id: number) {
+    const dialog = (globalThis as any).ui.create.dialog('五谷丰登', cards);
+    dialog.videoId = id;
+  }
+  makeDialog(10, [secret]);
+  game.broadcast(nativePool, [secret], 10);
+  makeDialog(11, [first], true);
+  game.broadcast(nativePool, [first], 11);
+  makeDialog(12, [first]);
+  game.broadcast(() => {}, [first], 12);
+  makeDialog(13, [first]);
+  viewer.send(nativePool, [first], 13);
+  makeDialog(14, [first, secret]);
+  game.broadcast(nativePool, [first], 14);
+  sent.length = 0;
+  replayPublicDialogs(viewer);
+  assert.equal(
+    sent.length,
+    0,
+    'neither private messages, opaque broadcasts nor mixed/blank dialogs qualify',
+  );
+  const publicPool = makeDialog(20, [first, second]);
+  game.broadcast(nativePool, [first, second], 20);
+  publicPool.buttons.shift();
+  replayPublicDialogs(viewer);
+  assert.equal(sent.length, 1);
+  assert.deepEqual(sent[0]!.slice(2), [20, '当前原生公开牌池', true]);
+  assert((sent[0]![1] as string[])[0]!.includes('PUBLIC-TWO'));
+  assert.equal((sent[0]![1] as string[]).length, 1, 'picked cards are not restored');
+  publicPool.buttons.push({ link: secret, classList: { contains: () => false } });
+  replayPublicDialogs(viewer);
+  assert.equal(sent.length, 1, 'new private material cannot inherit the public pool authorization');
+  publicPool.buttons.pop();
+  publicPool.isConnected = false;
+  makeDialog(20, [first]);
+  replayPublicDialogs(viewer);
+  assert.equal(sent.length, 1, 'a reused video ID cannot resurrect the closed original');
+  makeDialog(21, [first]);
+  game.broadcastAll(nativePool, [first], 21);
+  game.broadcastAll('closeDialog', 21);
+  replayPublicDialogs(viewer);
+  assert.equal(sent.length, 1, 'explicit close revokes recovery even before DOM removal');
 });
 
 test('装备点击选择其有效目标，装备材料、非目标和自定义卡牌处理仍走原生流程', async (t) => {

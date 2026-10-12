@@ -2,6 +2,177 @@
 import { lib, game, ui, get, _status } from 'noname';
 
 let discloseChoice = (_event, send) => send();
+let publicRendering;
+const publicExpansions = new WeakMap();
+const publicDialogs = new Map();
+
+/** Card arguments are declarations; opaque parents/storage are not materials. */
+function declaredCards(values) {
+  const cards = new Set();
+  const visit = (value, depth = 0) => {
+    if (get.itemtype?.(value) === 'card') cards.add(value);
+    else if (Array.isArray(value) && depth < 8) {
+      const card = value.length === 5 && typeof value[4] === 'string' && lib.cardOL?.[value[4]];
+      if (card) cards.add(card);
+      else for (const item of value) visit(item, depth + 1);
+    } else if (typeof value === 'string' && value.startsWith('_noname_card:')) {
+      try {
+        const card = lib.cardOL?.[JSON.parse(value.slice(13))[0]];
+        if (card) cards.add(card);
+      } catch {
+        // Leave malformed native values to the original serializer/parser.
+      }
+    }
+  };
+  visit(values);
+  return cards;
+}
+
+/** Retain only card pools actually created by a native public broadcast. */
+function rememberPublicDialogs(args) {
+  if (args[0] === 'closeDialog') return publicDialogs.delete(args[1]);
+  if (
+    typeof args[0] !== 'function' ||
+    !/ui\.create\.dialog/.test(String(args[0])) ||
+    !/\.videoId\s*=/.test(String(args[0])) ||
+    !get.idDialog
+  )
+    return;
+  const cards = declaredCards(args.slice(1));
+  for (const id of args.slice(1)) {
+    if (!Number.isSafeInteger(id)) continue;
+    const dialog = get.idDialog(id);
+    if (
+      !dialog?.isConnected ||
+      !dialog.buttons?.length ||
+      !dialog.buttons.every(
+        (button) =>
+          cards.has(button.link) &&
+          publicCardVisible(button.link) &&
+          !['blank', 'infohidden'].some((name) => button.classList.contains(name)),
+      )
+    )
+      continue;
+    for (const [key, value] of publicDialogs)
+      if (!value.dialog.isConnected) publicDialogs.delete(key);
+    publicDialogs.set(id, { dialog, cards });
+    if (publicDialogs.size > 16) publicDialogs.delete(publicDialogs.keys().next().value);
+  }
+}
+
+/** Rebuild current public pools before replaying a recipient's original choice. */
+export function replayPublicDialogs(player) {
+  for (const [id, { dialog, cards }] of publicDialogs) {
+    if (!dialog.isConnected) {
+      publicDialogs.delete(id);
+      continue;
+    }
+    const buttons = dialog.buttons ?? [];
+    if (
+      !buttons.length ||
+      !buttons.every(
+        (button) =>
+          cards.has(button.link) &&
+          publicCardVisible(button.link) &&
+          !['blank', 'infohidden'].some((name) => button.classList.contains(name)),
+      )
+    )
+      continue;
+    player.send(
+      function (cards, id, caption, isStatic) {
+        if (get.idDialog(id)?.isConnected) return;
+        const dialog = ui.create.dialog('公开牌池', cards, isStatic);
+        dialog.videoId = id;
+        dialog.content.firstChild.textContent = caption;
+      },
+      buttons.map((button) => button.link),
+      id,
+      String(dialog.content?.firstChild?.textContent ?? '公开牌池').slice(0, 500),
+      dialog.static === true,
+    );
+  }
+}
+
+/** One public-card policy for player serialization, journals and observers. */
+function publicCardDisclosure(card) {
+  const position = get.position(card, true);
+  if (['e', 'j', 'd'].includes(position)) return true;
+  if (card._knowers?.includes('everyone') || get.is?.shownCard?.(card)) return true;
+  if (publicRendering?.disclosed.has(card)) return true;
+  // A public expansion stays public on recovery, but this grants no access to
+  // another expansion, a later private placement, a hand or the draw pile.
+  if (
+    position === 'x' &&
+    publicExpansions.has(card) &&
+    publicExpansions.get(card) === get.owner(card)
+  )
+    return true;
+  // Native virtual equipment/judgments keep their physical public materials
+  // in ui.special. Recover only materials attached to the visible virtual card.
+  if (
+    position === 's' &&
+    [...(game?.players ?? []), ...(game?.dead ?? [])].some((player) =>
+      ['equips', 'judges'].some((zone) =>
+        player.vcardsMap?.[zone]?.some(
+          (virtual) => !lib.card[virtual.name]?.blankCard && virtual.cards?.includes(card),
+        ),
+      ),
+    )
+  )
+    return true;
+  const seen = new Set();
+  for (let event = get.event(), depth = 0; event && depth < 32 && !seen.has(event); depth++) {
+    seen.add(event);
+    if (event.partyShownCompareCards?.includes(card)) return true;
+    if (event.name === 'yanxi' && event.partyShownYanxiCards?.includes(card)) return true;
+    if (event.partyShownGuhuoCards?.includes(card)) return true;
+    // A use/respond ancestor contains the bluff during challenges too.
+    if (
+      ['reguhuo_guess', 'old_guhuo_guess', 'guhuo_guess'].includes(event.name) &&
+      event._trigger?.cards?.includes(card)
+    )
+      return false;
+    if (
+      ['equip', 'addJudge', 'gain', 'addToExpansion', 'lose'].includes(event.name) &&
+      event.visible === true &&
+      event.cards?.includes(card)
+    )
+      return true;
+    if (
+      ['useCard', 'respond', 'discard', 'showCards', 'recast'].includes(event.name) &&
+      event.cards?.includes(card)
+    )
+      return true;
+    if (
+      event.name === 'loseAsync' &&
+      event.visible === true &&
+      ((['discard', 'addToExpansion'].includes(event.type) &&
+        event.lose_list?.some((entry) => Array.isArray(entry[1]) && entry[1].includes(card))) ||
+        (event.type === 'gain' &&
+          event.gain_list?.some((entry) => Array.isArray(entry[1]) && entry[1].includes(card))))
+    )
+      return true;
+    if (event.name === 'loseToDiscardpile' && !event.blank && event.cards?.includes(card))
+      return true;
+    if (
+      event.name === 'useCard' &&
+      event.card?.name === 'wugu' &&
+      event.wuguShownCards?.includes(card)
+    )
+      return true;
+    if (event.name === 'reyajiao' && event.card === card) return true;
+    if (
+      event.name === 'judge' &&
+      (event.player?.judging?.includes(card) || event.result?.card === card)
+    )
+      return true;
+    event = event.getParent?.();
+  }
+}
+
+export function publicCardVisible(card) {
+  return publicCardDisclosure(card) === true;
+}
 /** Reuse the native choice's narrow disclosure scope when replaying its request. */
 export function withChoiceDisclosure(event, send) {
   return discloseChoice(event, send);
@@ -64,8 +235,53 @@ export function installPrivacy() {
     else if (concealed) this.classList.remove('party-concealed', 'infohidden');
     return result;
   };
+  const clearKnowers = lib.element.Card.prototype.clearKnowers;
+  if (clearKnowers)
+    lib.element.Card.prototype.clearKnowers = function (...args) {
+      publicExpansions.delete(this);
+      return clearKnowers.apply(this, args);
+    };
+  const expansion = lib.element.Player.prototype.$addToExpansion;
+  if (expansion)
+    lib.element.Player.prototype.$addToExpansion = function (cards, ...args) {
+      const event = get.event();
+      const check = args[2] === undefined ? true : args[2];
+      const existing = check ? this.getCards('x') : [];
+      for (const card of cards ?? []) {
+        // Native duplicate placements do not move the card or change its secrecy.
+        if (existing.includes(card)) continue;
+        publicExpansions.delete(card);
+        if (
+          event?.visible === true &&
+          ((event.name === 'addToExpansion' &&
+            event.player === this &&
+            event.cards?.includes(card)) ||
+            (event.name === 'loseAsync' &&
+              event.type === 'addToExpansion' &&
+              event.lose_list?.some(([player, cards]) => player === this && cards.includes(card))))
+        )
+          publicExpansions.set(card, this);
+      }
+      return expansion.call(this, cards, ...args);
+    };
+  for (const name of ['$addVirtualEquip', '$addVirtualJudge']) {
+    const render = lib.element.Player.prototype[name];
+    if (!render) continue;
+    lib.element.Player.prototype[name] = function (virtual, cards, ...args) {
+      const previous = publicRendering;
+      publicRendering = lib.card[virtual?.name]?.blankCard
+        ? undefined
+        : { player: this, virtual, cards, disclosed: new Set() };
+      try {
+        return render.call(this, virtual, cards, ...args);
+      } finally {
+        publicRendering = previous;
+      }
+    };
+  }
   let receiver;
   let addressedTo;
+  let addressedCards;
   let choiceDisclosure;
   discloseChoice = function (event, send) {
     const previous = choiceDisclosure;
@@ -174,11 +390,14 @@ export function installPrivacy() {
   const playerSend = lib.element.Player.prototype.send;
   lib.element.Player.prototype.send = function (...args) {
     const previous = addressedTo;
+    const previousCards = addressedCards;
     addressedTo = this;
+    addressedCards = declaredCards(args.slice(1));
     try {
       return playerSend.apply(this, args);
     } finally {
       addressedTo = previous;
+      addressedCards = previousCards;
     }
   };
   if (game?.log) {
@@ -189,20 +408,47 @@ export function installPrivacy() {
     };
   }
   const broadcastAll = game?.broadcastAll;
+  const broadcast = game?.broadcast;
+  if (broadcast)
+    game.broadcast = function (...args) {
+      const result = broadcast.apply(this, args);
+      rememberPublicDialogs(args);
+      return result;
+    };
   if (broadcastAll)
     game.broadcastAll = function (...args) {
       const event = get.event();
-      // Old 于吉 flips an existing face-down copy, without showCards or a new
+      // The pinned native renderers broadcast a newly created display card,
+      // which is distinct from their already-public physical cost materials.
+      if (
+        publicRendering &&
+        typeof args[0] === 'function' &&
+        args[1] === publicRendering.player &&
+        get.itemtype(args[2]) === 'card' &&
+        typeof args[3] === 'boolean' &&
+        args[4] === publicRendering.virtual &&
+        args[5] === publicRendering.cards
+      )
+        publicRendering.disclosed.add(args[2]);
+      // Two native 于吉 versions flip an existing copy without showCards or a new
       // card argument. Publish exactly its one material at the native flip,
       // after every challenge; keep the copy visually face down until native
       // animation removes infohidden. Other broadcasts grant no disclosure.
+      const bluffNode =
+        event?.name === 'old_guhuo_guess'
+          ? 'old_guhuoNode'
+          : event?.name === 'guhuo_guess'
+            ? 'guhuoNode'
+            : undefined;
       if (
-        event?.name === 'old_guhuo_guess' &&
+        bluffNode &&
         args.length === 2 &&
         typeof args[0] === 'function' &&
         args[1] === event.onEnd01 &&
         typeof args[1] === 'function' &&
-        /_status\.old_guhuoNode\.listenTransition\(onEnd,\s*300\)/.test(String(args[0])) &&
+        new RegExp(`_status\\.${bluffNode}\\.listenTransition\\(onEnd,\\s*300\\)`).test(
+          String(args[0]),
+        ) &&
         event._trigger?.cards?.length === 1 &&
         get.itemtype(event._trigger.cards[0]) === 'card'
       ) {
@@ -210,9 +456,9 @@ export function installPrivacy() {
         event.partyShownGuhuoCards = [card];
         broadcastAll.call(
           this,
-          function (card, player) {
-            const previous = _status.old_guhuoNode;
-            const node = (_status.old_guhuoNode = card.copy('thrown'));
+          function (card, player, nodeKey) {
+            const previous = _status[nodeKey];
+            const node = (_status[nodeKey] = card.copy('thrown'));
             node.classList.add('infohidden');
             if (previous?.isConnected) {
               node.classList.add('center');
@@ -228,10 +474,13 @@ export function installPrivacy() {
           },
           card,
           event.player,
+          bluffNode,
         );
         game.log(event.player, '展示了', [card]);
       }
-      return broadcastAll.apply(this, args);
+      const result = broadcastAll.apply(this, args);
+      rememberPublicDialogs(args);
+      return result;
     };
   const showCharacter = lib.element.Player.prototype.$showCharacter;
   if (showCharacter)
@@ -316,81 +565,19 @@ export function installPrivacy() {
   }
   function visible(card) {
     if (!receiver || _status.over) return true;
-    const position = get.position(card, true);
-    if (card.isKnownBy(receiver) || ['e', 'j', 'd'].includes(position)) return true;
+    if (card.isKnownBy(receiver)) return true;
     if (
       addressedTo === receiver &&
       choiceDisclosure?.player === receiver &&
       choiceDisclosure.cards.has(card)
     )
       return true;
-    // Native use/respond animation is broadcast BEFORE moving the physical
-    // materials out of the hand. Reveal that declared card, not its whole hand.
-    // Ordering ('o') is also used by private 观星, so it is not globally public.
-    let event = get.event();
-    const seen = new Set();
-    for (let depth = 0; event && depth < 32 && !seen.has(event); depth++) {
-      seen.add(event);
-      if (event.partyShownCompareCards?.includes(card)) return true;
-      if (event.name === 'yanxi' && event.partyShownYanxiCards?.includes(card)) return true;
-      if (event.partyShownGuhuoCards?.includes(card)) return true;
-      // 蛊惑's use/respond parent already holds the physical bluff material.
-      // It stays secret until the native showCards child or old-version flip.
-      if (
-        ['reguhuo_guess', 'old_guhuo_guess'].includes(event.name) &&
-        event._trigger?.cards?.includes(card)
-      )
-        return false;
-      // Direct equipment (e.g. 蒲元's opening 奇思) has no useCard parent.
-      // Native equip publishes these materials, but lose clears their knowers
-      // while they are in ui.special, before addVirtualEquip broadcasts them.
-      // Reveal only this face-up equip event's exact materials, not its hand.
-      if (event.name === 'equip' && event.visible === true && event.cards?.includes(card))
-        return true;
-      // recast logs its declared materials before moving them to discard.
-      // Reveal only that event's cards, never the replacement draw or other
-      // recastable cards left in the hand.
-      if (
-        ['useCard', 'respond', 'discard', 'showCards', 'recast'].includes(event.name) &&
-        event.cards?.includes(card)
-      )
-        return true;
-      // discardMultiple logs each native lose_list before filling event.cards
-      // or moving the cards out of their owner's hand (e.g. 魄袭). Its explicit
-      // face-up discard list is already public; the remaining hands are not.
-      if (
-        event.name === 'loseAsync' &&
-        event.type === 'discard' &&
-        event.visible === true &&
-        event.lose_list?.some((entry) => Array.isArray(entry[1]) && entry[1].includes(card))
-      )
-        return true;
-      if (event.name === 'loseToDiscardpile' && !event.blank && event.cards?.includes(card))
-        return true;
-      // 五谷丰登 draws before the ordering move. Its native useCard parent
-      // explicitly records the publicly displayed pool, unlike private 观星.
-      if (
-        event.name === 'useCard' &&
-        event.card?.name === 'wugu' &&
-        event.wuguShownCards?.includes(card)
-      )
-        return true;
-      // 界赵云's 涯角 publicly flips this one deck card before it is moved.
-      // Keep this exact native skill boundary; generic event.card stays private.
-      if (event.name === 'reyajiao' && event.card === card) return true;
-      // The flipped result is in player.judging, not event.card (the delayed
-      // trick being judged). After judging.shift(), callbacks use result.card.
-      if (
-        event.name === 'judge' &&
-        (event.player?.judging?.includes(card) || event.result?.card === card)
-      )
-        return true;
-      event = event.getParent?.();
-    }
+    const disclosure = publicCardDisclosure(card);
+    if (disclosure !== undefined) return disclosure;
     const owner = get.owner(card);
-    // Private choices such as 观星 explicitly send unowned cards to their actor.
-    // This does not permit that actor to see another player's concealed hand.
-    return !owner && addressedTo === receiver;
+    // Only explicit unowned card arguments inherit recipient authorization.
+    // Opaque event parents and another skill's storage do not inherit it.
+    return !owner && addressedTo === receiver && addressedCards?.has(card) === true;
   }
   const infoOL = get.cardInfoOL;
   get.cardInfoOL = function (card) {
@@ -470,7 +657,7 @@ export function installPrivacy() {
         ? lib.playerOL?.[item.player.slice(15)]
         : item.player;
     if (
-      ['reguhuo_guess', 'old_guhuo_guess'].includes(item.name) &&
+      ['reguhuo_guess', 'old_guhuo_guess', 'guhuo_guess'].includes(item.name) &&
       eventPlayer !== receiver &&
       'fake' in item
     ) {

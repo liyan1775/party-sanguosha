@@ -24,10 +24,10 @@ async function runtime(name: string) {
   )
     .replace(/import \{([^}]+)\} from 'noname';/, 'const {$1} = globalThis.nativeFixture;')
     .replace(
-      "import { withChoiceDisclosure } from './privacy.js';",
-      'const { withChoiceDisclosure } = globalThis.nativeFixture;',
+      "import { withChoiceDisclosure, replayPublicDialogs } from './privacy.js';",
+      'const { withChoiceDisclosure, replayPublicDialogs = () => {} } = globalThis.nativeFixture;',
     );
-  if (source.includes("import { markPublicLogCards } from './privacy.js';")) {
+  if (source.includes("from './privacy.js';")) {
     const privacy = (
       await readFile(
         new URL('../packages/noname-adapter/runtime/privacy.js', import.meta.url),

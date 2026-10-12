@@ -23,6 +23,7 @@ const base = `http://127.0.0.1:${party.server.address().port}`;
 const desktop = process.env.ENGINE_VERIFY_DESKTOP === '1';
 const http = process.env.ENGINE_VERIFY_HTTP === '1';
 const openingEquipment = process.env.ENGINE_VERIFY_TABLE_PUYUAN === '1';
+const adapterAudit = process.env.ENGINE_VERIFY_ADAPTER_AUDIT === '1';
 const gesture = desktop ? 'click' : 'tap';
 const browser = await chromium.launch({
   channel: process.env.E2E_BROWSER_CHANNEL ?? 'msedge',
@@ -194,7 +195,7 @@ async function start(computer, mode, preset, generals) {
     lib.config.duration = 100;
     globalThis.partyTableProbe = { done: true };
   });
-  for (const [i, phone] of (openingEquipment ? [] : phones).entries()) {
+  for (const [i, phone] of (openingEquipment || adapterAudit ? [] : phones).entries()) {
     await phone.reload();
     frames[i] = await table(phone);
     // booted means module loading finished, while HTTP reinit is asynchronous.
@@ -267,6 +268,53 @@ async function stage(kind) {
         await actor.gain(probe.privateEquipment);
       }
       if (event.kind === 'puyuan-replacement') await actor.equip(probe.privateEquipment);
+      if (event.kind === 'audit-moves') {
+        await actor.draw(2);
+        const materials = actor.getCards('h').slice(0, 4);
+        if (materials.length !== 4) throw new Error('audit requires four native starting cards');
+        probe.audit = { actor: actor.playerid, target: target.playerid };
+        await actor.addJudge('lebu', [materials[0]]);
+        const judgment = actor.getCards('j')[0];
+        probe.audit.judgment = { id: judgment.cardid, name: judgment.name };
+        await target.gain(materials[1], actor, 'give');
+        probe.audit.gain = { id: materials[1].cardid, name: materials[1].name };
+        await actor.addToExpansion(materials[2], actor, 'give');
+        probe.audit.expansion = { id: materials[2].cardid, name: materials[2].name };
+        const batches = [
+          [actor, [actor.getCards('h').find((card) => !materials.includes(card))]],
+          [target, [target.getCards('h').find((card) => card !== materials[1])]],
+        ];
+        await game
+          .loseAsync({ lose_list: batches, animate: 'give' })
+          .setContent('addToExpansionMultiple');
+        probe.audit.batches = batches.map(([player, [card]]) => ({
+          owner: player.playerid,
+          id: card.cardid,
+          name: card.name,
+        }));
+        await actor.equip(get.autoViewAs({ name: 'bagua' }, [materials[3]]));
+        const equipment = actor.getCards('e')[0];
+        probe.audit.equipment = { id: equipment.cardid, name: equipment.name };
+      }
+      if (event.kind === 'audit-public-pool') {
+        const cards = get.cards(3);
+        await game.cardsGotoOrdering(cards);
+        const shown = actor.showCards(cards, '接入层公开展示验证').set('closeDialog', false);
+        await shown;
+        probe.audit.poolId = shown.videoId;
+        probe.audit.pool = cards.map((card) => ({ id: card.cardid, name: card.name }));
+        const result = await actor
+          .chooseButton(true)
+          .set('dialog', shown.videoId)
+          .set('closeDialog', false)
+          .forResult();
+        probe.audit.poolChoice = cards.includes(result.links?.[0]);
+        game.broadcastAll('closeDialog', shown.videoId);
+      }
+      if (event.kind === 'audit-wugu') {
+        _status.currentPhase = actor;
+        await actor.useCard(game.createCard('wugu', 'heart', 3), game.players);
+      }
       if (event.kind === 'guhuo-setup') {
         for (const player of game.players) {
           player.stat.push({ card: {}, skill: {}, triggerSkill: {} });
@@ -508,7 +556,9 @@ async function oldHuashen() {
   });
 }
 
-async function oldGuhuo(matchId) {
+async function oldGuhuo(matchId, version = 'yuji') {
+  const nodeKey = version === 'yuji' ? 'old_guhuoNode' : 'guhuoNode';
+  const guessName = version === 'yuji' ? 'old_guhuo_guess' : 'guhuo_guess';
   await stage('guhuo-setup');
   await finish();
   const ids = await worker.evaluate(() => [
@@ -543,7 +593,7 @@ async function oldGuhuo(matchId) {
       ids,
     );
     assert(
-      await frames[1].evaluate(() => {
+      await frames[1].evaluate((guessName) => {
         const visited = new Set();
         for (
           let event = partyEngine._status.event;
@@ -551,10 +601,10 @@ async function oldGuhuo(matchId) {
           event = event._modparent || event.parent
         ) {
           visited.add(event);
-          if (event.name === 'old_guhuo_guess' && Object.hasOwn(event, 'fake')) return false;
+          if (event.name === guessName && Object.hasOwn(event, 'fake')) return false;
         }
         return true;
-      }),
+      }, guessName),
     );
   };
   await stage('guhuo');
@@ -579,18 +629,21 @@ async function oldGuhuo(matchId) {
   await concealed();
   await virtual(1, 'reguhuo_betray');
   await frames[1].waitForFunction(
-    (id) =>
+    ({ id, nodeKey }) =>
       partyEngine.lib.cardOL?.[id]?.name === 'sha' &&
-      partyEngine._status.old_guhuoNode?.name === 'sha' &&
-      !partyEngine._status.old_guhuoNode.classList.contains('infohidden'),
-    ids[0],
+      partyEngine._status[nodeKey]?.name === 'sha' &&
+      !partyEngine._status[nodeKey].classList.contains('infohidden'),
+    { id: ids[0], nodeKey },
   );
   await choosing(0, 'chooseToUse');
   await control(frames[0], '结束回合')[gesture]();
   await finish();
   assert(
     await worker.evaluate(
-      () => partyTableProbe.falseClaimDiscarded && partyTableProbe.challengeDrew,
+      (version) =>
+        partyTableProbe.falseClaimDiscarded &&
+        (version !== 'yuji' || partyTableProbe.challengeDrew),
+      version,
     ),
   );
   await frames[1].waitForFunction(
@@ -606,6 +659,7 @@ async function oldGuhuo(matchId) {
   );
   results.push({
     oldGuhuo: true,
+    version,
     privateUntilChallenges: true,
     reconnectOriginalDeadline: true,
     nativeFlipReveals: true,
@@ -709,6 +763,271 @@ async function puyuanEquipment() {
   });
 }
 
+async function auditAdapter(matchId) {
+  await stage('audit-moves');
+  await finish();
+  const expected = await worker.evaluate(() => partyTableProbe.audit);
+  const publicHands = [expected.gain.id];
+  const assertPrivateHands = async () => {
+    for (const frame of frames)
+      assert.equal(
+        await frame.evaluate((publicHands) => {
+          const { game } = partyEngine;
+          return game.players.every((player) =>
+            player
+              .getCards('h')
+              .every((card) =>
+                player === game.me
+                  ? card.name !== 'party_unknown'
+                  : publicHands.includes(card.cardid) || card.name === 'party_unknown',
+              ),
+          );
+        }, publicHands),
+        true,
+        'own hands are usable; other undeclared hands stay concealed',
+      );
+  };
+  const snapshots = [];
+  for (const [index, frame] of frames.entries()) {
+    await frame.waitForFunction(
+      ({ actor, judgment, equipment }) =>
+        partyEngine.lib.playerOL?.[actor]
+          ?.getCards('j')
+          .some((card) => card.cardid === judgment.id) &&
+        partyEngine.lib.playerOL?.[actor]
+          ?.getCards('e')
+          .some((card) => card.cardid === equipment.id),
+      expected,
+    );
+    snapshots.push(
+      await frame.evaluate((expected) => {
+        const { lib } = partyEngine;
+        return Object.fromEntries(
+          ['judgment', 'gain', 'expansion', 'equipment'].map((key) => {
+            const card = lib.cardOL[expected[key].id];
+            return [
+              key,
+              {
+                present: !!card,
+                faceMatches: card?.name === expected[key].name,
+                concealed:
+                  !card ||
+                  card.classList.contains('party-concealed') ||
+                  card.classList.contains('infohidden'),
+              },
+            ];
+          }),
+        );
+      }, expected),
+    );
+    await phones[index].screenshot({ path: `${output}/adapter-audit-initial-${index}.png` });
+  }
+  let history;
+  for (let attempt = 0; attempt < 20; attempt++) {
+    history = await request(phones[0], `/engine/history/${matchId}`, 'GET');
+    if (
+      history.entries.length >= 5 &&
+      history.entries.some((entry) => entry.text.includes('装备了'))
+    )
+      break;
+    await wait(250);
+  }
+  await writeFile(
+    `${output}/adapter-audit-initial.json`,
+    JSON.stringify({ expected, snapshots, history }, null, 2),
+  );
+  assert(history.entries.length >= 5);
+  assert(history.entries.some((entry) => entry.text.includes('装备了')));
+  assert(
+    history.entries.every((entry) => !entry.text.includes('暗牌')),
+    'native public movement logs retain declared faces',
+  );
+  await assertPrivateHands();
+  for (const snapshot of snapshots)
+    for (const key of ['judgment', 'gain', 'expansion', 'equipment']) {
+      assert.equal(snapshot[key].faceMatches, true, `${key}: initial public face matches`);
+      assert.equal(snapshot[key].concealed, false, `${key}: initial public face is unmasked`);
+    }
+  const assertRecovered = async () => {
+    for (const [index, phone] of phones.entries()) {
+      await phone.reload();
+      frames[index] = await table(phone);
+      await frames[index].waitForFunction(({ actor, judgment, equipment }) => {
+        const player = partyEngine.lib.playerOL?.[actor];
+        return (
+          player
+            ?.getCards('j')
+            .some((card) => card.cardid === judgment.id && card.name === judgment.name) &&
+          player
+            ?.getCards('e')
+            .some((card) => card.cardid === equipment.id && card.name === equipment.name)
+        );
+      }, expected);
+      const recovered = await frames[index].evaluate(({ actor, expansion, batches }) => {
+        return [{ owner: actor, ...expansion }, ...batches].every(({ owner, id, name }) => {
+          const card = partyEngine.lib.playerOL[owner]
+            .getCards('x')
+            .find((card) => card.cardid === id);
+          return (
+            !!card &&
+            card.name === name &&
+            !card.classList.contains('party-concealed') &&
+            !card.classList.contains('infohidden')
+          );
+        });
+      }, expected);
+      assert.equal(recovered, true, 'public expansion keeps its face after recovery');
+    }
+    await assertPrivateHands();
+  };
+  for (const frame of frames)
+    await frame.waitForFunction(
+      (batches) =>
+        batches.every(({ owner, id, name }) => {
+          const card = partyEngine.lib.playerOL[owner]
+            .getCards('x')
+            .find((card) => card.cardid === id);
+          return card?.name === name && !card.classList.contains('party-concealed');
+        }),
+      expected.batches,
+    );
+  await assertRecovered();
+  await stage('audit-public-pool');
+  await frames[0].waitForFunction(
+    () => partyEngine._status.event.name === 'chooseButton' && partyEngine._status.paused,
+  );
+  const poolId = await worker.evaluate(() => partyTableProbe.audit.poolId);
+  const recoverPool = async (pool, picker) => {
+    const id = await frames[picker].evaluate(() => partyEngine.game.me.playerid);
+    const before = await worker.evaluate((id) => partyEngine.lib.node.torespondtimeout[id], id);
+    assert.equal(typeof before, 'number');
+    for (const [index, phone] of phones.entries()) {
+      await phone.reload();
+      frames[index] = await table(phone);
+      await frames[index].waitForFunction(
+        ({ id, cards }) => {
+          const dialog = partyEngine.get.idDialog(id);
+          return (
+            dialog?.isConnected &&
+            dialog.buttons.length === cards.length &&
+            dialog.buttons.every(
+              (button) =>
+                cards.some(
+                  (card) => card.id === button.link.cardid && card.name === button.link.name,
+                ) &&
+                !button.classList.contains('infohidden') &&
+                !button.classList.contains('party-concealed'),
+            )
+          );
+        },
+        pool,
+        { timeout: 5000 },
+      );
+    }
+    assert.equal(
+      await worker.evaluate((id) => partyEngine.lib.node.torespondtimeout[id], id),
+      before,
+      'recovering public pools preserves the original choice deadline',
+    );
+    await frames[picker].waitForFunction(
+      () => partyEngine._status.event.name === 'chooseButton' && partyEngine._status.paused,
+    );
+    await assertPrivateHands();
+  };
+  const pickPool = async (id, picker) => {
+    await frames[picker].evaluate(
+      (id) => (partyEngine.get.idDialog(id).dataset.auditPool = 'true'),
+      id,
+    );
+    await frames[picker]
+      .locator('[data-audit-pool="true"] .button.card.selectable')
+      .first()
+      [gesture]();
+    await control(frames[picker], '确定')[gesture]();
+  };
+  const assertClosed = async (id) => {
+    for (const frame of frames)
+      await frame.waitForFunction((id) => !partyEngine.get.idDialog(id)?.isConnected, id);
+    await phones[0].reload();
+    frames[0] = await table(phones[0]);
+    await frames[0].waitForFunction(
+      (id) => partyEngine.game.me?.name && !partyEngine.get.idDialog(id)?.isConnected,
+      id,
+    );
+  };
+  await recoverPool(
+    { id: poolId, cards: await worker.evaluate(() => partyTableProbe.audit.pool) },
+    0,
+  );
+  await pickPool(poolId, 0);
+  await finish();
+  assert.equal(await worker.evaluate(() => partyTableProbe.audit.poolChoice), true);
+  await assertClosed(poolId);
+  await stage('audit-wugu');
+  let wuguId;
+  for (const picker of [0, 1]) {
+    const until = Date.now() + 20000;
+    let choosing = false;
+    while (Date.now() < until && !choosing) {
+      choosing = await frames[picker].evaluate(
+        () => partyEngine._status.event.name === 'chooseButton' && partyEngine._status.paused,
+      );
+      if (choosing) break;
+      for (const frame of frames)
+        if (
+          await frame.evaluate(
+            () => partyEngine._status.event.name === 'chooseToUse' && partyEngine._status.paused,
+          )
+        )
+          await control(frame, '取消')[gesture]();
+      await wait(100);
+    }
+    assert.equal(choosing, true, 'native counterspell choices finish before the public pool pick');
+    const pool = await worker.evaluate(() => {
+      const { get } = partyEngine;
+      const current = get.event().dialog;
+      const dialog = typeof current === 'number' ? get.idDialog(current) : current;
+      return {
+        id: dialog.videoId,
+        cards: dialog.buttons.map((button) => ({ id: button.link.cardid, name: button.link.name })),
+      };
+    });
+    wuguId = pool.id;
+    assert.equal(pool.cards.length, 3 - picker, 'native 五谷丰登 removes the previous pick');
+    if (!picker) publicHands.push(...pool.cards.map((card) => card.id));
+    await recoverPool(pool, picker);
+    await pickPool(pool.id, picker);
+  }
+  const until = Date.now() + 20000;
+  while (Date.now() < until && !(await worker.evaluate(() => partyTableProbe.done))) {
+    for (const frame of frames)
+      if (
+        await frame.evaluate(
+          () => partyEngine._status.event.name === 'chooseToUse' && partyEngine._status.paused,
+        )
+      )
+        await control(frame, '取消')[gesture]();
+    await wait(100);
+  }
+  await finish();
+  await assertClosed(wuguId);
+  await assertPrivateHands();
+  results.push({
+    adapterAudit: true,
+    directJudgment: true,
+    publicGain: true,
+    publicExpansion: true,
+    multipleExpansion: true,
+    virtualEquipment: true,
+    recoveryMatches: true,
+    publicPools: true,
+    nativeWuguRemainingPool: true,
+    originalDeadlines: true,
+    remainingHandPrivate: true,
+    closedPoolNotRestored: true,
+  });
+}
+
 try {
   computer = await page();
   await computer.goto(`${base}/server`);
@@ -723,14 +1042,28 @@ try {
     ],
     ['duel', 'ol-ranked-2026-10-basic', ['ol_sunjian', 're_huangzhong']],
     ['duel', 'mobile-time-field-2026-10', ['yuji', 'caocao']],
+    ['duel', 'mobile-time-field-2026-10', ['re_yuji', 'caocao']],
   ];
-  const selectedCases = openingEquipment
-    ? [['duel', 'ol-ranked-2026-10-full', ['ol_puyuan', 're_huangzhong']]]
-    : cases.filter(
-        (entry) => process.env.ENGINE_VERIFY_TABLE_BLUFF !== '1' || entry[2][0] === 'yuji',
-      );
+  const selectedCases = adapterAudit
+    ? [['doudizhu', 'advanced', ['caoren', 're_guanyu', 're_liubei']]]
+    : openingEquipment
+      ? [['duel', 'ol-ranked-2026-10-full', ['ol_puyuan', 're_huangzhong']]]
+      : cases.filter(
+          (entry) =>
+            !process.env.ENGINE_VERIFY_TABLE_BLUFF ||
+            entry[2][0] ===
+              (process.env.ENGINE_VERIFY_TABLE_BLUFF === '1'
+                ? 'yuji'
+                : process.env.ENGINE_VERIFY_TABLE_BLUFF),
+        );
   for (const [mode, preset, generals] of selectedCases) {
     const { code, matchId } = await start(computer, mode, preset, generals);
+    if (adapterAudit) {
+      await auditAdapter(matchId);
+      for (const phone of phones) await phone.context().close();
+      engine.release(code);
+      continue;
+    }
     if (openingEquipment) {
       await puyuanEquipment();
       for (const phone of phones) await phone.context().close();
@@ -767,7 +1100,7 @@ try {
     await deckVisible();
     await flowers(mode);
     if (mode === 'identity') await oldHuashen();
-    if (generals[0] === 'yuji') await oldGuhuo(matchId);
+    if (['yuji', 're_yuji'].includes(generals[0])) await oldGuhuo(matchId, generals[0]);
     results.push({
       mode,
       preset,

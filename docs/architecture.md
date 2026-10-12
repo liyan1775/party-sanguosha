@@ -1,5 +1,19 @@
 # 架构与决策
 
+## ADR-039：公开材料共用判定与公开牌池恢复
+
+状态：v0.7.9补丁，2026-10-12。固定引擎v1.11.6／commit不变。
+
+接入层的玩家序列化和公开记录原先各有一份牌面判定，且原生移动存在“先公告／广播、后落入目标区域”的间隙。两者改用privacy.js的publicCardVisible：除原有公开区域与展示事件外，明确visible=true的equip／addJudge／gain／addToExpansion／lose仅公开自身cards；loseAsync只公开对应discard／gain／addToExpansion显式名单。私人ordering、未声明材料和剩余手牌不因此公开。保留真假判定的三态结果，蛊惑隐藏决定不能落入定向消息的默认授权。
+
+虚拟装备及判定牌的原生显示牌不同于实体材料。仅在固定$addVirtualEquip／$addVirtualJudge调用栈内，核对原生广播的玩家、虚拟牌、材料引用及布尔参数后，公开这一张新建显示牌；blankCard不获该授权。恢复只承认仍挂在玩家vcardsMap公开装备／判定上的ui.special材料。公开武将牌上置牌另用WeakMap记录本次原生$addToExpansion的卡牌与接收者，支持单人及loseAsync批次；只在同一拥有者的x区域有效，clearKnowers或再次私人放置立即撤销。不修改原生知情者、牌堆、技能或AI决策。
+
+定向Player.send只对显式卡牌参数及嵌套数组声明的无主材料授予收件人权限，不再将其扩大到预编码父事件、任意对象或其他技能storage。原生chooseButton／chooseToMove／viewCards等已有私有选择授权保持；入站仍按可信现有卡牌ID解析，不接受手机改牌面或动态代码。shenhua的guhuo_guess与old_guhuo_guess／reguhuo_guess一并隐藏质疑期间的实体材料和fake；两种无showCards翻牌的版本仅在精确原生翻牌回调公开这一张牌并重建临时节点。
+
+公开牌池另保留至多16个原生广播创建的活跃dialog引用：必须声明创建dialog及videoId，全部按钮都是本次显式公开材料且无blank／infohidden。重连确认原生arena重建后，先用同编号、当前剩余按钮和公开标题恢复牌池，再重发原待选请求；私人创建、混入新材料、已关闭或编号复用的弹窗不获恢复。关闭即时撤销，恢复不重抽牌、不新建等待或延长期限。五谷丰登每人取牌后的剩余集合沿用原生dialog.buttons，不恢复已经取走的牌。
+
+本次只改既有运行模块，无新增服务端协议或路由。正式服务逐请求读取并重新验证适配器缓存，下一局载入补丁；已载入的规则worker继续使用原代码，不热换正在执行的规则，不重启或清空房间。
+
 ## ADR-038：技能对应的将池及牌桌反馈
 
 状态：v0.7.9，2026-10-12。固定引擎v1.11.6／commit不变。

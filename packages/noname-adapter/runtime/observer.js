@@ -1,62 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
 import { lib, game, ui, get, _status } from 'noname';
-import { markPublicLogCards } from './privacy.js';
+import { markPublicLogCards, publicCardVisible } from './privacy.js';
 
 /** Only cards already disclosed to everyone, never private ordering/skill data. */
 export function observerCardVisible(card) {
-  if (['e', 'j', 'd'].includes(get.position(card, true))) return true;
-  if (card._knowers?.includes('everyone') || get.is.shownCard(card)) return true;
-  const seen = new Set();
-  for (let event = get.event(), depth = 0; event && depth < 32 && !seen.has(event); depth++) {
-    seen.add(event);
-    if (event.partyShownCompareCards?.includes(card)) return true;
-    if (event.partyShownYanxiCards?.includes(card)) return true;
-    if (event.partyShownGuhuoCards?.includes(card)) return true;
-    // The physical bluff stays face down until its native showCards child.
-    // A use/respond ancestor already contains that card during challenges.
-    if (
-      ['reguhuo_guess', 'old_guhuo_guess'].includes(event.name) &&
-      event._trigger?.cards?.includes(card)
-    )
-      return false;
-    // Direct equips disclose only their explicit face-up materials, including
-    // the native transit through ui.special before the equipment DOM is built.
-    if (event.name === 'equip' && event.visible === true && event.cards?.includes(card))
-      return true;
-    // recast publishes its exact materials before its loseToDiscardpile child
-    // starts, and suppresses that child's duplicate log. Its replacement draw
-    // and any other recastable hand cards are outside event.cards.
-    if (
-      ['useCard', 'respond', 'discard', 'showCards', 'recast'].includes(event.name) &&
-      event.cards?.includes(card)
-    )
-      return true;
-    // Native simultaneous discard announces these exact face-up materials
-    // before event.cards is filled and before the cards enter the discard pile.
-    if (
-      event.name === 'loseAsync' &&
-      event.type === 'discard' &&
-      event.visible === true &&
-      event.lose_list?.some((entry) => Array.isArray(entry[1]) && entry[1].includes(card))
-    )
-      return true;
-    if (event.name === 'loseToDiscardpile' && !event.blank && event.cards?.includes(card))
-      return true;
-    if (
-      event.name === 'useCard' &&
-      event.card?.name === 'wugu' &&
-      event.wuguShownCards?.includes(card)
-    )
-      return true;
-    if (event.name === 'reyajiao' && event.card === card) return true;
-    if (
-      event.name === 'judge' &&
-      (event.player?.judging?.includes(card) || event.result?.card === card)
-    )
-      return true;
-    event = event.getParent?.();
-  }
-  return false;
+  return publicCardVisible(card);
 }
 function controller(player) {
   const seat = globalThis.partyEngine?.setup?.seats?.find((seat) => seat.id === player.playerid);

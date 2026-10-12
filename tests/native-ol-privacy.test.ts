@@ -388,6 +388,34 @@ function faces(value: unknown): string[] {
   return value?.constructor === Object ? Object.values(value).flatMap(faces) : [];
 }
 
+test('定向私有消息仅授权显式无主材料，父事件和其他技能storage里的暗牌不能借收件人授权', async (t) => {
+  const { actor, viewer, card, get, setEvent } = await fixture(t);
+  setEvent({ name: 'chooseToMove' });
+  const shown = card('DECLARED-PRIVATE', undefined, 'o');
+  const unrelated = card('SECRET-PARENT', undefined, 'o');
+  const stored = card('SECRET-STORAGE', undefined, 's');
+  const encodedParent = '_noname_event:' + JSON.stringify({ cards: [get.cardInfoOL(unrelated)] });
+  const result = actor.send(() => {}, [shown], encodedParent, { storage: { cards: [stored] } });
+  assert(
+    faces(result).includes('DECLARED-PRIVATE'),
+    'explicit actor-addressed materials stay usable',
+  );
+  assert(
+    !faces(result).includes('SECRET-PARENT'),
+    'encoded parent is not an actor-visible material list',
+  );
+  assert(
+    !faces(result).includes('SECRET-STORAGE'),
+    'unowned skill storage is not an actor-visible material list',
+  );
+  assert(faces(result).includes('party_unknown'));
+  assert(!faces(viewer.send(() => {}, { cards: [shown] })).includes('DECLARED-PRIVATE'));
+  assert(
+    !faces(actor.send(() => {}, { cards: [shown] })).includes('DECLARED-PRIVATE'),
+    'authorization ends with the original message',
+  );
+});
+
 test('化身动画只向所有者传真实将名；旁人保留数量，其他选将及权威材料不变', async (t) => {
   const { actor, Client, game } = await fixture(t);
   actor.storage.rehuashen = {
@@ -815,7 +843,7 @@ test('诫厉私人换牌与无换牌查看只授权本人指定材料，其他�
   assert.deepEqual(get.cardInfo(otherHand).slice(0, 3), ['heart', 8, otherHand.name]);
 });
 
-for (const version of ['reguhuo_guess', 'old_guhuo_guess'])
+for (const version of ['reguhuo_guess', 'old_guhuo_guess', 'guhuo_guess'])
   test(`${version}质疑时父事件真伪和暗置材料不泄露，原生亮牌后恢复公开`, async (t) => {
     const { actor, target, card, Client, GameEvent, get, setEvent } = await fixture(t);
     const bluff = card('SECRET-BLUFF', actor, 'o');
@@ -855,38 +883,44 @@ for (const version of ['reguhuo_guess', 'old_guhuo_guess'])
     assert.deepEqual(faces(new Client('target').send(remaining)), [remaining.name]);
   });
 
-test('旧蛊惑仅在原生翻牌回调公开一张材料，其他广播、假回调和其余暗牌仍隐藏', async (t) => {
-  const { actor, target, card, Client, GameEvent, game, get, broadcasts, setEvent } =
-    await fixture(t);
-  const bluff = card('BLUFF-TO-REVEAL', actor, 'o');
-  const secret = card('SECRET-OTHER', actor);
-  const use = new GameEvent('useCard', actor);
-  use.cards = [bluff];
-  const guess: any = new GameEvent('old_guhuo_guess', actor, use);
-  guess._trigger = use;
-  guess.onEnd01 = function nativeFlip() {};
-  function flip(onEnd: unknown) {
-    (globalThis as any)._status.old_guhuoNode.listenTransition(onEnd, 300);
-  }
-  setEvent(guess);
-  game.broadcastAll(flip, () => {});
-  assert(!guess.partyShownGuhuoCards, 'unrelated callbacks do not publish materials');
-  assert.deepEqual(faces(new Client(target.playerid).send(bluff, secret)), [
-    'party_unknown',
-    'party_unknown',
-  ]);
-  const before = broadcasts.length;
-  game.broadcastAll(flip, guess.onEnd01);
-  assert.deepEqual(guess.partyShownGuhuoCards, [bluff]);
-  assert.equal(
-    broadcasts.length,
-    before + 2,
-    'publication precedes the unchanged native animation',
-  );
-  assert.deepEqual(faces(get.stringifiedResult(broadcasts.at(-2))), [bluff.name]);
-  assert.deepEqual(faces(new Client(target.playerid).send(bluff, secret)), [
-    bluff.name,
-    'party_unknown',
-  ]);
-  assert.equal(bluff.name, 'BLUFF-TO-REVEAL');
-});
+for (const version of ['old_guhuo_guess', 'guhuo_guess'])
+  test(`${version}仅在原生翻牌回调公开一张材料，其他广播、假回调和其余暗牌仍隐藏`, async (t) => {
+    const { actor, target, card, Client, GameEvent, game, get, broadcasts, setEvent } =
+      await fixture(t);
+    const bluff = card('BLUFF-TO-REVEAL', actor, 'o');
+    const secret = card('SECRET-OTHER', actor);
+    const use = new GameEvent('useCard', actor);
+    use.cards = [bluff];
+    const guess: any = new GameEvent(version, actor, use);
+    guess._trigger = use;
+    guess.onEnd01 = function nativeFlip() {};
+    const flip =
+      version === 'old_guhuo_guess'
+        ? function (onEnd: unknown) {
+            (globalThis as any)._status.old_guhuoNode.listenTransition(onEnd, 300);
+          }
+        : function (onEnd: unknown) {
+            (globalThis as any)._status.guhuoNode.listenTransition(onEnd, 300);
+          };
+    setEvent(guess);
+    game.broadcastAll(flip, () => {});
+    assert(!guess.partyShownGuhuoCards, 'unrelated callbacks do not publish materials');
+    assert.deepEqual(faces(new Client(target.playerid).send(bluff, secret)), [
+      'party_unknown',
+      'party_unknown',
+    ]);
+    const before = broadcasts.length;
+    game.broadcastAll(flip, guess.onEnd01);
+    assert.deepEqual(guess.partyShownGuhuoCards, [bluff]);
+    assert.equal(
+      broadcasts.length,
+      before + 2,
+      'publication precedes the unchanged native animation',
+    );
+    assert.deepEqual(faces(get.stringifiedResult(broadcasts.at(-2))), [bluff.name]);
+    assert.deepEqual(faces(new Client(target.playerid).send(bluff, secret)), [
+      bluff.name,
+      'party_unknown',
+    ]);
+    assert.equal(bluff.name, 'BLUFF-TO-REVEAL');
+  });

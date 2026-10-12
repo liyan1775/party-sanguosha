@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 import { lib, get } from 'noname';
-import { withChoiceDisclosure } from './privacy.js';
+import { withChoiceDisclosure, replayPublicDialogs } from './privacy.js';
 
 /** Retain unresolved native choices privately until their original deadline. */
 export function installSelectionRecovery() {
@@ -177,7 +177,10 @@ export function installSelectionRecovery() {
     const player = lib.playerOL[this.id];
     // reinit loads the mode asynchronously. Replay only after the phone has
     // reconstructed its own arena, and only if the same choice remains pending.
-    if (player?.ws === this && !replay(player)) restoreYanxi(player, get.event());
+    if (player?.ws === this) {
+      replayPublicDialogs(player);
+      if (!replay(player)) restoreYanxi(player, get.event());
+    }
   };
   return { replay };
 }
