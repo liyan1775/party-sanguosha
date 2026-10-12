@@ -1,5 +1,9 @@
 # 正式无名杀适配
 
+v0.7.9蒲元显示补丁：公开equip事件的显式cards材料在移入ui.special、知情者被原生lose清除后仍公开，首次addVirtualEquip广播正确重建装备牌面并移除未知牌遮罩。只覆盖明确visible=true的装备材料，其他手牌／私人排序及预编码事件继续过滤；原生技能和牌堆保持。
+
+`ENGINE_VERIFY_TABLE_PUYUAN=1 npm run engine:verify:table`在独立服务真实选将／发牌后触发原生phaseBefore及奇思，检查本人／对手首次装备文字与遮罩、恢复前后相同、后续直接装备及其余手牌隐私。首次检查前不刷新玩家页面；未注入牌堆或装备材料。可加ENGINE_VERIFY_DESKTOP=1或ENGINE_VERIFY_HTTP=1，仍属桌面Edge／手机视口与合成触摸，不代表微信真机验收。
+
 v0.7.7使用96将进阶白名单，完整保留原72将；OL档保留v0.7.6已确认的完整原生张绣特例与mobile:re_xusheng，共92将。斗地主所有档位地主10／农民6候选，AI选将使用上游联机Math.random评分，用牌／技能AI不变。所有档位slow、基础delay1000ms。experience能力启用public-summary.js，将已经过滤的身份余量与最近三条有效公开动作发给手机，重连补发原摘要；工具条主动托管／恢复手动仍复用原Client认证的auto／unauto。
 
 公开GET／HEAD /engine/observe/:id?room=房号仅提供同房当前ObserverState／ObserverJournal，晚加入者不入座、不创建原生客户端。暗手牌、未公开身份、私人选择、storage、setup与通道凭据不进入公开API。曹冲装备材料的原生声明filter以数据重建；可见多人弃牌只公开原lose_list明示的弃牌，其他手牌保持隐藏。重铸的recast在移牌前日志公开本次显式材料，新摸牌与其余手牌仍隐藏。新增法正的眩惑仅在原生目标闭包与固定版本完全匹配时携带唯一指定玩家，手机重建该过滤、刷新复用原请求／期限，worker仍执行原生闭包规则。牌堆子节点变化后同步实际整数余量，修复首次发牌缺少最终update的问题，不输出牌堆内容／顺序。见ADR-035与ADR-036。

@@ -1,8 +1,22 @@
 # 开发交接
 
-最后更新：2026-10-12；当前源码及正式3001服务均为v0.7.9，LAN／公网入口已就绪。新增时光场258/326；OL排位基础147/151、完整284/288、SGL第一赛段83/83。来源与缺项见 [官方将池核对](official-rosters.md)，时光场完整目录及核对依据见 [研究依据](mobile-time-field-research.md)。本次按用户要求将v0.6.3后累积更新整理为本地Git提交，未推送远程；Windows ZIP未重打。
+最后更新：2026-10-12；当前源码及正式3001服务均为v0.7.9，含蒲元开局装备显示补丁，LAN／公网入口已就绪。新增时光场258/326；OL排位基础147/151、完整284/288、SGL第一赛段83/83。来源与缺项见 [官方将池核对](official-rosters.md)，时光场完整目录及核对依据见 [研究依据](mobile-time-field-research.md)。v0.6.3后累积更新及本次补丁已分别整理为本地Git提交，未推送远程；Windows ZIP未重打。
 
 ## 当前状态
+
+### 2026-10-12 蒲元开局装备文字修复（v0.7.9补丁）
+
+用户提供安卓微信LAN单挑截图，OL蒲元开局装备只显示两条黑条，恢复牌桌后才出现文字。独立真实选将／发牌后触发原生phaseBefore／奇思，在首次恢复前复现本人和对手的两张装备均被编码为party_unknown、仍带infohidden、name2文字display:none。失败证据`.runtime/native-table-feedback/2026-10-12T02-30-58-230Z/puyuan-before-any-recovery.json`；这是桌面隔离复现，不冒称已操作用户手机。
+
+原因是奇思直接装备没有普通useCard祖先：原生equip声明公开，但lose将手牌移入ui.special并清除知情者，首次装备广播又发生在装备DOM落位前。privacy及observer增加明确visible=true的equip事件cards材料边界，正确公开这一张正在装备的实体牌；未公开的其余手牌、私人排序、其他事件及预编码参数继续过滤。原生装备、技能、牌堆及选择期限保持，设计补充见ADR-038。
+
+桌面Edge155鼠标专项`.runtime/native-table-feedback/2026-10-12T02-32-44-012Z/result.json`及HTTP合成触屏专项`2026-10-12T02-35-19-107Z/result.json`通过：首次检查前不刷新玩家，真实奇思两种装备的牌名和遮罩在本人／对手端正常，恢复后保持一致，后续私下取得的装备在装备前隐藏、装备后公开，其余手牌仍私密。未注入牌堆或装备材料；faults／missing为空。HTTP早期恢复探针因原生异步reinit尚未建立playerOL而失败，已让探针等待真实重建，早期诊断轮不计通过。专项入口ENGINE_VERIFY_TABLE_PUYUAN=1，仍不是安卓／iPhone微信真机验收。
+
+最终`npm run check`通过类型、169项测试（0失败／跳过）、构建及全仓格式；`npm run test:browser`完整26项通过。日志`.runtime/puyuan-check.log`及`puyuan-browser.log`；公开装备边界与化身／蛊惑／隐匿等隐私定向18项先行通过。最终文档另做格式复核及git diff --check。
+
+适配器文件由正式服务按请求读取，新增牌局会重新验证缓存并载入补丁，本次无需重启或清空房间。localhost／LAN／公网的privacy与observer共六项实际200、字节等于源码、缓存要求重新验证；携带旧ETag请求仍返回新文件及新ETag，正式引擎ready且instanceId与v0.7.9启用时一致。只读检查时等待房8871FD／B68821和进行中916E9B保持，未操作玩家或在正式实例创建测试房；证据`.runtime/puyuan-live-patch.json`。已经载入旧规则文件的牌局可继续使用恢复牌桌临时显示，下一局自然使用修复。
+
+本次修复单独本地提交，运行日志、截图和本机凭据仍不入Git，未推送远程或重打Windows ZIP。下一项：请用户原手机复测蒲元首次装备显示，继续不同技能直接装备及真机网络／后台恢复覆盖。
 
 ### 2026-10-12 目标点击、送花、技能对应将池与常驻计数（v0.7.9，已正式启用）
 

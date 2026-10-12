@@ -85,7 +85,7 @@ test('原生对象过滤条件按数据重建，曹冲装备条件保留；其�
   assert.equal(get.parsedResult, before, 'worker result parsing is not widened');
 });
 
-test('公开弃牌与重铸只揭示显式材料，移牌前日志与协议一致；其余手牌、摸牌和私人排序仍隐藏', async (t) => {
+test('公开装备、弃牌与重铸只揭示显式材料，移牌前日志与协议一致；其余手牌、摸牌和私人排序仍隐藏', async (t) => {
   let event: any;
   const owner = { playerid: 'actor' },
     viewer = { playerid: 'viewer' };
@@ -230,6 +230,34 @@ test('公开弃牌与重铸只揭示显式材料，移牌前日志与协议一�
     'returning cards to a pile is not public discard',
   );
   assert(client.send(recast)[0]!.includes('party_unknown'));
+  // 奇思 directly equips from the hand. Native lose has already cleared all
+  // knowers, and the equipment is still in ui.special at its first broadcast.
+  discarded.position = 's';
+  event = { name: 'equip', visible: true, cards: [discarded], card: drawn };
+  assert.equal(observerCardVisible(discarded), true);
+  assert.equal(publicLogText(['装备了', discarded]), '装备了public-discard');
+  const equipWire = client.send(discarded, remaining, ordering, drawn);
+  assert(equipWire[0]!.includes('public-discard'));
+  assert(equipWire.slice(1).every((value) => value.includes('party_unknown')));
+  const equipParent = event;
+  event = { name: 'lose', cards: [discarded], getParent: () => equipParent };
+  assert(client.send(discarded)[0]!.includes('public-discard'));
+  assert.equal(observerCardVisible(discarded), true);
+  const preencodedEquip =
+    '_noname_event:' + JSON.stringify({ cards: [discarded, drawn].map(get.cardInfoOL) });
+  assert(client.send(preencodedEquip)[0]!.includes('public-discard'));
+  assert(!client.send(preencodedEquip)[0]!.includes('SECRET-DRAW'));
+  for (const changed of [
+    { visible: false },
+    { visible: undefined },
+    { name: 'chooseToUse' },
+    { cards: [] },
+  ]) {
+    event = { name: 'equip', visible: true, cards: [discarded], ...changed };
+    assert.equal(observerCardVisible(discarded), false);
+    assert(client.send(discarded)[0]!.includes('party_unknown'));
+  }
+  discarded.position = 'h';
   for (const name of ['reguhuo_guess', 'old_guhuo_guess']) {
     const use = { name: 'useCard', cards: [ordering] };
     const challenge = { name, _trigger: use, getParent: () => use };

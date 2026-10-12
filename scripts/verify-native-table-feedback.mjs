@@ -22,6 +22,7 @@ await new Promise((resolve) => party.server.listen(0, '127.0.0.1', resolve));
 const base = `http://127.0.0.1:${party.server.address().port}`;
 const desktop = process.env.ENGINE_VERIFY_DESKTOP === '1';
 const http = process.env.ENGINE_VERIFY_HTTP === '1';
+const openingEquipment = process.env.ENGINE_VERIFY_TABLE_PUYUAN === '1';
 const gesture = desktop ? 'click' : 'tap';
 const browser = await chromium.launch({
   channel: process.env.E2E_BROWSER_CHANNEL ?? 'msedge',
@@ -193,7 +194,7 @@ async function start(computer, mode, preset, generals) {
     lib.config.duration = 100;
     globalThis.partyTableProbe = { done: true };
   });
-  for (const [i, phone] of phones.entries()) {
+  for (const [i, phone] of (openingEquipment ? [] : phones).entries()) {
     await phone.reload();
     frames[i] = await table(phone);
     // booted means module loading finished, while HTTP reinit is asynchronous.
@@ -216,7 +217,7 @@ async function stage(kind) {
     const probe = partyTableProbe;
     probe.done = false;
     const event = new lib.element.GameEvent(
-      kind === 'huashen' ? 'phase' : 'partyTableFixture',
+      ['huashen', 'puyuan-opening'].includes(kind) ? 'phase' : 'partyTableFixture',
       false,
       _status.eventManager,
     );
@@ -252,6 +253,20 @@ async function stage(kind) {
         await event.trigger('phaseBefore');
         probe.huashenChosen = !!actor.storage.huashen.current2;
       }
+      if (event.kind === 'puyuan-opening') {
+        _status.currentPhase = actor;
+        await event.trigger('phaseBefore');
+        probe.openingEquipment = actor.getCards('e').map((card) => ({
+          id: card.cardid,
+          name: card.name,
+          label: get.translation(card.name),
+        }));
+      }
+      if (event.kind === 'puyuan-private-equipment') {
+        probe.privateEquipment = get.cardPile((card) => get.type(card) === 'equip');
+        await actor.gain(probe.privateEquipment);
+      }
+      if (event.kind === 'puyuan-replacement') await actor.equip(probe.privateEquipment);
       if (event.kind === 'guhuo-setup') {
         for (const player of game.players) {
           player.stat.push({ card: {}, skill: {}, triggerSkill: {} });
@@ -599,6 +614,101 @@ async function oldGuhuo(matchId) {
   });
 }
 
+async function puyuanEquipment() {
+  assert.equal(await worker.evaluate(() => partyEngine.game.players[0].name), 'ol_puyuan');
+  await stage('puyuan-opening');
+  await finish();
+  const expected = await worker.evaluate(() => partyTableProbe.openingEquipment);
+  assert.equal(expected.length, 2, 'native 奇思 installs two different equipment types');
+  const actor = await worker.evaluate(() => partyEngine.game.players[0].playerid);
+  const capture = async (tag) => {
+    const snapshots = [];
+    for (const [index, frame] of frames.entries()) {
+      await frame.waitForFunction(
+        ({ actor, ids }) =>
+          ids.every((id) =>
+            Array.from(partyEngine.lib.playerOL?.[actor]?.node?.equips?.children ?? []).some(
+              (card) => card.cardid === id,
+            ),
+          ),
+        { actor, ids: expected.map((entry) => entry.id) },
+      );
+      snapshots.push(
+        await frame.evaluate(
+          (actor) =>
+            Array.from(partyEngine.lib.playerOL[actor].node.equips.children)
+              .filter((card) => card.classList.contains('card'))
+              .map((card) => ({
+                id: card.cardid,
+                name: card.name,
+                text: card.node.name2.textContent,
+                concealed:
+                  card.classList.contains('party-concealed') ||
+                  card.classList.contains('infohidden'),
+                textDisplay: getComputedStyle(card.node.name2).display,
+                textOpacity: getComputedStyle(card.node.name2).opacity,
+              })),
+          actor,
+        ),
+      );
+      // Allow the native gain/give copies to finish before visual inspection.
+      await wait(600);
+      await phones[index].screenshot({ path: `${output}/${tag}-${index}.png` });
+    }
+    await writeFile(`${output}/${tag}.json`, JSON.stringify({ expected, snapshots }, null, 2));
+    for (const snapshot of snapshots)
+      for (const entry of expected) {
+        const card = snapshot.find((card) => card.id === entry.id);
+        assert.equal(card.name, entry.name, `${tag}: equipment has its public native name`);
+        assert.equal(card.concealed, false, `${tag}: equipment is not visually concealed`);
+        assert(card.text.includes(entry.label), `${tag}: equipment label is visible`);
+        assert.notEqual(card.textDisplay, 'none');
+        assert.notEqual(card.textOpacity, '0');
+      }
+  };
+  await capture('puyuan-before-any-recovery');
+  const assertHandPrivate = async () => {
+    const ids = await worker.evaluate(() =>
+      partyEngine.game.players[0].getCards('h').map((card) => card.cardid),
+    );
+    const hidden = await frames[1].evaluate(
+      (ids) =>
+        ids.every(
+          (id) =>
+            !partyEngine.lib.cardOL[id] || partyEngine.lib.cardOL[id].name === 'party_unknown',
+        ),
+      ids,
+    );
+    assert.equal(hidden, true, 'other hand cards stay private');
+  };
+  await assertHandPrivate();
+  for (const [index, phone] of phones.entries()) {
+    await phone.reload();
+    frames[index] = await table(phone);
+  }
+  await capture('puyuan-after-recovery');
+  await stage('puyuan-private-equipment');
+  await finish();
+  await assertHandPrivate();
+  await stage('puyuan-replacement');
+  await finish();
+  const replacement = await worker.evaluate(() => {
+    const card = partyTableProbe.privateEquipment;
+    return { id: card.cardid, name: card.name, label: partyEngine.get.translation(card.name) };
+  });
+  expected.splice(0, expected.length, replacement);
+  await capture('puyuan-later-direct-equipment');
+  await assertHandPrivate();
+  results.push({
+    nativePuyuanOpening: true,
+    initialEquipment: true,
+    ownerAndOpponentLabels: true,
+    recoveryMatches: true,
+    laterDirectEquipment: true,
+    remainingHandPrivate: true,
+  });
+}
+
 try {
   computer = await page();
   await computer.goto(`${base}/server`);
@@ -614,10 +724,19 @@ try {
     ['duel', 'ol-ranked-2026-10-basic', ['ol_sunjian', 're_huangzhong']],
     ['duel', 'mobile-time-field-2026-10', ['yuji', 'caocao']],
   ];
-  for (const [mode, preset, generals] of cases.filter(
-    (entry) => process.env.ENGINE_VERIFY_TABLE_BLUFF !== '1' || entry[2][0] === 'yuji',
-  )) {
+  const selectedCases = openingEquipment
+    ? [['duel', 'ol-ranked-2026-10-full', ['ol_puyuan', 're_huangzhong']]]
+    : cases.filter(
+        (entry) => process.env.ENGINE_VERIFY_TABLE_BLUFF !== '1' || entry[2][0] === 'yuji',
+      );
+  for (const [mode, preset, generals] of selectedCases) {
     const { code, matchId } = await start(computer, mode, preset, generals);
+    if (openingEquipment) {
+      await puyuanEquipment();
+      for (const phone of phones) await phone.context().close();
+      engine.release(code);
+      continue;
+    }
     await deckVisible();
     await stage('equipment');
     await equipmentClick();

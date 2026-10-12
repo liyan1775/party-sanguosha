@@ -19,6 +19,10 @@ export function observerCardVisible(card) {
       event._trigger?.cards?.includes(card)
     )
       return false;
+    // Direct equips disclose only their explicit face-up materials, including
+    // the native transit through ui.special before the equipment DOM is built.
+    if (event.name === 'equip' && event.visible === true && event.cards?.includes(card))
+      return true;
     // recast publishes its exact materials before its loseToDiscardpile child
     // starts, and suppresses that child's duplicate log. Its replacement draw
     // and any other recastable hand cards are outside event.cards.

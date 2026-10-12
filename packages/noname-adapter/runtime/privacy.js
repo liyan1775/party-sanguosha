@@ -341,6 +341,12 @@ export function installPrivacy() {
         event._trigger?.cards?.includes(card)
       )
         return false;
+      // Direct equipment (e.g. 蒲元's opening 奇思) has no useCard parent.
+      // Native equip publishes these materials, but lose clears their knowers
+      // while they are in ui.special, before addVirtualEquip broadcasts them.
+      // Reveal only this face-up equip event's exact materials, not its hand.
+      if (event.name === 'equip' && event.visible === true && event.cards?.includes(card))
+        return true;
       // recast logs its declared materials before moving them to discard.
       // Reveal only that event's cards, never the replacement draw or other
       // recastable cards left in the hand.
