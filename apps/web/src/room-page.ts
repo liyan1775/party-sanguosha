@@ -59,7 +59,10 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
   let noticeTimer: ReturnType<typeof setTimeout> | undefined;
   let finishedSyncTimer: ReturnType<typeof setTimeout> | undefined;
   let finishedSyncMatch: string | null = null;
-  let returnedMatchId: string | null = null;
+  const returnedMatchKey = `party_returned_match_${room.code}`;
+  let returnedMatchId = sessionStorage.getItem(returnedMatchKey);
+  let ownershipTimer: ReturnType<typeof setTimeout> | undefined;
+  let serverTimeOffset = Date.now() - (room.serverTime ?? Date.now());
   let pendingReturnMatchId: string | null = null;
   let returning = false;
   let recoveringRules = false;
@@ -72,6 +75,24 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
   let localMatchAttempt: string | null = null;
   let localAttemptAt = 0;
   const roomPath = `/api/rooms/${room.code}`;
+  function roomApi<T>(
+    path: string,
+    method = 'GET',
+    body?: unknown,
+    headers: Record<string, string> = {},
+    timeoutMs?: number,
+  ): Promise<T> {
+    return api<T>(
+      path,
+      method,
+      body,
+      {
+        ...headers,
+        ...(method !== 'GET' && session.playerId ? { 'X-Party-Player': session.playerId } : {}),
+      },
+      timeoutMs,
+    );
+  }
 
   frame(
     'room-layout',
@@ -138,6 +159,21 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
     'afterend',
     '<div id="general-pick-panel" hidden><button id="general-pick" class="button secondary full-width" type="button">点将 · 设置第1个候选</button><p id="general-pick-state" class="hint" role="status"></p></div>',
   );
+  element('#owner-start').insertAdjacentHTML(
+    'afterend',
+    '<div id="owner-transfer-row" hidden><button id="owner-transfer" class="button secondary full-width" type="button">转交房主</button></div><div id="owner-claim-row" hidden><button id="owner-claim" class="button secondary full-width" type="button">接任房主</button><p id="owner-claim-hint" class="hint" role="status"></p></div>',
+  );
+  app.insertAdjacentHTML(
+    'beforeend',
+    '<dialog id="ownership-dialog" aria-labelledby="ownership-title"><div class="panel-heading"><h2 id="ownership-title">转交房主</h2><button id="ownership-close" class="close-dialog" type="button" aria-label="关闭转交房主">×</button></div><p class="hint">转交后你仍在原席位；新房主管理设置、AI和下一局开局，真人需要重新准备。</p><label for="owner-successor">交给哪位朋友<select id="owner-successor"></select></label><button id="ownership-confirm" class="button primary full-width" type="button" disabled>确认转交</button></dialog>',
+  );
+  const matchLeave = document.createElement('button');
+  matchLeave.id = 'match-leave';
+  matchLeave.className = 'button secondary';
+  matchLeave.type = 'button';
+  matchLeave.textContent = '离开房间';
+  matchLeave.hidden = true;
+  element('#rematch-button').after(matchLeave);
   const generalGuide = bindGeneralGuide(() => room.settings.generalPreset, {
     sharedTeamPool: () => room.settings.mode === 'versus',
     enabled: () =>
@@ -145,8 +181,8 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
       room.settings.allowGeneralSelection === true &&
       session.roomCode === room.code &&
       room.players.some((player) => player.id === session.playerId),
-    read: () => api<GeneralChoiceView>(`${roomPath}/me/general`),
-    choose: (general) => api<GeneralChoiceView>(`${roomPath}/me/general`, 'PUT', { general }),
+    read: () => roomApi<GeneralChoiceView>(`${roomPath}/me/general`),
+    choose: (general) => roomApi<GeneralChoiceView>(`${roomPath}/me/general`, 'PUT', { general }),
   });
   const preloadStatus = document.createElement('p');
   preloadStatus.id = 'engine-preload';
@@ -165,6 +201,12 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
   roomFailure.id = 'room-failure';
   roomFailure.hidden = true;
   element('.welcome-panel').prepend(roomFailure);
+  const roomIdle = document.createElement('p');
+  roomIdle.id = 'room-idle-hint';
+  roomIdle.className = 'hint';
+  roomIdle.hidden = true;
+  roomIdle.textContent = '所有入座玩家已离线；连续10分钟无人回房，这间房将自动关闭。';
+  element('.welcome-panel').append(roomIdle);
   const networkStatus = document.createElement('span');
   networkStatus.id = 'match-network';
   networkStatus.className = 'match-network';
@@ -243,6 +285,43 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
 
   const owner = () => session.roomCode === room.code && session.playerId === room.ownerId;
   const refresh = () => renderRoom(room);
+
+  function renderOwnership(): void {
+    clearTimeout(ownershipTimer);
+    const me =
+      session.roomCode === room.code
+        ? room.players.find((player) => player.id === session.playerId)
+        : undefined;
+    const between = ['waiting', 'finished'].includes(room.phase);
+    const supported = room.ownerClaimAt !== undefined;
+    element('#owner-transfer-row').hidden = !me || !owner() || !between || !supported;
+    disable(element('#owner-transfer'), settingsDirty || settingsSaving || !between);
+    const claiming = Boolean(me && !owner() && between && typeof room.ownerClaimAt === 'number');
+    element('#owner-claim-row').hidden = !claiming;
+    if (claiming) {
+      const seconds = Math.max(
+        0,
+        Math.ceil((room.ownerClaimAt! + serverTimeOffset - Date.now()) / 1000),
+      );
+      disable(element('#owner-claim'), seconds > 0 || !me?.online);
+      element('#owner-claim-hint').textContent = seconds
+        ? `房主暂时离线，${seconds}秒后可接任；房主重新连接会取消倒计时。`
+        : '房主已连续离线满60秒。可接任以继续这一桌，原房主的席位仍保留。';
+      if (seconds > 0) ownershipTimer = setTimeout(renderOwnership, 1000);
+    }
+    if (!me || !owner() || !between) element<HTMLDialogElement>('#ownership-dialog').close();
+  }
+
+  function refreshSuccessors(): void {
+    const select = element<HTMLSelectElement>('#owner-successor');
+    const selected = select.value;
+    select.replaceChildren(new Option('选择一位在线玩家', ''));
+    for (const player of room.players)
+      if (player.kind === 'human' && player.online && player.id !== room.ownerId)
+        select.add(new Option(player.nickname, player.id));
+    select.value = selected;
+    disable(element('#ownership-confirm'), !select.value || !owner());
+  }
   function resizeTable(): void {
     const panel = element('#match-panel');
     const portrait = window.innerWidth < window.innerHeight;
@@ -291,7 +370,7 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
     if (!restoringMatch || restoring) return;
     restoring = true;
     try {
-      const info = await api<RoomInfo>(roomPath, 'GET', undefined, {}, 8000);
+      const info = await roomApi<RoomInfo>(roomPath, 'GET', undefined, {}, 8000);
       renderRoom(info.room);
       const frame = document.querySelector<HTMLIFrameElement>('#game-frame');
       if (
@@ -421,6 +500,7 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
       clearTimeout(finishedSyncTimer);
       clearTimeout(noticeTimer);
       clearTimeout(settingsTimer);
+      clearTimeout(ownershipTimer);
       settingsGeneration++;
     },
     { once: true },
@@ -479,7 +559,13 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
   function renderRoom(snapshot: RoomView): void {
     // 旧 HTTP 响应晚于 SSE 到达时，仍使用较新的在线和权限状态。
     if (snapshot.revision < room.revision) return;
+    if (snapshot !== room && typeof snapshot.serverTime === 'number')
+      serverTimeOffset = Date.now() - snapshot.serverTime;
     room = snapshot;
+    if (returnedMatchId && (returnedMatchId !== room.matchId || room.phase === 'waiting')) {
+      returnedMatchId = null;
+      sessionStorage.removeItem(returnedMatchKey);
+    }
     preloader.update(
       Boolean(room.engine.preload) && room.phase === 'waiting',
       settingsDirty
@@ -547,6 +633,7 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
     element('#rematch-button').hidden = room.phase !== 'finished';
     element('#rematch-button').textContent = isOwner ? '回到房间，准备下一局' : '回到房间';
     element('#finished-hint').hidden = room.phase !== 'finished' || isOwner;
+    matchLeave.hidden = room.phase !== 'finished' || room.ownerClaimAt === undefined;
     waitingReturn.hidden = room.phase !== 'finished' || returnedMatchId !== room.matchId;
     if (inMatch && room.matchId !== matchId) {
       const frame = document.createElement('iframe');
@@ -588,6 +675,7 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
     updateMatchControls();
     records.context(inMatch ? room.matchId : null, Boolean(room.engine.playerHistory));
     roomFailure.hidden = !room.matchFailure || inMatch;
+    roomIdle.hidden = room.idleCloseAt == null || room.phase === 'closed';
     roomFailure.textContent = room.matchFailure
       ? MATCH_FAILURE_MESSAGES[room.matchFailure.code]
       : '';
@@ -669,15 +757,17 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
     const readyHumans = humans.filter((player) => player.online && player.ready).length;
     const empty = room.settings.playerCount - room.players.length;
     const mode = findMode(room.settings.mode)!;
-    const preset = GENERAL_PRESETS.find((entry) => entry.id === room.settings.generalPreset)!;
-    renderRosterSource(element('#summary-roster-source'), preset.id);
+    const preset = GENERAL_PRESETS.find((entry) => entry.id === room.settings.generalPreset);
+    renderRosterSource(element('#summary-roster-source'), room.settings.generalPreset);
     element('#player-counter').textContent =
       `${room.players.length} / ${room.settings.playerCount} 席`;
     element('#seat-count').textContent = `${humans.length} 位真人 · ${bots.length} 个 AI`;
     element('#player-room-code').textContent = room.code;
     element('#summary-mode').textContent = mode.name;
-    element('#summary-details').textContent = `${room.settings.playerCount} 席 · ${preset.name}`;
-    element('#summary-preset').textContent = preset.description;
+    element('#summary-details').textContent =
+      `${room.settings.playerCount} 席 · ${preset?.name ?? '将池已移除'}`;
+    element('#summary-preset').textContent =
+      preset?.description ?? '请房主选择当前可用的武将范围，再准备下一局。';
     element('#summary-deck').textContent = cardPileDescription(room.settings.generalPreset);
     if (room.engine.luckCards)
       element('#summary-deck').textContent +=
@@ -723,7 +813,10 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
     element('#settings-panel').hidden = !isOwner;
     disable(element('#add-bot'), empty === 0 || !waiting || settingsPending);
     disable(element('#fill-bots'), empty === 0 || !waiting || settingsPending);
-    disable(element('#leave-button'), !waiting);
+    disable(
+      element('#leave-button'),
+      !waiting && !(room.phase === 'finished' && room.ownerClaimAt !== undefined),
+    );
     disable(
       element('#start-button'),
       !isOwner ||
@@ -741,6 +834,8 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
       presetDescription();
     }
     const settingsState = element('#settings-state');
+    renderOwnership();
+    refreshSuccessors();
     settingsState.classList.toggle('settings-error', Boolean(settingsError));
     settingsState.textContent = settingsError
       ? `自动保存失败：${settingsError} 你的修改仍保留，请点击重试保存。`
@@ -802,7 +897,7 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
         action(
           button,
           async () => {
-            renderRoom(await api<RoomView>(`${roomPath}/players/${player.id}`, 'DELETE'));
+            renderRoom(await roomApi<RoomView>(`${roomPath}/players/${player.id}`, 'DELETE'));
           },
           refresh,
         );
@@ -836,7 +931,7 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
     void perform(
       element('#join-button'),
       async () => {
-        const joined = await api<MembershipResult>(`${roomPath}/players`, 'POST', {
+        const joined = await roomApi<MembershipResult>(`${roomPath}/players`, 'POST', {
           nickname: element<HTMLInputElement>('#nickname').value,
         });
         session.playerId = joined.playerId;
@@ -844,7 +939,7 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
         renderRoom(joined.room);
         refresh();
         connectEvents();
-        renderRoom((await api<RoomInfo>(roomPath)).room);
+        renderRoom((await roomApi<RoomInfo>(roomPath)).room);
       },
       refresh,
     );
@@ -853,15 +948,45 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
     element('#ready-button'),
     async () => {
       const me = room.players.find((player) => player.id === session.playerId);
-      renderRoom(await api<RoomView>(`${roomPath}/me/ready`, 'PUT', { ready: !me?.ready }));
+      renderRoom(await roomApi<RoomView>(`${roomPath}/me/ready`, 'PUT', { ready: !me?.ready }));
+    },
+    refresh,
+  );
+  action(element('#leave-button'), leaveRoom, refresh);
+  async function leaveRoom(): Promise<void> {
+    await roomApi(`${roomPath}/me`, 'DELETE');
+    sessionStorage.removeItem(returnedMatchKey);
+    location.assign('/');
+  }
+  action(matchLeave, leaveRoom, refresh);
+  element('#owner-transfer').addEventListener('click', () => {
+    refreshSuccessors();
+    element<HTMLDialogElement>('#ownership-dialog').showModal();
+  });
+  element('#ownership-close').addEventListener('click', () =>
+    element<HTMLDialogElement>('#ownership-dialog').close(),
+  );
+  element('#owner-successor').addEventListener('change', () => {
+    disable(element('#ownership-confirm'), !element<HTMLSelectElement>('#owner-successor').value);
+  });
+  action(
+    element('#ownership-confirm'),
+    async () => {
+      renderRoom(
+        await roomApi<RoomView>(`${roomPath}/owner`, 'PUT', {
+          playerId: element<HTMLSelectElement>('#owner-successor').value,
+        }),
+      );
+      element<HTMLDialogElement>('#ownership-dialog').close();
     },
     refresh,
   );
   action(
-    element('#leave-button'),
+    element('#owner-claim'),
     async () => {
-      await api(`${roomPath}/me`, 'DELETE');
-      location.assign('/');
+      renderRoom(
+        await roomApi<RoomView>(`${roomPath}/owner/claim`, 'POST', { ownerId: room.ownerId }),
+      );
     },
     refresh,
   );
@@ -869,7 +994,7 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
     element('#start-button'),
     async () => {
       renderRoom(
-        await api<RoomView>(
+        await roomApi<RoomView>(
           `${roomPath}/start`,
           'POST',
           undefined,
@@ -886,7 +1011,7 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
   action(
     element('#add-bot'),
     async () => {
-      renderRoom(await api<RoomView>(`${roomPath}/bots`, 'POST', { count: 1 }));
+      renderRoom(await roomApi<RoomView>(`${roomPath}/bots`, 'POST', { count: 1 }));
     },
     refresh,
   );
@@ -894,7 +1019,7 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
     element('#fill-bots'),
     async () => {
       renderRoom(
-        await api<RoomView>(`${roomPath}/bots`, 'POST', {
+        await roomApi<RoomView>(`${roomPath}/bots`, 'POST', {
           count: room.settings.playerCount - room.players.length,
         }),
       );
@@ -904,7 +1029,7 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
   async function shareRoom() {
     element<HTMLDialogElement>('#share-dialog').showModal();
     try {
-      const current = await api<RoomInfo>(roomPath);
+      const current = await roomApi<RoomInfo>(roomPath);
       bindQr(current.joinUrls, room.code, current.entry ?? initial.entry);
     } catch {
       element('#qr-hint').textContent =
@@ -919,16 +1044,17 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
     try {
       // Native settlement may reach the table before the outer room's poll.
       // Re-read authority, or remember the click until that match is finished.
-      const current = await api<RoomInfo>(roomPath);
+      const current = await roomApi<RoomInfo>(roomPath);
       renderRoom(current.room);
       if (room.phase !== 'finished') {
         if (room.phase === 'playing') pendingReturnMatchId = room.matchId;
         return;
       }
       pendingReturnMatchId = null;
-      if (owner()) renderRoom(await api<RoomView>(`${roomPath}/rematch`, 'POST', {}));
+      if (owner()) renderRoom(await roomApi<RoomView>(`${roomPath}/rematch`, 'POST', {}));
       else {
         returnedMatchId = room.matchId;
+        if (returnedMatchId) sessionStorage.setItem(returnedMatchKey, returnedMatchId);
         refresh();
       }
     } finally {
@@ -961,7 +1087,7 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
     settingsError = '';
     refresh();
     try {
-      const updated = await api<RoomView>(roomPath, 'PUT', settings);
+      const updated = await roomApi<RoomView>(roomPath, 'PUT', settings);
       if (generation !== settingsGeneration || !owner() || room.phase !== 'waiting') return;
       // SSE can publish this response before HTTP finishes. A newer local edit
       // keeps the form dirty, so neither response can overwrite its controls.

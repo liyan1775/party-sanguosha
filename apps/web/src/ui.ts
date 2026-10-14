@@ -125,6 +125,9 @@ export function watchEvents(
   update: (data: unknown) => void,
   poll = false,
 ): { close(): void } {
+  window.addEventListener('pageshow', (event) => {
+    if (event.persisted) location.reload();
+  });
   if (poll) {
     const abort = new AbortController();
     let timer: ReturnType<typeof setTimeout> | undefined;
@@ -161,9 +164,6 @@ export function watchEvents(
     }
     void refresh();
     window.addEventListener('pagehide', close, { once: true });
-    window.addEventListener('pageshow', (event) => {
-      if (event.persisted) location.reload();
-    });
     return { close };
   }
   const events = new EventSource(url);

@@ -14,6 +14,7 @@ import { verifyLuckCards, verifyConnectionAndEmotions } from './native-connectio
 import { verifyNativePrivateChoices } from './native-private-choices.mjs';
 import { launchBackgroundBrowser, observeBackgroundPage } from './native-background-browser.mjs';
 import { verifyPartyFeedback } from './native-party-feedback-probes.mjs';
+import { verifyNativeTouchControls } from './native-touch-control-probes.mjs';
 import {
   verifyChoicePrompts,
   verifyLateVoices,
@@ -514,16 +515,26 @@ try {
     const phone = await page(true);
     const phones = [phone];
     await phone.goto(playerOrigin(0));
-    const created = await phone.evaluate(async () => {
-      const response = await fetch('/api/rooms', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nickname: '玩家 <测试>' }),
-      });
-      return response.json();
-    });
-    const code = created.room.code;
-    await phone.goto(`${playerOrigin(0)}/join/${code}`);
+    // The homepage creates the anonymous session before rendering this form.
+    // An immediate raw POST races its in-flight /api/me on real public links
+    // and can replace the owner cookie with the late bootstrap response.
+    await phone.locator('#nickname').fill('玩家 <测试>');
+    await phone.locator('#create-button').tap();
+    await phone.waitForURL(/\/join\/[A-F0-9]{6}$/);
+    const code = new URL(phone.url()).pathname.split('/').at(-1);
+    // Read current state after navigation; a POST response body can disappear
+    // from CDP as soon as the real form navigates to its new room.
+    const created = await phone.evaluate(async (code) => {
+      const responses = await Promise.all([fetch(`/api/rooms/${code}`), fetch('/api/me')]);
+      for (const response of responses) if (!response.ok) throw new Error(await response.text());
+      const [info, session] = await Promise.all(responses.map((response) => response.json()));
+      return { room: info.room, playerId: session.playerId };
+    }, code);
+    assert.equal(
+      created.playerId,
+      created.room.ownerId,
+      'the real homepage seats its player owner',
+    );
     if (mode === modes[0]) {
       await phone.locator('#general-guide').tap();
       await phone.waitForFunction(
@@ -1387,6 +1398,13 @@ try {
       );
     }
     loadingProof.network = networkProof;
+    // An existing test instance can retain earlier rooms. Choose this room in
+    // the console explicitly rather than assuming it is the first room.
+    await computer
+      .locator('#room-list .room-list-item')
+      .filter({ hasText: code })
+      .getByRole('button', { name: '查看 / 观战', exact: true })
+      .click();
     await computer.waitForFunction(
       (code) =>
         document.querySelector('#console-room-title')?.textContent.includes(code) &&
@@ -1475,6 +1493,14 @@ try {
       await observeJudgeDisplay(gameFrame);
       await observePublicDisplay(gameFrame);
     }
+    if (process.env.ENGINE_VERIFY_TOUCH_CONTROLS === '1')
+      loadingProof.touchControls = await verifyNativeTouchControls({
+        worker,
+        frame: gameFrame,
+        phone,
+        output: artifactRoot,
+        mode,
+      });
     if (process.env.ENGINE_VERIFY_MANUAL === '1') {
       const delivery = await observeActionDelivery(worker, gameFrames);
       await playOneAction(gameFrames, worker);

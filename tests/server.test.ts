@@ -4,6 +4,121 @@ import { createPartyServer } from '../apps/server/src/server.js';
 import { fileURLToPath } from 'node:url';
 import type { TestContext } from 'node:test';
 
+test('HTTP：入座前建立浏览器会话，并发建房只占一间，离房后的迟到响应不清空新席位身份', async (t) => {
+  const { party, base, request, create } = await fixture(t);
+  const identity = await request('/api/me');
+  const cookie = identity.headers.get('set-cookie')!.split(';')[0]!;
+  assert.match(cookie, /^party_player=/);
+  assert.deepEqual(await identity.json(), { roomCode: null, playerId: null });
+  const raced = await Promise.all([
+    request('/api/rooms', 'POST', { nickname: '同一浏览器A' }, cookie),
+    request('/api/rooms', 'POST', { nickname: '同一浏览器B' }, cookie),
+  ]);
+  assert.deepEqual(raced.map((response) => response.status).sort(), [201, 409]);
+  assert.equal(party.lobby.list().length, 1);
+  const created = await raced.find((response) => response.status === 201)!.json();
+  assert.equal(
+    raced
+      .find((response) => response.status === 201)!
+      .headers.get('set-cookie')!
+      .split(';')[0],
+    cookie,
+  );
+  const left = await request(`/api/rooms/${created.room.code}/me`, 'DELETE', undefined, cookie);
+  assert.equal(left.status, 200);
+  assert.equal(left.headers.get('set-cookie'), null);
+  const other = await create('另一桌');
+  const path = `/api/rooms/${other.data.room.code}`;
+  const joins = await Promise.all([
+    request(`${path}/players`, 'POST', { nickname: '换房' }, cookie),
+    request(`${path}/players`, 'POST', { nickname: '重复入座' }, cookie),
+  ]);
+  assert(joins.every((response) => response.status === 201));
+  const memberships = await Promise.all(joins.map((response) => response.json()));
+  assert.equal(memberships[0].playerId, memberships[1].playerId);
+  assert.equal(party.lobby.get(other.data.room.code).snapshot().players.length, 2);
+  party.lobby
+    .get(other.data.room.code)
+    .removePlayer(memberships[0].playerId, other.cookie.slice('party_player='.length));
+  const rejoined = await (
+    await request(`${path}/players`, 'POST', { nickname: '重新入座' }, cookie)
+  ).json();
+  assert.notEqual(rejoined.playerId, memberships[0].playerId);
+  const staleLeave = await fetch(base + `${path}/me`, {
+    method: 'DELETE',
+    headers: { Cookie: cookie, 'X-Party-Player': memberships[0].playerId },
+  });
+  assert.equal(staleLeave.status, 409);
+  assert.equal(
+    (await (await request('/api/me', 'GET', undefined, cookie)).json()).playerId,
+    rejoined.playerId,
+  );
+  const forged = 'party_player=not-a-server-issued-identity';
+  const issued = await request('/api/me', 'GET', undefined, forged);
+  assert.notEqual(issued.headers.get('set-cookie')!.split(';')[0], forged);
+});
+
+test('HTTP：转交和离线接任逐次验证本房会话，旧房主和过期点击不能操作', async (t) => {
+  t.mock.timers.enable({ apis: ['Date'], now: 1000000 });
+  const { party, request, create } = await fixture(t);
+  const owner = await create('房主');
+  const stranger = await create('另一桌');
+  const path = `/api/rooms/${owner.data.room.code}`;
+  const joined = await request(`${path}/players`, 'POST', { nickname: '接任者' });
+  const memberCookie = joined.headers.get('set-cookie')!.split(';')[0]!;
+  const member = await joined.json();
+  const room = party.lobby.get(owner.data.room.code);
+  room.connect(owner.cookie.slice('party_player='.length));
+  const disconnectMember = room.connect(memberCookie.slice('party_player='.length));
+  for (const cookie of ['', stranger.cookie, memberCookie])
+    assert.equal(
+      (await request(`${path}/owner`, 'PUT', { playerId: member.playerId }, cookie)).status,
+      403,
+    );
+  for (const cookie of ['', stranger.cookie])
+    assert.equal(
+      (await request(`${path}/owner/claim`, 'POST', { ownerId: owner.data.playerId }, cookie))
+        .status,
+      401,
+    );
+  assert.equal(
+    (await request(`${path}/owner/claim`, 'POST', { ownerId: owner.data.playerId }, memberCookie))
+      .status,
+    409,
+  );
+  assert.equal(
+    (await request(`${path}/owner`, 'PUT', { playerId: member.playerId }, owner.cookie)).status,
+    200,
+  );
+  assert.equal((await request(`${path}/bots`, 'POST', { count: 1 }, owner.cookie)).status, 403);
+  assert.equal(
+    (await request(`${path}/owner/claim`, 'POST', { ownerId: owner.data.playerId }, owner.cookie))
+      .status,
+    409,
+  );
+  disconnectMember();
+  t.mock.timers.tick(60000);
+  assert.equal(
+    (
+      await request(
+        `${path}/owner/claim`,
+        'POST',
+        { ownerId: member.playerId },
+        owner.cookie,
+        'http://other.invalid',
+      )
+    ).status,
+    403,
+  );
+  assert.equal(
+    (await request(`${path}/owner/claim`, 'POST', { ownerId: member.playerId }, owner.cookie))
+      .status,
+    200,
+  );
+  assert.equal(room.snapshot().ownerId, owner.data.playerId);
+  assert.equal(room.session(memberCookie.slice('party_player='.length))?.id, member.playerId);
+});
+
 async function fixture(t: TestContext) {
   const party = createPartyServer({
     port: 0,

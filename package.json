@@ -1,6 +1,7 @@
 {
   "name": "party-sanguosha",
-  "version": "0.7.9",
+  "version": "0.7.12",
+  "license": "GPL-3.0-only",
   "private": true,
   "type": "module",
   "engines": {
@@ -33,10 +34,12 @@
     "engine:verify:surrender": "npm run build && node --import tsx scripts/verify-native-surrender.mjs",
     "engine:verify:lightweight": "npm run build && node --import tsx scripts/verify-lightweight.mjs",
     "package:windows": "node --use-env-proxy scripts/package-windows.mjs",
+    "release:check": "node scripts/check-publication.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "check": "npm run typecheck && npm test && npm run build && npm run format:check",
-    "engine:verify:table": "npm run build && node --import tsx scripts/verify-native-table-feedback.mjs"
+    "engine:verify:table": "npm run build && node --import tsx scripts/verify-native-table-feedback.mjs",
+    "engine:verify:jiedao-zonghu": "npm run build && node --import tsx scripts/verify-native-jiedao-zonghu.mjs"
   },
   "dependencies": {
     "qrcode": "1.5.4",

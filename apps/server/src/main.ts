@@ -23,12 +23,18 @@ const extensions = JSON.parse(
 if (!Array.isArray(extensions) || extensions.length !== 0)
   throw new Error('扩展接入尚未完成，config/extensions.json 当前应保持空列表。');
 findHomeUrls(preferredPort, publicUrl);
+console.log('正在校验固定游戏资源，首次运行可能较慢……');
+const validationStarted = performance.now();
+const adapter = new NativeNonameService(root);
+console.log(
+  `${adapter.status().preload ? '固定游戏资源校验通过' : '固定游戏资源未准备完整，请重新运行资源准备'}（耗时${((performance.now() - validationStarted) / 1000).toFixed(1)}秒）。`,
+);
 const party = createPartyServer({
   webRoot: path.join(root, 'dist/web'),
   port: preferredPort,
   ...(publicUrl ? { publicUrl } : {}),
   extensions,
-  adapter: new NativeNonameService(root),
+  adapter,
   entryMode: entryMode as 'internet' | 'lan',
 });
 let port = preferredPort;

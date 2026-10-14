@@ -76,8 +76,16 @@ export function installSelectionRecovery() {
     // skill dialogs now that human choices run on the phone again.
     // Its timeout still calls unwait('ai'); reconnects never extend that timer.
     if (closing.has(this) && pending.has(this.playerid)) return;
+    const request = pending.get(this.playerid);
     pending.delete(this.playerid);
-    return unwait.call(this, result);
+    const accepted = unwait.call(this, result);
+    if (accepted === false && request) {
+      // A worker rule may reject stale selection data (e.g. 宗护's cost).
+      // Retry the same trusted request; do not accept it or restart its timer.
+      pending.set(this.playerid, request);
+      replay(this);
+    }
+    return accepted;
   };
   const close = lib.element.Client.prototype.close;
   lib.element.Client.prototype.close = function (...args) {

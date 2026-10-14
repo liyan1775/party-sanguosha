@@ -3,7 +3,9 @@ import type { GeneralPresetId } from './general-presets.js';
 export type { GeneralPresetId } from './general-presets.js';
 
 export const APP_ID = 'party-sanguosha';
-export const APP_VERSION = '0.7.9';
+export const APP_VERSION = '0.7.12';
+export const OWNER_OFFLINE_GRACE_MS = 60000;
+export const ROOM_IDLE_GRACE_MS = 10 * 60000;
 
 export const MODES = [
   {
@@ -115,6 +117,13 @@ export interface RoomView {
   settings: RoomSettings;
   players: PlayerView[];
   ownerId: string | null;
+  /** Offline owner's seat is retained; an online member can explicitly claim after this time.
+   * Undefined on older servers that do not support ownership management. */
+  ownerClaimAt?: number | null;
+  /** Lets phones show the ownership grace countdown without trusting their clock. */
+  serverTime?: number;
+  /** Only waiting/finished rooms with every human offline have an idle deadline. */
+  idleCloseAt?: number | null;
   engine: EngineStatus;
   matchFailure?: { code: MatchFailureCode; at: number };
   matchRecovery?: { deadline: number };

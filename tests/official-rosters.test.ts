@@ -11,18 +11,28 @@ const inventory = (await read('config/native-character-inventory.json')).charact
 const candidate = await read('config/noname-candidate.json');
 const audio = await read('config/noname-lab-assets.json');
 
+test('2024及2025移动版群雄逐鹿已从公告映射、运行白名单、图鉴和音效档位移除', async () => {
+  const { validateCardPile } = await import('../packages/noname-adapter/runtime/card-pile.js');
+  for (const id of ['mobile-qunxiong-12', 'mobile-qunxiong-16']) {
+    assert(!official.rosters.some((entry: any) => entry.id === id));
+    assert(!presets.some((entry: any) => entry.id === id));
+    assert(!GENERAL_PRESETS.some((entry) => entry.id === id));
+    assert(!catalog.some((entry: any) => entry.preset === id));
+    assert.equal(audio.audioFilesByPreset[id], undefined);
+    assert.throws(() => validateCardPile({ id, cardPile: presets[1].cardPile }), /缺少/);
+  }
+});
+
 test('官方公告全部逐项保留，缺项不进白名单；前后端、图鉴、固定引擎来源一致', () => {
   assert.equal(official.engine.commit, candidate.commit);
   assert.equal(official.engine.tag, candidate.tag);
-  assert.equal(official.rosters.length, 10);
+  assert.equal(official.rosters.length, 8);
   assert.equal(presets.length, GENERAL_PRESETS.length);
   const counts: Record<string, [number, number]> = {
     'ol-doudizhu-s15': [92, 92],
     'mobile-college-2026': [63, 66],
     'mobile-qunxiong-2026-09': [83, 88],
     'decade-quanmin-s19': [90, 90],
-    'mobile-qunxiong-12': [120, 120],
-    'mobile-qunxiong-16': [119, 120],
     'ol-ranked-2026-10-basic': [147, 151],
     'ol-ranked-2026-10-full': [284, 288],
     'ol-sgl-2026-stage1': [83, 83],
@@ -171,14 +181,13 @@ test('同名的平台版本分别固定，OL谋将、马良、羊祜与移动版
   assert.match(xusheng.skills[0].description, /手牌数和装备区内的牌数均不大于你/);
   assert.match(xusheng.skills[0].description, /此伤害\+1/);
   assert.equal(id('ol-doudizhu-s15', '谋卢植'), 'ol_sb_yl_luzhi');
-  assert.equal(id('mobile-qunxiong-12', '谋卢植'), 'sb_yl_luzhi');
+  assert.equal(id('mobile-qunxiong-2026-09', '谋卢植'), 'sb_yl_luzhi');
   assert.equal(id('ol-doudizhu-s15', '马良'), 'ol_maliang');
   assert.equal(id('mobile-college-2026', '马良'), 'maliang');
   assert.equal(id('ol-doudizhu-s15', '羊祜'), 'jin_yanghu');
-  assert.equal(id('mobile-qunxiong-16', '羊祜'), 'sp_yanghu');
-  assert.equal(id('mobile-qunxiong-16', '文钦'), 'mb_wenqin');
+  assert.equal(id('mobile-qunxiong-2026-09', '羊祜'), 'sp_yanghu');
   assert.equal(id('decade-quanmin-s19', '谋吕蒙'), 'dc_sb_lvmeng');
-  assert.equal(id('mobile-qunxiong-12', '谋吕蒙'), 'sb_lvmeng');
+  assert.equal(id('mobile-qunxiong-2026-09', '谋吕蒙'), 'sb_lvmeng');
   assert.equal(id('ol-doudizhu-s15', '界于禁'), undefined);
   assert.equal(id('mobile-college-2026', '界于禁'), 'ol_yujin');
   assert.equal(id('decade-quanmin-s19', '界于禁'), 'yujin_yujin');

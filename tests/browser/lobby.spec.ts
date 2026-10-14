@@ -7,6 +7,184 @@ import type { EngineAdapter, EngineEvent } from '../../packages/noname-adapter/s
 import { createPartyServer } from '../../apps/server/src/server.js';
 import { createPublicGateway } from '../../apps/server/src/public-gateway.js';
 
+for (const internet of [false, true]) {
+  test(`${internet ? '公网轮询' : '局域网SSE'}：大家关页后无人房间自动回收，观战不续期，旧邀请失效`, async ({
+    browser,
+  }) => {
+    await withLobby(
+      browser,
+      async ({ party, base, publicBase, page }) => {
+        const entry = internet ? publicBase : base;
+        const owner = await page();
+        const member = await page();
+        const observer = await page();
+        const home = await page();
+        const code = await createRoom(owner, entry, '散场房主');
+        await joinRoom(member, entry, code, '朋友');
+        await owner.locator('#fill-bots').click();
+        await observer.goto(`${entry}/join/${code}`);
+        await home.goto(entry + '/');
+        await expect(home.locator('#room-list li')).toHaveCount(1);
+        const room = party.lobby.get(code);
+        const tokens = await Promise.all(
+          [owner, member].map(
+            async (phone) =>
+              (await phone.context().cookies()).find((cookie) => cookie.name === 'party_player')!
+                .value,
+          ),
+        );
+        await owner.goto(entry + '/');
+        await member.goto(entry + '/');
+        if (!internet)
+          await expect
+            .poll(() =>
+              room
+                .snapshot()
+                .players.filter((player) => player.kind === 'human')
+                .every((player) => !player.online),
+            )
+            .toBe(true);
+        // Advance the server's presence leases without waiting ten real minutes.
+        for (const token of tokens) room.poll(token, Date.now() - 31000);
+        room.expirePolls();
+        const deadline = room.snapshot().idleCloseAt!;
+        await expect(observer.locator('#room-idle-hint')).toBeVisible();
+        expect(room.snapshot().idleCloseAt).toBe(deadline);
+        party.lobby.sweep(deadline - 1);
+        expect(party.lobby.list()).toHaveLength(1);
+        party.lobby.sweep(deadline);
+        await expect(observer.locator('#connection')).toHaveText('房间已关闭');
+        await expect(home.locator('#room-list li')).toHaveCount(0);
+        expect((await observer.request.get(`${entry}/api/rooms/${code}`)).status()).toBe(404);
+        await owner.reload();
+        await expect(owner.locator('#current-room')).toBeHidden();
+        await expect(owner.locator('#create-button')).toBeVisible();
+        await observer.reload();
+        await expect(observer.getByText('暂时没找到牌桌')).toBeVisible();
+      },
+      internet,
+    );
+  });
+
+  test(`${internet ? '公网轮询' : '局域网SSE'}：转交房主、短断线取消接任、超时显式接任，原房主席位保留`, async ({
+    browser,
+  }) => {
+    await withLobby(
+      browser,
+      async ({ party, base, publicBase, page }) => {
+        const entry = internet ? publicBase : base;
+        const first = await page();
+        const code = await createRoom(first, entry, '原房主');
+        const second = await page();
+        await joinRoom(second, entry, code, '接班朋友');
+        await expect(first.locator('#general-preset option')).toHaveCount(10);
+        await expect(first.locator('#general-preset option')).not.toContainText(['2024', '2025']);
+        await first.locator('#owner-transfer').click();
+        const room = party.lobby.get(code);
+        const member = room.snapshot().players.find((player) => player.nickname === '接班朋友')!;
+        await first.locator('#owner-successor').selectOption(member.id);
+        await first.locator('#ownership-confirm').click();
+        await expect(second.locator('#my-role')).toHaveText('你是房主，也参加这一局');
+        await expect(first.locator('#settings-panel')).toBeHidden();
+        const memberToken = (await second.context().cookies()).find(
+          (cookie) => cookie.name === 'party_player',
+        )!.value;
+        await second.goto(entry + '/');
+        if (!internet) await expect.poll(() => room.session(memberToken)?.online).toBe(false);
+        room.poll(memberToken, Date.now() - 31000);
+        room.expirePolls();
+        await expect(first.locator('#owner-claim-row')).toBeVisible();
+        await expect(first.locator('#owner-claim')).toBeDisabled();
+        await second.goto(`${entry}/join/${code}`);
+        await expect(first.locator('#owner-claim-row')).toBeHidden();
+        expect(room.snapshot().ownerId).toBe(member.id);
+        await second.goto(entry + '/');
+        if (!internet) await expect.poll(() => room.session(memberToken)?.online).toBe(false);
+        room.poll(memberToken, Date.now() - 90001);
+        room.expirePolls();
+        await expect(first.locator('#owner-claim')).toBeEnabled();
+        await first.locator('#owner-claim').click();
+        await expect(first.locator('#my-role')).toHaveText('你是房主，也参加这一局');
+        expect(room.session(memberToken)?.id).toBe(member.id);
+        await second.goto(`${entry}/join/${code}`);
+        await expect(second.locator('#my-role')).toHaveText('已为你留好座位');
+        await first.screenshot({
+          path: `.runtime/previews/room-ownership-${internet ? 'poll' : 'sse'}.png`,
+        });
+      },
+      internet,
+    );
+  });
+}
+
+test('结算可直接离房；普通成员回房后刷新仍在大厅，房主离开后接班并再开局', async ({ browser }) => {
+  const listeners = new Set<(event: EngineEvent) => void>();
+  let sequence = 0;
+  const matches = new Map<string, string>();
+  const adapter: EngineAdapter = {
+    status: () => ({ id: 'noname', ready: true, message: '房间生命周期页面占位器' }),
+    start: async (setup) => {
+      matches.set(setup.roomCode, `lifecycle-${++sequence}`);
+    },
+    matchId: (code) => matches.get(code) ?? null,
+    release: (code) => {
+      matches.delete(code);
+    },
+    subscribe: (listener) => {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+  };
+  await withLobby(
+    browser,
+    async ({ party, base, page }) => {
+      const owner = await page();
+      const member = await page();
+      const leaving = await page();
+      for (const phone of [owner, member, leaving])
+        await phone.route('**/engine/player/lifecycle-*', (route) =>
+          route.fulfill({
+            contentType: 'text/html',
+            body: '<p>牌桌页面占位器</p><script>window.partyEngine={_status:{over:true}};parent.postMessage({type:"party-connected",matchId:location.pathname.split("/").pop()},location.origin)</script>',
+          }),
+        );
+      const code = await createRoom(owner, base, '房主');
+      await joinRoom(member, base, code, '下一任');
+      await joinRoom(leaving, base, code, '先走朋友');
+      await owner.locator('#fill-bots').click();
+      for (const phone of [owner, member, leaving]) await phone.locator('#ready-button').click();
+      await owner.locator('#start-button').click();
+      await expect(member.locator('#game-frame')).toHaveCount(1);
+      expect(party.lobby.get(code).snapshot().phase).toBe('playing');
+      for (const listener of listeners) listener({ type: 'ended', roomCode: code });
+      await leaving.locator('#match-leave').click();
+      await expect(leaving.locator('#create-panel')).toBeVisible();
+      expect(party.lobby.get(code).snapshot().phase).toBe('finished');
+      await member.locator('#rematch-button').click();
+      await expect(member.locator('#waiting-return')).toBeVisible();
+      await member.reload();
+      await expect(member.locator('#waiting-return')).toBeVisible();
+      await expect(member.locator('#game-frame')).toHaveCount(0);
+      await expect(member.locator('#leave-button')).toBeEnabled();
+      await owner.locator('#match-leave').click();
+      await expect(owner.locator('#create-panel')).toBeVisible();
+      await expect(member.locator('#my-role')).toHaveText('你是房主，也参加这一局');
+      expect(party.lobby.get(code).snapshot().phase).toBe('waiting');
+      await member.locator('#fill-bots').click();
+      await member.locator('#ready-button').click();
+      await member.locator('#start-button').click();
+      await expect(member.locator('#game-frame')).toHaveCount(1);
+      expect(sequence).toBe(2);
+      for (const listener of listeners) listener({ type: 'ended', roomCode: code });
+      await member.locator('#match-leave').click();
+      await expect(member.locator('#create-panel')).toBeVisible();
+      expect(party.lobby.list()).toHaveLength(0);
+    },
+    false,
+    adapter,
+  );
+});
+
 test('手机公开记录分页与安全文本，规则端恢复和失败均保留原牌桌直到主动回房', async ({
   browser,
 }) => {

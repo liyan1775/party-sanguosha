@@ -678,3 +678,99 @@ test('首次发牌及后续堆变化广播实际余量，仅发送轮数和整�
   window.dispatchEvent(new Event('pagehide'));
   assert.equal(observers.at(-1)!.disconnected, true);
 });
+
+test('借刀等依次选人：取消前置目标清除后续目标，保留卡牌和更早目标', async (t) => {
+  const nodes = Array.from({ length: 3 }, () => ({
+    classes: new Set(['selected']),
+    unprompted: 0,
+    classList: {
+      remove(name: string) {
+        this.owner.classes.delete(name);
+      },
+      owner: undefined as any,
+    },
+    unprompt() {
+      this.unprompted++;
+    },
+  }));
+  for (const node of nodes) node.classList.owner = node;
+  const selected = [...nodes] as typeof nodes & { remove: (node: (typeof nodes)[number]) => void };
+  selected.remove = (node) => {
+    const index = selected.indexOf(node);
+    if (index >= 0) selected.splice(index, 1);
+  };
+  let checks = 0,
+    ignored = false;
+  const event = { name: 'chooseToUse', custom: { replace: {} as { target?: () => void } } };
+  const info = { singleCard: true, filterAddedTarget: () => true };
+  const material = {};
+  const ui = {
+    selected: { targets: selected, cards: [material] },
+    click: {
+      target(this: (typeof nodes)[number]) {
+        if (!ignored) {
+          selected.remove(this);
+          this.classes.delete('selected');
+        }
+        return 'native-target-result';
+      },
+    },
+  };
+  const setup = { role: 'player' };
+  globals(t, {
+    partyEngine: { setup },
+    nativeFixture: {
+      ui,
+      _status: { event },
+      get: { card: () => material, info: () => info },
+      game: { check: () => checks++ },
+    },
+  });
+  const { installDependentTargetSelection } = await runtime('controls');
+  installDependentTargetSelection();
+  assert.equal(ui.click.target.call(nodes[1]!), 'native-target-result');
+  assert.deepEqual([...selected], [nodes[0]]);
+  assert.equal(nodes[2]!.classes.has('selected'), false);
+  assert.equal(nodes[2]!.unprompted, 1);
+  assert.deepEqual(ui.selected.cards, [material]);
+  assert.equal(checks, 1);
+  selected.splice(0, selected.length, ...nodes);
+  ignored = true;
+  ui.click.target.call(nodes[0]!);
+  assert.equal(selected.length, 3, 'a native ignored click never clears a selection');
+  ignored = false;
+  event.custom.replace.target = () => {};
+  ui.click.target.call(nodes[0]!);
+  assert.deepEqual([...selected], nodes.slice(1), 'custom native target handling stays in control');
+  delete event.custom.replace.target;
+  selected.splice(0, selected.length, ...nodes);
+  info.singleCard = false;
+  ui.click.target.call(nodes[0]!);
+  assert.deepEqual(
+    [...selected],
+    nodes.slice(1),
+    'independent multi-target cards keep other selections',
+  );
+  const native = ui.click.target;
+  setup.role = 'worker';
+  installDependentTargetSelection();
+  assert.equal(ui.click.target, native, 'worker AI keeps its native selection behavior');
+});
+
+test('重连的公开轮数同时恢复技能所用轮数，宗护不会按零轮计算成本', async (t) => {
+  const game = { roundNumber: 0 };
+  const ui = {
+    cardPileNumber: { id: '', style: { display: 'none' } },
+    create: { arena: () => 'arena' },
+    updateRoundNumber: (round: number, count: number) => [round, count],
+  };
+  globals(t, { partyEngine: { setup: { role: 'player' } }, nativeFixture: { game, ui } });
+  (await runtime('controls')).installDeckCounter();
+  assert.deepEqual(ui.updateRoundNumber(2, 120), [2, 120]);
+  assert.equal(game.roundNumber, 2);
+  ui.updateRoundNumber(4, 95);
+  assert.equal(game.roundNumber, 4);
+  ui.updateRoundNumber(Number.NaN, 95);
+  assert.equal(game.roundNumber, 4);
+  assert.equal(ui.cardPileNumber.style.display, '');
+});

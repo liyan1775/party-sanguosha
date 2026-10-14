@@ -16,7 +16,7 @@ import {
 } from '../../shared/src/contracts.js';
 import { ObserverJournal, sanitizeObserver } from './observer.js';
 import { EngineAssets } from './assets.js';
-import { isLocalRequest } from './access.js';
+import { isLocalRequest, parseUpgradeUrl } from './access.js';
 import { PollChannel } from './poll-channel.js';
 import { LanBridge } from './lan-bridge.js';
 import { sanitizeTable, tableAction } from './table.js';
@@ -649,7 +649,8 @@ export class NativeNonameService implements EngineAdapter {
     }, 15000);
     this.heartbeat.unref();
     server.on('upgrade', (request, socket, head) => {
-      const url = new URL(request.url ?? '/', 'http://localhost');
+      const url = parseUpgradeUrl(request, socket);
+      if (!url) return;
       const route = /^\/engine\/socket\/([\w-]+)\/(worker|player|view|clock)$/.exec(url.pathname);
       if (!route) return;
       const match = route && this.matches.get(route[1]!);
@@ -676,6 +677,10 @@ export class NativeNonameService implements EngineAdapter {
         return;
       }
       wss.handleUpgrade(request, socket, head, (ws) => {
+        ws.on('error', () => {
+          // ws closes this transport on protocol failure. Its normal close
+          // path retains seat recovery without taking down other rooms.
+        });
         alive.add(ws);
         ws.on('pong', () => alive.add(ws));
         if (route![2] === 'worker' || route![2] === 'clock') {

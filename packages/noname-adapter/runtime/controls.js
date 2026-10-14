@@ -68,6 +68,37 @@ export function installEquipmentTargetSelection() {
   };
 }
 
+/** A later target of a singleCard action depends on every preceding target. */
+export function installDependentTargetSelection() {
+  if (globalThis.partyEngine.setup.role !== 'player') return;
+  const target = ui.click.target;
+  ui.click.target = function (...args) {
+    const event = _status.event;
+    const info = event?.name === 'chooseToUse' && get.info(get.card());
+    const selected = ui.selected.targets.slice();
+    const index = selected.indexOf(this);
+    const result = target.apply(this, args);
+    if (
+      index >= 0 &&
+      info?.singleCard &&
+      typeof info.filterAddedTarget === 'function' &&
+      typeof event.custom?.replace?.target !== 'function' &&
+      !ui.selected.targets.includes(this)
+    ) {
+      // Native deselection leaves the former second target in slot one. Its
+      // added-target filter cannot prove it is a legal first target (借刀).
+      // Retain the card and earlier targets; clear only dependent selections.
+      for (const dependent of selected.slice(index + 1)) {
+        dependent.classList.remove('selected');
+        ui.selected.targets.remove(dependent);
+        dependent.unprompt();
+      }
+      game.check();
+    }
+    return result;
+  };
+}
+
 /** Use the native public count, never inspect or serialize the card pile. */
 export function installDeckCounter() {
   const { role, tableView } = globalThis.partyEngine.setup;
@@ -121,6 +152,9 @@ export function installDeckCounter() {
   };
   const update = ui.updateRoundNumber;
   ui.updateRoundNumber = function (round, count, ...args) {
+    // Native reinit omits game.roundNumber. The reconnect callback restores
+    // its public display; skills such as 宗护 must use that same actual round.
+    if (Number.isSafeInteger(round) && round >= 0) game.roundNumber = round;
     const result = update.call(this, round, count, ...args);
     show();
     return result;
@@ -153,6 +187,83 @@ export function installDialogFocus() {
       return result;
     };
   }
+}
+
+/** Separate native OK/Cancel touch targets, including reused confirm controls. */
+export function installTouchConfirmation() {
+  if (
+    globalThis.partyEngine.setup.role !== 'player' ||
+    globalThis.partyEngine.setup.tableView ||
+    !matchMedia('(pointer: coarse)').matches
+  )
+    return;
+  const style = document.createElement('style');
+  style.id = 'party-touch-confirm-style';
+  style.textContent = `
+    #control > .party-touch-confirm {
+      display: inline-flex; padding: 0; overflow: visible;
+      height: auto; min-height: var(--party-confirm-height, 48px);
+      background: transparent !important; box-shadow: none !important;
+      border: none !important;
+    }
+    #control > .party-touch-confirm > div {
+      display: inline-flex; align-items: center; justify-content: center;
+      box-sizing: border-box; min-width: var(--party-confirm-width, 80px);
+      min-height: var(--party-confirm-height, 48px); padding: 8px 16px;
+      font-size: var(--party-confirm-font, 18px); line-height: 1.3;
+      border: 1px solid #87958a; border-radius: 8px;
+      background: #f4f0e8; color: #283b34; text-shadow: none;
+      box-shadow: 0 1px 3px #0003;
+    }
+    #control > .party-touch-confirm > div + div {
+      margin-left: var(--party-confirm-gap, 20px);
+    }
+    #control > .party-touch-confirm > .party-confirm-ok {
+      background: #e6ca88; border-color: #9e803b; color: #27342a;
+    }
+  `;
+  document.head.append(style);
+  const size = () => {
+    const control = ui.confirm;
+    if (!control) return;
+    control.classList.add('party-touch-confirm');
+    // Native replace() sums child widths without their margins. Clear that
+    // cached width so native updatec() positions the full separated group.
+    control.style.removeProperty('width');
+    const zoom =
+      Number.isFinite(game.documentZoom) && game.documentZoom > 0 ? game.documentZoom : 1;
+    for (const [key, pixels] of [
+      ['width', 80],
+      ['height', 48],
+      ['gap', 20],
+      ['font', 18],
+    ])
+      control.style.setProperty(`--party-confirm-${key}`, `${Math.ceil(pixels / zoom)}px`);
+    for (const button of control.children)
+      button.classList.toggle('party-confirm-ok', button.link === 'ok');
+  };
+  const update = ui.updatec;
+  ui.updatec = function (...args) {
+    size();
+    return update.apply(this, args);
+  };
+  const zoom = ui.updatez;
+  ui.updatez = function (...args) {
+    const result = zoom.apply(this, args);
+    if (ui.control) ui.updatec();
+    return result;
+  };
+  const confirm = ui.create.confirm;
+  ui.create.confirm = function (...args) {
+    const result = confirm.apply(this, args);
+    ui.updatec();
+    return result;
+  };
+  window.addEventListener('resize', () => {
+    requestAnimationFrame(() => {
+      if (ui.control) ui.updatec();
+    });
+  });
 }
 
 export function installHumanConfirmation() {
@@ -233,6 +344,30 @@ export function installRuleSkillChoices() {
       event?.player === this &&
       ['chooseToUse', 'chooseToRespond'].includes(event.name)
     ) {
+      if (result.bool && result.skill === 'olzonghu_backup') {
+        const rule = lib.skill.olzonghu_backup;
+        const [min, max] = get.select(rule?.selectCard);
+        const cards = result.cards;
+        const targets = result.targets;
+        if (
+          rule?.sourceSkill !== 'olzonghu' ||
+          !Number.isSafeInteger(min) ||
+          min < 1 ||
+          min !== max ||
+          !Array.isArray(cards) ||
+          cards.length !== min ||
+          new Set(cards).size !== min ||
+          !cards.every((card) => this.getCards('he').includes(card)) ||
+          !Array.isArray(targets) ||
+          targets.length !== 1 ||
+          !game.players.includes(targets[0]) ||
+          !rule.filterTarget(result.card, this, targets[0]) ||
+          this.hasSkill('olzonghu_used')
+        )
+          // Selection recovery resends the original choice without a new wait
+          // or deadline. Never let native precontent give zero/foreign cards.
+          return false;
+      }
       // A phone can cancel a backup and choose another skill/card. Match native
       // UI.ok's restore before the worker handles its next navigation/result.
       if (event._backup) event.restore();
@@ -297,8 +432,14 @@ export function installRuleSkillChoices() {
     const backup =
       ['chooseToUse', 'chooseToRespond'].includes(choice.name) &&
       choice._backup &&
-      info?.sourceSkill &&
-      typeof lib.skill[info.sourceSkill]?.chooseButton?.backup === 'function';
+      ((info?.sourceSkill &&
+        typeof lib.skill[info.sourceSkill]?.chooseButton?.backup === 'function') ||
+        // 宗护's paid second stage is a native subskill, not a factory backup.
+        // Its broadcast viewAs is lost on reinit, so retain this accepted rule.
+        (choice.skill === 'olzonghu_backup2' &&
+          choice._backupevent === choice.skill &&
+          choice.norestore &&
+          ['sha', 'shan'].includes(info?.viewAs?.name)));
     // Pinned xinxuanhuo captures its designated target in a local target2.
     // Native function text loses that binding on a phone. Evaluate the exact
     // worker rule and carry only its one public player reference; keep the
@@ -329,6 +470,7 @@ export function installRuleSkillChoices() {
         if (typeof values[0] === 'function' && values[1] === choice.name) {
           const callback = values[0];
           values[0] = function (name, args, set, parent, skills, extra, apply) {
+            if (Number.isSafeInteger(extra.round)) game.roundNumber = extra.round;
             if (extra.recipe) {
               // Rebuild the pinned native factory with the worker's accepted
               // choice. Sending function text loses captured links/player
@@ -376,6 +518,9 @@ export function installRuleSkillChoices() {
             );
           }
           if (backup) {
+            // A native factory may read public round state. Keep its original
+            // value on both reinit and a rejected stale material submission.
+            if (Number.isSafeInteger(game?.roundNumber)) extra.round = game.roundNumber;
             const recipe = recipes.get(choice);
             if (recipe?.skill === choice.skill) extra.recipe = recipe;
             else extra.rule = [choice.skill, info];
@@ -410,7 +555,9 @@ export function installControls() {
   let updateSettlement = () => {};
   installNativeFilterDecoding();
   installHumanConfirmation();
+  installTouchConfirmation();
   installEquipmentTargetSelection();
+  installDependentTargetSelection();
   installRuleSkillChoices();
   installDialogFocus();
   installReadOnlyCharacterDetails();

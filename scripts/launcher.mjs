@@ -5,6 +5,7 @@ import { mkdir, open, readFile, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { setTimeout as delay } from 'node:timers/promises';
+import { LAUNCH_LOCK_TIMEOUT_MS, waitForStartup } from './launcher-readiness.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const runtime = path.join(root, '.runtime');
@@ -64,7 +65,8 @@ async function openBrowser(url) {
 
 async function acquireLock() {
   let announced = false;
-  for (let attempt = 0; attempt < 60; attempt++) {
+  const started = Date.now();
+  while (Date.now() - started < LAUNCH_LOCK_TIMEOUT_MS) {
     try {
       const handle = await open(lockFile, 'wx');
       await handle.writeFile(JSON.stringify({ pid: process.pid, startedAt: Date.now() }));
@@ -215,14 +217,16 @@ async function start() {
       });
       child.unref();
       try {
-        for (let attempt = 0; attempt < 100; attempt++) {
-          if (startupError) throw startupError;
-          if (exited) throw new Error('服务未能启动，请查看 .runtime/server-error.log。');
-          session = await runningSession();
-          if (session) break;
-          await delay(200);
-        }
-        if (!session) throw new Error('等待启动超时，请查看 .runtime/server-error.log 后再试。');
+        console.log('正在启动本机服务；首次资源校验可能需要几十秒，请保持此窗口开启……');
+        session = await waitForStartup({
+          check: runningSession,
+          assertAlive: () => {
+            if (startupError) throw startupError;
+            if (exited) throw new Error('服务未能启动，请查看 .runtime/server-error.log。');
+          },
+          onProgress: (seconds) =>
+            console.log(`仍在启动本机服务（已等待${seconds}秒），首次运行可能较慢……`),
+        });
       } catch (error) {
         // 只清理本次启动器刚创建的进程，绝不按端口杀掉其他服务。
         if (!exited) child.kill();

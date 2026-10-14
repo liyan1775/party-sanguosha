@@ -96,44 +96,6 @@ export const GENERAL_PRESETS = [
     },
   },
   {
-    id: 'mobile-qunxiong-12',
-    name: '移动版群雄逐鹿第十二届（2024）',
-    description: '三国杀移动版官方活动将池，已导入 120/120 将。沿用本项目四种玩法。',
-    cardPile: '军争160张（去木牛流马）',
-    characterCount: 120,
-    official: {
-      platform: '三国杀移动版',
-      sourceKind: 'announcement',
-      eventMode: 'versus',
-      publishedAt: '2024-11-06',
-      url: 'https://www.sanguosha.cn/pc/news-detail-1947.html',
-      announcedCount: 120,
-      missingGenerals: [],
-      versionNotes: [
-        '刘协：天命／密诏与该平台版本相同；保留完整原生额外主公技坠廷及主公标记，按原生规则生效。',
-      ],
-    },
-  },
-  {
-    id: 'mobile-qunxiong-16',
-    name: '移动版群雄逐鹿第十六届（2025）',
-    description: '三国杀移动版官方活动将池，已导入 119/120 将；缺少：友徐庶。沿用本项目四种玩法。',
-    cardPile: '军争160张（去木牛流马）',
-    characterCount: 119,
-    official: {
-      platform: '三国杀移动版',
-      sourceKind: 'announcement',
-      eventMode: 'versus',
-      publishedAt: '2025-04-28',
-      url: 'https://www.sanguosha.cn/pc/news-detail-2059.html',
-      announcedCount: 120,
-      missingGenerals: ['友徐庶'],
-      versionNotes: [
-        '刘协：天命／密诏与该平台版本相同；保留完整原生额外主公技坠廷及主公标记，按原生规则生效。',
-      ],
-    },
-  },
-  {
     id: 'ol-ranked-2026-10-basic',
     name: 'OL排位基础池（2026年10月）',
     description:

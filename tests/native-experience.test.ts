@@ -5,6 +5,55 @@ import { setImmediate as tick } from 'node:timers/promises';
 import type { TestContext } from 'node:test';
 import { ObserverJournal } from '../packages/noname-adapter/src/observer.js';
 
+test('触摸确认控件在原生画布建立前不重排，缩放完成后沿用原生重排', async (t) => {
+  let updates = 0;
+  const ui: any = {
+    create: { confirm: () => {} },
+    updatez: () => 'native zoom result',
+    updatec: () => {
+      assert(ui.control);
+      updates++;
+    },
+  };
+  globals(t, {
+    nativeFixture: { lib: {}, game: { documentZoom: 1 }, ui, get: {}, _status: {} },
+    partyEngine: { setup: { role: 'player' } },
+    matchMedia: () => ({ matches: true }),
+    document: { createElement: () => ({}), head: { append() {} } },
+    window: { addEventListener() {} },
+  });
+  (await runtime('controls')).installTouchConfirmation();
+  assert.equal(ui.updatez(), 'native zoom result');
+  assert.equal(updates, 0, 'boot calls updatez before ui.control exists');
+  ui.control = {};
+  ui.updatez();
+  assert.equal(updates, 1);
+});
+
+test('触摸控件不改变规则宿主、轻量研究视图或鼠标玩家的确认函数', async (t) => {
+  const ui = { updatec() {}, updatez() {}, create: { confirm() {} } };
+  const original = { ...ui, confirm: ui.create.confirm };
+  const engine: any = { setup: { role: 'worker' } };
+  globals(t, {
+    nativeFixture: { lib: {}, game: {}, ui, get: {}, _status: {} },
+    partyEngine: engine,
+    matchMedia: () => ({ matches: false }),
+    document: { createElement: () => assert.fail('unexpected touch styling') },
+  });
+  const { installTouchConfirmation } = await runtime('controls');
+  for (const setup of [
+    { role: 'worker' },
+    { role: 'player', tableView: true },
+    { role: 'player' },
+  ]) {
+    engine.setup = setup;
+    installTouchConfirmation();
+    assert.equal(ui.updatec, original.updatec);
+    assert.equal(ui.updatez, original.updatez);
+    assert.equal(ui.create.confirm, original.confirm);
+  }
+});
+
 function globals(t: TestContext, values: Record<string, unknown>) {
   for (const [key, value] of Object.entries(values)) {
     const before = Object.getOwnPropertyDescriptor(globalThis, key);
@@ -338,6 +387,163 @@ test('原生转化选择值保留闭包；刷新按同一已选颜色重建且�
   assert.equal(received, 0, 'client backup definitions never reach native unwait');
   actor.unwait({ bool: true });
   assert.equal(received, 1);
+});
+
+test('宗护电脑核验交牌成本，拒绝零张、重复及他人牌；原请求重试不重置期限', async (t) => {
+  const sent: unknown[][] = [];
+  const waiting: Record<string, unknown> = {};
+  let waits = 0,
+    received = 0,
+    used = false;
+  const own = [{ id: 'a' }, { id: 'b' }, { id: 'c' }],
+    foreign = { id: 'foreign' };
+  class Player {
+    constructor(public playerid: string) {}
+    ws: Client | undefined;
+    getCards() {
+      return own;
+    }
+    hasSkill() {
+      return used;
+    }
+    send(...args: unknown[]) {
+      sent.push(args);
+    }
+    wait() {
+      waits++;
+      waiting[this.playerid] = '_noname_waiting';
+    }
+    unwait(result: unknown) {
+      received++;
+      waiting[this.playerid] = result;
+    }
+  }
+  class Client {
+    id = 'actor';
+    close() {}
+  }
+  const actor = new Player('actor'),
+    recipient = new Player('recipient');
+  actor.ws = new Client();
+  let applied: unknown[] = [];
+  const callback = (...args: unknown[]) => {
+    applied = args;
+  };
+  class Choice {
+    name = 'chooseToUse';
+    player = actor;
+    skill = 'olzonghu_backup';
+    _backup: object | undefined = {};
+    _backupevent = '';
+    norestore = false;
+    backup() {}
+    restore() {
+      this._backup = undefined;
+    }
+    send() {
+      actor.send(callback, this.name, [], [], 'encoded original parent', {});
+      actor.wait();
+    }
+  }
+  const game = { players: [actor, recipient], roundNumber: 2 };
+  const rule = {
+    sourceSkill: 'olzonghu',
+    viewAs: { name: 'sha' },
+    selectCard: () => [Math.min(3, game.roundNumber), Math.min(3, game.roundNumber)],
+    filterTarget: (_card: unknown, player: Player, target: Player) => player !== target,
+  };
+  const lib: any = {
+    skill: { olzonghu: { chooseButton: { backup: () => rule } }, olzonghu_backup: rule },
+    element: { Player, Client, GameEvent: Choice },
+    playerOL: { actor, recipient },
+    node: { torespond: waiting, torespondtimeout: { actor: 12345 } },
+    message: { server: { reinited() {} } },
+  };
+  const choice = new Choice();
+  globals(t, {
+    partyEngine: { setup: { role: 'worker' }, proof: { started: true } },
+    nativeFixture: {
+      lib,
+      game,
+      get: { event: () => choice, select: (value: () => number[]) => value() },
+      withChoiceDisclosure: (_event: unknown, send: () => unknown) => send(),
+    },
+  });
+  (await runtime('controls')).installRuleSkillChoices();
+  (await runtime('selection-recovery')).installSelectionRecovery();
+  choice.send();
+  const request = sent[0]!;
+  for (const cards of [[], [own[0]], [own[0], own[0]], [own[0], foreign], own]) {
+    assert.equal(
+      actor.unwait({ bool: true, skill: 'olzonghu_backup', cards, targets: [recipient] }),
+      false,
+    );
+    assert.deepEqual(sent.at(-1), request);
+    assert.equal(received, 0);
+    assert.equal(waits, 1);
+    assert.equal(waiting.actor, '_noname_waiting');
+    assert.equal(lib.node.torespondtimeout.actor, 12345);
+  }
+  for (const targets of [[], [actor], [new Player('foreign')], [recipient, actor]]) {
+    assert.equal(
+      actor.unwait({ bool: true, skill: 'olzonghu_backup', cards: own.slice(0, 2), targets }),
+      false,
+    );
+    assert.equal(received, 0);
+  }
+  used = true;
+  assert.equal(
+    actor.unwait({
+      bool: true,
+      skill: 'olzonghu_backup',
+      cards: own.slice(0, 2),
+      targets: [recipient],
+    }),
+    false,
+  );
+  used = false;
+  game.roundNumber = 0;
+  (request[0] as (...args: unknown[]) => void)(...request.slice(1));
+  assert.equal(
+    game.roundNumber,
+    2,
+    'retry restores original public round before rebuilding a rule',
+  );
+  assert.deepEqual(applied, request.slice(1, 6));
+  actor.unwait({
+    bool: true,
+    skill: 'olzonghu_backup',
+    cards: own.slice(0, 2),
+    targets: [recipient],
+  });
+  assert.equal(received, 1);
+  const count = sent.length;
+  lib.message.server.reinited.call(actor.ws);
+  assert.equal(sent.length, count, 'accepted payment cannot reopen');
+  for (const name of ['sha', 'shan']) {
+    choice.skill = 'olzonghu_backup2';
+    choice._backupevent = choice.skill;
+    choice._backup = {};
+    choice.norestore = true;
+    const paidRule = { viewAs: { name }, filterCard: () => false, selectCard: -1 };
+    lib.skill.olzonghu_backup2 = paidRule;
+    choice.send();
+    const paidRequest = sent.at(-1)!;
+    assert.deepEqual(paidRequest[6], { round: 2, rule: ['olzonghu_backup2', paidRule] });
+    lib.skill.olzonghu_backup2 = { selectCard: -1 };
+    (paidRequest[0] as (...args: unknown[]) => void)(...paidRequest.slice(1));
+    assert.equal(
+      lib.skill.olzonghu_backup2.viewAs.name,
+      name,
+      'paid second stage recovers its accepted card',
+    );
+    actor.unwait({ bool: true, skill: 'olzonghu_backup2', cards: [], targets: [] });
+    assert.equal(
+      received,
+      name === 'sha' ? 2 : 3,
+      'only the paid second stage needs no further material',
+    );
+  }
 });
 
 test('原生技能选择刷新：原请求与期限保留，换席位、已提交和超时不重放', async (t) => {

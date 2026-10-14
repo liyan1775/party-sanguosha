@@ -1,5 +1,3 @@
-import assert from 'node:assert/strict';
-
 export async function chooseGeneral(frame, worker, options = {}) {
   const gesture = options.mouse ? 'click' : 'tap';
   const tapChoice = async (locator) => {
@@ -28,8 +26,10 @@ export async function chooseGeneral(frame, worker, options = {}) {
         inspectedLuck = true;
         frame = (await options.onLuck(frame, worker)) ?? frame;
       }
-      const keep = frame.locator('#party-luck-cards button[data-action="keep"]');
-      if (await keep.isVisible()) await keep[gesture]();
+      // The button stays visible but disabled while its first submission is
+      // in flight. A public round trip may span several loop iterations.
+      const keep = frame.locator('#party-luck-cards button[data-action="keep"]:enabled');
+      if (await keep.isVisible()) await tapChoice(keep);
       await new Promise((resolve) => setTimeout(resolve, 150));
       continue;
     }
@@ -78,12 +78,35 @@ export async function playOneAction(frames, worker) {
         responded: player.getAllHistory('respond').length,
       })),
   );
+  const submitted = new Set();
   for (let attempt = 0; attempt < 100; attempt++) {
+    // Finish native follow-up choices on either phone before judging the
+    // recorded action. A discard cost alone is not a use/respond result.
+    if (
+      submitted.size &&
+      (await worker.evaluate(
+        ({ before, ids }) =>
+          before.some((record) => {
+            if (!ids.includes(record.id)) return false;
+            const player = partyEngine.lib.playerOL[record.id];
+            return (
+              player.getAllHistory('useCard').length > record.used ||
+              player.getAllHistory('respond').length > record.responded
+            );
+          }),
+        { before, ids: [...submitted] },
+      ))
+    ) {
+      console.log('native touch card selection recorded by the rule worker');
+      return;
+    }
     for (const frame of frames) {
-      // A general may ask about an optional preparation skill before its first
-      // playable card. Decline it through the real UI, then continue the turn.
+      // A native skill may ask for an optional boolean or target before the
+      // first playable card (e.g. 曹叡恢拓 after an opponent's damage). Decline
+      // only when the native cancel control is visible; do not resolve a
+      // mandatory choice or alter cards just to make this probe advance.
       const eventName = await frame.evaluate(() => partyEngine._status.event?.name);
-      if (eventName === 'chooseBool') {
+      if (['chooseBool', 'chooseTarget', 'chooseButton'].includes(eventName)) {
         const cancel = frame
           .locator('.control > div')
           .filter({ hasText: /^取消$/ })
@@ -93,7 +116,7 @@ export async function playOneAction(frames, worker) {
       }
       const selectable = frame
         .locator(
-          '.handcards .card.selectable, .handcards1 .card.selectable, .handcards2 .card.selectable',
+          '.handcards .card.selectable:not(.selected), .handcards1 .card.selectable:not(.selected), .handcards2 .card.selectable:not(.selected)',
         )
         .first();
       if (!(await selectable.isVisible())) {
@@ -120,22 +143,9 @@ export async function playOneAction(frames, worker) {
         if (await target.isVisible()) await target.tap();
       }
       if (!(await confirm.isVisible())) continue;
+      const playerId = await frame.evaluate(() => partyEngine.game.me.playerid);
       await confirm.tap();
-      await worker.waitForFunction(
-        (before) =>
-          before.some((record) => {
-            const player = partyEngine.lib.playerOL[record.id];
-            return (
-              player.getAllHistory('useCard').length > record.used ||
-              player.getAllHistory('respond').length > record.responded
-            );
-          }),
-        before,
-        { timeout: 8000 },
-      );
-      assert(true, 'native rule worker recorded the human card action');
-      console.log('native touch card selection recorded by the rule worker');
-      return;
+      if (['chooseToUse', 'chooseToRespond'].includes(eventName)) submitted.add(playerId);
     }
     await new Promise((resolve) => setTimeout(resolve, 400));
   }

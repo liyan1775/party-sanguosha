@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto';
 import type { EngineAdapter } from '../../../packages/noname-adapter/src/index.js';
 import type {
   ExtensionInfo,
@@ -5,12 +6,13 @@ import type {
   SessionView,
 } from '../../../packages/shared/src/contracts.js';
 import { AppError } from './errors.js';
-import { RoomStore } from './room.js';
+import { normalizeNickname, RoomStore } from './room.js';
 
 /** 电脑只提供服务；房间由玩家创建，房主权限来自该房间的真人席位。 */
 export class LobbyStore {
   private readonly rooms = new Map<string, RoomStore>();
   private readonly listeners = new Set<(rooms: RoomSummary[]) => void>();
+  private readonly sessions = new Map<string, number>();
 
   constructor(
     private readonly engine: EngineAdapter,
@@ -47,11 +49,34 @@ export class LobbyStore {
     return { roomCode: null, playerId: null };
   }
 
+  /** Browser identity exists before seating, so concurrent requests share one membership. */
+  identify(token?: string, now = Date.now()): string {
+    if (!token || ((this.sessions.get(token) ?? 0) <= now && !this.session(token).roomCode))
+      token = randomBytes(24).toString('base64url');
+    this.sessions.set(token, now + 86400000);
+    return token;
+  }
+
+  expireSessions(now = Date.now()): void {
+    for (const [token, expiry] of this.sessions)
+      if (expiry <= now && !this.session(token).roomCode) this.sessions.delete(token);
+  }
+
+  sweep(now = Date.now()): void {
+    for (const room of [...this.rooms.values()]) {
+      room.expirePolls(now);
+      room.reapIfIdle(now);
+    }
+    this.expireSessions(now);
+  }
+
   create(nickname: unknown, token?: string) {
+    nickname = normalizeNickname(nickname);
+    token = this.identify(token);
     this.assertAvailable(token);
     let room = new RoomStore(this.engine, this.catalog);
     while (this.rooms.has(room.code)) room = new RoomStore(this.engine, this.catalog);
-    const player = room.join(nickname);
+    const player = room.join(nickname, token);
     this.rooms.set(room.code, room);
     const unsubscribe = room.subscribe((snapshot) => {
       if (snapshot.phase === 'closed') {
@@ -66,6 +91,8 @@ export class LobbyStore {
 
   join(code: string, nickname: unknown, token?: string) {
     const room = this.get(code);
+    nickname = normalizeNickname(nickname);
+    token = this.identify(token);
     this.assertAvailable(token, code);
     return { room, ...room.join(nickname, token) };
   }

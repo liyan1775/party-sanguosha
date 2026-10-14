@@ -8,6 +8,7 @@
 - 固定核心包与资源位于被忽略的 `.local`，通过正式适配服务分发到局域网玩家；Windows 离线包保留版本、来源、许可证和本项目适配源码。
 - `packages/noname-adapter/lab/duel-mode.js` 通过上游单挑模式复用原生规则，适配文件标记 GPL-3.0-only；上游原始许可证全文保存在 `packages/noname-adapter/licenses/noname-GPL-3.0.txt`。
 - `packages/noname-adapter/runtime` 的衍生适配文件同样标记 GPL-3.0-only。未改写上游磁盘文件；兼容路径调整在 `src/service.ts` 的资源响应中进行，源码可审查。
+- `tests/fixtures/native-numbered-translation.js` 保存该固定版本 `character/onlyOL.js` 的立文说明片段，保留出处及GPL-3.0-only标记；仅作语法解析夹具，不导入或执行。
 - 验证资源清单 `config/noname-lab-assets.json` 固定上游 commit 和资源 Git blob 校验。资源所有权与原有许可不因下载或整理而改变。
 - v0.3.2 增加 1686 个同 commit 的卡牌、技能与阵亡音频，保留原路径和逐项校验。`config/general-catalog.json` 的武将与技能文本来自该版本的原始定义，记录来源与 GPL-3.0-only 元数据，不改变原有资源所有权。
 - `dist/engine` 是上述固定上游的浏览器构建产物，保留来源标记；对应上游源码及随包依赖仍完整保存在 `.local/noname/v1.11.6`，离线发行包一并携带原始代码与许可证。构建变换可在 `scripts/build-native-engine.mjs` 审查。
@@ -25,10 +26,14 @@
 
 Windows 离线包携带当前 Node.js 24 的 Windows x64 二进制、版本、SHA-256 和对应 [Node.js 原始许可证](https://github.com/nodejs/node/blob/v24.12.0/LICENSE)，位于 `.local/runtime/node-LICENSE.txt`。打包脚本不携带本机代理、配置或服务凭据。
 
-本项目当前为私有开发项目，尚未指定对外发布许可证。
+用户于2026-10-12确认本项目自有代码采用 `GPL-3.0-only`，许可证全文见根目录 [LICENSE](LICENSE)。现有无名杀衍生适配继续使用相同许可，其他第三方代码保留各自许可。已有GitHub仓库当前公开，本轮新增许可及候选修改仍未推送，尚无公开发行包。
+
+该许可说明不替第三方图片、音频、字体、商标或其他资源授予权利。固定上游文件与哈希证明来源及一致性，不能单独证明所有资源均可公开再分发。首轮 Windows 完整包用于受邀验收，公开托管完整资源包前须单独核对分发依据；源码公开与资源包公开分别作结论。
+
+上游该版本的 [README](https://github.com/libnoname/noname/blob/v1.11.6/README.md) 另列保留代码出处和不用于商业用途的项目使用说明。此处如实保留来源说明，不改写 GPL 原文或擅自增添非商业许可证。原始代码基线见 [固定 commit](https://github.com/libnoname/noname/tree/2367607e246d21aae168dba15c01151ee0651f30)；本项目源码、构建脚本和适配修改随测试包提供。
 
 ## 公网联网组件
 
-Cloudflared 来自 [Cloudflare 官方项目](https://github.com/cloudflare/cloudflared)，固定 [2026.9.3 发布](https://github.com/cloudflare/cloudflared/releases/tag/2026.9.3) 的 Windows x64 独立可执行文件，官方 SHA-256 与来源记录在 `config/public-connector.json`。不安装系统服务，不自动升级；缓存位于被忽略的 `.local/connector`，完整发行包携带该固定组件。原始 Apache-2.0 许可证保存在 [notices/cloudflared-LICENSE.txt](notices/cloudflared-LICENSE.txt)，不改变无名杀 GPL 或本项目未定的许可。
+Cloudflared 来自 [Cloudflare 官方项目](https://github.com/cloudflare/cloudflared)，固定 [2026.9.3 发布](https://github.com/cloudflare/cloudflared/releases/tag/2026.9.3) 的 Windows x64 独立可执行文件，官方 SHA-256 与来源记录在 `config/public-connector.json`。不安装系统服务，不自动升级；缓存位于被忽略的 `.local/connector`，完整发行包携带该固定组件。原始 Apache-2.0 许可证保存在 [notices/cloudflared-LICENSE.txt](notices/cloudflared-LICENSE.txt)，不改变无名杀及本项目自有代码的 GPL-3.0-only 许可。
 
 实际流量使用 Cloudflare Quick Tunnel 临时服务，能力与限制以 [官方说明](https://developers.cloudflare.com/tunnel/get-started/quick-tunnels/) 为依据；随机 HTTPS 域名、无可用性保证、200 个同时在途请求、不支持 SSE。公网方案不创建托管游戏服务器、远程仓库或用户账号。

@@ -1,4 +1,16 @@
 import type { IncomingMessage } from 'node:http';
+import type { Duplex } from 'node:stream';
+
+/** Upgrade listeners run outside the HTTP handler's promise error boundary. */
+export function parseUpgradeUrl(request: IncomingMessage, socket: Duplex): URL | undefined {
+  if (socket.destroyed || socket.writableEnded) return undefined;
+  try {
+    return new URL(request.url ?? '/', 'http://localhost');
+  } catch {
+    socket.end('HTTP/1.1 400 Bad Request\r\nConnection: close\r\n\r\n');
+    return undefined;
+  }
+}
 
 /** The public ingress always stamps its requests, even if a visitor spoofs Host. */
 export function isLocalRequest(request: IncomingMessage): boolean {

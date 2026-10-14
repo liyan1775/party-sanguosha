@@ -16,7 +16,7 @@ import {
 import type { EngineAdapter } from '../../../packages/noname-adapter/src/index.js';
 import { NonameAdapter } from '../../../packages/noname-adapter/src/index.js';
 import { NativeNonameService } from '../../../packages/noname-adapter/src/service.js';
-import { isLocalRequest } from '../../../packages/noname-adapter/src/access.js';
+import { isLocalRequest, parseUpgradeUrl } from '../../../packages/noname-adapter/src/access.js';
 import { AppError } from './errors.js';
 import { findHomeUrls } from './network.js';
 import { LobbyStore } from './lobby.js';
@@ -114,8 +114,8 @@ export function createPartyServer(options: ServerOptions) {
   server.headersTimeout = 15000;
   const realtime = new WebSocketServer({ noServer: true, maxPayload: 64 });
   server.on('upgrade', (request, socket, head) => {
-    const url = new URL(request.url ?? '/', 'http://localhost');
-    if (url.pathname !== '/api/realtime-check') return;
+    const url = parseUpgradeUrl(request, socket);
+    if (!url || url.pathname !== '/api/realtime-check') return;
     let sameOrigin = true;
     try {
       if (request.headers.origin)
@@ -128,6 +128,10 @@ export function createPartyServer(options: ServerOptions) {
       return;
     }
     realtime.handleUpgrade(request, socket, head, (ws) => {
+      ws.on('error', () => {
+        // ws already closes protocol-invalid peers. Consume its error event so
+        // a bad public probe cannot terminate the shared game server.
+      });
       const timeout = setTimeout(() => ws.terminate(), 10000);
       ws.once('close', () => clearTimeout(timeout));
       ws.once('message', () => ws.send('party-sanguosha-realtime'));
@@ -155,7 +159,7 @@ export function createPartyServer(options: ServerOptions) {
     server.closeIdleConnections();
   };
   const pollExpiry = setInterval(() => {
-    for (const { code } of lobby.list()) lobby.get(code).expirePolls();
+    lobby.sweep();
   }, 5000);
   pollExpiry.unref();
   server.once('close', () => clearInterval(pollExpiry));
@@ -310,7 +314,9 @@ export function createPartyServer(options: ServerOptions) {
       return;
     }
     if (route === 'GET /api/me') {
-      json(response, 200, lobby.session(playerToken));
+      const token = lobby.identify(playerToken);
+      if (token !== playerToken) response.setHeader('Set-Cookie', playerCookie(request, token));
+      json(response, 200, lobby.session(token));
       return;
     }
     if (route === 'POST /api/rooms') {
@@ -334,44 +340,60 @@ export function createPartyServer(options: ServerOptions) {
     }
 
     const roomRoute =
-      /^\/api\/rooms\/([A-F0-9]{6})(?:\/(players(?:\/[\w-]+)?|me(?:\/(?:ready|general))?|start|rematch|bots|events))?$/.exec(
+      /^\/api\/rooms\/([A-F0-9]{6})(?:\/(players(?:\/[\w-]+)?|me(?:\/(?:ready|general))?|owner(?:\/claim)?|start|rematch|bots|events))?$/.exec(
         url.pathname,
       );
     if (roomRoute) {
       const code = roomRoute[1]!;
       const room = lobby.get(code);
       const operation = `${request.method} ${roomRoute[2] ?? ''}`;
+      const body = [
+        'POST players',
+        'PUT me/ready',
+        'PUT me/general',
+        'PUT ',
+        'POST bots',
+        'PUT owner',
+        'POST owner/claim',
+      ].includes(operation)
+        ? await readBody(request)
+        : undefined;
+      const expectedPlayer = request.headers['x-party-player'];
+      if (
+        expectedPlayer !== undefined &&
+        !['GET', 'HEAD'].includes(request.method ?? '') &&
+        operation !== 'POST players' &&
+        room.session(playerToken)?.id !== expectedPlayer
+      )
+        throw new AppError(409, 'SEAT_CHANGED', '你的席位已经变化，请刷新房间后再操作。');
       switch (operation) {
         case 'GET ':
           json(response, 200, roomInfo(code));
           return;
         case 'POST players': {
-          const joined = lobby.join(code, (await readBody(request)).nickname, playerToken);
+          const joined = lobby.join(code, body!.nickname, playerToken);
           response.setHeader('Set-Cookie', playerCookie(request, joined.token));
           json(response, 201, { ...roomInfo(code), playerId: joined.playerId });
           return;
         }
         case 'DELETE me':
           room.leave(playerToken);
-          response.setHeader('Set-Cookie', playerCookie(request, '', 0));
+          // Leaving removes membership, not browser identity. A late response
+          // must not erase the cookie used by a subsequent join or create.
           json(response, 200, { ok: true });
           return;
         case 'PUT me/ready':
-          room.setReady(playerToken, (await readBody(request)).ready);
+          room.setReady(playerToken, body!.ready);
           json(response, 200, room.snapshot());
           return;
         case 'GET me/general':
           json(response, 200, room.generalChoice(playerToken));
           return;
         case 'PUT me/general':
-          json(
-            response,
-            200,
-            room.setGeneralChoice(playerToken, (await readBody(request)).general),
-          );
+          json(response, 200, room.setGeneralChoice(playerToken, body!.general));
           return;
         case 'PUT ':
-          room.updateSettings(await readBody(request), playerToken);
+          room.updateSettings(body, playerToken);
           json(response, 200, room.snapshot());
           return;
         case 'POST start':
@@ -382,8 +404,16 @@ export function createPartyServer(options: ServerOptions) {
           room.returnToWaiting(playerToken);
           json(response, 200, room.snapshot());
           return;
+        case 'PUT owner':
+          room.transferOwnership(body!.playerId, playerToken);
+          json(response, 200, room.snapshot());
+          return;
+        case 'POST owner/claim':
+          room.claimOwnership(body!.ownerId, playerToken);
+          json(response, 200, room.snapshot());
+          return;
         case 'POST bots':
-          room.addBots((await readBody(request)).count, playerToken);
+          room.addBots(body!.count, playerToken);
           json(response, 200, room.snapshot());
           return;
         case 'GET events':

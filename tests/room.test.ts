@@ -12,6 +12,7 @@ import { RoomStore } from '../apps/server/src/room.js';
 import { LobbyStore } from '../apps/server/src/lobby.js';
 import { AppError } from '../apps/server/src/errors.js';
 import { findHomeUrls, findJoinUrls, isLoopbackPortOccupied } from '../apps/server/src/network.js';
+import { ROOM_IDLE_GRACE_MS } from '../packages/shared/src/contracts.js';
 
 function fakeEngine(start: (setup: MatchSetup) => Promise<void> = async () => {}): EngineAdapter {
   return { status: () => ({ id: 'noname', ready: true, message: 'test engine' }), start };
@@ -24,6 +25,316 @@ function ownedRoom(engine = fakeEngine()) {
 function code(expected: string) {
   return (error: unknown) => error instanceof AppError && error.code === expected;
 }
+
+test('无效建房不遗留引擎订阅；关闭最后真人的房间释放订阅', () => {
+  const listeners = new Set<(event: EngineEvent) => void>();
+  const engine: EngineAdapter = {
+    ...fakeEngine(),
+    subscribe(listener) {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+  };
+  const lobby = new LobbyStore(engine);
+  for (let i = 0; i < 5; i++) assert.throws(() => lobby.create(''), code('INVALID_NICKNAME'));
+  assert.equal(listeners.size, 0);
+  const owner = lobby.create('房主');
+  assert.equal(listeners.size, 1);
+  owner.room.leave(owner.token);
+  assert.equal(listeners.size, 0);
+});
+
+test('局间最后真人离线满10分钟自动关房；AI、观战及状态广播不续期，其他房间保持', (t) => {
+  t.mock.timers.enable({ apis: ['Date'], now: 1000000 });
+  const listeners = new Set<(event: EngineEvent) => void>();
+  const released: string[] = [];
+  const lobby = new LobbyStore({
+    ...fakeEngine(),
+    subscribe(listener) {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+    release: (roomCode) => released.push(roomCode),
+  });
+  const owner = lobby.create('待回收');
+  const member = lobby.join(owner.room.code, '朋友');
+  owner.room.addBots(3, owner.token);
+  const disconnectOwner = owner.room.connect(owner.token);
+  const disconnectMember = owner.room.connect(member.token);
+  const other = lobby.create('另桌');
+  other.room.connect(other.token);
+  disconnectOwner();
+  assert.equal(owner.room.snapshot().idleCloseAt, null);
+  t.mock.timers.tick(1000);
+  disconnectMember();
+  const deadline = Date.now() + ROOM_IDLE_GRACE_MS;
+  assert.equal(owner.room.snapshot().idleCloseAt, deadline);
+  const disconnectSpectator = owner.room.connect();
+  owner.room.poll('unseated-observer');
+  for (const listener of listeners) listener({ type: 'status' });
+  assert.equal(owner.room.snapshot().idleCloseAt, deadline);
+  lobby.sweep(deadline - 1);
+  assert.equal(lobby.list().length, 2);
+  lobby.sweep(deadline);
+  assert.equal(owner.room.snapshot().phase, 'closed');
+  assert.equal(owner.room.snapshot().players.length, 0);
+  assert.deepEqual(released, [owner.room.code]);
+  assert.equal(listeners.size, 1);
+  assert.throws(() => lobby.get(owner.room.code), code('ROOM_NOT_FOUND'));
+  assert.deepEqual(lobby.session(member.token), { roomCode: null, playerId: null });
+  assert.equal(lobby.get(other.room.code).snapshot().ownerId, other.playerId);
+  const revision = owner.room.snapshot().revision;
+  disconnectSpectator();
+  disconnectMember();
+  assert.equal(owner.room.snapshot().revision, revision);
+  const next = lobby.create('新房', owner.token);
+  assert.equal(next.token, owner.token);
+  assert.notEqual(next.playerId, owner.playerId);
+});
+
+test('SSE和HTTP租约共同保留在线；回房取消旧回收，重新离线再给完整10分钟', (t) => {
+  t.mock.timers.enable({ apis: ['Date'], now: 1000000 });
+  const lobby = new LobbyStore(fakeEngine());
+  const owner = lobby.create('房主');
+  const firstTab = owner.room.connect(owner.token);
+  const secondTab = owner.room.connect(owner.token);
+  owner.room.poll(owner.token);
+  firstTab();
+  secondTab();
+  lobby.sweep();
+  assert.equal(owner.room.snapshot().idleCloseAt, null);
+  t.mock.timers.tick(30000);
+  lobby.sweep();
+  const oldDeadline = Date.now() + ROOM_IDLE_GRACE_MS;
+  assert.equal(owner.room.snapshot().idleCloseAt, oldDeadline);
+  t.mock.timers.tick(ROOM_IDLE_GRACE_MS - 1000);
+  owner.room.poll(owner.token);
+  assert.equal(owner.room.snapshot().idleCloseAt, null);
+  t.mock.timers.tick(1000);
+  lobby.sweep();
+  assert.equal(lobby.list().length, 1);
+  t.mock.timers.tick(29000);
+  lobby.sweep();
+  const newDeadline = Date.now() + ROOM_IDLE_GRACE_MS;
+  assert.equal(owner.room.snapshot().idleCloseAt, newDeadline);
+  const reconnect = owner.room.connect(owner.token);
+  lobby.sweep(newDeadline);
+  assert.equal(owner.room.snapshot().idleCloseAt, null);
+  t.mock.timers.tick(2000);
+  reconnect();
+  const lastDeadline = Date.now() + ROOM_IDLE_GRACE_MS;
+  assert.equal(owner.room.snapshot().idleCloseAt, lastDeadline);
+  lobby.sweep(lastDeadline - 1);
+  assert.equal(lobby.list().length, 1);
+  lobby.sweep(lastDeadline);
+  assert.equal(lobby.list().length, 0);
+});
+
+test('选将和进行中的无人牌局不回收；长时间离线的牌局结算后才开始10分钟保留', async (t) => {
+  t.mock.timers.enable({ apis: ['Date'], now: 1000000 });
+  let confirm!: () => void;
+  let emit!: (event: EngineEvent) => void;
+  let released = 0;
+  const lobby = new LobbyStore({
+    ...fakeEngine(
+      () =>
+        new Promise<void>((resolve) => {
+          confirm = resolve;
+        }),
+    ),
+    subscribe: (listener) => {
+      emit = listener;
+      return () => {};
+    },
+    release: () => {
+      released++;
+    },
+  });
+  const owner = lobby.create('房主');
+  owner.room.addBots(4, owner.token);
+  const disconnect = owner.room.connect(owner.token);
+  owner.room.setReady(owner.token, true);
+  const starting = owner.room.start(owner.token);
+  disconnect();
+  t.mock.timers.tick(ROOM_IDLE_GRACE_MS * 2);
+  lobby.sweep();
+  assert.equal(owner.room.snapshot().phase, 'starting');
+  assert.equal(owner.room.snapshot().idleCloseAt, null);
+  confirm();
+  await starting;
+  t.mock.timers.tick(ROOM_IDLE_GRACE_MS * 2);
+  lobby.sweep();
+  assert.equal(owner.room.snapshot().phase, 'playing');
+  assert.equal(released, 0);
+  emit({ type: 'ended', roomCode: owner.room.code });
+  const deadline = Date.now() + ROOM_IDLE_GRACE_MS;
+  assert.equal(owner.room.snapshot().phase, 'finished');
+  assert.equal(owner.room.snapshot().idleCloseAt, deadline);
+  lobby.sweep(deadline - 1);
+  assert.equal(lobby.list().length, 1);
+  lobby.sweep(deadline);
+  assert.equal(lobby.list().length, 0);
+  assert.equal(released, 1);
+});
+
+test('开局失败释放本次引擎并撤销准备，不能沿用失败前的确认直接重试', async () => {
+  let released = 0;
+  const { room, owner } = ownedRoom({
+    ...fakeEngine(async () => {
+      throw new Error('资源不可用');
+    }),
+    release: () => {
+      released++;
+    },
+  });
+  room.addBots(4, owner.token);
+  room.connect(owner.token);
+  room.setReady(owner.token, true);
+  await assert.rejects(room.start(owner.token), code('ENGINE_START_FAILED'));
+  assert.equal(room.snapshot().phase, 'waiting');
+  assert.equal(room.session(owner.token)?.ready, false);
+  assert.equal(released, 1);
+  await assert.rejects(room.start(owner.token), code('PLAYERS_NOT_READY'));
+});
+
+test('取消的开局即使迟到成功也返回取消，不能把下一次开局误报成功', async () => {
+  let confirm!: () => void;
+  const { room, owner } = ownedRoom(
+    fakeEngine(
+      () =>
+        new Promise<void>((resolve) => {
+          confirm = resolve;
+        }),
+    ),
+  );
+  room.addBots(4, owner.token);
+  room.connect(owner.token);
+  room.setReady(owner.token, true);
+  const starting = room.start(owner.token);
+  room.consoleReset();
+  confirm();
+  await assert.rejects(starting, code('MATCH_CANCELLED'));
+  assert.equal(room.snapshot().phase, 'waiting');
+});
+
+test('结算后成员能直接离房，房主离开时交接并释放旧局，最后真人关闭房间', async () => {
+  let emit!: (event: EngineEvent) => void;
+  let released = 0;
+  const engine: EngineAdapter = {
+    ...fakeEngine(),
+    subscribe: (listener) => {
+      emit = listener;
+      return () => {};
+    },
+    release: () => {
+      released++;
+    },
+  };
+  const lobby = new LobbyStore(engine);
+  const owner = lobby.create('房主');
+  const first = lobby.join(owner.room.code, '先离开');
+  const successor = lobby.join(owner.room.code, '接班');
+  owner.room.addBots(2, owner.token);
+  for (const player of [owner, first, successor]) {
+    owner.room.connect(player.token);
+    owner.room.setReady(player.token, true);
+  }
+  await owner.room.start(owner.token);
+  emit({ type: 'ended', roomCode: owner.room.code });
+  owner.room.leave(first.token);
+  assert.equal(owner.room.snapshot().phase, 'finished');
+  assert.equal(released, 0);
+  assert.deepEqual(lobby.session(first.token), { roomCode: null, playerId: null });
+  owner.room.leave(owner.token);
+  assert.equal(owner.room.snapshot().phase, 'waiting');
+  assert.equal(owner.room.snapshot().ownerId, successor.playerId);
+  assert.equal(released, 1);
+  assert.equal(owner.room.session(successor.token)?.ready, false);
+  owner.room.leave(successor.token);
+  assert.equal(lobby.list().length, 0);
+});
+
+test('转交只允许局间的房主交给本房在线真人，保留席位并重新准备', async () => {
+  const { room, owner } = ownedRoom();
+  const member = room.join('在线朋友');
+  const absent = room.join('离线朋友');
+  room.connect(owner.token);
+  room.connect(member.token);
+  room.addBots(2, owner.token);
+  room.setReady(owner.token, true);
+  room.setReady(member.token, true);
+  const bot = room.snapshot().players.find((player) => player.kind === 'bot')!;
+  for (const token of [undefined, member.token, ownedRoom().owner.token])
+    assert.throws(() => room.transferOwnership(member.playerId, token), code('OWNER_REQUIRED'));
+  for (const id of [null, owner.playerId, bot.id, 'other-room-player'])
+    assert.throws(() => room.transferOwnership(id, owner.token), code('INVALID_SUCCESSOR'));
+  assert.throws(
+    () => room.transferOwnership(absent.playerId, owner.token),
+    code('SUCCESSOR_OFFLINE'),
+  );
+  room.transferOwnership(member.playerId, owner.token);
+  assert.equal(room.snapshot().ownerId, member.playerId);
+  assert.equal(room.snapshot().players.length, 5);
+  assert.equal(room.session(owner.token)?.ready, false);
+  assert.equal(room.session(member.token)?.ready, false);
+  assert.throws(() => room.addBots(1, owner.token), code('OWNER_REQUIRED'));
+  room.removePlayer(absent.playerId, member.token);
+  room.addBots(1, member.token);
+  room.setReady(owner.token, true);
+  room.setReady(member.token, true);
+  await room.start(member.token);
+  assert.throws(() => room.transferOwnership(owner.playerId, member.token), code('ROOM_LOCKED'));
+  assert.throws(() => room.claimOwnership(member.playerId, owner.token), code('ROOM_LOCKED'));
+});
+
+test('离线房主保留60秒；在线成员显式接任且旧房主仍在席位，过期与跨房请求拒绝', (t) => {
+  t.mock.timers.enable({ apis: ['Date'], now: 1000000 });
+  const { room, owner } = ownedRoom();
+  const member = room.join('接班');
+  const rival = room.join('另一位');
+  const disconnect = room.connect(owner.token);
+  room.connect(member.token);
+  room.connect(rival.token);
+  disconnect();
+  const claimAt = room.snapshot().ownerClaimAt!;
+  assert.equal(claimAt, 1060000);
+  assert.throws(
+    () => room.claimOwnership(owner.playerId, member.token, claimAt - 1),
+    code('OWNER_RESERVED'),
+  );
+  for (const token of [undefined, ownedRoom().owner.token])
+    assert.throws(
+      () => room.claimOwnership(owner.playerId, token, claimAt),
+      code('PLAYER_REQUIRED'),
+    );
+  room.claimOwnership(owner.playerId, member.token, claimAt);
+  assert.equal(room.snapshot().ownerId, member.playerId);
+  assert.equal(room.session(owner.token)?.id, owner.playerId);
+  assert.throws(
+    () => room.claimOwnership(owner.playerId, rival.token, claimAt),
+    code('OWNER_CHANGED'),
+  );
+  assert.throws(() => room.updateSettings({}, owner.token), code('OWNER_REQUIRED'));
+  room.connect(owner.token);
+  assert.equal(room.snapshot().ownerId, member.playerId);
+});
+
+test('重连取消接任资格；HTTP离线从原租约到期计算，失效准备不能趁清理间隙开局', async (t) => {
+  t.mock.timers.enable({ apis: ['Date'], now: 1000000 });
+  const { room, owner } = ownedRoom();
+  const member = room.join('朋友');
+  room.connect(member.token);
+  room.addBots(3, owner.token);
+  room.poll(owner.token);
+  room.setReady(owner.token, true);
+  room.setReady(member.token, true);
+  t.mock.timers.tick(30001);
+  await assert.rejects(room.start(owner.token), code('PLAYERS_NOT_READY'));
+  assert.equal(room.snapshot().ownerClaimAt, 1090000);
+  room.poll(owner.token);
+  assert.equal(room.snapshot().ownerClaimAt, null);
+  assert.throws(() => room.claimOwnership(owner.playerId, member.token), code('OWNER_RESERVED'));
+});
 
 test('规则端中断不静默回房：恢复期锁原局，失败无胜负，房主显式回房后才能再准备', async () => {
   let emit: (event: EngineEvent) => void = () => {};

@@ -1,0 +1,35 @@
+name: 使用问题
+description: 报告启动、扫码、牌局或恢复问题
+title: '[问题] '
+body:
+  - type: markdown
+    attributes:
+      value: 请勿提交 session.json、cookie、完整原生消息、私人手牌或未公开身份。涉及隐私泄漏或越权时先阅读 SECURITY.md。
+  - type: input
+    id: version
+    attributes:
+      label: 版本与使用方式
+      placeholder: 例如 v0.7.11，Windows 测试包／源码启动
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: 设备、浏览器与网络
+      description: 电脑 Windows 版本；手机型号、系统和微信／浏览器版本；同 Wi-Fi、流量或异地网络。
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 怎样遇到这个问题
+      description: 写出模式、将池、具体武将／技能版本、操作步骤和是否刷新／切后台。
+    validations:
+      required: true
+  - type: textarea
+    id: result
+    attributes:
+      label: 实际现象与期望
+      description: 能否重复、是否只有一人受影响、恢复牌桌后是否正常；截图请遮住私密信息。
+    validations:
+      required: true

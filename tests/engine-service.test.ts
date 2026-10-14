@@ -14,14 +14,16 @@ import type { TestContext } from 'node:test';
 import type { MatchSetup } from '../packages/noname-adapter/src/index.js';
 import { GENERAL_PRESETS } from '../packages/shared/src/contracts.js';
 
-test('单局冻结原生将池与牌堆，刷新沿用快照，非法新配置不能释放已有对局', async (t) => {
+// Protocol tests need a minimal config, not a developer's downloaded engine.
+// Resource availability is separately required by the full engine API check.
+async function minimalEngineRoot(t: TestContext) {
   const root = fileURLToPath(new URL('../', import.meta.url));
   const parent = resolve(root, '.runtime');
   await mkdir(parent, { recursive: true });
-  const temporary = await mkdtemp(resolve(parent, 'roster-snapshot-'));
+  const temporary = await mkdtemp(resolve(parent, 'engine-config-'));
   t.after(async () => {
     const child = relative(parent, temporary);
-    assert(child.startsWith('roster-snapshot-') && !child.includes('..'));
+    assert(child.startsWith('engine-config-') && !child.includes('..'));
     await rm(temporary, { recursive: true, force: true });
   });
   await mkdir(resolve(temporary, 'config'), { recursive: true });
@@ -30,14 +32,22 @@ test('单局冻结原生将池与牌堆，刷新沿用快照，非法新配置�
     resolve(root, 'config/noname-candidate.json'),
     resolve(temporary, 'config/noname-candidate.json'),
   );
-  const path = resolve(temporary, 'config/roster-presets.json');
-  const config = JSON.parse(await readFile(resolve(root, 'config/roster-presets.json'), 'utf8'));
-  await writeFile(path, JSON.stringify(config));
+  await copyFile(
+    resolve(root, 'config/roster-presets.json'),
+    resolve(temporary, 'config/roster-presets.json'),
+  );
   await writeFile(
     resolve(temporary, 'config/noname-lab-assets.json'),
     JSON.stringify({ assets: [], portraitAliases: {} }),
   );
   await writeFile(resolve(temporary, '.local/noname/v1.11.6/game/config.json'), '{}');
+  return temporary;
+}
+
+test('单局冻结原生将池与牌堆，刷新沿用快照，非法新配置不能释放已有对局', async (t) => {
+  const temporary = await minimalEngineRoot(t);
+  const path = resolve(temporary, 'config/roster-presets.json');
+  const config = JSON.parse(await readFile(path, 'utf8'));
   const f = await fixture(t, temporary);
   const url = `${f.base}/engine/setup/${f.id}?role=player`;
   const first = await (await fetch(url, { headers: { Cookie: f.ownerCookie } })).json();
@@ -442,7 +452,7 @@ test('手气卡、心跳、表情和投降网关仍按本人认证，字段白�
 });
 
 test('规则时钟仅限本机宿主：手机与公网不能连接，房间释放清理时钟', async (t) => {
-  const f = await fixture(t);
+  const f = await fixture(t, await minimalEngineRoot(t));
   for (const cookie of ['', f.ownerCookie]) {
     const denied = f.socket('clock', cookie);
     const error = once(denied, 'error');

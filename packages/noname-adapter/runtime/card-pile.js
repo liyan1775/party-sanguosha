@@ -12,8 +12,6 @@ const profiles = {
   'mobile-college-2026': military,
   'mobile-qunxiong-2026-09': military,
   'decade-quanmin-s19': military,
-  'mobile-qunxiong-12': military,
-  'mobile-qunxiong-16': military,
   'ol-ranked-2026-10-basic': military,
   'ol-ranked-2026-10-full': military,
   'ol-sgl-2026-stage1': military,

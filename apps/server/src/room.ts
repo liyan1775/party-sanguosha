@@ -4,6 +4,8 @@ import generalCatalog from '../../../config/general-catalog.json' with { type: '
 import {
   findMode,
   GENERAL_PRESETS,
+  OWNER_OFFLINE_GRACE_MS,
+  ROOM_IDLE_GRACE_MS,
   type ExtensionInfo,
   type GeneralPresetId,
   type GeneralChoiceView,
@@ -18,10 +20,19 @@ type Human = PlayerView & {
   token: string;
   connections: number;
   pollUntil: number;
+  offlineSince: number | null;
   general: string | null;
 };
 type Bot = PlayerView & { kind: 'bot' };
 type Seat = Human | Bot;
+
+export function normalizeNickname(nickname: unknown): string {
+  if (typeof nickname !== 'string') throw new AppError(400, 'INVALID_NICKNAME', '请填写昵称。');
+  const name = nickname.normalize('NFC').trim();
+  if (!name || [...name].length > 16 || /[\p{Cc}\p{Cf}]/u.test(name))
+    throw new AppError(400, 'INVALID_NICKNAME', '昵称需要 1–16 个字，不能包含控制字符。');
+  return name;
+}
 
 export class RoomStore {
   readonly code = randomBytes(3).toString('hex').toUpperCase();
@@ -37,16 +48,21 @@ export class RoomStore {
   private ownerId: string | null = null;
   private botSequence = 0;
   private startGeneration = 0;
+  private betweenMatchesSince = Date.now();
   private matchFailure: RoomView['matchFailure'];
   private matchRecovery: RoomView['matchRecovery'];
   private readonly players = new Map<string, Seat>();
   private readonly listeners = new Set<(room: RoomView) => void>();
+  private unsubscribeEngine: (() => void) | undefined;
 
   constructor(
     private readonly engine: EngineAdapter,
     private readonly catalog: ExtensionInfo[] = [],
-  ) {
-    const unsubscribe = engine.subscribe?.((event) => {
+  ) {}
+
+  private subscribeEngine(): void {
+    if (this.unsubscribeEngine || !this.engine.subscribe) return;
+    this.unsubscribeEngine = this.engine.subscribe((event) => {
       if (event.type === 'status') this.changed();
       else if (event.roomCode === this.code && ['starting', 'playing'].includes(this.phase)) {
         if (event.type === 'recovering') this.matchRecovery = { deadline: event.deadline };
@@ -60,12 +76,10 @@ export class RoomStore {
             this.phase = this.phase === 'playing' ? 'finished' : 'waiting';
             this.resetReady();
           } else this.phase = 'finished';
+          this.betweenMatchesSince = Date.now();
         }
         this.changed();
       }
-    });
-    this.subscribe((room) => {
-      if (room.phase === 'closed') unsubscribe?.();
     });
   }
 
@@ -78,6 +92,9 @@ export class RoomStore {
       settings: { ...this.settings, extensions: [...this.settings.extensions] },
       players: [...this.players.values()].map((player) => this.publicPlayer(player)),
       ownerId: this.ownerId,
+      ownerClaimAt: this.ownerClaimAt(),
+      serverTime: Date.now(),
+      idleCloseAt: this.idleCloseAt(),
       engine: this.engine.status(),
       ...(this.matchFailure ? { matchFailure: { ...this.matchFailure } } : {}),
       ...(this.matchRecovery ? { matchRecovery: { ...this.matchRecovery } } : {}),
@@ -96,10 +113,7 @@ export class RoomStore {
 
   join(nickname: unknown, token?: string): { token: string; playerId: string } {
     this.assertWaiting();
-    if (typeof nickname !== 'string') throw new AppError(400, 'INVALID_NICKNAME', '请填写昵称。');
-    const cleanName = nickname.normalize('NFC').trim();
-    if (!cleanName || [...cleanName].length > 16 || /[\p{Cc}\p{Cf}]/u.test(cleanName))
-      throw new AppError(400, 'INVALID_NICKNAME', '昵称需要 1–16 个字，不能包含控制字符。');
+    const cleanName = normalizeNickname(nickname);
     const existing = this.human(token);
     if (existing) {
       existing.nickname = cleanName;
@@ -110,37 +124,71 @@ export class RoomStore {
       throw new AppError(409, 'ROOM_FULL', '房间已满，请联系房主调整人数或移除一个 AI。');
     const player: Human = {
       id: randomUUID(),
-      token: randomBytes(24).toString('base64url'),
+      // LobbyStore supplies a server-issued browser session, reused across rooms.
+      token: token ?? randomBytes(24).toString('base64url'),
       kind: 'human',
       nickname: cleanName,
       ready: false,
       online: false,
       connections: 0,
       pollUntil: 0,
+      offlineSince: Date.now(),
       general: null,
     };
     this.players.set(player.id, player);
     this.ownerId ??= player.id;
+    this.subscribeEngine();
     this.resetReady();
     this.changed();
     return { token: player.token, playerId: player.id };
   }
 
   leave(token?: string): void {
-    this.assertWaiting();
+    this.assertBetweenMatches();
+    this.expirePolls();
     const player = this.human(token);
     if (!player) throw new AppError(401, 'PLAYER_REQUIRED', '请先加入房间。');
     this.players.delete(player.id);
     if (player.id === this.ownerId) {
       // 显式离开才交接房主；短暂断线或刷新保留原房主身份。
-      const successor = [...this.players.values()].find((seat) => seat.kind === 'human');
+      const humans = [...this.players.values()].filter((seat) => seat.kind === 'human');
+      const successor = humans.find((seat) => seat.online) ?? humans[0];
       this.ownerId = successor?.id ?? null;
       if (!successor) {
-        this.players.clear();
-        this.phase = 'closed';
-        this.engine.release?.(this.code);
-      }
+        this.consoleClose();
+        return;
+      } else if (this.phase === 'finished') this.resetMatch();
     }
+    this.resetReady();
+    this.changed();
+  }
+
+  transferOwnership(id: unknown, ownerToken?: string): void {
+    this.requireOwner(ownerToken);
+    this.assertBetweenMatches();
+    this.expirePolls();
+    const successor = typeof id === 'string' ? this.players.get(id) : undefined;
+    if (!successor || successor.kind !== 'human' || successor.id === this.ownerId)
+      throw new AppError(400, 'INVALID_SUCCESSOR', '请选择本房间的另一位真人玩家。');
+    if (!successor.online)
+      throw new AppError(409, 'SUCCESSOR_OFFLINE', '这位玩家暂时离线，请等连接恢复后再转交。');
+    this.ownerId = successor.id;
+    this.resetReady();
+    this.changed();
+  }
+
+  claimOwnership(expectedOwnerId: unknown, token?: string, now = Date.now()): void {
+    this.assertBetweenMatches();
+    this.expirePolls(now);
+    const player = this.human(token);
+    if (!player) throw new AppError(401, 'PLAYER_REQUIRED', '请先加入本房间。');
+    if (!player.online) throw new AppError(409, 'PLAYER_OFFLINE', '连接还未恢复，请稍后再试。');
+    if (expectedOwnerId !== this.ownerId)
+      throw new AppError(409, 'OWNER_CHANGED', '房主已经变化，请按当前房间状态操作。');
+    const claimAt = this.ownerClaimAt();
+    if (player.id === this.ownerId || claimAt === null || now < claimAt)
+      throw new AppError(409, 'OWNER_RESERVED', '房主仍在线或正在断线保留期内，请稍后再试。');
+    this.ownerId = player.id;
     this.resetReady();
     this.changed();
   }
@@ -178,6 +226,7 @@ export class RoomStore {
 
   setReady(token: string | undefined, ready: unknown): void {
     this.assertWaiting();
+    this.expirePolls();
     const player = this.human(token);
     if (!player) throw new AppError(401, 'PLAYER_REQUIRED', '请先加入房间。');
     if (typeof ready !== 'boolean') throw new AppError(400, 'INVALID_READY', '准备状态无效。');
@@ -246,7 +295,7 @@ export class RoomStore {
       throw new AppError(400, 'INVALID_EXTENSIONS', '扩展包设置无效。');
     const extensions = [...new Set(body.extensions as string[])];
     if (!GENERAL_PRESETS.some((preset) => preset.id === body.generalPreset))
-      throw new AppError(400, 'INVALID_PRESET', '请选择新手档或进阶档。');
+      throw new AppError(400, 'INVALID_PRESET', '请选择当前可用的武将范围。');
     if (body.allowGeneralSelection !== undefined && typeof body.allowGeneralSelection !== 'boolean')
       throw new AppError(400, 'INVALID_GENERAL_SELECTION', '点将开关需要开启或关闭。');
     if (
@@ -284,6 +333,7 @@ export class RoomStore {
   async start(ownerToken?: string): Promise<void> {
     this.requireOwner(ownerToken);
     this.assertWaiting();
+    this.expirePolls();
     if (!this.engine.status().ready)
       throw new AppError(503, 'ENGINE_NOT_READY', this.engine.status().message);
     if (
@@ -310,13 +360,19 @@ export class RoomStore {
       });
       this.changed();
       await starting;
-      if (generation !== this.startGeneration) return;
+      if (generation !== this.startGeneration)
+        throw new AppError(409, 'MATCH_CANCELLED', '电脑控制台已结束这次开局。');
       if (this.phase === 'starting') this.phase = 'playing';
       this.changed();
     } catch {
       if (generation !== this.startGeneration)
         throw new AppError(409, 'MATCH_CANCELLED', '电脑控制台已结束这次开局。');
       this.phase = 'waiting';
+      this.betweenMatchesSince = Date.now();
+      this.matchRecovery = undefined;
+      this.matchFailure ??= { code: 'runtime-error', at: Date.now() };
+      this.resetReady();
+      this.engine.release?.(this.code);
       this.changed();
       throw new AppError(
         503,
@@ -343,12 +399,7 @@ export class RoomStore {
   consoleReset(): void {
     if (!['starting', 'playing', 'finished'].includes(this.phase))
       throw new AppError(409, 'NO_ACTIVE_MATCH', '这个房间已在等待玩家。');
-    this.startGeneration++;
-    this.phase = 'waiting';
-    this.engine.release?.(this.code);
-    this.matchFailure = undefined;
-    this.matchRecovery = undefined;
-    this.resetReady();
+    this.resetMatch();
     this.changed();
   }
 
@@ -357,6 +408,8 @@ export class RoomStore {
     this.phase = 'closed';
     this.ownerId = null;
     this.players.clear();
+    this.matchFailure = undefined;
+    this.matchRecovery = undefined;
     this.engine.release?.(this.code);
     this.changed();
   }
@@ -365,11 +418,7 @@ export class RoomStore {
     this.requireOwner(ownerToken);
     if (this.phase !== 'finished')
       throw new AppError(409, 'MATCH_NOT_FINISHED', '请等这一局结束后再返回房间。');
-    this.engine.release?.(this.code);
-    this.phase = 'waiting';
-    this.matchFailure = undefined;
-    this.matchRecovery = undefined;
-    this.resetReady();
+    this.resetMatch();
     this.changed();
   }
 
@@ -379,6 +428,7 @@ export class RoomStore {
     if (player) {
       player.connections++;
       player.online = true;
+      player.offlineSince = null;
       this.changed();
     }
     return () => {
@@ -386,7 +436,9 @@ export class RoomStore {
       closed = true;
       if (!player || this.players.get(player.id) !== player) return;
       player.connections = Math.max(0, player.connections - 1);
-      player.online = player.connections > 0 || player.pollUntil > Date.now();
+      const online = player.connections > 0 || player.pollUntil > Date.now();
+      if (player.online && !online) player.offlineSince = Date.now();
+      player.online = online;
       if (!player.online) player.ready = false;
       this.changed();
     };
@@ -399,6 +451,7 @@ export class RoomStore {
     player.pollUntil = now + 30000;
     if (!player.online) {
       player.online = true;
+      player.offlineSince = null;
       this.changed();
     }
   }
@@ -408,9 +461,18 @@ export class RoomStore {
       if (player.kind !== 'human' || player.connections || !player.online || player.pollUntil > now)
         continue;
       player.online = false;
+      player.offlineSince = player.pollUntil;
       player.ready = false;
       this.changed();
     }
+  }
+
+  /** Public observers and engine status events never renew a human's room presence. */
+  reapIfIdle(now = Date.now()): boolean {
+    const deadline = this.idleCloseAt();
+    if (deadline === null || now < deadline) return false;
+    this.consoleClose();
+    return true;
   }
 
   private human(token?: string): Human | undefined {
@@ -434,12 +496,51 @@ export class RoomStore {
     for (const player of this.players.values()) player.ready = player.kind === 'bot';
   }
 
+  private ownerClaimAt(): number | null {
+    const owner = this.ownerId ? this.players.get(this.ownerId) : undefined;
+    return owner?.kind === 'human' && !owner.online && owner.offlineSince !== null
+      ? owner.offlineSince + OWNER_OFFLINE_GRACE_MS
+      : null;
+  }
+
+  private idleCloseAt(): number | null {
+    if (!['waiting', 'finished'].includes(this.phase)) return null;
+    const humans = [...this.players.values()].filter(
+      (seat): seat is Human => seat.kind === 'human',
+    );
+    if (!humans.length || humans.some((player) => player.online)) return null;
+    const lastOffline = Math.max(
+      this.betweenMatchesSince,
+      ...humans.map((player) => player.offlineSince ?? this.betweenMatchesSince),
+    );
+    return lastOffline + ROOM_IDLE_GRACE_MS;
+  }
+
+  private resetMatch(): void {
+    this.startGeneration++;
+    this.phase = 'waiting';
+    this.betweenMatchesSince = Date.now();
+    this.matchFailure = undefined;
+    this.matchRecovery = undefined;
+    this.resetReady();
+    this.engine.release?.(this.code);
+  }
+
+  private assertBetweenMatches(): void {
+    if (!['waiting', 'finished'].includes(this.phase))
+      throw new AppError(409, 'ROOM_LOCKED', '请等本局结束后再离房或交接房主。');
+  }
+
   private assertWaiting(): void {
     if (this.phase !== 'waiting')
       throw new AppError(409, 'ROOM_LOCKED', '房间已关闭或对局正在启动，暂时不能修改。');
   }
 
   private changed(): void {
+    if (this.phase === 'closed') {
+      this.unsubscribeEngine?.();
+      this.unsubscribeEngine = undefined;
+    }
     this.revision++;
     const snapshot = this.snapshot();
     for (const listener of this.listeners) listener(snapshot);

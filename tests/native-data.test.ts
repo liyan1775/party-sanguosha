@@ -17,11 +17,8 @@ const expression = (text: string) => {
 
 test('固定原生立文的编号说明完整提取，不执行第三方函数', async () => {
   const source = ts.createSourceFile(
-    'onlyOL.js',
-    await readFile(
-      new URL('../.local/noname/v1.11.6/character/onlyOL.js', import.meta.url),
-      'utf8',
-    ),
+    'native-numbered-translation.js',
+    await readFile(new URL('./fixtures/native-numbered-translation.js', import.meta.url), 'utf8'),
     ts.ScriptTarget.Latest,
     true,
   );
