@@ -24,6 +24,14 @@ controls.js为触摸玩家的原生确认控件提供独立按钮背景、名义
 
 最终`npm run check`195测试通过（0失败／跳过），类型／构建／格式通过；Edge浏览器31项、强制完整资源API20项通过，日志`.runtime/ux-followup/check.log`、`browser.log`及`engine-api.log`。无引擎缓存的源码副本194项通过、1项资源清单按设计跳过，类型／构建／格式通过，见`clean-check.log`。2026-10-14按已确认授权启用GitHub私密漏洞报告，GET复核enabled=true，入口见SECURITY.md；源码整理目标为已有main仓库，不建立新仓库、账号或云服务。Git直连首次失败，使用本机既有系统代理后fetch成功、远端无新增冲突；不打印代理或认证凭据。源码与发行包的最终核对记录保留在`.runtime/ux-followup`。
 
+源码已统一提交并推送已有main，包含此前未推送的v0.7.9修复及v0.7.10／0.7.11／本轮改动；源提交`161cd19fc8680a3df49c0a6c9b5de59794c37855`。GitHub已识别GPL-3.0，项目元数据及README明确GPL-3.0-only；[远端检查](https://github.com/liyan1775/party-sanguosha/actions/runs/38557523171)的Windows／Ubuntu两项均success。没有创建Release、上传图片／音频包或修改其他仓库设置。
+
+本地更新包`.runtime/releases/聚会三国杀-v0.7.12-Windows-x64.zip`约467.9MiB，7792条目，SHA-256=`e7d65660971fbb3ab5d35e1b307809a465a54538143654695e1c69b7f17fe5cc`，同目录附`.zip.sha256`及`聚会三国杀-v0.7.12-验证摘要.json`。归档209份源文件和7511份应用／资源文件与构建时工作区一致，Node24.12.0及固定联网组件哈希正确，无.runtime及私人.env；校验后在新目录解压，证据`package-audit.json`。核对脚本初次未映射打包时额外生成的依赖许可证，已对照node_modules原许可修正，仅为核对工具问题，未改归档。
+
+解压副本独立3012经自己的launch.ps1默认联网模式启动，随包Node执行，实际资源校验1.3秒、preload=true；未把尚无规则浏览器的状态称作可玩。随后两真人LAN视口在该包完成真实160张发牌、三布局触摸控件、实际用牌、原座刷新、暗牌过滤、自然结算及回房，errors／missing／external为空；证据`package-native.log`及`.runtime/native-runtime/2026-10-14T11-45-55-619Z`。公网当时starting，不计本轮真实公网通过。仅用测试副本自己的启动器停止3012，确认健康接口不可达，正式3001仍v0.7.11，未重启或操作正式房间。
+
+ZIP源码对应上述161cd19；包验证完成后只增补本节记录，不重写已校验归档。下一项：原手机顺手复测确定／取消间隔及技能取消，原报告机器复测首次冷启动；继续公网真机、具体旧Edge版本、动态技能隐私及多房容量。正式手机新载入／恢复牌桌可取得当前runtime补丁，已有实例不热换；如需切换后台版本，先核对既有牌局并按正常启停，不为版本显示清空正在玩的房间。
+
 ### 2026-10-12 首个公开测试版准备（v0.7.11候选）
 
 用户授权接手维护与首发准备，确认自有代码GPL-3.0-only，并具备Android／iPhone、微信／浏览器、同Wi-Fi／异地网络和朋友另一台Windows的试用条件。准备期间固定已有功能；验收条件见[发布准备](release-readiness.md)，真机及朋友操作见[受邀验收](beta-testing.md)。实现、审查、交付分别留证据；真实设备结果尚待收到。
