@@ -20,7 +20,7 @@
 
 视频完整解码、6732帧／30fps、音视频224.4秒、79条字幕时界与宽度通过，43场景最终抽帧及640×360缩看通过；字幕字面高50–51px，响度约-16.68 LUFS／-1.50 dBTP。开头与片尾重新沿用选定参考合成，正文保留v3，原始独立转写匹配94.9%／97.5%；未连续试听，不宣称精确口型。视频SHA-256 `6e2f6412e340cc3e2e6d2903a579e43b40fe14ed84d485d7cebebb860f05ed2a`。发布素材8文件ZIP 30,760,114字节，CRC／媒体hash通过，SHA-256 `b2292b9c8cffb0fcb7a804d69723b4cbae9ab1021f91339af89ad6342f47d3a7`，位于`.runtime/video/聚会三国杀-B站视频发布素材-v4-新粗野主义.zip`。v3成片hash复核未变。
 
-发行入口：[v0.7.13公开测试启动包](https://github.com/liyan1775/party-sanguosha/releases/tag/v0.7.13)。首次联网准备与完整资源包分发分别说明；B站未代用户上传。下一项：用户观看v4并自行投稿，收集外部Windows首启与异地手机反馈；完整素材再分发依据继续单独核对。
+发行入口：[v0.7.13公开测试启动包](https://github.com/liyan1775/party-sanguosha/releases/tag/v0.7.13)。 已实际公开为非草稿测试发行，两个附件均uploaded，GitHub返回的ZIP SHA-256与本机一致；私密漏洞报告保持启用。普通Git推送两次连接失败后，通过GitHub Git数据API同步相同审查树（未强推），发行标签对应提交`7e8c866ee3be44b96cd912776403d16531d38d90`。源码树hash、远端附件及发布证据分别在`source-publication.json`、`github-release-qa.json`。两份系统临时验收副本清理被自动审批以“blocked by policy”拒绝，缓存保留；测试服务已按各自目录正常停止。首次联网准备与完整资源包分发分别说明；B站未代用户上传。下一项：用户观看v4并自行投稿，收集外部Windows首启与异地手机反馈；完整素材再分发依据继续单独核对。
 
 ### 2026-10-15 视频v3：按创作者审查重剪完成
 
