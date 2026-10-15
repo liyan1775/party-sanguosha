@@ -117,7 +117,11 @@ async function prepare() {
       throw new Error('发行包版本不匹配，请重新解压完整发行包。');
     await readFile(path.join(root, 'dist/server/main.js'));
     await readFile(path.join(root, 'dist/web/index.html'));
-    console.log('离线发行包已就绪。');
+    if (portable.resources === 'download-pinned-upstream') {
+      console.log('正在检查本机游戏资源；首次使用会从无名杀上游下载，完成后保存在本机。');
+      await runNode(['--use-env-proxy', path.join(root, 'scripts/prepare-portable.mjs')]);
+    }
+    console.log('发行包已就绪。');
     return;
   }
   const lockHash = createHash('sha256')

@@ -17,6 +17,7 @@ let archiveBytes = await readFile(archive).catch((error) => {
   throw error;
 });
 if (!archiveBytes) {
+  console.log('首次准备：正在从无名杀上游下载固定核心包（约 38 MiB）……');
   const response = await fetch(candidate.coreArchive.url, { signal: AbortSignal.timeout(120000) });
   if (!response.ok) throw new Error(`Core archive download failed (${response.status})`);
   archiveBytes = Buffer.from(await response.arrayBuffer());
@@ -87,6 +88,19 @@ async function downloadAsset(url, path) {
 
 let next = 0;
 let downloaded = 0;
+let verified = 0;
+let checkedBytes = 0;
+const totalBytes = manifest.assets.reduce((sum, entry) => sum + entry.bytes, 0);
+console.log(
+  `正在校验并补齐 ${manifest.assets.length} 个固定资源（约 ${Math.ceil(totalBytes / 1048576)} MiB）；已完成的文件会保留。`,
+);
+const progress = () => {
+  verified++;
+  if (verified % 80 === 0 || verified === manifest.assets.length)
+    console.log(
+      `资源 ${verified}/${manifest.assets.length} · ${Math.floor(checkedBytes / 1048576)}/${Math.ceil(totalBytes / 1048576)} MiB · 本次下载 ${downloaded} 个`,
+    );
+};
 await Promise.all(
   Array.from({ length: 4 }, async () => {
     while (next < manifest.assets.length) {
@@ -104,8 +118,11 @@ await Promise.all(
         if (error.code === 'ENOENT') return null;
         throw error;
       });
-      if (present && present.length === entry.bytes && blobHash(present) === entry.gitBlobSha)
+      if (present && present.length === entry.bytes && blobHash(present) === entry.gitBlobSha) {
+        checkedBytes += entry.bytes;
+        progress();
         continue;
+      }
       const url = `https://raw.githubusercontent.com/libnoname/noname/${manifest.commit}/apps/core/${entry.path}`;
       const bytes = await downloadAsset(url, entry.path);
       if (bytes.length !== entry.bytes || blobHash(bytes) !== entry.gitBlobSha) {
@@ -120,7 +137,8 @@ await Promise.all(
         await rm(temporary, { force: true });
       }
       downloaded++;
-      if (downloaded % 40 === 0) console.log(`Prepared ${downloaded} engine lab assets`);
+      checkedBytes += entry.bytes;
+      progress();
     }
   }),
 );

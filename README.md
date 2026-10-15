@@ -4,11 +4,11 @@
 
 对局规则、技能、AI 和手机牌桌来自 [无名杀](https://github.com/libnoname/noname)，固定 v1.11.6／commit `2367607e246d21aae168dba15c01151ee0651f30`。本项目主要负责扫码入口、房间管理、电脑运行和手机接入；感谢上游开发者。
 
-**当前源码：v0.7.12，面向熟人聚会的测试版本。** Windows 完整测试包用于受邀试用，尚无公开下载地址。当前运行服务、验证结果和待办统一见 [开发交接](docs/handoff.md)；首发条件见 [发布准备](docs/release-readiness.md)。
+**当前版本：v0.7.13，面向熟人聚会的公开测试版本。** 普通玩家请下载 [Windows x64 启动包](https://github.com/liyan1775/party-sanguosha/releases/tag/v0.7.13)，选择 `party-sanguosha-v0.7.13-windows-x64-setup.zip`，无需安装开发工具。当前运行服务、验证结果和待办统一见 [开发交接](docs/handoff.md)；首发条件见 [发布准备](docs/release-readiness.md)。
 
 ## 如何组织一桌
 
-Windows x64 完整包包含运行环境、固定联网组件和游戏资源，无需另装 Node.js。源码运行方法见下文。
+Windows x64 启动包内置运行环境、固定联网组件与准备工具。**首次双击会自动从无名杀上游下载约431 MiB游戏资源**，电脑需要能访问 GitHub 和 raw.githubusercontent.com；耗时取决于网络，窗口显示进度。已下载并校验的文件会保留，中断后再次双击可继续补齐。准备完成后资源在本机保存，同 Wi-Fi 游玩不依赖公网。无需另装 Node.js、Git 或 Codex；源码运行方法见下文。
 
 1. 完整解压，双击 **「启动聚会三国杀.cmd」**，等待自动打开电脑服务页。电脑整局保持联网、页面开启并避免休眠。
 2. 同 Wi-Fi／电脑热点的朋友扫局域网码；其他网络的朋友等待公网入口就绪后扫公网码。两种入口可以加入同一个房间。
@@ -19,7 +19,7 @@ Windows x64 完整包包含运行环境、固定联网组件和游戏资源，�
 
 重复双击启动会打开同一实例；关闭浏览器标签不会停止后台。停止或重启服务会清空房间，需要重新建房及分享邀请。请完整保留解压文件夹，不要只复制 `.cmd` 文件。
 
-首次启动的资源校验可能需要几十秒，启动窗口会持续提示等待，最多等待两分钟。校验完成后才打开电脑服务页；若失败，请保留 `.runtime/server.log` 和 `server-error.log` 中的错误信息供维护者检查。
+首次下载需要先完成资源准备，下载时间不计入服务的两分钟等待窗口。准备完成后，每次启动的资源校验可能需要几十秒，启动窗口会持续提示等待，服务就绪最多等待两分钟。校验完成后才打开电脑服务页；若失败，请保留 `.runtime/server.log` 和 `server-error.log` 中的错误信息供维护者检查。
 
 微信锁定竖屏时默认把牌桌横过来，横着握手机即可操作，也可切回竖屏。首次触摸尝试开启声音，工具条提供声音开关及音量调节，仅影响自己的手机。
 
@@ -63,7 +63,7 @@ npm run engine:prepare
 npm start
 ```
 
-`npm start` 构建并以前台方式启动，`Ctrl+C` 停止。开发时可用 `npm run dev` 监视服务端变化；网页源码改变后重新构建。完整包的双击入口直接运行 `dist`，不会编译修改过的源码；继续开发请安装完整 Node.js 24、运行 `npm ci` 后用 `npm start`。
+`npm start` 构建并以前台方式启动，`Ctrl+C` 停止。开发时可用 `npm run dev` 监视服务端变化；网页源码改变后重新构建。发行包的双击入口运行预构建页面与服务，首次在本机准备固定引擎，不会编译修改过的应用源码；继续开发请安装完整 Node.js 24、运行 `npm ci` 后用 `npm start`。
 
 ```powershell
 npm run check
@@ -74,7 +74,7 @@ npm run test:engine-api
 
 `check` 包含类型、领域／HTTP 测试、构建和格式检查。纯源码没有引擎时明确跳过完整资源清单这一项，不能据此称可玩；`test:engine-api` 强制要求完整固定资源。真实选将、发牌、自然结算、重连和第二局验证用 `npm run engine:verify:rooms`，参数见 [适配说明](packages/noname-adapter/runtime/README.md)。旧轻量界面只保留显式研究／回归入口。
 
-在 Windows x64／Node24 环境用 `npm run package:windows` 生成 ZIP 和 SHA-256；发布前在本项目 Git 检出运行 `npm run release:check`，再按发布准备文档验收。包和检查报告位于忽略的 `.runtime`，不包含个人 `.env`、当前会话或日志。资源公开分发许可需另行核对。
+在 Windows x64／Node24 环境用 `npm run package:windows -- --starter` 生成公开启动包 ZIP 和 SHA-256；不带 `--starter` 可生成本机完整资源测试包。发布前在本项目 Git 检出运行 `npm run release:check`，再按发布准备文档验收。包和检查报告位于忽略的 `.runtime`，不包含个人 `.env`、当前会话或日志。公开启动包不内置上游图片、音频、字体及其衍生产物，由用户首次启动时从固定上游获取；完整资源包的再分发依据仍单独核对。
 
 可选配置见 [.env.example](.env.example)。开发接续、反馈和验证要求见 [参与开发](CONTRIBUTING.md)。安全问题见 [安全反馈](SECURITY.md)，不要公开 cookie、停止凭据、私人牌面或未经检查的协议日志。
 

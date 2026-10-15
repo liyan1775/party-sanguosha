@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { setTimeout as delay } from 'node:timers/promises';
+import { createRequire } from 'node:module';
 
 if (
   process.platform !== 'win32' ||
@@ -16,7 +17,10 @@ const pkg = JSON.parse(await readFile(resolve(root, 'package.json')));
 const candidate = JSON.parse(await readFile(resolve(root, 'config/noname-candidate.json')));
 const connector = JSON.parse(await readFile(resolve(root, 'config/public-connector.json')));
 const releaseRoot = resolve(root, '.runtime/releases');
-const name = `聚会三国杀-v${pkg.version}-Windows-x64`;
+const starter = process.argv.includes('--starter');
+const name = starter
+  ? `party-sanguosha-v${pkg.version}-windows-x64-setup`
+  : `聚会三国杀-v${pkg.version}-Windows-x64`;
 await mkdir(releaseRoot, { recursive: true });
 // Always package a fresh directory: a previously tested copy may have cookies,
 // local configuration or an instance shutdown token in its .runtime folder.
@@ -71,13 +75,47 @@ for (const entry of [
   '启动局域网聚会三国杀.cmd',
   '停止聚会三国杀.cmd',
 ]) {
-  await cp(resolve(root, entry), resolve(target, entry), { recursive: true });
+  await cp(resolve(root, entry), resolve(target, entry), {
+    recursive: true,
+    filter: (source) =>
+      !starter || !relative(resolve(root, 'dist'), source).match(/^engine(?:[\\/]|$)/),
+  });
 }
-await cp(
-  resolve(root, `.local/noname/${candidate.tag}`),
-  resolve(target, `.local/noname/${candidate.tag}`),
-  { recursive: true },
-);
+if (starter) {
+  const copied = new Set();
+  async function copyTool(name, from = resolve(root, 'package.json'), optional = false) {
+    let manifest;
+    for (const location of createRequire(from).resolve.paths(name) ?? []) {
+      const candidate = resolve(location, name, 'package.json');
+      if (await readFile(candidate).catch(() => null)) {
+        manifest = candidate;
+        break;
+      }
+    }
+    if (!manifest && optional) return;
+    if (!manifest) throw new Error(`Missing starter build tool: ${name}`);
+    if (copied.has(name)) return;
+    copied.add(name);
+    const tool = JSON.parse(await readFile(manifest));
+    if (optional && (tool.os?.includes('!win32') || (tool.os && !tool.os.includes('win32'))))
+      return;
+    if (optional && tool.cpu && !tool.cpu.includes('x64')) return;
+    await cp(dirname(manifest), resolve(target, 'node_modules', name), { recursive: true });
+    for (const dependency of Object.keys(tool.dependencies ?? {}))
+      await copyTool(dependency, manifest);
+    for (const dependency of Object.keys(tool.optionalDependencies ?? {}))
+      await copyTool(dependency, manifest, true);
+  }
+  await copyTool('esbuild');
+  await copyTool('sharp');
+  await copyTool('ws');
+} else {
+  await cp(
+    resolve(root, `.local/noname/${candidate.tag}`),
+    resolve(target, `.local/noname/${candidate.tag}`),
+    { recursive: true },
+  );
+}
 const connectorPath = `.local/connector/${connector.version}/${process.platform}-${process.arch}`;
 await mkdir(resolve(target, connectorPath), { recursive: true });
 await cp(
@@ -154,6 +192,7 @@ await writeFile(
         .digest('hex'),
       noname: candidate.tag,
       commit: candidate.commit,
+      resources: starter ? 'download-pinned-upstream' : 'bundled-invited-test',
       connector: {
         version: connector.version,
         sha256: connector.artifacts[`${process.platform}-${process.arch}`].sha256,
@@ -165,7 +204,7 @@ await writeFile(
 );
 await writeFile(
   resolve(target, '开始使用.txt'),
-  `聚会三国杀 v${pkg.version} 受邀测试包\r\n\r\n1. 解压完整文件夹。\r\n2. 双击“启动聚会三国杀.cmd”，电脑会同时提供局域网码和临时公网码。电脑保持联网、页面开启并避免休眠。\r\n3. 同 Wi-Fi 手机扫局域网码；其他网络等公网码就绪后再扫。一个玩家填写昵称开房，其他人扫码入座，无需安装软件或配置网络。\r\n4. 房主设置玩法、添加 AI，真人准备后开始对局。微信锁定竖屏时横着握手机，可用按钮切回竖屏。\r\n5. 结算后回原房，再准备开第二局。聚会结束双击“停止聚会三国杀.cmd”；重启会清空房间，需要重新分享公网码。\r\n\r\n此包包含运行环境、固定联网组件和游戏资源，无需安装 Node.js、Git 或 Codex。临时公网服务需要互联网。\r\n没有互联网时，双击“启动局域网聚会三国杀.cmd”，所有手机连接同一 Wi-Fi 或电脑热点。两种入口共用一个本地服务实例，切换前先停止。\r\n\r\n试用后告诉项目主人：版本、手机和浏览器、网络、玩法、哪一步通过或失败；完整清单在 docs/beta-testing.md。不要分享 .runtime/session.json、cookie 或私人牌面。\r\n自有代码 GPL-3.0-only，源码及构建脚本随包附带；第三方图片、音频等另见 THIRD_PARTY_NOTICES.md。本包供受邀验收，资源公开分发依据仍待核对。\r\n`,
+  `聚会三国杀 v${pkg.version} ${starter ? 'Windows 启动包' : '受邀测试包'}\r\n\r\n${starter ? '首次使用：电脑需能访问 GitHub 和 raw.githubusercontent.com。启动器会从固定无名杀版本下载约 431 MiB 资源，时间取决于网络。窗口显示进度，中断后再次双击可继续补齐；完成后资源保存在本机，局域网游玩不依赖公网。\r\n\r\n' : ''}1. 解压完整文件夹。\r\n2. 双击“启动聚会三国杀.cmd”，电脑会同时提供局域网码和临时公网码。电脑保持联网、页面开启并避免休眠。\r\n3. 同 Wi-Fi 手机扫局域网码；其他网络等公网码就绪后再扫。一个玩家填写昵称开房，其他人扫码入座，无需安装软件或配置网络。\r\n4. 房主设置玩法、添加 AI，真人准备后开始对局。微信锁定竖屏时横着握手机，可用按钮切回竖屏。\r\n5. 结算后回原房，再准备开第二局。聚会结束双击“停止聚会三国杀.cmd”；重启会清空房间，需要重新分享公网码。\r\n\r\n此包包含运行环境和固定联网组件${starter ? '，游戏资源首次从上游自动下载' : '及游戏资源'}，无需安装 Node.js、Git 或 Codex。临时公网服务需要互联网。\r\n没有互联网时，双击“启动局域网聚会三国杀.cmd”，所有手机连接同一 Wi-Fi 或电脑热点。两种入口共用一个本地服务实例，切换前先停止。\r\n\r\n试用后告诉项目主人：版本、手机和浏览器、网络、玩法、哪一步通过或失败；完整清单在 docs/beta-testing.md。不要分享 .runtime/session.json、cookie 或私人牌面。\r\n自有代码 GPL-3.0-only，源码及构建脚本随包附带；第三方图片、音频等另见 THIRD_PARTY_NOTICES.md。${starter ? '本包不包含上游游戏图片、音频和字体；首次使用时从上游固定版本获取。素材保留原权属。' : '本包供受邀验收，资源公开分发依据仍待核对。'}\r\n`,
 );
 const archive = resolve(releaseRoot, `${name}.zip`);
 const quote = (value) => `'${value.replaceAll("'", "''")}'`;

@@ -37,3 +37,9 @@ Windows 离线包携带当前 Node.js 24 的 Windows x64 二进制、版本、SH
 Cloudflared 来自 [Cloudflare 官方项目](https://github.com/cloudflare/cloudflared)，固定 [2026.9.3 发布](https://github.com/cloudflare/cloudflared/releases/tag/2026.9.3) 的 Windows x64 独立可执行文件，官方 SHA-256 与来源记录在 `config/public-connector.json`。不安装系统服务，不自动升级；缓存位于被忽略的 `.local/connector`，完整发行包携带该固定组件。原始 Apache-2.0 许可证保存在 [notices/cloudflared-LICENSE.txt](notices/cloudflared-LICENSE.txt)，不改变无名杀及本项目自有代码的 GPL-3.0-only 许可。
 
 实际流量使用 Cloudflare Quick Tunnel 临时服务，能力与限制以 [官方说明](https://developers.cloudflare.com/tunnel/get-started/quick-tunnels/) 为依据；随机 HTTPS 域名、无可用性保证、200 个同时在途请求、不支持 SSE。公网方案不创建托管游戏服务器、远程仓库或用户账号。
+
+## Windows 公开启动包
+
+v0.7.13 的公开启动包不内置 `.local/noname`、`dist/engine` 或上游图片、音频、字体；本项目源码、预构建页面和服务、Node、固定公网组件及本机准备工具随包提供。首次运行由用户电脑从上游 v1.11.6 核心发行页与固定 commit 的原始文件下载，按已提交的 SHA-256、文件大小和 Git blob 校验，随后本机生成规则模块与手机小图。
+
+准备工具包括 esbuild、sharp 及其当前 Windows x64 依赖，随工具保留原始许可证；sharp/libvips 及其链接组件的声明见随附依赖目录。工具不修改素材归属，也不构成对第三方素材再分发权的保证。完整素材包公开上传的用户授权已于2026-10-15获得，但素材权利来源仍须另核。
