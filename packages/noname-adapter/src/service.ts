@@ -13,6 +13,7 @@ import {
   type MatchFailureCode,
   type ObserverState,
   type PlayerNetwork,
+  type SurrenderState,
 } from '../../shared/src/contracts.js';
 import { ObserverJournal, sanitizeObserver } from './observer.js';
 import { EngineAssets } from './assets.js';
@@ -50,6 +51,7 @@ type Match = {
   observer: ObserverState | null;
   journal: ObserverJournal;
   networks: Map<string, PlayerNetwork>;
+  surrenderStates: Map<string, { state: SurrenderState; at: number }>;
   resolve: () => void;
   reject: (error: Error) => void;
   timer: NodeJS.Timeout;
@@ -152,11 +154,16 @@ function safeMessage(data: string): boolean {
       return false;
     // Native chooseButton factories run on the authenticated rule worker.
     // Even a code-free _sendskill must not replace its authoritative definition.
+    const result = message[1];
+    const nativeResult =
+      result && typeof result === 'object' && Object.hasOwn(result, 'partyNativeResult')
+        ? result.partyNativeResult
+        : result;
     if (
       ['result', 'tempResult'].includes(message[0]) &&
-      message[1] &&
-      typeof message[1] === 'object' &&
-      Object.hasOwn(message[1], '_sendskill')
+      nativeResult &&
+      typeof nativeResult === 'object' &&
+      Object.hasOwn(nativeResult, '_sendskill')
     )
       return false;
     return !data.includes('_noname_func:') && !data.includes('_noname_event:');
@@ -179,6 +186,7 @@ export class NativeNonameService implements EngineAdapter {
   private lastSupervisor = 0;
   private hostOnline = false;
   private membership: Membership = () => undefined;
+  private onlineMembers: (room: string) => string[] = () => [];
   private readonly lan = new LanBridge(
     (room, token) => this.membership(room, token),
     (request) => this.hostAuthorized(request),
@@ -274,6 +282,7 @@ export class NativeNonameService implements EngineAdapter {
       playerHistory: true,
       publicSpectating: true,
       experience: true,
+      doudizhuPractice: true,
       message: ready
         ? '无名杀已就绪，真人准备后可以开始对局。'
         : assets
@@ -300,6 +309,15 @@ export class NativeNonameService implements EngineAdapter {
   matchId(roomCode: string): string | null {
     return (
       [...this.matches.values()].find((match) => match.setup.roomCode === roomCode)?.id ?? null
+    );
+  }
+  /** Browser membership and an engine role differ only for a proxied AI landlord. */
+  private engineSeat(match: Match, member: { id: string } | undefined) {
+    return (
+      member &&
+      match.setup.seats.find(
+        (seat) => seat.kind === 'human' && (seat.controllerId ?? seat.id) === member.id,
+      )
     );
   }
   start(setup: MatchSetup): Promise<void> {
@@ -333,6 +351,7 @@ export class NativeNonameService implements EngineAdapter {
         observer: null,
         journal: new ObserverJournal(),
         networks: new Map(),
+        surrenderStates: new Map(),
         resolve: resolveStart,
         reject,
         timer: setTimeout(
@@ -632,8 +651,9 @@ export class NativeNonameService implements EngineAdapter {
       return false;
     }
   }
-  attach(server: Server, membership: Membership) {
+  attach(server: Server, membership: Membership, onlineMembers?: (room: string) => string[]) {
     this.membership = membership;
+    this.onlineMembers = onlineMembers ?? (() => []);
     const wss = new WebSocketServer({ noServer: true, maxPayload: 131072 });
     this.wss = wss;
     const alive = new WeakSet<WebSocket>();
@@ -660,7 +680,12 @@ export class NativeNonameService implements EngineAdapter {
       } catch {
         /* invalid Origin */
       }
-      const seat = match && this.membership(match.setup.roomCode, cookie(request, 'party_player'));
+      const seat =
+        match &&
+        this.engineSeat(
+          match,
+          this.membership(match.setup.roomCode, cookie(request, 'party_player')),
+        );
       const viewId = route[2] === 'view' ? url.searchParams.get('seat') : null;
       const allowed =
         match &&
@@ -741,13 +766,31 @@ export class NativeNonameService implements EngineAdapter {
                   match.setup,
                 );
                 if (match.observer) match.journal.append(match.observer);
+              } else if (message.type === 'surrender-state') {
+                const payload = message as unknown as { memberId: string; state: SurrenderState };
+                if (
+                  match.setup.doudizhu?.members.some(
+                    (s) => s.id === payload.memberId && s.kind === 'human',
+                  ) &&
+                  payload.state?.kind === 'surrender'
+                )
+                  match.surrenderStates.set(payload.memberId, {
+                    state: payload.state,
+                    at: Date.now(),
+                  });
               } else if (message.type === 'started' && match.state === 'starting') {
                 match.state = 'playing';
                 clearTimeout(match.timer);
                 match.resolve();
               } else if (message.type === 'ended' && match.state === 'playing') {
                 match.state = 'ended';
-                this.emit({ type: 'ended', roomCode: match.setup.roomCode });
+                const value = (message as unknown as { winner: unknown }).winner;
+                this.emit({
+                  type: 'ended',
+                  roomCode: match.setup.roomCode,
+                  matchId: match.id,
+                  winner: value === 'landlord' || value === 'farmers' ? value : null,
+                });
               } else if (message.type === 'failed') this.fail(match);
             } catch {
               this.fail(match, 'protocol-error');
@@ -784,7 +827,10 @@ export class NativeNonameService implements EngineAdapter {
             ws.on('pong', () => channel.touch());
             ws.on('message', (bytes) => {
               if (
-                this.membership(match.setup.roomCode, cookie(request, 'party_player'))?.id !== id
+                this.engineSeat(
+                  match,
+                  this.membership(match.setup.roomCode, cookie(request, 'party_player')),
+                )?.id !== id
               ) {
                 ws.close(1008);
                 return;
@@ -850,7 +896,10 @@ export class NativeNonameService implements EngineAdapter {
                 return;
               }
             } else if (
-              this.membership(match.setup.roomCode, cookie(request, 'party_player'))?.id !== id
+              this.engineSeat(
+                match,
+                this.membership(match.setup.roomCode, cookie(request, 'party_player')),
+              )?.id !== id
             ) {
               ws.close(1008);
               return;
@@ -892,9 +941,12 @@ export class NativeNonameService implements EngineAdapter {
     const match = this.matches.get(matchId);
     const seat =
       match &&
-      (request.headers['x-party-relay']
-        ? this.lan.relaySeat(request, match.setup.roomCode)
-        : this.membership(match.setup.roomCode, cookie(request, 'party_player')));
+      this.engineSeat(
+        match,
+        request.headers['x-party-relay']
+          ? this.lan.relaySeat(request, match.setup.roomCode)
+          : this.membership(match.setup.roomCode, cookie(request, 'party_player')),
+      );
     if (request.method === 'DELETE' && (!match || !seat)) {
       json(response, 200, {});
       return;
@@ -982,10 +1034,126 @@ export class NativeNonameService implements EngineAdapter {
   async handle(request: IncomingMessage, response: ServerResponse): Promise<boolean> {
     const url = new URL(request.url ?? '/', 'http://localhost');
     if (!url.pathname.startsWith('/engine/')) return false;
+    const surrenderRoute = /^\/engine\/surrender\/([\w-]+)$/.exec(url.pathname);
+    if (surrenderRoute) {
+      const match = this.matches.get(surrenderRoute[1]!);
+      const member =
+        match && this.membership(match.setup.roomCode, cookie(request, 'party_player'));
+      if (
+        !match ||
+        !member ||
+        match.setup.settings.mode !== 'college' ||
+        !match.setup.doudizhu?.members.some((s) => s.kind === 'human' && s.id === member.id)
+      ) {
+        json(response, 403, {});
+        return true;
+      }
+      let origin = true;
+      try {
+        if (request.headers.origin)
+          origin = new URL(request.headers.origin).host === request.headers.host;
+      } catch {
+        origin = false;
+      }
+      if (!origin) {
+        json(response, 403, {});
+        return true;
+      }
+      send(match.host, {
+        type: 'surrender-presence',
+        onlineIds: this.onlineMembers(match.setup.roomCode),
+      });
+      if (request.method === 'POST') {
+        let length = 0;
+        const parts = [];
+        for await (const chunk of request) {
+          length += chunk.length;
+          if (length > 4096) {
+            json(response, 413, {});
+            return true;
+          }
+          parts.push(Buffer.from(chunk));
+        }
+        let body;
+        try {
+          body = JSON.parse(Buffer.concat(parts).toString('utf8'));
+        } catch {
+          json(response, 400, {});
+          return true;
+        }
+        if (
+          this.matches.get(match.id) !== match ||
+          this.membership(match.setup.roomCode, cookie(request, 'party_player'))?.id !== member.id
+        ) {
+          json(response, 403, {});
+          return true;
+        }
+        if (
+          !body ||
+          Object.keys(body).some((key) => !['action', 'epoch'].includes(key)) ||
+          !['request', 'approve', 'reject'].includes(body.action) ||
+          typeof body.epoch !== 'string' ||
+          (body.action === 'request' ? body.epoch !== '' : !/^[\w-]{1,80}$/.test(body.epoch))
+        ) {
+          json(response, 400, {});
+          return true;
+        }
+        if (
+          match.state !== 'playing' ||
+          match.recovering.size ||
+          match.host?.readyState !== WebSocket.OPEN
+        ) {
+          json(response, 409, {});
+          return true;
+        }
+        send(match.host, {
+          type: 'surrender-action',
+          memberId: member.id,
+          action: body.action,
+          epoch: body.epoch,
+        });
+        json(response, 200, { ok: true });
+        return true;
+      }
+      if (request.method !== 'GET') {
+        json(response, 405, {});
+        return true;
+      }
+      const saved = match.surrenderStates.get(member.id);
+      const elapsed = saved ? Math.max(0, Date.now() - saved.at) : 0;
+      json(
+        response,
+        200,
+        saved
+          ? {
+              ...saved.state,
+              cooldownMs: Math.max(0, saved.state.cooldownMs - elapsed),
+              vote: saved.state.vote
+                ? {
+                    ...saved.state.vote,
+                    remainingMs: Math.max(0, saved.state.vote.remainingMs - elapsed),
+                  }
+                : null,
+            }
+          : {
+              kind: 'surrender',
+              available: false,
+              cooldownMs: 0,
+              notice: '',
+              vote: null,
+            },
+      );
+      return true;
+    }
     const network = /^\/engine\/network\/([\w-]+)$/.exec(url.pathname);
     if (network && request.method === 'POST') {
       const match = this.matches.get(network[1]!);
-      const seat = match && this.membership(match.setup.roomCode, cookie(request, 'party_player'));
+      const seat =
+        match &&
+        this.engineSeat(
+          match,
+          this.membership(match.setup.roomCode, cookie(request, 'party_player')),
+        );
       if (
         !match ||
         !seat ||
@@ -1051,7 +1219,7 @@ export class NativeNonameService implements EngineAdapter {
         const mode = url.searchParams.get('mode') ?? 'identity';
         if (
           !GENERAL_PRESETS.some((entry) => entry.id === preset) ||
-          !['identity', 'duel', 'doudizhu', 'versus'].includes(mode)
+          !['identity', 'duel', 'doudizhu', 'versus', 'college'].includes(mode)
         ) {
           json(response, 400, {});
           return true;
@@ -1099,7 +1267,7 @@ export class NativeNonameService implements EngineAdapter {
           'character/perfectPairs.js',
           ...definitions.cards.map((name: string) => `card/${name}.js`),
           ...definitions.characters.map((name: string) => `character/${name}.js`),
-          `mode/${mode === 'duel' ? 'single' : mode}.js`,
+          `mode/${mode === 'duel' ? 'single' : mode === 'college' ? 'doudizhu' : mode}.js`,
           'image/background/ol_bg.jpg',
           'image/card/handcard.png',
           'image/card/tiesuo_mark.png',
@@ -1221,7 +1389,11 @@ export class NativeNonameService implements EngineAdapter {
       if (tableRoute) {
         const match = this.matches.get(tableRoute[2]!);
         const seat =
-          match && this.membership(match.setup.roomCode, cookie(request, 'party_player'));
+          match &&
+          this.engineSeat(
+            match,
+            this.membership(match.setup.roomCode, cookie(request, 'party_player')),
+          );
         if (
           !match ||
           !seat ||
@@ -1282,7 +1454,11 @@ export class NativeNonameService implements EngineAdapter {
       if (historyRoute) {
         const match = this.matches.get(historyRoute[1]!);
         const seat =
-          match && this.membership(match.setup.roomCode, cookie(request, 'party_player'));
+          match &&
+          this.engineSeat(
+            match,
+            this.membership(match.setup.roomCode, cookie(request, 'party_player')),
+          );
         if (
           !match ||
           !seat ||
@@ -1315,7 +1491,11 @@ export class NativeNonameService implements EngineAdapter {
           matchRoute[1] === 'worker' ||
           (matchRoute[1] === 'setup' && url.searchParams.get('role') === 'worker');
         const seat =
-          match && this.membership(match.setup.roomCode, cookie(request, 'party_player'));
+          match &&
+          this.engineSeat(
+            match,
+            this.membership(match.setup.roomCode, cookie(request, 'party_player')),
+          );
         if (
           !match ||
           (worker || view
@@ -1341,6 +1521,7 @@ export class NativeNonameService implements EngineAdapter {
             serverVersion: APP_VERSION,
             selectionRecovery: true,
             connectionRecovery: true,
+            controlVersions: true,
             luckCards: true,
             surrender: true,
             emotions: true,
@@ -1352,6 +1533,8 @@ export class NativeNonameService implements EngineAdapter {
             tablePresentation: true,
             ...match.setup,
             generalSelections: worker ? match.setup.generalSelections : undefined,
+            doudizhu: worker ? match.setup.doudizhu : undefined,
+            farmerHandSharing: ['doudizhu', 'college'].includes(match.setup.settings.mode),
             role: worker ? 'worker' : 'player',
             playerId: worker ? null : view ? viewId : seat!.id,
             tableView: view,
@@ -1460,6 +1643,7 @@ export class NativeNonameService implements EngineAdapter {
             'emotions.js',
             'table-projection.js',
             'table-presentation.js',
+            'farmer-hands.js',
           ].includes(name)
         )
           throw new Error('Invalid runtime path');

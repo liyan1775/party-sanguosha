@@ -1,6 +1,7 @@
 import type { ModeId } from '../../../packages/shared/src/contracts.js';
 
 const paths: Record<ModeId, string> = {
+  college: '<path d="m2 9 10-5 10 5-10 5L2 9Zm4 3v6c4 3 8 3 12 0v-6M22 9v8"/>',
   identity: '<path d="m4 8 4 4 4-7 4 7 4-4-2 10H6L4 8Z"/><path d="M7 21h10"/>',
   doudizhu: '<path d="m12 3 5 7-5 7-5-7 5-7Z"/><path d="m5 10-3 5 5 7 5-5m7-7 3 5-5 7-5-5"/>',
   versus:

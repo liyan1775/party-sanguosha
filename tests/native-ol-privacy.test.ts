@@ -388,6 +388,48 @@ function faces(value: unknown): string[] {
   return value?.constructor === Object ? Object.values(value).flatMap(faces) : [];
 }
 
+test('斗地主农民互看仅允许同局队友当前手牌，不公开标记、不扩展技能私有区，身份变化即失效', async (t) => {
+  const f = await fixture(t);
+  const previous = Object.getOwnPropertyDescriptor(globalThis, 'partyEngine');
+  const setup = { farmerHandSharing: true, settings: { mode: 'college' } };
+  Object.defineProperty(globalThis, 'partyEngine', {
+    value: { setup },
+    configurable: true,
+    writable: true,
+  });
+  t.after(() => {
+    if (previous) Object.defineProperty(globalThis, 'partyEngine', previous);
+    else Reflect.deleteProperty(globalThis, 'partyEngine');
+  });
+  (f.Player.prototype as any).getCards = function (zone: string) {
+    return Object.values(f.lib.cardOL).filter((c: any) => c.owner === this && c.position === zone);
+  };
+  f.actor.identity = 'fan';
+  f.target.identity = 'fan';
+  f.viewer.identity = 'zhu';
+  const hand = f.card('FARMER-HAND', f.actor);
+  const expansion = f.card('PRIVATE-SKILL', f.actor, 'x');
+  const landlord = f.card('LANDLORD-HAND', f.viewer);
+  assert.deepEqual(faces(new f.Client('target').send('cards', [hand, expansion, landlord])), [
+    'FARMER-HAND',
+    'party_unknown',
+    'party_unknown',
+  ]);
+  assert.deepEqual(faces(new f.Client('viewer').send('cards', [hand, expansion])), [
+    'party_unknown',
+    'party_unknown',
+  ]);
+  assert.equal(f.runtime.publicCardVisible(hand), false);
+  f.target.identity = 'zhu';
+  assert.deepEqual(faces(new f.Client('target').send('cards', [hand])), ['party_unknown']);
+  f.target.identity = 'fan';
+  hand.position = 'o';
+  assert.deepEqual(faces(new f.Client('target').send('cards', [hand])), ['party_unknown']);
+  hand.position = 'h';
+  setup.farmerHandSharing = false;
+  assert.deepEqual(faces(new f.Client('target').send('cards', [hand])), ['party_unknown']);
+});
+
 test('定向私有消息仅授权显式无主材料，父事件和其他技能storage里的暗牌不能借收件人授权', async (t) => {
   const { actor, viewer, card, get, setEvent } = await fixture(t);
   setEvent({ name: 'chooseToMove' });

@@ -108,7 +108,16 @@ export function bindRoomSpectator(roomCode: string) {
     { once: true },
   );
   return {
-    context(room: RoomView, unseated: boolean): void {
+    context(room: RoomView, unseated: boolean, standby = false): void {
+      if (standby && panel.parentElement?.id !== 'game-frame-container')
+        element('#game-frame-container').append(panel);
+      else if (!standby && panel.parentElement?.id === 'game-frame-container')
+        element('.room-grid').before(panel);
+      panel.classList.toggle('college-spectator', standby);
+      panel.querySelector('h2')!.textContent = standby ? '本局待命 · 公开牌桌' : '公开观战';
+      panel.querySelector<HTMLElement>('p.hint')!.textContent = standby
+        ? '本局队友为地主，你处于待命位，可在此查看公开牌桌和本队比分。'
+        : '本局已开场，先在这里观战。观战不占席位；下一局回到等待房间后可填写昵称入座。';
       snapshot = room;
       const id =
         unseated && ['starting', 'playing', 'finished'].includes(room.phase) ? room.matchId : null;

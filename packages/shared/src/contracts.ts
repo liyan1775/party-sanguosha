@@ -3,7 +3,7 @@ import type { GeneralPresetId } from './general-presets.js';
 export type { GeneralPresetId } from './general-presets.js';
 
 export const APP_ID = 'party-sanguosha';
-export const APP_VERSION = '0.7.13';
+export const APP_VERSION = '0.8.0';
 export const OWNER_OFFLINE_GRACE_MS = 60000;
 export const ROOM_IDLE_GRACE_MS = 10 * 60000;
 
@@ -36,6 +36,13 @@ export const MODES = [
     maxPlayers: 2,
     description: '两位玩家，面对面对决，2 人',
   },
+  {
+    id: 'college',
+    name: '高校联赛练习',
+    minPlayers: 4,
+    maxPlayers: 4,
+    description: 'OL战队斗地主，两队各2人、每局3人出场；标准12局／20分或快速6局／10分',
+  },
 ] as const;
 
 export type ModeId = (typeof MODES)[number]['id'];
@@ -53,6 +60,50 @@ export interface RoomSettings {
   generalPreset: GeneralPresetId;
   allowGeneralSelection: boolean;
   extensions: string[];
+  collegeFormat?: 'standard' | 'quick';
+}
+
+export interface DoudizhuPublicState {
+  id: string;
+  phase: 'bidding' | 'choosing' | 'ready';
+  phaseId: string;
+  deadline: number;
+  bidSeatId: string | null;
+  highestBid: number;
+  bids: { seatId: string; bid: number }[];
+  landlordId: string | null;
+  activeSeatIds: string[];
+  controllers: Record<string, string>;
+}
+
+export interface DoudizhuPrivateState {
+  preparation: DoudizhuPublicState;
+  maxBid: number;
+  seats: {
+    id: string;
+    nickname: string;
+    role: 'candidate' | 'landlord' | 'farmer';
+    revision: number;
+    candidates: string[];
+    replacementsLeft: number;
+    selected: string | null;
+    locked: boolean;
+  }[];
+}
+
+export interface CollegeSeriesView {
+  id: string;
+  format: 'standard' | 'quick';
+  maxGames: number;
+  targetScore: number;
+  completedGames: number;
+  scores: [number, number];
+  firstBidIndex: number;
+  teams: [string[], string[]];
+  finished: boolean;
+  winner: 0 | 1 | null;
+  /** Already settled public results; omitted by older running services. */
+  results?: { game: number; winner: 0 | 1; points: number }[];
 }
 
 /** Only the requesting seated human's preference, never a public room snapshot. */
@@ -91,6 +142,7 @@ export interface EngineStatus {
   playerHistory?: boolean;
   experience?: boolean;
   publicSpectating?: boolean;
+  doudizhuPractice?: boolean;
 }
 
 /** Explicit consent only; identity votes do not contain roles or factions. */
@@ -127,6 +179,8 @@ export interface RoomView {
   engine: EngineStatus;
   matchFailure?: { code: MatchFailureCode; at: number };
   matchRecovery?: { deadline: number };
+  doudizhu?: DoudizhuPublicState;
+  series?: CollegeSeriesView;
 }
 
 export type MatchFailureCode =

@@ -9,7 +9,7 @@ import { createPartyServer } from '../apps/server/src/server.ts';
 import { NativeNonameService } from '../packages/noname-adapter/src/service.ts';
 import { createPublicGateway } from '../apps/server/src/public-gateway.ts';
 import { APP_VERSION } from '../packages/shared/src/contracts.ts';
-import { chooseGeneral, playOneAction } from './native-ui-actions.mjs';
+import { chooseGeneral, playOneAction, completeDoudizhuPregame } from './native-ui-actions.mjs';
 import { verifyLuckCards, verifyConnectionAndEmotions } from './native-connection-luck-probes.mjs';
 import { verifyNativePrivateChoices } from './native-private-choices.mjs';
 import { launchBackgroundBrowser, observeBackgroundPage } from './native-background-browser.mjs';
@@ -155,6 +155,14 @@ async function privateHandIds(worker, viewerId) {
     const viewer = partyEngine.lib.playerOL[id];
     return partyEngine.game.players
       .filter((player) => player !== viewer)
+      .filter(
+        (player) =>
+          !(
+            partyEngine.setup.farmerHandSharing &&
+            viewer.identity === 'fan' &&
+            player.identity === 'fan'
+          ),
+      )
       .flatMap((player) => player.getCards('h'))
       .filter((card) => !card.isKnownBy(viewer))
       .map((card) => card.cardid);
@@ -635,6 +643,7 @@ try {
     await phone.locator('#start-button').waitFor({ state: 'visible' });
     await phone.waitForFunction(() => !document.querySelector('#start-button').disabled);
     await phone.locator('#start-button').tap();
+    if (mode === 'doudizhu') await completeDoudizhuPregame(phones, code);
     await phone.locator('#game-frame').waitFor({ state: 'visible', timeout: 15000 });
     await phone.waitForFunction(() =>
       document
@@ -1192,6 +1201,14 @@ try {
       const viewer = lib.playerOL[playerId];
       const hidden = game.players
         .filter((player) => player !== viewer)
+        .filter(
+          (player) =>
+            !(
+              partyEngine.setup.farmerHandSharing &&
+              viewer.identity === 'fan' &&
+              player.identity === 'fan'
+            ),
+        )
         .flatMap((player) => player.getCards('h'))
         .find((card) => !card.isKnownBy(viewer));
       const own = viewer.getCards('h')[0];
@@ -1835,6 +1852,7 @@ try {
       for (const participant of phones) await participant.locator('#ready-button').tap();
       await phone.waitForFunction(() => !document.querySelector('#start-button').disabled);
       await phone.locator('#start-button').tap();
+      if (mode === 'doudizhu') await completeDoudizhuPregame(phones, code);
       await phone.waitForFunction(() =>
         document
           .querySelector('#game-frame')

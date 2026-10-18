@@ -35,6 +35,8 @@ import { bindSurrenderDialog } from './surrender-dialog.js';
 import { bindMatchRecords } from './match-records.js';
 import { bindRoomSpectator } from './room-spectator.js';
 import { bindMatchExperience } from './match-experience.js';
+import { bindDoudizhuPanel } from './doudizhu-panel.js';
+import { bindCollegeStage } from './college-stage.js';
 
 export function showRoomPage(initial: RoomInfo, initialSession: SessionView): void {
   let room = initial.room;
@@ -113,7 +115,68 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
     <dialog id="share-dialog" aria-labelledby="share-title"><div class="panel-heading"><h2 id="share-title">扫码直接进入本房间</h2><button id="close-share" class="close-dialog" type="button" aria-label="关闭房间二维码">×</button></div><p class="room-code">房间 <strong>${room.code}</strong></p>${qrMarkup('本房间邀请二维码', '微信扫一扫 · 直接进入这张牌桌')}</dialog>`,
     roomArtwork,
   );
-  const surrender = bindSurrenderDialog(() => room.settings.mode);
+  const doudizhuPanel = bindDoudizhuPanel(roomPath, roomApi);
+  const collegeEnd = document.createElement('button');
+  collegeEnd.id = 'college-end';
+  collegeEnd.type = 'button';
+  collegeEnd.className = 'button secondary';
+  collegeEnd.textContent = '结束整场练习';
+  action(collegeEnd, async () =>
+    renderRoom(await roomApi<RoomView>(`${roomPath}/series/end`, 'POST', {})),
+  );
+  element('#preset-description').after(
+    Object.assign(document.createElement('div'), {
+      id: 'college-format-setting',
+      hidden: true,
+      innerHTML:
+        '<label for="college-format">整场赛制<select id="college-format"><option value="standard">标准 · 12局／抢20分</option><option value="quick">快速 · 6局／抢10分</option></select></label><p class="hint">两名农民互看手牌；手气每席每小局最多3次。开场后固定队伍和赛制。</p>',
+    }),
+  );
+  const surrender = bindSurrenderDialog(
+    () => room.settings.mode,
+    (action, epoch) => {
+      if (room.settings.mode !== 'college' || !room.matchId) return false;
+      void roomApi(`/engine/surrender/${room.matchId}`, 'POST', { action, epoch })
+        .then(() => readCollegeVote())
+        .catch((cause) => {
+          message(cause instanceof Error ? cause.message : '投票未能同步。');
+          void readCollegeVote();
+        });
+      return true;
+    },
+  );
+  let collegeVoteTimer: ReturnType<typeof setTimeout> | undefined;
+  const collegeVote = document.createElement('button');
+  collegeVote.type = 'button';
+  collegeVote.id = 'college-vote';
+  collegeVote.className = 'button secondary';
+  collegeVote.textContent = '查看投降投票';
+  collegeVote.hidden = true;
+  collegeVote.onclick = () => surrender.open();
+  async function readCollegeVote() {
+    clearTimeout(collegeVoteTimer);
+    collegeVoteTimer = undefined;
+    if (
+      room.settings.mode !== 'college' ||
+      !room.matchId ||
+      room.phase !== 'playing' ||
+      !session.playerId
+    )
+      return;
+    const id = room.matchId;
+    try {
+      const state = await roomApi<SurrenderState>(`/engine/surrender/${id}`);
+      if (room.matchId === id) {
+        surrender.update(state);
+        collegeVote.hidden = !state.vote;
+      }
+    } catch {
+      /* The native worker may still be enabling settlement controls. */
+    } finally {
+      if (room.matchId === id && room.phase === 'playing')
+        collegeVoteTimer = setTimeout(() => void readCollegeVote(), 1000);
+    }
+  }
   const records = bindMatchRecords();
   const experience = bindMatchExperience();
   const spectator = bindRoomSpectator(room.code);
@@ -124,9 +187,11 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
       !room.matchFailure &&
       !(connectionNotice.classList.contains('blocking') && !connectionNotice.hidden);
     surrender.context(
-      matchId,
-      Boolean(matchId) && room.phase === 'playing' && Boolean(room.engine.surrender),
-      connected,
+      room.settings.mode === 'college' ? room.matchId : matchId,
+      Boolean(room.settings.mode === 'college' ? room.matchId : matchId) &&
+        room.phase === 'playing' &&
+        Boolean(room.engine.surrender),
+      connected && navigator.onLine !== false,
     );
     experience.context(
       matchId,
@@ -283,6 +348,7 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
     refresh();
   }
 
+  const collegeStage = bindCollegeStage(collegeEnd, collegeVote);
   const owner = () => session.roomCode === room.code && session.playerId === room.ownerId;
   const refresh = () => renderRoom(room);
 
@@ -329,6 +395,14 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
     panel.classList.toggle('rotated-table', rotated);
     panel.style.setProperty('--table-width', `${window.innerHeight}px`);
     panel.style.setProperty('--table-height', `${window.innerWidth}px`);
+    panel.classList.toggle(
+      'stage-portrait',
+      (rotated ? window.innerHeight : window.innerWidth) < 620,
+    );
+    panel.classList.toggle(
+      'stage-short',
+      (rotated ? window.innerWidth : window.innerHeight) <= 440,
+    );
     element('#match-orientation').hidden = !portrait;
     element('#match-orientation').textContent = horizontalTable ? '竖屏显示' : '横屏牌桌';
     element('#orientation-hint').hidden = !rotated;
@@ -501,6 +575,7 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
       clearTimeout(noticeTimer);
       clearTimeout(settingsTimer);
       clearTimeout(ownershipTimer);
+      clearTimeout(collegeVoteTimer);
       settingsGeneration++;
     },
     { once: true },
@@ -533,6 +608,11 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
     );
     select.disabled = mode.minPlayers === mode.maxPlayers || room.phase !== 'waiting';
     element('#mode-description').textContent = mode.description;
+    element('#college-format-setting').hidden = modeId !== 'college';
+    if (modeId === 'college') {
+      element<HTMLSelectElement>('#general-preset').value = 'ol-college-2026';
+      element<HTMLInputElement>('#allow-general-selection').checked = false;
+    }
     preloader.update(
       Boolean(room.engine.preload) && room.phase === 'waiting',
       element<HTMLSelectElement>('#general-preset').value,
@@ -589,6 +669,19 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
       qrBound = false;
     }
     const isOwner = owner();
+    const seriesLocked = !!room.series && !room.series.finished;
+    if (
+      room.settings.mode === 'college' &&
+      room.phase === 'playing' &&
+      collegeVoteTimer === undefined
+    )
+      void readCollegeVote();
+    else if (room.phase !== 'playing') {
+      clearTimeout(collegeVoteTimer);
+      collegeVoteTimer = undefined;
+      collegeVote.hidden = true;
+    }
+    doudizhuPanel.context(room, me?.id ?? null);
     if (!me && localConnection) {
       localConnection.close();
       localConnection = undefined;
@@ -608,16 +701,33 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
       Object.assign(window, { partyLan: localConnection });
     }
     const waiting = room.phase === 'waiting';
+    const standby = Boolean(
+      me &&
+      room.settings.mode === 'college' &&
+      room.matchId &&
+      returnedMatchId !== room.matchId &&
+      room.doudizhu &&
+      !Object.values(room.doudizhu.controllers).includes(me.id),
+    );
     const inMatch = Boolean(
       me &&
+      !standby &&
       room.matchId &&
       returnedMatchId !== room.matchId &&
       ['starting', 'playing', 'finished'].includes(room.phase),
     );
-    element('#match-panel').hidden = !inMatch;
-    app.classList.toggle('in-match', inMatch);
-    document.body.classList.toggle('playing-match', inMatch);
-    spectator.context(room, !me);
+    const inStage =
+      inMatch ||
+      Boolean(
+        me &&
+        (standby ||
+          (room.settings.mode === 'college' && room.series) ||
+          (room.phase === 'starting' && !room.matchId && room.doudizhu)),
+      );
+    element('#match-panel').hidden = !inStage;
+    app.classList.toggle('in-match', inStage);
+    document.body.classList.toggle('playing-match', inStage);
+    spectator.context(room, !me || standby, standby);
     resizeTable();
     element('#match-label').textContent = room.matchFailure
       ? '本局中断 · 未判胜负'
@@ -630,8 +740,12 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
             : room.phase === 'starting'
               ? '正在选将'
               : `${findMode(room.settings.mode)!.name} · ${room.code}`;
+    if (room.series)
+      element('#match-label').textContent +=
+        ` · A ${room.series.scores[0]} : ${room.series.scores[1]} B`;
     element('#rematch-button').hidden = room.phase !== 'finished';
-    element('#rematch-button').textContent = isOwner ? '回到房间，准备下一局' : '回到房间';
+    element('#rematch-button').textContent =
+      room.settings.mode === 'college' ? '整场休息' : isOwner ? '回到房间，准备下一局' : '回到房间';
     element('#finished-hint').hidden = room.phase !== 'finished' || isOwner;
     matchLeave.hidden = room.phase !== 'finished' || room.ownerClaimAt === undefined;
     waitingReturn.hidden = room.phase !== 'finished' || returnedMatchId !== room.matchId;
@@ -811,11 +925,11 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
     element('#owner-leave-hint').hidden = !isOwner;
     element('#bot-controls').hidden = !isOwner;
     element('#settings-panel').hidden = !isOwner;
-    disable(element('#add-bot'), empty === 0 || !waiting || settingsPending);
-    disable(element('#fill-bots'), empty === 0 || !waiting || settingsPending);
+    disable(element('#add-bot'), empty === 0 || !waiting || settingsPending || seriesLocked);
+    disable(element('#fill-bots'), empty === 0 || !waiting || settingsPending || seriesLocked);
     disable(
       element('#leave-button'),
-      !waiting && !(room.phase === 'finished' && room.ownerClaimAt !== undefined),
+      seriesLocked || (!waiting && !(room.phase === 'finished' && room.ownerClaimAt !== undefined)),
     );
     disable(
       element('#start-button'),
@@ -826,11 +940,14 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
         readyHumans !== humans.length ||
         settingsPending,
     );
+    collegeStage.context(room, me?.id ?? null, inMatch, standby, inStage);
     if (!settingsDirty) {
       setDraftMode(room.settings.mode, room.settings.playerCount);
       element<HTMLSelectElement>('#general-preset').value = room.settings.generalPreset;
       element<HTMLInputElement>('#allow-general-selection').checked =
         room.settings.allowGeneralSelection === true;
+      element<HTMLSelectElement>('#college-format').value =
+        room.settings.collegeFormat ?? 'standard';
       presetDescription();
     }
     const settingsState = element('#settings-state');
@@ -844,16 +961,25 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
         : `${settingsSaved ? '设置已自动保存。' : '修改设置后会自动保存。'}修改玩法、点将或增减席位后，真人需要重新准备；缩小房间时会自动移除多余 AI。`;
     const selectionSupported = typeof room.settings.allowGeneralSelection === 'boolean';
     element<HTMLInputElement>('#allow-general-selection').disabled =
-      !waiting || !selectionSupported;
+      !waiting || !selectionSupported || seriesLocked || room.settings.mode === 'college';
     element('#general-selection-description').textContent = selectionSupported
       ? `开放后，真人可在大厅点一名武将作为第1个候选；${room.settings.mode === 'versus' ? '2v2 会加入本队共享将池，队友也可选择；' : ''}同局上场武将不重复。关闭点将或更换武将档会清除已有点将。`
       : '电脑服务更新并重新启动后可开放点将。';
-    element<HTMLSelectElement>('#general-preset').disabled = !waiting;
+    element<HTMLSelectElement>('#general-preset').disabled =
+      !waiting || seriesLocked || draftMode === 'college';
+    element<HTMLSelectElement>('#college-format').disabled = !waiting || seriesLocked;
     element('#save-settings').hidden = !settingsError;
     disable(element('#save-settings'), !waiting || settingsSaving || !isOwner);
     app
       .querySelectorAll<HTMLButtonElement>('[data-mode]')
-      .forEach((button) => disable(button, !waiting));
+      .forEach((button) =>
+        disable(
+          button,
+          !waiting ||
+            seriesLocked ||
+            (button.dataset.mode === 'college' && !room.engine.doudizhuPractice),
+        ),
+      );
     if (me && !qrBound) {
       bindQr(initial.joinUrls, room.code, initial.entry);
       qrBound = true;
@@ -875,6 +1001,8 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
           (player.id === room.ownerId ? '（房主）' : '') +
           (player.id === session.playerId ? '（你）' : '')
         : '虚位以待';
+      if (room.settings.mode === 'college')
+        name.textContent = `${index % 2 === 0 ? 'A' : 'B'}队 · ${name.textContent}`;
       const status = document.createElement('span');
       status.className = `seat-state ${player?.ready ? 'ready' : ''}`;
       status.textContent = player
@@ -887,13 +1015,32 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
               : '待准备'
         : '等朋友 / AI';
       item.append(avatar, name, status);
+      if (isOwner && player && room.settings.mode === 'college' && !seriesLocked) {
+        const team = document.createElement('button');
+        team.type = 'button';
+        team.className = 'button subtle';
+        team.textContent = '调换队伍';
+        team.disabled = !waiting;
+        action(
+          team,
+          async () =>
+            renderRoom(
+              await roomApi<RoomView>(`${roomPath}/team`, 'PUT', {
+                playerId: player.id,
+                position: index % 2 === 0 ? 1 : 0,
+              }),
+            ),
+          refresh,
+        );
+        item.append(team);
+      }
       if (isOwner && player && player.id !== room.ownerId) {
         const button = document.createElement('button');
         button.className = 'remove-player';
         button.type = 'button';
         button.textContent = '移除';
         button.setAttribute('aria-label', `移除 ${player.nickname}`);
-        disable(button, !waiting || settingsPending);
+        disable(button, !waiting || settingsPending || seriesLocked);
         action(
           button,
           async () => {
@@ -1072,6 +1219,12 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
       .value as RoomSettings['generalPreset'],
     allowGeneralSelection: element<HTMLInputElement>('#allow-general-selection').checked,
     extensions: [],
+    ...(draftMode === 'college'
+      ? {
+          collegeFormat: element<HTMLSelectElement>('#college-format').value as
+            'standard' | 'quick',
+        }
+      : {}),
   });
   function scheduleSettings(): void {
     clearTimeout(settingsTimer);
@@ -1127,6 +1280,7 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
     }),
   );
   element('#player-count').addEventListener('change', markDirty);
+  element('#college-format').addEventListener('change', markDirty);
   element('#allow-general-selection').addEventListener('change', markDirty);
   element('#general-preset').addEventListener('change', () => {
     presetDescription();

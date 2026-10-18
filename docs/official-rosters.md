@@ -4,7 +4,7 @@
 
 按官方完整公告的名单导入已有原生角色，保留活动、平台、届次和年份。游戏平台版本必须对应：OL谋关羽使用 `ol_sb_guanyu`，不用手杀 `sb_guanyu` 或新杀 `dc_sb_guanyu`。别名、界字和原生ID前缀不能代替技能核对。无法对应的角色保留在公告清单中，但从可选白名单排除；不替换、不删技能、不自行实现角色，也不为此升级引擎。用户2026-10-12确认按非主公技能核对，名称可以不同，允许原生多出主公技；保留完整原生技能及主公标记。例如张绣保留踞襄，OL界孙坚保留破虏，OL界黄忠对应原生黄忠 `re_huangzhong`。大厅与图鉴显示具体版本提示。关联技能也参与核对，非主公机制不同仍列为缺项。
 
-只导入将池。本项目仍采用现有身份、斗地主、OL常规2v2和单武将单挑规则，新增档位使用军争160张（去木牛流马），不复刻赛事BP、报名、计分、换将道具或赛事专用牌堆。图鉴技能取固定引擎同版本文本，不能将本表理解为商业客户端所有历次技能修订的复刻。
+旧有官方档位仍只导入将池，沿用本项目身份、斗地主、OL常规2v2和单武将单挑规则，使用军争160张（去木牛流马），不复制原活动计分。2026-10-17用户另行批准OL高校联赛练习，接入四人战队叫分、选将与12／20或6／10整场；其中训练约定及官方未明文细则见高校联赛设计。王瓘等五项按用户指定接受完整原生差异，其他档位的版本政策保持原约定。图鉴技能取固定引擎同版本文本，不能将本表理解为商业客户端所有历次技能修订的复刻。
 
 | 官方将池                                                                            | 公告日期   | 已导入 / 公告 | 缺项                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | ----------------------------------------------------------------------------------- | ---------- | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -16,6 +16,7 @@
 | [OL排位完整池（2026年10月）](https://www.sanguosha.com/news/20260922_1251_1414)     | 2026-09-30 | 284/288       | 界沮授、谋周瑜、唐棠、谢灵毓                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | [OL SGL第一赛段（2026）](https://www.sanguosha.com/news/20260608_6402_4317)         | 2026-06-08 | 83/83         | 无                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | [手杀斗地主·时光场（公开目录）](https://www.sanguosha.cn/)                          | 2026-10-11 | 258/326       | 典韦、孟获、姜维、孙策、许攸、卢植、周妃、陆抗、界马超、界吕蒙、界孙策、高顺、马谡、于禁、曹彰、步练师、刘表、郭淮、周仓、顾雍、界凌统、辛宪英、伏完、杨修、SP马超、SP赵云、SP貂蝉、SP贾诩、陈琳、大乔小乔、诸葛恪、张宝、乐进、诸葛瑾、诸葛诞、何太后、孙皓、蹋顿、严白虎、SP黄月英、步骘、赵襄、马忠、麹义、吕虔、马云騄、张梁、刘琦、郭汜、徐荣、王元姬、樊稠、严畯、吕岱、周鲂、刘繇、曹婴、张琪瑛、许贡、吕凯、杨仪、司马徽、神周瑜、神刘备、神张辽、凌操、郑玄、星甘宁 |
+| [OL高校联赛（2026）](https://sanguosha.com/news/20261010_3336_5809)                 | 2026-10-10 | 92/93         | 唐棠                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 
 持久依据为 [official-rosters.json](../config/official-rosters.json)，运行白名单为 [roster-presets.json](../config/roster-presets.json)。运行 `npm run engine:update-official-rosters` 可从已审查映射重建白名单、跨端说明和本文；原始下载页和图片仅在忽略的.local中保留过程副本，官方链接可重新获取。该生成器不会凭同名自动匹配武将。
 
@@ -1581,3 +1582,114 @@
 - 凌操：[平台技能依据](https://www.sanguosha.cn/)；排除 `lingcao`、`dc_lingcao`。
 - 郑玄：[平台技能依据](https://www.sanguosha.cn/)；排除 `zhengxuan`、`std_zhengxuan`。
 - 星甘宁：[平台技能依据](https://www.sanguosha.cn/)；排除 `yj_ganning`、`sp_ganning`、`re_ganning`。
+
+## OL高校联赛（2026）
+
+[官方公告](https://sanguosha.com/news/20261010_3336_5809) · [公告将池原图1](https://wwwoss.sanguosha.com/uploads/202610/8WTnclCr727i2v2e.png) · [公告将池原图2](https://wwwoss.sanguosha.com/uploads/202610/z01EIjb3CYvk4yWb.png)；发布于 2026-10-10。对应原活动斗地主，本项目可用于现有四模式。
+
+2026-10-17用户确认王瓘、陆凯、谋鲁肃、谋张让、族荀粲采用现成原生设计及已记载差异；张郃按巧变、周泰按不屈／奋激对应。唐棠缺项。高校玩法另见赛事设计，不把其他官方池改为赛事规则。
+
+| 公告／目录武将 | 原生ID               | 定义包   | 原生技能 / 缺项原因                                                                                                                                                |
+| -------------- | -------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 鲍信           | `baoxin`             | mobile   | 募讨 / 毅谋                                                                                                                                                        |
+| 曹昂           | `caoang`             | sp       | 慷忾                                                                                                                                                               |
+| 崔琰           | `ol_cuiyan`          | sp       | 束统 / 直节                                                                                                                                                        |
+| 孙鸢           | `sunyuan`            | sp       | 飒影 / 恫心                                                                                                                                                        |
+| 张曼成         | `ol_zhangmancheng`   | sp       | 狂信 / 雷噬                                                                                                                                                        |
+| 李傕           | `lijue`              | sp2      | 狼袭 / 亦算                                                                                                                                                        |
+| 董翓           | `ol_dongxie`         | sp       | 狡威 / 鞭御 / 凤瑶                                                                                                                                                 |
+| 刘焉           | `liuyan`             | sp       | 图射 / 立牧                                                                                                                                                        |
+| 鲁芝           | `luzhi`              | sp       | 清忠 / 卫境                                                                                                                                                        |
+| 吕伯奢         | `lvboshe`            | sp       | 缚豕 / 东道                                                                                                                                                        |
+| 马良           | `ol_maliang`         | diy      | 自书 / 应援                                                                                                                                                        |
+| 段煨           | `ol_duanwei`         | sp       | 讨怀                                                                                                                                                               |
+| 彭羕           | `ol_pengyang`        | sp       | 嚣翻 / 侻失 / 寸目                                                                                                                                                 |
+| 麹义           | `quyi`               | sp       | 伏骑 / 骄恣                                                                                                                                                        |
+| 沙摩柯         | `shamoke`            | sp       | 蒺藜                                                                                                                                                               |
+| 滕芳兰         | `tengfanglan`        | sp       | 落宠 / 哀尘                                                                                                                                                        |
+| 王瓘           | `wangguan`           | sp       | 谬焰 / 失路                                                                                                                                                        |
+| 戏志才         | `xizhicai`           | sp       | 天妒 / 先辅 / 筹策                                                                                                                                                 |
+| 阎柔           | `yanrou`             | sp2      | 仇讨 / 襄戍                                                                                                                                                        |
+| 辛毗           | `xinpi`              | sp2      | 持节 / 引裾                                                                                                                                                        |
+| 管亥           | `ol_guanhai`         | sp       | 卸尾 / 诱阙                                                                                                                                                        |
+| 张华           | `zhanghua`           | sp       | 弼昏 / 剑合 / 穿屋                                                                                                                                                 |
+| 张芝           | `zhangzhi`           | sp       | 笔心 / 洗墨                                                                                                                                                        |
+| 陆凯           | `ol_lukai`           | sp       | 玄注 / 謇谔                                                                                                                                                        |
+| 王荣           | `ol_wangrong`        | sp       | 丰姿 / 吉占 / 赋颂                                                                                                                                                 |
+| 唐棠           | **缺项**             | —        | 择行／知意对应原生在固定v1.11.6未收录；2026-10-17最新正式版仍为v1.11.6，当次固定main快照26包／78文件亦未检出唐棠注册或名称。继续缺项，不自行实现或借其他武将代替。 |
+| 孔淑           | `kongshu`            | sp       | 累卵 / 覆巢                                                                                                                                                        |
+| 界黄盖         | `re_huanggai`        | refresh  | 苦肉 / 诈降                                                                                                                                                        |
+| 界李儒         | `ol_liru`            | onlyOL   | 绝策 / 灭计 / 焚城                                                                                                                                                 |
+| 界王异         | `ol_wangyi`          | onlyOL   | 贞烈 / 秘计                                                                                                                                                        |
+| 界魏延         | `ol_weiyan`          | refresh  | 狂骨 / 奇谋                                                                                                                                                        |
+| 界徐盛         | `re_xusheng`         | mobile   | 破军                                                                                                                                                               |
+| 界张春华       | `ol_zhangchunhua`    | onlyOL   | 绝情 / 伤逝 / 翦灭                                                                                                                                                 |
+| 曹金玉         | `ol_caojinyu`        | sp       | 春晖 / 夏晟 / 秋暮                                                                                                                                                 |
+| 鲍三娘         | `baosanniang`        | sp       | 武娘 / 镇南 / 许身                                                                                                                                                 |
+| 曹纯           | `caochun`            | sp       | 缮甲                                                                                                                                                               |
+| 曹婴           | `caoying`            | sp       | 凌人 / 伏间                                                                                                                                                        |
+| 费祎           | `ol_feiyi`           | sp       | 晏如 / 和衷                                                                                                                                                        |
+| 郭照           | `ol_guozhao`         | sp       | 椒遇 / 内训                                                                                                                                                        |
+| 蒋琬           | `ol_jiangwan`        | sp       | 自若 / 蓄发                                                                                                                                                        |
+| 徐荣           | `xurong`             | xianding | 凶镬 / 杀绝                                                                                                                                                        |
+| 周处           | `jin_zhouchu`        | sp       | 善断 / 义烈                                                                                                                                                        |
+| 吕玲绮         | `ol_lvlingqi`        | sp       | 绮武 / 妆戎                                                                                                                                                        |
+| SP刘备         | `sp_ol_liubei`       | sp       | 虚待 / 煮酒 / 惊雷                                                                                                                                                 |
+| SP孙策         | `sp_sunce`           | sp       | 连讨                                                                                                                                                               |
+| 周群           | `ol_zhouqun`         | sp       | 天候 / 谶说                                                                                                                                                        |
+| SP赵云         | `sp_zhaoyun`         | sp       | 龙胆 / 冲阵                                                                                                                                                        |
+| 祢衡           | `ol_miheng`          | sp       | 狂狷 / 飞辩                                                                                                                                                        |
+| 蒲元           | `ol_puyuan`          | sp       | 神工 / 奇思                                                                                                                                                        |
+| 闪朱儁         | `ol_jsrg_zhujun`     | onlyOL   | 分敌 / 拒降                                                                                                                                                        |
+| 谋邓艾         | `ol_sb_dengai`       | onlyOL   | 积谷 / 解腕                                                                                                                                                        |
+| 谋董卓         | `ol_sb_dongzhuo`     | onlyOL   | 观变 / 凶逆 / 封赏 / 执柄                                                                                                                                          |
+| 谋公孙瓒       | `ol_sb_gongsunzan`   | onlyOL   | 剿狄 / 保京                                                                                                                                                        |
+| 谋关羽         | `ol_sb_guanyu`       | onlyOL   | 威临 / 夺首                                                                                                                                                        |
+| 谋华雄         | `ol_sb_huaxiong`     | onlyOL   | 搏决 / 扬威                                                                                                                                                        |
+| 谋鲁肃         | `ol_sb_lusu`         | onlyOL   | 独断 / 英略 / 盟势                                                                                                                                                 |
+| 谋卢植         | `ol_sb_yl_luzhi`     | onlyOL   | 司兵 / 敛策                                                                                                                                                        |
+| 谋姜维         | `ol_sb_jiangwei`     | onlyOL   | 逐日 / 燃己                                                                                                                                                        |
+| 谋孙坚         | `ol_sb_sunjian`      | onlyOL   | 虎烈 / 毅魄                                                                                                                                                        |
+| 谋文丑         | `ol_sb_wenchou`      | onlyOL   | 轮战 / 决绝                                                                                                                                                        |
+| 谋小乔         | `ol_sb_xiaoqiao`     | onlyOL   | 迷落 / 绝颜                                                                                                                                                        |
+| 谋诸葛亮       | `ol_sb_zhugeliang`   | onlyOL   | 知天 / 武靖 / 智绝                                                                                                                                                 |
+| 谋袁术         | `ol_sb_yuanshu`      | onlyOL   | 矜名 / 枭噬 / 厌粱                                                                                                                                                 |
+| 谋张绣         | `ol_sb_zhangxiu`     | onlyOL   | 仇猎 / 追剿                                                                                                                                                        |
+| 谋程昱         | `ol_sb_chengyu`      | onlyOL   | 戾断 / 胆持                                                                                                                                                        |
+| 谋张让         | `ol_sb_zhangrang`    | onlyOL   | 赂存 / 蜕生                                                                                                                                                        |
+| 魔曹操         | `dm_caocao`          | onlyOL   | 霸朝 / 覆载                                                                                                                                                        |
+| 魔貂蝉         | `dm_diaochan`        | onlyOL   | 幻惑 / 倾世                                                                                                                                                        |
+| 魔吕布         | `dm_lvbu`            | onlyOL   | 夺炁 / 狂魔 / 罡拳                                                                                                                                                 |
+| 魔司马懿       | `dm_simayi`          | onlyOL   | 诡伏 / 谋变                                                                                                                                                        |
+| 魔孙权         | `dm_sunquan`         | onlyOL   | 权御 / 天恩 / 乾纲                                                                                                                                                 |
+| 神典韦         | `shen_dianwei`       | onlyOL   | 捐甲 / 挈挟 / 摧决                                                                                                                                                 |
+| 神甘宁         | `shen_ganning`       | extra    | 魄袭 / 劫营                                                                                                                                                        |
+| 神陆逊         | `shen_luxun`         | extra    | 军略 / 摧克 / 绽火                                                                                                                                                 |
+| 神张角         | `junk_zhangjiao`     | onlyOL   | 异兆 / 肆军 / 天劫                                                                                                                                                 |
+| 神赵云         | `shen_zhaoyun`       | extra    | 绝境 / 龙魂                                                                                                                                                        |
+| 张郃           | `zhanghe`            | shenhua  | 巧变                                                                                                                                                               |
+| 周泰           | `zhoutai`            | refresh  | 不屈 / 奋激                                                                                                                                                        |
+| 神黄忠         | `ol_shen_huangzhong` | onlyOL   | 神御 / 化刃                                                                                                                                                        |
+| 族王沈         | `clan_wangshen`      | clan     | 岸然 / 告变 / 中流                                                                                                                                                 |
+| 族荀采         | `clan_xuncai`        | clan     | 烈誓 / 点盏 / 还阴 / 蹈节                                                                                                                                          |
+| 族荀谌         | `clan_xunchen`       | clan     | 三恇 / 卑势 / 蹈节                                                                                                                                                 |
+| 族荀莳         | `clan_xunshi`        | clan     | 清绝 / 萦香 / 蹈节                                                                                                                                                 |
+| 族荀攸         | `clan_xunyou`        | clan     | 百出 / 蹈节                                                                                                                                                        |
+| 族荀粲         | `clan_xuncan`        | clan     | 熨身 / 伤神 / 分钗 / 蹈节                                                                                                                                          |
+| 族杨彪         | `clan_yangbiao`      | clan     | 间难 / 义叱 / 去惑                                                                                                                                                 |
+| 族钟会         | `clan_zhonghui`      | clan     | 迂志 / 挟术 / 保族                                                                                                                                                 |
+| 族钟琰         | `clan_zhongyan`      | clan     | 观骨 / 啸咏 / 保族                                                                                                                                                 |
+| 族陆郁生       | `clan_luyusheng`     | clan     | 拾昔 / 坚白 / 泽烈                                                                                                                                                 |
+| 族王明山       | `clan_wangmingshan`  | clan     | 弹雀 / 剩墨 / 中流                                                                                                                                                 |
+| 族杨修         | `clan_yangxiu`       | clan     | 捷悟 / 高视 / 去惑                                                                                                                                                 |
+| 秦宓           | `qinmi`              | yijiang  | 谏征 / 专对 / 天辩                                                                                                                                                 |
+| 吴懿           | `wuyi`               | yijiang  | 奔袭                                                                                                                                                               |
+
+- 王瓘 → `wangguan`：用户接受固定原生失路摸牌上限5，保留完整谬焰／失路，不改成官网摘要版本；仍验证技能执行和私有选择。 [版本依据](https://www.sanguosha.com/hero/553)
+- 陆凯 → `ol_lukai`：用户接受玄注／謇谔的sp:ol_lukai原生设计，包括扩展区及弃置后等量摸牌；不采用另一陆凯。扩展牌的可见性、事件和恢复仍须验证。 [版本依据](https://www.sanguosha.com/hero/590)
+- 谋鲁肃 → `ol_sb_lusu`：用户接受原生独断／英略／盟势及盟势不能选择同体力两人的限制；不再就该差异等待审批，仍验证阶段交换和限定技恢复。 [版本依据](https://www.sanguosha.com/hero/718)
+- 谋张让 → `ol_sb_zhangrang`：用户接受原生赂存／蜕生；新的赂牌私有状态、逐牌名／每轮记录、恢复和实际技能路径仍须验证。 [版本依据](https://www.sanguosha.com/hero/697)
+- 张郃 → `zhanghe`：公告是无界字的张郃，对应巧变的shenhua:zhanghe；不替换成界张郃、SP张郃或闪张郃。 [版本依据](https://www.sanguosha.com/hero/50)
+- 周泰 → `zhoutai`：采用不屈／奋激的refresh:zhoutai（原生显示界周泰），不采用只有旧不屈的old_zhoutai。原生奋激排除主动赠予／交给，官网摘要未展开此边界，图鉴展示完整规则；须验证被夺／被弃与主动交牌的具体触发。 [版本依据](https://www.sanguosha.com/hero/210)
+- 族荀粲 → `clan_xuncan`：用户接受原生蹈节／熨身／伤神／分钗；首个属性伤害、分钗记录及判定恢复仍须验证。 [版本依据](https://www.sanguosha.com/hero/525)
+- 唐棠：[平台技能依据](https://www.sanguosha.com/hero/744)；固定引擎无同名原生候选。

@@ -25,10 +25,13 @@ export async function verifyLuckCards(frame, worker) {
     );
     const aggregate = await worker.evaluate((id) => {
       const player = partyEngine.lib.playerOL[id];
-      const next = player.getCards('h').map((card) => card.cardid);
+      // Exhausting a lone human's quota starts native game-start skills/turns.
+      // The accepted starting hand remains stable even if a legal draw follows.
+      const accepted = player._start_cards ?? player.getCards('h');
+      const next = accepted.map((card) => card.cardid);
       const proof = partyEngine.luckQA;
       const changed = next.every((card) => !proof.hand.includes(card));
-      const count = player.countCards('h');
+      const count = accepted.length;
       proof.hand = next;
       proof.draws++;
       return { changed, count, originalCount: proof.count };
@@ -37,6 +40,7 @@ export async function verifyLuckCards(frame, worker) {
     assert.equal(aggregate.count, aggregate.originalCount);
     await frame.waitForFunction(
       (count) => {
+        if (!partyEngine.luckState?.active) return true;
         const cards = [...document.querySelectorAll('#me .card')];
         return (
           cards.length === count &&
@@ -94,7 +98,11 @@ export async function verifyLuckCards(frame, worker) {
   await wait(300);
   const limited = await worker.evaluate((id) => {
     const player = partyEngine.lib.playerOL[id];
-    return player.getCards('h').every((card) => partyEngine.luckQA.hand.includes(card.cardid));
+    const accepted = player._start_cards ?? player.getCards('h');
+    return (
+      accepted.length === partyEngine.luckQA.hand.length &&
+      accepted.every((card) => partyEngine.luckQA.hand.includes(card.cardid))
+    );
   }, id);
   assert.equal(limited, true, 'a fourth refresh is rejected');
   console.log(

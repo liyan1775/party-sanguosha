@@ -4,7 +4,12 @@ import { connectRuleHost } from './relay.js';
 import { broadcastCharacterInit } from './privacy.js';
 
 function configure(setup) {
-  const mode = setup.settings.mode === 'duel' ? 'single' : setup.settings.mode;
+  const mode =
+    setup.settings.mode === 'duel'
+      ? 'single'
+      : setup.settings.mode === 'college'
+        ? 'doudizhu'
+        : setup.settings.mode;
   _status.connectMode = true;
   _status.mode = mode === 'single' ? 'dianjiang' : mode === 'versus' ? '2v2' : 'normal';
   const packs = lib.config.characters;
@@ -325,6 +330,33 @@ export function trackVersusChoices(batch, replayChoice) {
 
 /** Identity alone reveals the lord before asking the remaining seats. */
 export async function selectGenerals(setup, pool, initialize, replayChoice) {
+  if (setup.doudizhu) {
+    const selected = new Set();
+    for (const player of game.players) {
+      const candidates = setup.doudizhu.candidates[player.playerid];
+      if (
+        !Array.isArray(candidates) ||
+        !candidates.length ||
+        candidates.some((name) => !pool.includes(name))
+      )
+        throw new Error('无效的赛前武将候选');
+      let name = setup.doudizhu.selectedGenerals[player.playerid];
+      if (!name) {
+        const choice = player.chooseButton(
+          ['从本席候选选择武将', [candidates, 'character']],
+          true,
+          1,
+        );
+        choice.set('ai', (button) => get.rank(button.link, true));
+        choice.isOnline = () => false;
+        name = (await choice.forResult()).links?.[0];
+      }
+      if (!candidates.includes(name) || selected.has(name)) throw new Error('无效的赛前选将结果');
+      selected.add(name);
+      await initialize(player, name);
+    }
+    return;
+  }
   const initialized = new Set();
   const choose = async (batch) => {
     const { requested, delegated } =
@@ -544,10 +576,20 @@ const start = async function start() {
   };
   await connectRuleHost();
   proof.hostReady = true;
-  await connected;
+  if (setup.doudizhu) {
+    let timer;
+    await Promise.race([
+      connected,
+      new Promise((resolve) => {
+        timer = setTimeout(resolve, 60000);
+      }),
+    ]);
+    clearTimeout(timer);
+  } else await connected;
   _status.waitingForPlayer = false;
   // A random seat order also randomizes landlord/first action in open modes.
   const seats = setup.seats.slice().randomSort();
+  if (setup.doudizhu) seats.splice(0, seats.length, ...setup.seats);
   const roles = identities(setup.settings.mode, seats.length);
   for (let index = 0; index < seats.length; index++) {
     const seat = seats[index],
@@ -685,15 +727,20 @@ const start = async function start() {
     },
     selectionRecovery?.replay,
   );
-  if (setup.settings.mode === 'doudizhu') {
-    game.broadcastAll(function (id) {
-      const lord = lib.playerOL[id];
-      lord.maxHp++;
-      lord.hp++;
-      lord.update();
-      lib.playerOL[id].addSkill(['feiyang', 'bahu']);
-    }, game.zhu.playerid);
+  if (['doudizhu', 'college'].includes(setup.settings.mode)) {
+    game.broadcastAll(
+      function (id, college) {
+        const lord = lib.playerOL[id];
+        lord.maxHp++;
+        lord.hp++;
+        lord.update();
+        lib.playerOL[id].addSkill(college ? ['feiyang', 'bahu', 'qiangyi'] : ['feiyang', 'bahu']);
+      },
+      game.zhu.playerid,
+      setup.settings.mode === 'college',
+    );
   }
+  if (setup.settings.mode === 'college') game.addGlobalSkill('_party_college_round_limit');
   if (setup.settings.mode === 'identity') {
     // Native identity death handling needs the lord skills and shown flags.
     game.zhu.isZhu = true;
@@ -703,6 +750,7 @@ const start = async function start() {
   game.syncState();
   _status.event.trigger('gameStart');
   const first = await initialDraw(setup);
+  if (setup.farmerHandSharing) (await import('./farmer-hands.js')).installFarmerHands();
   if (offerLuckCards) await offerLuckCards();
   proof.started = true;
   globalThis.partyEngine.signal('started');
@@ -713,6 +761,24 @@ const start = async function start() {
 export function adaptMode(mode) {
   mode.startBefore = () => {};
   mode.start = start;
+  if (mode.name === 'doudizhu') {
+    mode.skill ??= {};
+    mode.skill._party_college_round_limit = {
+      trigger: { global: 'roundStart' },
+      forced: true,
+      popup: false,
+      charlotte: true,
+      priority: 10000,
+      filter() {
+        return globalThis.partyEngine.setup.settings.mode === 'college' && game.roundNumber > 25;
+      },
+      content() {
+        game.checkOnlineResult = (player) => player.identity === 'fan';
+        game.log('第25轮结束，农民获胜');
+        game.over();
+      },
+    };
+  }
   if (mode.name === 'identity') {
     const dieAfter = mode.element.player.dieAfter;
     mode.element.player.dieAfter = function (...args) {

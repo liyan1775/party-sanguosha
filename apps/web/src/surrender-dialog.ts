@@ -2,7 +2,10 @@ import type { ModeId, SurrenderState } from '../../../packages/shared/src/contra
 import { element } from './ui.js';
 
 /** Kept outside the rotated native canvas so confirmation stays readable. */
-export function bindSurrenderDialog(mode: () => ModeId) {
+export function bindSurrenderDialog(
+  mode: () => ModeId,
+  externalSend?: (action: 'request' | 'approve' | 'reject', epoch: string) => boolean,
+) {
   const button = document.createElement('button');
   button.id = 'match-surrender';
   button.type = 'button';
@@ -40,7 +43,13 @@ export function bindSurrenderDialog(mode: () => ModeId) {
   const close = () => dialog.close();
   const send = (action: 'request' | 'approve' | 'reject') => {
     const frame = document.querySelector<HTMLIFrameElement>('#game-frame');
-    if (!enabled || !connected || pending || !matchId || !frame?.contentWindow) return;
+    if (!enabled || !connected || pending || !matchId) return;
+    if (externalSend?.(action, state?.vote?.epoch ?? '')) {
+      pending = true;
+      render();
+      return;
+    }
+    if (!frame?.contentWindow) return;
     pending = true;
     frame.contentWindow.postMessage(
       { type: 'party-surrender-action', matchId, action, epoch: state?.vote?.epoch ?? '' },
@@ -52,6 +61,7 @@ export function bindSurrenderDialog(mode: () => ModeId) {
     const vote = state?.vote;
     const end = state?.kind === 'end';
     const duel = mode() === 'duel';
+    const required = mode() === 'college' ? '本队在线真人（含待命队友）' : '本方所有存活真人';
     rules.hidden = duel;
     const cooldown = Math.max(0, Math.ceil((cooldownDeadline - performance.now()) / 1000));
     button.hidden = !enabled || !state?.available;
@@ -65,12 +75,12 @@ export function bindSurrenderDialog(mode: () => ModeId) {
         ? '提前结束这局？'
         : '确认本方认输？';
     find('#surrender-detail').textContent = vote
-      ? `${vote.initiator} 发起${end ? '提前结束' : '本方认输'}。${end ? '须所有真人同意，结束后不判胜负。' : '须本方所有存活真人同意，AI自动同意；通过后对方获胜。'}`
+      ? `${vote.initiator} 发起${end ? '提前结束' : '本方认输'}。${end ? '须所有真人同意，结束后不判胜负。' : `须${required}同意，AI自动同意；通过后对方获胜。`}`
       : end
         ? '身份局须所有真人（含已阵亡玩家）明确同意。通过后本局结束，不判胜负，不需要公开身份来组队投票。'
         : duel
           ? '确认后本局立即结束，你将认输，对方获胜。'
-          : '须本方所有存活真人同意，AI自动同意。通过后本方失败、对方获胜。';
+          : `须${required}同意，AI自动同意。通过后本方失败、对方获胜。`;
     find('#surrender-voters').replaceChildren(
       ...(vote?.participants ?? []).map((participant) => {
         const row = document.createElement('li');
@@ -125,6 +135,7 @@ export function bindSurrenderDialog(mode: () => ModeId) {
     { once: true },
   );
   return {
+    open,
     context(id: string | null, available: boolean, isConnected: boolean) {
       if (id !== matchId) {
         state = null;

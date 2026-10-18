@@ -1,6 +1,6 @@
 {
   "name": "party-sanguosha",
-  "version": "0.7.13",
+  "version": "0.8.0",
   "license": "GPL-3.0-only",
   "private": true,
   "type": "module",
@@ -39,7 +39,10 @@
     "format:check": "prettier --check .",
     "check": "npm run typecheck && npm test && npm run build && npm run format:check",
     "engine:verify:table": "npm run build && node --import tsx scripts/verify-native-table-feedback.mjs",
-    "engine:verify:jiedao-zonghu": "npm run build && node --import tsx scripts/verify-native-jiedao-zonghu.mjs"
+    "engine:verify:jiedao-zonghu": "npm run build && node --import tsx scripts/verify-native-jiedao-zonghu.mjs",
+    "engine:verify:college": "npm run build && npm run engine:check-definitions && node --import tsx scripts/verify-college-runtime.mjs",
+    "engine:verify:college-matrix": "npm run build && node --import tsx scripts/verify-college-matrix.mjs",
+    "engine:verify:college-ui": "npm run build && node --import tsx scripts/verify-college-ui.mjs"
   },
   "dependencies": {
     "qrcode": "1.5.4",

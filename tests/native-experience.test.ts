@@ -473,6 +473,18 @@ test('宗护电脑核验交牌成本，拒绝零张、重复及他人牌；原�
   (await runtime('selection-recovery')).installSelectionRecovery();
   choice.send();
   const request = sent[0]!;
+  // Shared farmer cards are visible, but an ordinary personal use cannot submit them.
+  const fixtureGlobals = globalThis as any;
+  fixtureGlobals.partyEngine.setup.farmerHandSharing = true;
+  (actor as any).identity = 'fan';
+  (recipient as any).identity = 'fan';
+  recipient.getCards = () => [foreign];
+  fixtureGlobals.nativeFixture.get.itemtype = () => 'card';
+  fixtureGlobals.nativeFixture.get.owner = (card: unknown) =>
+    card === foreign ? recipient : actor;
+  assert.equal(actor.unwait({ bool: true, cards: [foreign] }), false);
+  assert.equal(received, 0);
+  assert.deepEqual(sent.at(-1), request);
   for (const cards of [[], [own[0]], [own[0], own[0]], [own[0], foreign], own]) {
     assert.equal(
       actor.unwait({ bool: true, skill: 'olzonghu_backup', cards, targets: [recipient] }),

@@ -12,11 +12,19 @@ export async function connectRuleHost() {
     : new WebSocket(url);
   window.addEventListener('pagehide', () => socket.close(), { once: true });
   globalThis.partyEngine.ruleSocket = socket;
-  globalThis.partyEngine.signal = (type) => {
-    if (socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type }));
+  globalThis.partyEngine.signal = (type, detail = {}) => {
+    if (socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type, ...detail }));
   };
   socket.addEventListener('message', ({ data }) => {
     const message = JSON.parse(data);
+    if (message.type === 'surrender-presence') {
+      globalThis.partyEngine.setSurrenderPresence?.(message.onlineIds);
+      return;
+    }
+    if (message.type === 'surrender-action') {
+      globalThis.partyEngine.externalSurrender?.(message.memberId, message.action, message.epoch);
+      return;
+    }
     if (message.type === 'connect') {
       const previous = virtualSockets.get(message.id);
       if (globalThis.partyEngine.connectionRecovery?.resume(previous)) return;
@@ -79,8 +87,8 @@ export async function connectRuleHost() {
       socket.send(JSON.stringify({ type: 'observer', state }));
   });
   const signal = globalThis.partyEngine.signal;
-  globalThis.partyEngine.signal = (type) => {
+  globalThis.partyEngine.signal = (type, detail) => {
     update();
-    signal(type);
+    signal(type, detail);
   };
 }

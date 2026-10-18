@@ -10530,6 +10530,789 @@
       "versionNotes": [
         "固定于移动版4.6.0公开目录，包含旧版武将；允许名称差异及额外主公技，非主公技能不同的版本仍缺项，具体对应与原因见图鉴及项目将池核对表。不代表商业服务器当日开放状态。"
       ]
+    },
+    {
+      "id": "ol-college-2026",
+      "name": "OL高校联赛（2026）",
+      "platform": "ol",
+      "platformName": "三国杀OL",
+      "eventMode": "doudizhu",
+      "source": {
+        "kind": "announcement",
+        "publishedAt": "2026-10-10",
+        "url": "https://sanguosha.com/news/20261010_3336_5809",
+        "rosterImages": [
+          "https://wwwoss.sanguosha.com/uploads/202610/8WTnclCr727i2v2e.png",
+          "https://wwwoss.sanguosha.com/uploads/202610/z01EIjb3CYvk4yWb.png"
+        ]
+      },
+      "announcedCount": 93,
+      "note": "2026-10-17用户确认王瓘、陆凯、谋鲁肃、谋张让、族荀粲采用现成原生设计及已记载差异；张郃按巧变、周泰按不屈／奋激对应。唐棠缺项。高校玩法另见赛事设计，不把其他官方池改为赛事规则。",
+      "versionNotes": [
+        "王瓘：用户接受固定原生失路摸牌上限5，保留完整谬焰／失路，不改成官网摘要版本；仍验证技能执行和私有选择。",
+        "陆凯：用户接受玄注／謇谔的sp:ol_lukai原生设计，包括扩展区及弃置后等量摸牌；不采用另一陆凯。扩展牌的可见性、事件和恢复仍须验证。",
+        "谋鲁肃：用户接受原生独断／英略／盟势及盟势不能选择同体力两人的限制；不再就该差异等待审批，仍验证阶段交换和限定技恢复。",
+        "谋张让：用户接受原生赂存／蜕生；新的赂牌私有状态、逐牌名／每轮记录、恢复和实际技能路径仍须验证。",
+        "张郃：公告是无界字的张郃，对应巧变的shenhua:zhanghe；不替换成界张郃、SP张郃或闪张郃。",
+        "周泰：采用不屈／奋激的refresh:zhoutai（原生显示界周泰），不采用只有旧不屈的old_zhoutai。原生奋激排除主动赠予／交给，官网摘要未展开此边界，图鉴展示完整规则；须验证被夺／被弃与主动交牌的具体触发。",
+        "族荀粲：用户接受原生蹈节／熨身／伤神／分钗；首个属性伤害、分钗记录及判定恢复仍须验证。"
+      ],
+      "entries": [
+        {
+          "officialName": "鲍信",
+          "nativeId": "baoxin",
+          "nativeName": "鲍信",
+          "nativePack": "mobile",
+          "nativeSkills": ["mutao", "yimou"],
+          "source": "https://www.sanguosha.com/hero/728",
+          "versionNote": "核对OL官方募讨／毅谋全文，与固定mobile:baoxin同为分发所有杀后随机伤害、近距受伤获杀或给牌摸牌，技能和参数一致；原生所在包名不作为平台差异依据。"
+        },
+        {
+          "officialName": "曹昂",
+          "nativeId": "caoang",
+          "nativeName": "曹昂",
+          "nativePack": "sp",
+          "nativeSkills": ["kaikang"],
+          "source": "https://www.sanguosha.com/hero/122"
+        },
+        {
+          "officialName": "崔琰",
+          "nativeId": "ol_cuiyan",
+          "nativeName": "OL崔琰",
+          "nativePack": "sp",
+          "nativeSkills": ["olshutong", "olzhijie"],
+          "source": "https://www.sanguosha.com/hero/739"
+        },
+        {
+          "officialName": "孙鸢",
+          "nativeId": "sunyuan",
+          "nativeName": "孙鸢",
+          "nativePack": "sp",
+          "nativeSkills": ["olsaying", "oltongxin"],
+          "source": "https://www.sanguosha.com/hero/707"
+        },
+        {
+          "officialName": "张曼成",
+          "nativeId": "ol_zhangmancheng",
+          "nativeName": "OL张曼成",
+          "nativePack": "sp",
+          "nativeSkills": ["olkuangxin", "olleishi"],
+          "source": "https://www.sanguosha.com/hero/699"
+        },
+        {
+          "officialName": "李傕",
+          "nativeId": "lijue",
+          "nativeName": "李傕",
+          "nativePack": "sp2",
+          "nativeSkills": ["xinfu_langxi", "xinfu_yisuan"],
+          "source": "https://www.sanguosha.com/hero/418"
+        },
+        {
+          "officialName": "董翓",
+          "nativeId": "ol_dongxie",
+          "nativeName": "OL董翓",
+          "nativePack": "sp",
+          "nativeSkills": ["oljiaowei", "olbianyu", "olfengyao"],
+          "source": "https://www.sanguosha.com/hero/656"
+        },
+        {
+          "officialName": "刘焉",
+          "nativeId": "liuyan",
+          "nativeName": "刘焉",
+          "nativePack": "sp",
+          "nativeSkills": ["xinfu_tushe", "xinfu_limu"],
+          "source": "https://www.sanguosha.com/hero/634"
+        },
+        {
+          "officialName": "鲁芝",
+          "nativeId": "luzhi",
+          "nativeName": "鲁芝",
+          "nativePack": "sp",
+          "nativeSkills": ["qingzhong", "weijing"],
+          "source": "https://www.sanguosha.com/hero/379"
+        },
+        {
+          "officialName": "吕伯奢",
+          "nativeId": "lvboshe",
+          "nativeName": "吕伯奢",
+          "nativePack": "sp",
+          "nativeSkills": ["olfushi", "oldongdao"],
+          "source": "https://www.sanguosha.com/hero/578"
+        },
+        {
+          "officialName": "马良",
+          "nativeId": "ol_maliang",
+          "nativeName": "OL马良",
+          "nativePack": "diy",
+          "nativeSkills": ["zishu", "xinyingyuan"],
+          "source": "https://www.sanguosha.com/hero/128"
+        },
+        {
+          "officialName": "段煨",
+          "nativeId": "ol_duanwei",
+          "nativeName": "OL段煨",
+          "nativePack": "sp",
+          "nativeSkills": ["oltaohuai"],
+          "source": "https://www.sanguosha.com/hero/763"
+        },
+        {
+          "officialName": "彭羕",
+          "nativeId": "ol_pengyang",
+          "nativeName": "彭羕",
+          "nativePack": "sp",
+          "nativeSkills": ["olxiaofan", "oltuishi", "nzry_cunmu"],
+          "source": "https://www.sanguosha.com/hero/572"
+        },
+        {
+          "officialName": "麹义",
+          "nativeId": "quyi",
+          "nativeName": "麴义",
+          "nativePack": "sp",
+          "nativeSkills": ["fuqi", "jiaozi"],
+          "source": "https://www.sanguosha.com/hero/374"
+        },
+        {
+          "officialName": "沙摩柯",
+          "nativeId": "shamoke",
+          "nativeName": "沙摩柯",
+          "nativePack": "sp",
+          "nativeSkills": ["gzjili"],
+          "source": "https://www.sanguosha.com/hero/431"
+        },
+        {
+          "officialName": "滕芳兰",
+          "nativeId": "tengfanglan",
+          "nativeName": "OL滕芳兰",
+          "nativePack": "sp",
+          "nativeSkills": ["luochong", "aichen"],
+          "source": "https://www.sanguosha.com/hero/500"
+        },
+        {
+          "officialName": "王瓘",
+          "nativeId": "wangguan",
+          "nativeName": "王瓘",
+          "nativePack": "sp",
+          "nativeSkills": ["olmiuyan", "olshilu"],
+          "source": "https://www.sanguosha.com/hero/553",
+          "note": "用户接受固定原生失路摸牌上限5，保留完整谬焰／失路，不改成官网摘要版本；仍验证技能执行和私有选择。"
+        },
+        {
+          "officialName": "戏志才",
+          "nativeId": "xizhicai",
+          "nativeName": "戏志才",
+          "nativePack": "sp",
+          "nativeSkills": ["tiandu", "xianfu", "chouce"],
+          "source": "https://www.sanguosha.com/hero/375"
+        },
+        {
+          "officialName": "阎柔",
+          "nativeId": "yanrou",
+          "nativeName": "阎柔",
+          "nativePack": "sp2",
+          "nativeSkills": ["choutao", "xiangshu"],
+          "source": "https://www.sanguosha.com/hero/521"
+        },
+        {
+          "officialName": "辛毗",
+          "nativeId": "xinpi",
+          "nativeName": "辛毗",
+          "nativePack": "sp2",
+          "nativeSkills": ["xpchijie", "yinju"],
+          "source": "https://www.sanguosha.com/hero/435",
+          "versionNote": "同平台原生历史触发／次数差异：官网持节为每回合共限一次、受到伤害后令伤害牌无效，或获得未造成伤害的牌；固定xpchijie为每项各限一次、牌对本人结算后令后续目标无效。引裾仍为限定的目标共摸牌／防伤改回血，保留完整原生。"
+        },
+        {
+          "officialName": "管亥",
+          "nativeId": "ol_guanhai",
+          "nativeName": "OL管亥",
+          "nativePack": "sp",
+          "nativeSkills": ["olxiewei", "olyouque"],
+          "source": "https://www.sanguosha.com/hero/701"
+        },
+        {
+          "officialName": "张华",
+          "nativeId": "zhanghua",
+          "nativeName": "张华",
+          "nativePack": "sp",
+          "nativeSkills": ["olbihun", "oljianhe", "olchuanwu"],
+          "source": "https://www.sanguosha.com/hero/544"
+        },
+        {
+          "officialName": "张芝",
+          "nativeId": "zhangzhi",
+          "nativeName": "张芝",
+          "nativePack": "sp",
+          "nativeSkills": ["olbixin", "olximo"],
+          "source": "https://www.sanguosha.com/hero/516"
+        },
+        {
+          "officialName": "陆凯",
+          "nativeId": "ol_lukai",
+          "nativeName": "OL陆凯",
+          "nativePack": "sp",
+          "nativeSkills": ["olxuanzhu", "oljiane"],
+          "source": "https://www.sanguosha.com/hero/590",
+          "note": "用户接受玄注／謇谔的sp:ol_lukai原生设计，包括扩展区及弃置后等量摸牌；不采用另一陆凯。扩展牌的可见性、事件和恢复仍须验证。"
+        },
+        {
+          "officialName": "王荣",
+          "nativeId": "ol_wangrong",
+          "nativeName": "OL王荣",
+          "nativePack": "sp",
+          "nativeSkills": ["olfengzi", "oljizhan", "olfusong"],
+          "source": "https://www.sanguosha.com/hero/344"
+        },
+        {
+          "officialName": "唐棠",
+          "nativeId": null,
+          "source": "https://www.sanguosha.com/hero/744",
+          "reason": "择行／知意对应原生在固定v1.11.6未收录；2026-10-17最新正式版仍为v1.11.6，当次固定main快照26包／78文件亦未检出唐棠注册或名称。继续缺项，不自行实现或借其他武将代替。",
+          "rejectedIds": []
+        },
+        {
+          "officialName": "孔淑",
+          "nativeId": "kongshu",
+          "nativeName": "孔淑",
+          "nativePack": "sp",
+          "nativeSkills": ["leiluan", "fuchao"],
+          "source": "https://www.sanguosha.com/hero/654"
+        },
+        {
+          "officialName": "界黄盖",
+          "nativeId": "re_huanggai",
+          "nativeName": "界黄盖",
+          "nativePack": "refresh",
+          "nativeSkills": ["rekurou", "zhaxiang"],
+          "source": "https://www.sanguosha.com/hero/307"
+        },
+        {
+          "officialName": "界李儒",
+          "nativeId": "ol_liru",
+          "nativeName": "OL界李儒",
+          "nativePack": "onlyOL",
+          "nativeSkills": ["oljuece", "olmieji", "dcfencheng"],
+          "source": "https://www.sanguosha.com/hero/642"
+        },
+        {
+          "officialName": "界王异",
+          "nativeId": "ol_wangyi",
+          "nativeName": "OL界王异",
+          "nativePack": "onlyOL",
+          "nativeSkills": ["olzhenlie", "olmiji"],
+          "source": "https://www.sanguosha.com/hero/621"
+        },
+        {
+          "officialName": "界魏延",
+          "nativeId": "ol_weiyan",
+          "nativeName": "界魏延",
+          "nativePack": "refresh",
+          "nativeSkills": ["xinkuanggu", "reqimou"],
+          "source": "https://www.sanguosha.com/hero/456"
+        },
+        {
+          "officialName": "界徐盛",
+          "nativeId": "re_xusheng",
+          "nativeName": "手杀界徐盛",
+          "nativePack": "mobile",
+          "nativeSkills": ["repojun"],
+          "source": "https://www.sanguosha.com/hero/587"
+        },
+        {
+          "officialName": "界张春华",
+          "nativeId": "ol_zhangchunhua",
+          "nativeName": "OL界张春华",
+          "nativePack": "onlyOL",
+          "nativeSkills": ["jueqing", "shangshi", "oljianmie"],
+          "source": "https://www.sanguosha.com/hero/625"
+        },
+        {
+          "officialName": "曹金玉",
+          "nativeId": "ol_caojinyu",
+          "nativeName": "OL曹金玉",
+          "nativePack": "sp",
+          "nativeSkills": ["olchunhui", "olxiasheng", "olqiumu"],
+          "source": "https://www.sanguosha.com/hero/740"
+        },
+        {
+          "officialName": "鲍三娘",
+          "nativeId": "baosanniang",
+          "nativeName": "鲍三娘",
+          "nativePack": "sp",
+          "nativeSkills": ["newwuniang", "newzhennan", "newxushen"],
+          "source": "https://www.sanguosha.com/hero/351"
+        },
+        {
+          "officialName": "曹纯",
+          "nativeId": "caochun",
+          "nativeName": "曹纯",
+          "nativePack": "sp",
+          "nativeSkills": ["olshanjia"],
+          "source": "https://www.sanguosha.com/hero/426"
+        },
+        {
+          "officialName": "曹婴",
+          "nativeId": "caoying",
+          "nativeName": "曹婴",
+          "nativePack": "sp",
+          "nativeSkills": ["ollingren", "olfujian"],
+          "source": "https://www.sanguosha.com/hero/353"
+        },
+        {
+          "officialName": "费祎",
+          "nativeId": "ol_feiyi",
+          "nativeName": "费祎",
+          "nativePack": "sp",
+          "nativeSkills": ["yanru", "hezhong"],
+          "source": "https://www.sanguosha.com/hero/568"
+        },
+        {
+          "officialName": "郭照",
+          "nativeId": "ol_guozhao",
+          "nativeName": "OL郭照",
+          "nativePack": "sp",
+          "nativeSkills": ["oljiaoyu", "olneixun"],
+          "source": "https://www.sanguosha.com/hero/662"
+        },
+        {
+          "officialName": "蒋琬",
+          "nativeId": "ol_jiangwan",
+          "nativeName": "蒋琬",
+          "nativePack": "sp",
+          "nativeSkills": ["olziruo", "olxvfa"],
+          "source": "https://www.sanguosha.com/hero/576"
+        },
+        {
+          "officialName": "徐荣",
+          "nativeId": "xurong",
+          "nativeName": "徐荣",
+          "nativePack": "xianding",
+          "nativeSkills": ["xinfu_xionghuo", "xinfu_shajue"],
+          "source": "https://www.sanguosha.com/hero/417"
+        },
+        {
+          "officialName": "周处",
+          "nativeId": "jin_zhouchu",
+          "nativeName": "周处",
+          "nativePack": "sp",
+          "nativeSkills": ["shanduan", "yilie"],
+          "source": "https://www.sanguosha.com/hero/518"
+        },
+        {
+          "officialName": "吕玲绮",
+          "nativeId": "ol_lvlingqi",
+          "nativeName": "OL吕玲绮",
+          "nativePack": "sp",
+          "nativeSkills": ["olqiwu", "olzhuangrong"],
+          "source": "https://www.sanguosha.com/hero/716"
+        },
+        {
+          "officialName": "SP刘备",
+          "nativeId": "sp_ol_liubei",
+          "nativeName": "SP刘备",
+          "nativePack": "sp",
+          "nativeSkills": ["spolxudai", "spolzhujiu", "spoljinglei"],
+          "source": "https://www.sanguosha.com/hero/664"
+        },
+        {
+          "officialName": "SP孙策",
+          "nativeId": "sp_sunce",
+          "nativeName": "SP孙策",
+          "nativePack": "sp",
+          "nativeSkills": ["junkliantao"],
+          "source": "https://www.sanguosha.com/hero/633"
+        },
+        {
+          "officialName": "周群",
+          "nativeId": "ol_zhouqun",
+          "nativeName": "周群",
+          "nativePack": "sp",
+          "nativeSkills": ["oltianhou", "olchenshuo"],
+          "source": "https://www.sanguosha.com/hero/543",
+          "versionNote": "同平台原生历史修订差异：官网天候于准备阶段观看顶一张、谶说于结束阶段自己展示；固定ol_zhouqun为结束阶段观看顶三张的天候、准备阶段可令一名角色展示的谶说，完整保留固定历史版本。"
+        },
+        {
+          "officialName": "SP赵云",
+          "nativeId": "sp_zhaoyun",
+          "nativeName": "SP赵云",
+          "nativePack": "sp",
+          "nativeSkills": ["ollongdan", "chongzhen"],
+          "source": "https://www.sanguosha.com/hero/108"
+        },
+        {
+          "officialName": "祢衡",
+          "nativeId": "ol_miheng",
+          "nativeName": "OL祢衡",
+          "nativePack": "sp",
+          "nativeSkills": ["olkuangjuan", "olfeibian"],
+          "source": "https://www.sanguosha.com/hero/709"
+        },
+        {
+          "officialName": "蒲元",
+          "nativeId": "ol_puyuan",
+          "nativeName": "OL蒲元",
+          "nativePack": "sp",
+          "nativeSkills": ["olshengong", "olqisi"],
+          "source": "https://www.sanguosha.com/hero/510"
+        },
+        {
+          "officialName": "闪朱儁",
+          "nativeId": "ol_jsrg_zhujun",
+          "nativeName": "闪朱儁",
+          "nativePack": "onlyOL",
+          "nativeSkills": ["olfendi", "oljuxiang"],
+          "source": "https://www.sanguosha.com/hero/720"
+        },
+        {
+          "officialName": "谋邓艾",
+          "nativeId": "ol_sb_dengai",
+          "nativeName": "OL谋邓艾",
+          "nativePack": "onlyOL",
+          "nativeSkills": ["olsbjigu", "olsbjiewan"],
+          "source": "https://www.sanguosha.com/hero/601",
+          "versionNote": "同平台原生历史体力参数差异：OL英雄目录标5体力且未列初始体力，固定ol_sb_dengai为4/5；保留固定完整积谷／解腕及原生体力。"
+        },
+        {
+          "officialName": "谋董卓",
+          "nativeId": "ol_sb_dongzhuo",
+          "nativeName": "OL谋董卓",
+          "nativePack": "onlyOL",
+          "nativeSkills": ["olguanbian", "olxiongni", "olfengshang", "olzhibin"],
+          "source": "https://www.sanguosha.com/hero/605"
+        },
+        {
+          "officialName": "谋公孙瓒",
+          "nativeId": "ol_sb_gongsunzan",
+          "nativeName": "OL谋公孙瓒",
+          "nativePack": "onlyOL",
+          "nativeSkills": ["olsbjiaodi", "olsbbaojing"],
+          "source": "https://www.sanguosha.com/hero/648"
+        },
+        {
+          "officialName": "谋关羽",
+          "nativeId": "ol_sb_guanyu",
+          "nativeName": "OL谋关羽",
+          "nativePack": "onlyOL",
+          "nativeSkills": ["olsbweilin", "olsbduoshou"],
+          "source": "https://www.sanguosha.com/hero/593"
+        },
+        {
+          "officialName": "谋华雄",
+          "nativeId": "ol_sb_huaxiong",
+          "nativeName": "OL谋华雄",
+          "nativePack": "onlyOL",
+          "nativeSkills": ["olsbbojue", "olsbyangwei"],
+          "source": "https://www.sanguosha.com/hero/644"
+        },
+        {
+          "officialName": "谋鲁肃",
+          "nativeId": "ol_sb_lusu",
+          "nativeName": "OL谋鲁肃",
+          "nativePack": "onlyOL",
+          "nativeSkills": ["olsbduduan", "olsbyinglve", "olsbmengshi"],
+          "source": "https://www.sanguosha.com/hero/718",
+          "note": "用户接受原生独断／英略／盟势及盟势不能选择同体力两人的限制；不再就该差异等待审批，仍验证阶段交换和限定技恢复。"
+        },
+        {
+          "officialName": "谋卢植",
+          "nativeId": "ol_sb_yl_luzhi",
+          "nativeName": "OL谋卢植",
+          "nativePack": "onlyOL",
+          "nativeSkills": ["olsibing", "olliance"],
+          "source": "https://www.sanguosha.com/hero/692"
+        },
+        {
+          "officialName": "谋姜维",
+          "nativeId": "ol_sb_jiangwei",
+          "nativeName": "OL谋姜维",
+          "nativePack": "onlyOL",
+          "nativeSkills": ["olsbzhuri", "olsbranji"],
+          "source": "https://www.sanguosha.com/hero/586"
+        },
+        {
+          "officialName": "谋孙坚",
+          "nativeId": "ol_sb_sunjian",
+          "nativeName": "OL谋孙坚",
+          "nativePack": "onlyOL",
+          "nativeSkills": ["olsbhulie", "olsbyipo"],
+          "source": "https://www.sanguosha.com/hero/609"
+        },
+        {
+          "officialName": "谋文丑",
+          "nativeId": "ol_sb_wenchou",
+          "nativeName": "OL谋文丑",
+          "nativePack": "onlyOL",
+          "nativeSkills": ["olsblunzhan", "olsbjuejue"],
+          "source": "https://www.sanguosha.com/hero/681"
+        },
+        {
+          "officialName": "谋小乔",
+          "nativeId": "ol_sb_xiaoqiao",
+          "nativeName": "OL谋小乔",
+          "nativePack": "onlyOL",
+          "nativeSkills": ["olmiluo", "oljueyan"],
+          "source": "https://www.sanguosha.com/hero/705"
+        },
+        {
+          "officialName": "谋诸葛亮",
+          "nativeId": "ol_sb_zhugeliang",
+          "nativeName": "OL谋诸葛亮",
+          "nativePack": "onlyOL",
+          "nativeSkills": ["olsbzhitian", "olsbwujing", "olsbzhijue"],
+          "source": "https://www.sanguosha.com/hero/717"
+        },
+        {
+          "officialName": "谋袁术",
+          "nativeId": "ol_sb_yuanshu",
+          "nativeName": "OL谋袁术",
+          "nativePack": "onlyOL",
+          "nativeSkills": ["olsbjinming", "olsbxiaoshi", "olsbyanliang"],
+          "source": "https://www.sanguosha.com/hero/646"
+        },
+        {
+          "officialName": "谋张绣",
+          "nativeId": "ol_sb_zhangxiu",
+          "nativeName": "OL谋张绣",
+          "nativePack": "onlyOL",
+          "nativeSkills": ["olsbchoulie", "olsbzhuijiao"],
+          "source": "https://www.sanguosha.com/hero/687"
+        },
+        {
+          "officialName": "谋程昱",
+          "nativeId": "ol_sb_chengyu",
+          "nativeName": "OL谋程昱",
+          "nativePack": "onlyOL",
+          "nativeSkills": ["olsbliduan", "olsbdanchi"],
+          "source": "https://www.sanguosha.com/hero/734"
+        },
+        {
+          "officialName": "谋张让",
+          "nativeId": "ol_sb_zhangrang",
+          "nativeName": "OL谋张让",
+          "nativePack": "onlyOL",
+          "nativeSkills": ["olsblucun", "olsbtuisheng"],
+          "source": "https://www.sanguosha.com/hero/697",
+          "note": "用户接受原生赂存／蜕生；新的赂牌私有状态、逐牌名／每轮记录、恢复和实际技能路径仍须验证。"
+        },
+        {
+          "officialName": "魔曹操",
+          "nativeId": "dm_caocao",
+          "nativeName": "OL魔曹操",
+          "nativePack": "onlyOL",
+          "nativeSkills": ["olbachao", "olfuzai"],
+          "source": "https://www.sanguosha.com/hero/713"
+        },
+        {
+          "officialName": "魔貂蝉",
+          "nativeId": "dm_diaochan",
+          "nativeName": "魔貂蝉",
+          "nativePack": "onlyOL",
+          "nativeSkills": ["olhuanhuo", "olqingshi"],
+          "source": "https://www.sanguosha.com/hero/715"
+        },
+        {
+          "officialName": "魔吕布",
+          "nativeId": "dm_lvbu",
+          "nativeName": "魔吕布",
+          "nativePack": "onlyOL",
+          "nativeSkills": ["olduoqi", "olkuangmo", "olgangquan"],
+          "source": "https://www.sanguosha.com/hero/714"
+        },
+        {
+          "officialName": "魔司马懿",
+          "nativeId": "dm_simayi",
+          "nativeName": "魔司马懿",
+          "nativePack": "onlyOL",
+          "nativeSkills": ["olguifu", "olmoubian"],
+          "source": "https://www.sanguosha.com/hero/710"
+        },
+        {
+          "officialName": "魔孙权",
+          "nativeId": "dm_sunquan",
+          "nativeName": "魔孙权",
+          "nativePack": "onlyOL",
+          "nativeSkills": ["olquanyu", "oltianen", "olqiangang"],
+          "source": "https://www.sanguosha.com/hero/711"
+        },
+        {
+          "officialName": "神典韦",
+          "nativeId": "shen_dianwei",
+          "nativeName": "神典韦",
+          "nativePack": "onlyOL",
+          "nativeSkills": ["juanjia", "qiexie", "cuijue"],
+          "source": "https://www.sanguosha.com/hero/229"
+        },
+        {
+          "officialName": "神甘宁",
+          "nativeId": "shen_ganning",
+          "nativeName": "神甘宁",
+          "nativePack": "extra",
+          "nativeSkills": ["drlt_poxi", "drlt_jieying"],
+          "source": "https://www.sanguosha.com/hero/224"
+        },
+        {
+          "officialName": "神陆逊",
+          "nativeId": "shen_luxun",
+          "nativeName": "神陆逊",
+          "nativePack": "extra",
+          "nativeSkills": ["nzry_junlve", "nzry_cuike", "nzry_dinghuo"],
+          "source": "https://www.sanguosha.com/hero/221"
+        },
+        {
+          "officialName": "神张角",
+          "nativeId": "junk_zhangjiao",
+          "nativeName": "OL神张角",
+          "nativePack": "onlyOL",
+          "nativeSkills": ["yizhao", "junksijun", "tianjie"],
+          "source": "https://www.sanguosha.com/hero/227"
+        },
+        {
+          "officialName": "神赵云",
+          "nativeId": "shen_zhaoyun",
+          "nativeName": "神赵云",
+          "nativePack": "extra",
+          "nativeSkills": ["xinjuejing", "relonghun"],
+          "source": "https://www.sanguosha.com/hero/207"
+        },
+        {
+          "officialName": "张郃",
+          "nativeId": "zhanghe",
+          "nativeName": "张郃",
+          "nativePack": "shenhua",
+          "nativeSkills": ["qiaobian"],
+          "source": "https://www.sanguosha.com/hero/50",
+          "note": "公告是无界字的张郃，对应巧变的shenhua:zhanghe；不替换成界张郃、SP张郃或闪张郃。"
+        },
+        {
+          "officialName": "周泰",
+          "nativeId": "zhoutai",
+          "nativeName": "界周泰",
+          "nativePack": "refresh",
+          "nativeSkills": ["buqu", "fenji"],
+          "source": "https://www.sanguosha.com/hero/210",
+          "note": "采用不屈／奋激的refresh:zhoutai（原生显示界周泰），不采用只有旧不屈的old_zhoutai。原生奋激排除主动赠予／交给，官网摘要未展开此边界，图鉴展示完整规则；须验证被夺／被弃与主动交牌的具体触发。"
+        },
+        {
+          "officialName": "神黄忠",
+          "nativeId": "ol_shen_huangzhong",
+          "nativeName": "OL神黄忠",
+          "nativePack": "onlyOL",
+          "nativeSkills": ["shenyu", "huaren"],
+          "source": "https://www.sanguosha.com/hero/230"
+        },
+        {
+          "officialName": "族王沈",
+          "nativeId": "clan_wangshen",
+          "nativeName": "族王沈",
+          "nativePack": "clan",
+          "nativeSkills": ["clananran", "clangaobian", "clanzhongliu"],
+          "source": "https://www.sanguosha.com/hero/647"
+        },
+        {
+          "officialName": "族荀采",
+          "nativeId": "clan_xuncai",
+          "nativeName": "族荀采",
+          "nativePack": "clan",
+          "nativeSkills": ["clanlieshi", "clandianzhan", "clanhuanyin", "clandaojie"],
+          "source": "https://www.sanguosha.com/hero/524"
+        },
+        {
+          "officialName": "族荀谌",
+          "nativeId": "clan_xunchen",
+          "nativeName": "族荀谌",
+          "nativePack": "clan",
+          "nativeSkills": ["clansankuang", "clanbeishi", "clandaojie"],
+          "source": "https://www.sanguosha.com/hero/523"
+        },
+        {
+          "officialName": "族荀莳",
+          "nativeId": "clan_xunshi",
+          "nativeName": "族荀莳",
+          "nativePack": "clan",
+          "nativeSkills": ["clanqingjue", "clanxsyingxiang", "clandaojie"],
+          "source": "https://www.sanguosha.com/hero/738"
+        },
+        {
+          "officialName": "族荀攸",
+          "nativeId": "clan_xunyou",
+          "nativeName": "族荀攸",
+          "nativePack": "clan",
+          "nativeSkills": ["clanbaichu", "clandaojie"],
+          "source": "https://www.sanguosha.com/hero/573"
+        },
+        {
+          "officialName": "族荀粲",
+          "nativeId": "clan_xuncan",
+          "nativeName": "族荀粲",
+          "nativePack": "clan",
+          "nativeSkills": ["clanyunshen", "clanshangshen", "clanfenchai", "clandaojie"],
+          "source": "https://www.sanguosha.com/hero/525",
+          "note": "用户接受原生蹈节／熨身／伤神／分钗；首个属性伤害、分钗记录及判定恢复仍须验证。"
+        },
+        {
+          "officialName": "族杨彪",
+          "nativeId": "clan_yangbiao",
+          "nativeName": "族杨彪",
+          "nativePack": "clan",
+          "nativeSkills": ["clanjiannan", "clanyichi", "clanquhuo"],
+          "source": "https://www.sanguosha.com/hero/700"
+        },
+        {
+          "officialName": "族钟会",
+          "nativeId": "clan_zhonghui",
+          "nativeName": "族钟会",
+          "nativePack": "clan",
+          "nativeSkills": ["clanyuzhi", "clanxieshu", "clanbaozu"],
+          "source": "https://www.sanguosha.com/hero/567"
+        },
+        {
+          "officialName": "族钟琰",
+          "nativeId": "clan_zhongyan",
+          "nativeName": "族钟琰",
+          "nativePack": "clan",
+          "nativeSkills": ["clanguangu", "clanxiaoyong", "clanbaozu"],
+          "source": "https://www.sanguosha.com/hero/548"
+        },
+        {
+          "officialName": "族陆郁生",
+          "nativeId": "clan_luyusheng",
+          "nativeName": "族陆郁生",
+          "nativePack": "clan",
+          "nativeSkills": ["clanshixi", "clanjianbai", "clanzelie"],
+          "source": "https://www.sanguosha.com/hero/751"
+        },
+        {
+          "officialName": "族王明山",
+          "nativeId": "clan_wangmingshan",
+          "nativeName": "族王明山",
+          "nativePack": "clan",
+          "nativeSkills": ["clantanque", "clanshengmo", "clanzhongliu"],
+          "source": "https://www.sanguosha.com/hero/608"
+        },
+        {
+          "officialName": "族杨修",
+          "nativeId": "clan_yangxiu",
+          "nativeName": "族杨修",
+          "nativePack": "clan",
+          "nativeSkills": ["clanjiewu", "clangaoshi", "clanquhuo"],
+          "source": "https://www.sanguosha.com/hero/694"
+        },
+        {
+          "officialName": "秦宓",
+          "nativeId": "qinmi",
+          "nativeName": "秦宓",
+          "nativePack": "yijiang",
+          "nativeSkills": ["jianzheng", "zhuandui", "tianbian"],
+          "source": "https://www.sanguosha.com/hero/393"
+        },
+        {
+          "officialName": "吴懿",
+          "nativeId": "wuyi",
+          "nativeName": "吴懿",
+          "nativePack": "yijiang",
+          "nativeSkills": ["olbenxi"],
+          "source": "https://www.sanguosha.com/hero/324"
+        }
+      ]
     }
   ],
   "matchingPolicy": "按固定引擎完整原生角色核对非主公技能（含关联技能效果），允许原生名称不同及额外主公技；保留主公标记与完整技能，不拼装、删技或改写武将。缺项逐项注明，不凭同名或同技能名自动匹配。"

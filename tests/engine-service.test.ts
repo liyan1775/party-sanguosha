@@ -115,6 +115,139 @@ async function fixture(t: TestContext, engineRoot?: string) {
   return { base, engine, party, id, room, ownerCookie, workerCookie, started, socket, setup };
 }
 
+test('AI地主的真人操作者在HTTP、原生WebSocket及持续推送中均绑定同一AI角色；其他会话不能继承', async (t) => {
+  const f = await fixture(t);
+  const setup: MatchSetup = {
+    ...f.setup,
+    settings: {
+      ...f.setup.settings,
+      mode: 'college',
+      generalPreset: 'ol-college-2026',
+      playerCount: 4,
+    },
+    seats: [
+      { id: 'registered-ai', nickname: 'AI地主', kind: 'human', controllerId: f.room.ownerId },
+      { id: 'farmer-a', nickname: '农民甲', kind: 'bot' },
+      { id: 'farmer-b', nickname: '农民乙', kind: 'bot' },
+    ],
+    doudizhu: {
+      preparationId: 'prep-test',
+      landlordId: 'registered-ai',
+      multiplier: 4,
+      candidates: { 'registered-ai': ['liuyan'], 'farmer-a': ['caocao'], 'farmer-b': ['sunquan'] },
+      selectedGenerals: {},
+      members: [
+        { id: f.room.ownerId, nickname: '真人', kind: 'human' },
+        { id: 'registered-ai', nickname: 'AI地主', kind: 'bot' },
+      ],
+    },
+  };
+  void f.engine.start(setup).catch(() => {});
+  const id = f.engine.matchId(f.room.code)!;
+  const base = f.base.replace('http:', 'ws:');
+  const worker = new WebSocket(`${base}/engine/socket/${id}/worker`, {
+    origin: f.base,
+    headers: { Cookie: f.workerCookie },
+  });
+  const events: any[] = [];
+  worker.on('message', (data) => events.push(JSON.parse(String(data))));
+  await once(worker, 'open');
+  const waitFor = async (test: () => boolean) => {
+    for (let i = 0; i < 100 && !test(); i++) await new Promise((r) => setTimeout(r, 15));
+    assert(test());
+  };
+  const response = await fetch(`${f.base}/engine/setup/${id}?role=player`, {
+    headers: { Cookie: f.ownerCookie },
+  });
+  const view = await response.json();
+  assert.equal(view.playerId, 'registered-ai');
+  assert.equal(view.doudizhu, undefined);
+  assert.equal(
+    (
+      await fetch(`${f.base}/engine/setup/${id}?role=player`, {
+        headers: { Cookie: f.workerCookie },
+      })
+    ).status,
+    403,
+  );
+  const direct = new WebSocket(`${base}/engine/socket/${id}/player`, {
+    origin: f.base,
+    headers: { Cookie: f.ownerCookie },
+  });
+  await once(direct, 'open');
+  direct.send(JSON.stringify(['partyPing', 1]));
+  await waitFor(() =>
+    events.some(
+      (e) => e.type === 'message' && e.id === 'registered-ai' && e.data === '["partyPing",1]',
+    ),
+  );
+  direct.close();
+  await once(direct, 'close');
+  const stream = new WebSocket(
+    `${base}/engine/socket/${id}/player?transport=stream&channel=${randomUUID()}&after=0`,
+    { origin: f.base, headers: { Cookie: f.ownerCookie } },
+  );
+  const received: any[] = [];
+  stream.on('message', (data) => received.push(JSON.parse(String(data))));
+  await once(stream, 'open');
+  stream.send(JSON.stringify({ type: 'ping', id: 'binding-probe' }));
+  await waitFor(() => received.some((e) => e.type === 'pong' && e.id === 'binding-probe'));
+  stream.send(
+    JSON.stringify({ type: 'action', sequence: 1, data: JSON.stringify(['partyPing', 2]) }),
+  );
+  await waitFor(() => received.some((e) => e.type === 'ack' && e.status === 200));
+  await waitFor(() =>
+    events.some(
+      (e) => e.type === 'message' && e.id === 'registered-ai' && e.data === '["partyPing",2]',
+    ),
+  );
+  worker.send(JSON.stringify({ type: 'started' }));
+  worker.send(
+    JSON.stringify({
+      type: 'surrender-state',
+      memberId: f.room.ownerId,
+      state: {
+        kind: 'surrender',
+        available: true,
+        cooldownMs: 0,
+        notice: 'private-vote-probe',
+        vote: null,
+      },
+    }),
+  );
+  const voteUrl = `${f.base}/engine/surrender/${id}`;
+  await waitFor(() => events.some((e) => e.type === 'message'));
+  await new Promise((r) => setTimeout(r, 40));
+  const vote = await (await fetch(voteUrl, { headers: { Cookie: f.ownerCookie } })).json();
+  assert.equal(vote.notice, 'private-vote-probe');
+  assert.equal((await fetch(voteUrl, { headers: { Cookie: f.workerCookie } })).status, 403);
+  assert.equal(
+    (
+      await fetch(voteUrl, {
+        method: 'POST',
+        headers: { Cookie: f.ownerCookie, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'request', epoch: '', memberId: 'other' }),
+      })
+    ).status,
+    400,
+  );
+  assert.equal(
+    (
+      await fetch(voteUrl, {
+        method: 'POST',
+        headers: { Cookie: f.ownerCookie, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'request', epoch: '' }),
+      })
+    ).status,
+    200,
+  );
+  await waitFor(() =>
+    events.some((e) => e.type === 'surrender-action' && e.memberId === f.room.ownerId),
+  );
+  stream.close();
+  worker.close();
+});
+
 test('手机记录只给本局入座真人：分页沿用公开投影，不发送手牌、牌堆或私有技能数据', async (t) => {
   const f = await fixture(t);
   const worker = f.socket('worker', f.workerCookie);
@@ -329,16 +462,19 @@ test('原生转化技能网关继续拒绝手机提交动态代码，WebSocket�
   const received: string[] = [];
   worker.on('message', (data) => received.push(data.toString()));
   for (const marker of ['_noname_func:() => {}', '_noname_event:{}', true]) {
-    const phone = f.socket('player', f.ownerCookie);
-    await once(phone, 'open');
-    const close = once(phone, 'close');
-    phone.send(
-      JSON.stringify([
-        'result',
-        { bool: true, _sendskill: ['forged_backup', { filterCard: marker }] },
-      ]),
-    );
-    assert.equal((await close)[0], 1008);
+    for (const wrapped of [false, true]) {
+      const phone = f.socket('player', f.ownerCookie);
+      await once(phone, 'open');
+      const close = once(phone, 'close');
+      const native = { bool: true, _sendskill: ['forged_backup', { filterCard: marker }] };
+      phone.send(
+        JSON.stringify([
+          'result',
+          wrapped ? { partyControlVersion: 0, partyNativeResult: native } : native,
+        ]),
+      );
+      assert.equal((await close)[0], 1008);
+    }
   }
   const channel = randomUUID();
   const path = `${f.base}/engine/poll/${f.id}`;
@@ -356,7 +492,10 @@ test('原生转化技能网关继续拒绝手机提交动态代码，WebSocket�
       sequence: 1,
       data: JSON.stringify([
         'result',
-        { _sendskill: ['forged_backup', { filterCard: '_noname_func:() => {}' }] },
+        {
+          partyControlVersion: 0,
+          partyNativeResult: { _sendskill: ['forged_backup', { filterCard: true }] },
+        },
       ]),
     }),
   });

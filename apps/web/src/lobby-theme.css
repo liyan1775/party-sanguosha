@@ -1,5 +1,6 @@
 @import './style.css';
 @import './match-experience.css';
+@import './college-stage.css';
 
 /* Lobby visual system: ink, paper and vermilion. Native match UI stays in its iframe. */
 :root {

@@ -1,3 +1,36 @@
+/** Exercise the actual pregame buttons before the native frame exists. */
+export async function completeDoudizhuPregame(phones, code) {
+  const deadline = Date.now() + 180000;
+  while (Date.now() < deadline) {
+    const room = (
+      await (
+        await phones[0].request.get(new URL(`/api/rooms/${code}`, phones[0].url()).href)
+      ).json()
+    ).room;
+    if (room.matchFailure) throw new Error('Pregame failed: ' + room.matchFailure.code);
+    if (room.matchId) return;
+    for (const phone of phones) {
+      const bid = phone.locator('#doudizhu-bids button').last();
+      if ((await bid.isVisible()) && (await bid.isEnabled())) {
+        await bid.tap();
+        continue;
+      }
+      const section = phone
+        .locator('.doudizhu-seat:not([hidden])')
+        .filter({ has: phone.locator('button[data-general]:enabled') })
+        .first();
+      const pick = section.locator('button[data-general]:enabled').first();
+      if (await pick.isVisible()) {
+        await pick.tap();
+        const confirm = phone.locator('#doudizhu-confirm');
+        if ((await confirm.isVisible()) && (await confirm.isEnabled())) await confirm.tap();
+      }
+    }
+    await new Promise((resolve) => setTimeout(resolve, 200));
+  }
+  throw new Error('Doudizhu pregame did not complete');
+}
+
 export async function chooseGeneral(frame, worker, options = {}) {
   const gesture = options.mouse ? 'click' : 'tap';
   const tapChoice = async (locator) => {
@@ -11,7 +44,10 @@ export async function chooseGeneral(frame, worker, options = {}) {
   };
   await frame.waitForFunction(
     () =>
-      globalThis.partyEngine?._status.event?.name === 'chooseButton' && partyEngine._status.paused,
+      (globalThis.partyEngine?._status.event?.name === 'chooseButton' &&
+        partyEngine._status.paused) ||
+      globalThis.partyEngine?.luckState?.active ||
+      globalThis.partyEngine?.proof.started,
     {},
     { timeout: 120000 },
   );
@@ -68,7 +104,7 @@ export async function chooseGeneral(frame, worker, options = {}) {
 }
 
 /** A real touch selection and native result packet, with no altered cards/HP. */
-export async function playOneAction(frames, worker) {
+export async function playOneAction(frames, worker, options = {}) {
   const before = await worker.evaluate(() =>
     partyEngine.game.players
       .filter((player) => player.ws)
@@ -106,12 +142,32 @@ export async function playOneAction(frames, worker) {
       // only when the native cancel control is visible; do not resolve a
       // mandatory choice or alter cards just to make this probe advance.
       const eventName = await frame.evaluate(() => partyEngine._status.event?.name);
+      if (options.resolveMandatory && eventName === 'chooseControl') {
+        const control = frame.locator('.control:not(.removing) > div').first();
+        if (await control.isVisible()) await control.tap();
+        continue;
+      }
       if (['chooseBool', 'chooseTarget', 'chooseButton'].includes(eventName)) {
         const cancel = frame
           .locator('.control > div')
           .filter({ hasText: /^取消$/ })
           .first();
         if (await cancel.isVisible()) await cancel.tap();
+        else if (options.resolveMandatory) {
+          const candidate = frame
+            .locator(
+              eventName === 'chooseTarget'
+                ? '.player.selectable:not(.selected)'
+                : '.dialog:not(.removing) .button.selectable:not(.selected)',
+            )
+            .first();
+          if (await candidate.isVisible()) await candidate.tap();
+          const confirm = frame
+            .locator('.control > div')
+            .filter({ hasText: /^确定$/ })
+            .first();
+          if (await confirm.isVisible()) await confirm.tap();
+        }
         continue;
       }
       const selectable = frame

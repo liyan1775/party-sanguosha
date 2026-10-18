@@ -187,7 +187,12 @@ try {
     ]),
   ];
   const packs = setup.rosterPolicy ? (setup.preset.enabledPacks ?? legacyPacks) : legacyPacks;
-  const mode = setup.settings.mode === 'duel' ? 'single' : setup.settings.mode;
+  const mode =
+    setup.settings.mode === 'duel'
+      ? 'single'
+      : setup.settings.mode === 'college'
+        ? 'doudizhu'
+        : setup.settings.mode;
   const definitions = setup.preset.definitionPacks ?? { characters: packs, cards: ['standard'] };
   // Old running services retain standard108 and cannot serve this module.
   const cardPacks = setup.cardPilePolicy
@@ -311,6 +316,8 @@ try {
     (await import('./connection-recovery.js')).installConnectionRecovery();
   if (role !== 'worker' && setup.luckCards) (await import('./luck-cards.js')).installLuckCards();
   if (role !== 'worker' && setup.surrender) (await import('./surrender.js')).installSurrender();
+  if (role !== 'worker' && setup.farmerHandSharing)
+    (await import('./farmer-hands.js')).installFarmerHandView();
   if (role === 'worker' && setup.tablePresentation)
     (await import('./table-presentation.js')).installTablePresentation();
   installPrompts();
@@ -320,7 +327,13 @@ try {
   if (role !== 'worker') game.onlineID = setup.playerId;
   lib.onover.push(() => {
     proof.ended = true;
-    globalThis.partyEngine.signal?.('ended');
+    const result =
+      ['doudizhu', 'college'].includes(setup.settings.mode) && game.zhu
+        ? game.checkOnlineResult(game.zhu)
+        : null;
+    globalThis.partyEngine.signal?.('ended', {
+      winner: result === true ? 'landlord' : result === false ? 'farmers' : null,
+    });
   });
   progress('boot', '正在初始化对局…');
   await boot();

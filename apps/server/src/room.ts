@@ -1,5 +1,10 @@
 import { randomBytes, randomUUID } from 'node:crypto';
 import type { EngineAdapter } from '../../../packages/noname-adapter/src/index.js';
+import type { EngineEvent, MatchSetup } from '../../../packages/noname-adapter/src/index.js';
+import {
+  DoudizhuPreparation,
+  PreparationError,
+} from '../../../packages/noname-adapter/src/doudizhu-preparation.js';
 import generalCatalog from '../../../config/general-catalog.json' with { type: 'json' };
 import {
   findMode,
@@ -12,6 +17,8 @@ import {
   type PlayerView,
   type RoomSettings,
   type RoomView,
+  type DoudizhuPrivateState,
+  type CollegeSeriesView,
 } from '../../../packages/shared/src/contracts.js';
 import { AppError } from './errors.js';
 
@@ -54,6 +61,9 @@ export class RoomStore {
   private readonly players = new Map<string, Seat>();
   private readonly listeners = new Set<(room: RoomView) => void>();
   private unsubscribeEngine: (() => void) | undefined;
+  private preparation: DoudizhuPreparation | undefined;
+  private series: CollegeSeriesView | undefined;
+  private readonly scoredMatches = new Set<string>();
 
   constructor(
     private readonly engine: EngineAdapter,
@@ -65,6 +75,12 @@ export class RoomStore {
     this.unsubscribeEngine = this.engine.subscribe((event) => {
       if (event.type === 'status') this.changed();
       else if (event.roomCode === this.code && ['starting', 'playing'].includes(this.phase)) {
+        if (
+          event.type === 'ended' &&
+          event.matchId &&
+          event.matchId !== this.engine.matchId?.(this.code)
+        )
+          return;
         if (event.type === 'recovering') this.matchRecovery = { deadline: event.deadline };
         else if (event.type === 'recovered') this.matchRecovery = undefined;
         else {
@@ -75,7 +91,10 @@ export class RoomStore {
             // return. It has no winner and must not silently become a new lobby.
             this.phase = this.phase === 'playing' ? 'finished' : 'waiting';
             this.resetReady();
-          } else this.phase = 'finished';
+          } else {
+            this.phase = 'finished';
+            this.scoreCollege(event);
+          }
           this.betweenMatchesSince = Date.now();
         }
         this.changed();
@@ -98,6 +117,8 @@ export class RoomStore {
       engine: this.engine.status(),
       ...(this.matchFailure ? { matchFailure: { ...this.matchFailure } } : {}),
       ...(this.matchRecovery ? { matchRecovery: { ...this.matchRecovery } } : {}),
+      ...(this.preparation ? { doudizhu: this.preparation.publicState() } : {}),
+      ...(this.series ? { series: structuredClone(this.series) } : {}),
     };
   }
 
@@ -113,6 +134,7 @@ export class RoomStore {
 
   join(nickname: unknown, token?: string): { token: string; playerId: string } {
     this.assertWaiting();
+    this.assertSeriesEditable();
     const cleanName = normalizeNickname(nickname);
     const existing = this.human(token);
     if (existing) {
@@ -145,6 +167,7 @@ export class RoomStore {
 
   leave(token?: string): void {
     this.assertBetweenMatches();
+    this.assertSeriesEditable();
     this.expirePolls();
     const player = this.human(token);
     if (!player) throw new AppError(401, 'PLAYER_REQUIRED', '请先加入房间。');
@@ -196,6 +219,7 @@ export class RoomStore {
   removePlayer(id: string, ownerToken?: string): void {
     this.requireOwner(ownerToken);
     this.assertWaiting();
+    this.assertSeriesEditable();
     if (id === this.ownerId)
       throw new AppError(400, 'OWNER_CANNOT_KICK_SELF', '请使用离开房间，房主会交接给下一位玩家。');
     if (!this.players.delete(id)) throw new AppError(404, 'PLAYER_NOT_FOUND', '这个座位已移除。');
@@ -206,6 +230,7 @@ export class RoomStore {
   addBots(count: unknown, ownerToken?: string): void {
     this.requireOwner(ownerToken);
     this.assertWaiting();
+    this.assertSeriesEditable();
     if (!Number.isInteger(count) || (count as number) < 1 || (count as number) > 7)
       throw new AppError(400, 'INVALID_BOT_COUNT', '请选择要添加的 AI 数量。');
     if (this.players.size + (count as number) > this.settings.playerCount)
@@ -280,6 +305,7 @@ export class RoomStore {
   updateSettings(input: unknown, ownerToken?: string): void {
     this.requireOwner(ownerToken);
     this.assertWaiting();
+    this.assertSeriesEditable();
     if (!input || typeof input !== 'object')
       throw new AppError(400, 'INVALID_SETTINGS', '房间设置无效。');
     const body = input as Record<string, unknown>;
@@ -294,7 +320,8 @@ export class RoomStore {
     if (!Array.isArray(body.extensions) || body.extensions.some((id) => typeof id !== 'string'))
       throw new AppError(400, 'INVALID_EXTENSIONS', '扩展包设置无效。');
     const extensions = [...new Set(body.extensions as string[])];
-    if (!GENERAL_PRESETS.some((preset) => preset.id === body.generalPreset))
+    const presetId = mode.id === 'college' ? 'ol-college-2026' : body.generalPreset;
+    if (!GENERAL_PRESETS.some((preset) => preset.id === presetId))
       throw new AppError(400, 'INVALID_PRESET', '请选择当前可用的武将范围。');
     if (body.allowGeneralSelection !== undefined && typeof body.allowGeneralSelection !== 'boolean')
       throw new AppError(400, 'INVALID_GENERAL_SELECTION', '点将开关需要开启或关闭。');
@@ -311,12 +338,26 @@ export class RoomStore {
     const next: RoomSettings = {
       mode: mode.id,
       playerCount: body.playerCount as number,
-      generalPreset: body.generalPreset as GeneralPresetId,
+      generalPreset: presetId as GeneralPresetId,
       allowGeneralSelection:
         (body.allowGeneralSelection as boolean | undefined) ?? this.settings.allowGeneralSelection,
       extensions,
+      ...(mode.id === 'college'
+        ? {
+            collegeFormat:
+              body.collegeFormat === undefined
+                ? (this.settings.collegeFormat ?? 'standard')
+                : (body.collegeFormat as 'standard' | 'quick'),
+          }
+        : {}),
     };
+    if (mode.id === 'college') {
+      if (!['standard', 'quick'].includes(next.collegeFormat!))
+        throw new AppError(400, 'INVALID_FORMAT', '请选择标准或快速赛制。');
+      next.allowGeneralSelection = false;
+    }
     if (JSON.stringify(next) === JSON.stringify(this.settings)) return;
+    this.series = undefined;
     if (!next.allowGeneralSelection || next.generalPreset !== this.settings.generalPreset)
       for (const player of this.players.values())
         if (player.kind === 'human') player.general = null;
@@ -336,6 +377,8 @@ export class RoomStore {
     this.expirePolls();
     if (!this.engine.status().ready)
       throw new AppError(503, 'ENGINE_NOT_READY', this.engine.status().message);
+    if (this.settings.mode === 'college' && !this.engine.status().doudizhuPractice)
+      throw new AppError(503, 'COLLEGE_NOT_SUPPORTED', '电脑规则服务需要更新后才能运行高校练习。');
     if (
       this.players.size !== this.settings.playerCount ||
       [...this.players.values()].some((player) => !player.online || !player.ready)
@@ -345,19 +388,70 @@ export class RoomStore {
     this.matchFailure = undefined;
     this.matchRecovery = undefined;
     const generation = ++this.startGeneration;
+    const setup: MatchSetup = {
+      roomCode: this.code,
+      ownerPlayerId: this.ownerId!,
+      settings: structuredClone(this.settings),
+      seats: [...this.players.values()].map(({ id, nickname, kind }) => ({ id, nickname, kind })),
+      aiPolicy: 'strongest-native',
+      generalSelections: Object.fromEntries(
+        [...this.players.values()]
+          .filter((player): player is Human => player.kind === 'human' && player.general !== null)
+          .map((player) => [player.id, player.general!]),
+      ),
+    };
+    if (
+      this.engine.status().doudizhuPractice &&
+      ['doudizhu', 'college'].includes(this.settings.mode)
+    ) {
+      if (this.settings.mode === 'college' && (!this.series || this.series.finished)) {
+        this.scoredMatches.clear();
+        const ids = setup.seats.map((s) => s.id);
+        const quick = this.settings.collegeFormat === 'quick';
+        this.series = {
+          id: randomUUID(),
+          format: quick ? 'quick' : 'standard',
+          maxGames: quick ? 6 : 12,
+          targetScore: quick ? 10 : 20,
+          completedGames: 0,
+          scores: [0, 0],
+          firstBidIndex: Math.floor(Math.random() * 4),
+          teams: [
+            [ids[0]!, ids[2]!],
+            [ids[1]!, ids[3]!],
+          ],
+          finished: false,
+          winner: null,
+          results: [],
+        };
+      }
+      try {
+        this.preparation = new DoudizhuPreparation(setup, this.series?.firstBidIndex, () =>
+          this.changed(),
+        );
+      } catch {
+        this.phase = 'waiting';
+        this.resetReady();
+        this.changed();
+        throw new AppError(503, 'PREPARATION_FAILED', '本局候选准备失败，请检查固定将池。');
+      }
+      this.changed();
+      void this.preparation.result
+        .then(async (prepared) => {
+          if (generation !== this.startGeneration) return;
+          await this.launch(prepared, generation);
+        })
+        .catch(() => {
+          if (generation === this.startGeneration) this.startFailed();
+        });
+      return;
+    }
+    await this.launch(setup, generation);
+  }
+
+  private async launch(setup: MatchSetup, generation: number): Promise<void> {
     try {
-      const starting = this.engine.start({
-        roomCode: this.code,
-        ownerPlayerId: this.ownerId!,
-        settings: structuredClone(this.settings),
-        seats: [...this.players.values()].map(({ id, nickname, kind }) => ({ id, nickname, kind })),
-        aiPolicy: 'strongest-native',
-        generalSelections: Object.fromEntries(
-          [...this.players.values()]
-            .filter((player): player is Human => player.kind === 'human' && player.general !== null)
-            .map((player) => [player.id, player.general!]),
-        ),
-      });
+      const starting = this.engine.start(setup);
       this.changed();
       await starting;
       if (generation !== this.startGeneration)
@@ -367,13 +461,7 @@ export class RoomStore {
     } catch {
       if (generation !== this.startGeneration)
         throw new AppError(409, 'MATCH_CANCELLED', '电脑控制台已结束这次开局。');
-      this.phase = 'waiting';
-      this.betweenMatchesSince = Date.now();
-      this.matchRecovery = undefined;
-      this.matchFailure ??= { code: 'runtime-error', at: Date.now() };
-      this.resetReady();
-      this.engine.release?.(this.code);
-      this.changed();
+      this.startFailed();
       throw new AppError(
         503,
         'ENGINE_START_FAILED',
@@ -382,9 +470,108 @@ export class RoomStore {
     }
   }
 
+  private startFailed(): void {
+    this.preparation?.cancel();
+    this.preparation = undefined;
+    this.phase = 'waiting';
+    this.betweenMatchesSince = Date.now();
+    this.matchRecovery = undefined;
+    this.matchFailure ??= { code: 'runtime-error', at: Date.now() };
+    this.resetReady();
+    this.engine.release?.(this.code);
+    this.changed();
+  }
+
+  doudizhuChoice(token?: string): DoudizhuPrivateState {
+    const player = this.human(token);
+    if (!player) throw new AppError(401, 'PLAYER_REQUIRED', '请先加入本房间。');
+    if (!this.preparation) throw new AppError(409, 'NO_PREPARATION', '当前没有赛前选择。');
+    return this.preparation.privateState(player.id);
+  }
+  doudizhuAction(token: string | undefined, input: unknown): DoudizhuPrivateState {
+    const player = this.human(token);
+    if (!player) throw new AppError(401, 'PLAYER_REQUIRED', '请先加入本房间。');
+    if (this.phase !== 'starting' || !this.preparation)
+      throw new AppError(409, 'NO_PREPARATION', '赛前阶段已结束。');
+    try {
+      this.preparation.action(player.id, input);
+    } catch (error) {
+      if (error instanceof PreparationError)
+        throw new AppError(409, 'INVALID_PREPARATION_ACTION', error.message);
+      throw error;
+    }
+    return this.preparation.privateState(player.id);
+  }
+
+  setCollegeSeat(playerId: unknown, position: unknown, token?: string): void {
+    this.requireOwner(token);
+    this.assertWaiting();
+    this.assertSeriesEditable();
+    if (
+      this.settings.mode !== 'college' ||
+      typeof playerId !== 'string' ||
+      !Number.isInteger(position) ||
+      (position as number) < 0 ||
+      (position as number) > 3
+    )
+      throw new AppError(400, 'INVALID_TEAM', '请选择高校模式中有效的报名位。');
+    const seats = [...this.players.values()];
+    const index = seats.findIndex((s) => s.id === playerId);
+    if (index < 0 || !seats[position as number])
+      throw new AppError(400, 'INVALID_TEAM', '报名位尚未入座。');
+    [seats[index], seats[position as number]] = [seats[position as number]!, seats[index]!];
+    this.players.clear();
+    for (const seat of seats) this.players.set(seat.id, seat);
+    this.resetReady();
+    this.changed();
+  }
+  endSeries(token?: string): void {
+    this.requireOwner(token);
+    this.assertBetweenMatches();
+    this.series = undefined;
+    this.scoredMatches.clear();
+    this.resetMatch();
+    this.changed();
+  }
+  private scoreCollege(event: Extract<EngineEvent, { type: 'ended' }>): void {
+    if (!this.series || this.series.finished || !this.preparation) return;
+    const id = event.matchId ?? this.engine.matchId?.(this.code);
+    if (!id || this.scoredMatches.has(id)) return;
+    if (!event.winner) {
+      this.matchFailure = { code: 'protocol-error', at: Date.now() };
+      return;
+    }
+    const state = this.preparation.publicState();
+    const landlordTeam = this.series.teams[0].includes(state.landlordId!) ? 0 : 1;
+    const team = event.winner === 'landlord' ? landlordTeam : 1 - landlordTeam;
+    this.scoredMatches.add(id);
+    this.series.scores[team as 0 | 1] += state.highestBid;
+    this.series.completedGames++;
+    (this.series.results ??= []).push({
+      game: this.series.completedGames,
+      winner: team as 0 | 1,
+      points: state.highestBid,
+    });
+    this.series.firstBidIndex = (this.series.firstBidIndex + 1) % 4;
+    const [a, b] = this.series.scores;
+    if (
+      a >= this.series.targetScore ||
+      b >= this.series.targetScore ||
+      (this.series.completedGames >= this.series.maxGames && a !== b)
+    ) {
+      this.series.finished = true;
+      this.series.winner = a > b ? 0 : 1;
+    }
+  }
+  private assertSeriesEditable(): void {
+    if (this.series && !this.series.finished)
+      throw new AppError(409, 'SERIES_LOCKED', '整场队伍和规则已固定，请先结束整场练习。');
+  }
+
   /** Separate local operator authority, granted only by the console API. */
   consoleRemovePlayer(id: string): void {
     this.assertWaiting();
+    this.assertSeriesEditable();
     const player = this.players.get(id);
     if (!player) throw new AppError(404, 'PLAYER_NOT_FOUND', '这个座位已移除。');
     if (player.id === this.ownerId && player.kind === 'human') {
@@ -405,6 +592,9 @@ export class RoomStore {
 
   consoleClose(): void {
     this.startGeneration++;
+    this.preparation?.cancel();
+    this.preparation = undefined;
+    this.series = undefined;
     this.phase = 'closed';
     this.ownerId = null;
     this.players.clear();
@@ -518,6 +708,8 @@ export class RoomStore {
 
   private resetMatch(): void {
     this.startGeneration++;
+    this.preparation?.cancel();
+    this.preparation = undefined;
     this.phase = 'waiting';
     this.betweenMatchesSince = Date.now();
     this.matchFailure = undefined;

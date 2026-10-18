@@ -4,10 +4,12 @@
   "controller": "noname-native",
   "strength": "strongest-available",
   "showDifficultySelector": false,
-  "supportedModes": ["identity", "doudizhu", "versus", "duel"],
+  "supportedModes": ["identity", "doudizhu", "versus", "duel", "college"],
   "minimumHumanPlayers": 1,
   "automaticallyReady": true,
   "ownerMustBeHuman": true,
   "runtimeVerified": true,
-  "note": "四模式和两档武将均已通过大厅原生托管至结算；AI 席位直接走上游完整事件决策，没有另造随机机器人。所检查版本没有统一智力档位，保留完整原生决策，不把 difficulty 的对人类态度误当智力。"
+  "note": "原四模式及高校四成员／三出场模式均复用固定引擎的完整原生出牌与技能决策，不提供智力档位。高校AI队友赛前叫分、换将、选将由真人代理，AI地主可由真人操作；未接管角色保留原生AI。四成员自动竞价／换将是明确标记的适配训练策略，不宣称上游已有或最优；选将只在本席合法候选中运行原生选择。",
+  "pregameController": "adapter-private-preparation-with-native-rank-training-policy",
+  "humanMayControlAiLandlord": true
 }

@@ -5,7 +5,24 @@ import { lib, game, ui, _status } from 'noname';
 export function installConnectionRecovery() {
   const engine = globalThis.partyEngine;
   if (engine.setup.role !== 'worker') {
+    if (engine.setup.controlVersions) {
+      engine.controlVersion = 0;
+      const send = game.send;
+      game.send = function (command, ...args) {
+        // The same ordered channel carries the toggle before its native AI result.
+        // Advance locally too; do not wait for a round-trip acknowledgement.
+        if (['auto', 'unauto'].includes(command)) engine.controlVersion++;
+        if (['result', 'tempResult'].includes(command))
+          args[0] = {
+            partyControlVersion: engine.controlVersion,
+            partyNativeResult: args[0],
+          };
+        return send.call(this, command, ...args);
+      };
+    }
     engine.showControlState = (state) => {
+      if (engine.setup.controlVersions && Number.isSafeInteger(state.controlVersion))
+        engine.controlVersion = Math.max(engine.controlVersion, state.controlVersion);
       _status.auto = state.auto === true;
       ui.auto?.classList.toggle('glow', _status.auto);
       ui.arena?.classList.toggle('auto', _status.auto);
@@ -32,6 +49,7 @@ export function installConnectionRecovery() {
   const interrupted = new Map();
   const grace = new Map();
   const closed = new WeakSet();
+  const versions = new Map();
   const report = (client, recovered = false) => {
     const player = lib.playerOL[client.id];
     if (!player) return;
@@ -52,6 +70,7 @@ export function installConnectionRecovery() {
       },
       {
         auto: player.isAuto === true,
+        ...(engine.setup.controlVersions ? { controlVersion: versions.get(client.id) ?? 0 } : {}),
         recovered,
         offline: interruption?.expired === true,
         awaySeconds: interruption ? Math.floor((Date.now() - interruption.at) / 1000) : 0,
@@ -61,16 +80,40 @@ export function installConnectionRecovery() {
   };
   const reinited = lib.message.server.reinited;
   lib.message.server.reinited = function (...args) {
-    reinited.apply(this, args);
+    // The phone has reconstructed its arena. Restore its version before the
+    // selection-recovery wrapper replays a choice that can answer immediately.
     report(this, interrupted.has(this.id));
+    return reinited.apply(this, args);
   };
   for (const name of ['auto', 'unauto']) {
     const original = lib.message.server[name];
     lib.message.server[name] = function (...args) {
+      if (engine.setup.controlVersions) {
+        if (lib.playerOL[this.id]?.ws !== this || this.closed) return;
+        versions.set(this.id, (versions.get(this.id) ?? 0) + 1);
+      }
       original.apply(this, args);
       report(this);
     };
   }
+  if (engine.setup.controlVersions)
+    for (const name of ['result', 'tempResult']) {
+      const original = lib.message.server[name];
+      lib.message.server[name] = function (result, ...args) {
+        if (
+          lib.playerOL[this.id]?.ws !== this ||
+          this.closed ||
+          !result ||
+          typeof result !== 'object' ||
+          !Object.hasOwn(result, 'partyNativeResult') ||
+          result.partyControlVersion !== (versions.get(this.id) ?? 0)
+        )
+          return;
+        // Native tempResult may be an array or a general ID; forced choices
+        // may return the literal 'ai'. Preserve every native value's shape.
+        return original.call(this, result.partyNativeResult, ...args);
+      };
+    }
   // A probe travels through the same authenticated relay and native executor.
   lib.message.server.partyPing = function (id) {
     if (Number.isSafeInteger(id) && id > 0) this.send('partyPong', id);

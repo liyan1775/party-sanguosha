@@ -16,6 +16,7 @@ const profiles = {
   'ol-ranked-2026-10-full': military,
   'ol-sgl-2026-stage1': military,
   'mobile-time-field-2026-10': military,
+  'ol-college-2026': military,
 };
 
 export function validateCardPile(preset) {

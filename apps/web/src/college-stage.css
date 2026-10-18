@@ -1,0 +1,698 @@
+/* College drafting and series share the same bounded surface as the native table. */
+.match-panel.practice-stage {
+  --stage-ink: #edf1e8;
+  --stage-muted: #b3c4bb;
+  --stage-line: #60776b;
+  color: var(--stage-ink);
+  background: #182e27;
+}
+.practice-stage .match-toolbar {
+  gap: 8px;
+  min-height: 48px;
+  padding: 4px 12px;
+  overflow: visible;
+  border-bottom: 1px solid #597365;
+  background: #14261f;
+}
+.practice-stage .stage-heading {
+  margin-right: auto;
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.practice-stage .stage-heading[hidden],
+.practice-stage [hidden] {
+  display: none;
+}
+.practice-stage .stage-heading strong {
+  margin: 0;
+  color: #f4dfac;
+  font-size: 19px;
+  font-variant-numeric: tabular-nums;
+}
+.practice-stage #college-progress {
+  font-size: 11px;
+  color: #c8d4c8;
+  white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.practice-stage #stage-role {
+  font-size: 12px;
+  color: #c3dddb;
+  white-space: nowrap;
+}
+.practice-stage #stage-role.is-proxy {
+  color: #f1d6a6;
+}
+.practice-stage #stage-role.is-automatic {
+  color: #f6c57a;
+}
+.practice-stage .stage-secondary {
+  display: none;
+}
+.practice-stage #stage-more[data-network-slow='true']::before {
+  content: '●';
+  color: #aa593a;
+  padding-right: 4px;
+}
+.practice-stage .draft-general {
+  -webkit-tap-highlight-color: transparent;
+}
+.practice-stage .match-toolbar .button {
+  min-height: 36px;
+  padding: 6px 12px;
+}
+#stage-tools {
+  width: min(500px, calc(100% - 24px));
+}
+#stage-tools .stage-tools-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+#stage-tools .stage-tools-grid > .button {
+  width: 100%;
+  margin: 0;
+}
+#stage-tools .match-volume {
+  grid-column: 1/-1;
+  justify-content: space-between;
+  color: #374d40;
+}
+#stage-tools .match-volume input {
+  width: 65%;
+}
+#stage-tools .stage-tools-status {
+  margin-top: 18px;
+  color: #374d40;
+}
+#stage-tools .match-network {
+  color: #526657;
+  white-space: normal;
+}
+#stage-tools .match-experience {
+  margin-top: 10px;
+  color: #374d40;
+  background: #eeeee3;
+  flex-wrap: wrap;
+}
+#stage-tools #match-actions {
+  max-width: 100%;
+}
+#stage-tools #match-actions[open] ol {
+  position: static;
+  max-width: 100%;
+  color: #edf1e8;
+}
+#stage-tools #owner-transfer-row,
+#stage-tools #owner-claim-row {
+  grid-column: 1/-1;
+}
+.practice-stage .doudizhu-panel {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+  gap: 8px;
+  padding: 12px 18px;
+  margin: 0;
+  overflow: hidden;
+  background: radial-gradient(ellipse at 35% 20%, #365447 0, #223e33 50%, #172e26 100%);
+}
+.practice-stage .draft-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+.practice-stage .draft-heading h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 650;
+  color: #f7edcf;
+  letter-spacing: 0.04em;
+}
+.practice-stage .draft-heading p {
+  margin: 3px 0 0;
+  font-size: 12px;
+  color: #c5d3c8;
+}
+.practice-stage .draft-clock {
+  flex-shrink: 0;
+  padding: 5px 12px;
+  border: 1px solid #91a28b;
+  border-radius: 5px;
+  color: #f5e8b9;
+  font-size: 19px;
+  font-variant-numeric: tabular-nums;
+}
+.practice-stage .draft-clock.is-urgent {
+  border-color: #d4aa72;
+  color: #ffd094;
+}
+.practice-stage .draft-progress {
+  display: flex;
+  gap: 8px;
+}
+.practice-stage .draft-seat-progress {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid #60776b;
+  border-radius: 5px;
+  padding: 5px 9px;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  background: #152b2380;
+}
+.practice-stage .draft-seat-progress strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+}
+.practice-stage .draft-seat-progress span {
+  flex-shrink: 0;
+  color: #b6c7b6;
+}
+.practice-stage [data-team='a'] {
+  border-left: 3px solid #7bbccf;
+}
+.practice-stage [data-team='b'] {
+  border-left: 3px solid #e9ae68;
+}
+.practice-stage .draft-seat-progress.is-current {
+  background: #49604a;
+  border-color: #d4be8c;
+  box-shadow: inset 0 0 0 1px #d4be8c;
+}
+.practice-stage .draft-seat-progress.is-current span {
+  color: #f4dfac;
+}
+.practice-stage .draft-tasks {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 30px;
+}
+.practice-stage .draft-task {
+  padding: 5px 12px;
+  border: 1px solid #748373;
+  border-radius: 5px;
+  background: #1a3328;
+  color: #ccd8c7;
+  min-height: 32px;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.practice-stage .draft-task[aria-pressed='true'] {
+  border-color: #e2c68e;
+  background: #435641;
+  color: #ffedbd;
+}
+.practice-stage .draft-workspace {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 28%);
+  gap: 14px;
+}
+.practice-stage .draft-pool {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.practice-stage .draft-pool-heading {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 0 2px 8px;
+}
+.practice-stage .draft-pool-heading h3 {
+  margin: 0;
+  font-size: 14px;
+  color: #e5e8d2;
+  font-weight: 500;
+}
+.practice-stage #doudizhu-quota {
+  font-size: 11px;
+  color: #c6d2be;
+  white-space: nowrap;
+}
+.practice-stage #doudizhu-seats {
+  min-height: 0;
+  flex: 1;
+  overflow: auto;
+  scrollbar-width: thin;
+}
+.practice-stage .doudizhu-seat {
+  height: 100%;
+}
+.practice-stage .doudizhu-candidates {
+  display: grid;
+  grid-template-columns: repeat(var(--draft-columns, 4), minmax(0, 1fr));
+  grid-auto-rows: minmax(112px, 1fr);
+  gap: 8px;
+  height: 100%;
+  padding: 3px;
+}
+.practice-stage .draft-general {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) 28px;
+  min-width: 0;
+  min-height: 112px;
+  max-height: 255px;
+  padding: 3px;
+  overflow: hidden;
+  border: 1px solid #a7976b;
+  border-radius: 5px;
+  background: #182a20;
+  color: #f5dfab;
+  cursor: pointer;
+  box-shadow: 0 3px 8px #0005;
+}
+.practice-stage .draft-general img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  object-fit: cover;
+  object-position: center 22%;
+  border-radius: 2px;
+}
+.practice-stage .draft-general strong {
+  align-self: center;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.practice-stage .draft-general[aria-pressed='true'] {
+  outline: 2px solid #ffe1a2;
+  outline-offset: 0;
+  background: #6e6139;
+  color: #fff7d6;
+}
+.practice-stage .draft-general:hover:not(:disabled) {
+  border-color: #f7dda1;
+}
+.practice-stage .draft-general:focus-visible,
+.practice-stage .draft-task:focus-visible {
+  outline: 3px solid #f4dfac;
+  outline-offset: 1px;
+}
+.practice-stage .draft-detail {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 12px;
+  border: 1px solid #657b62;
+  border-radius: 5px;
+  background: #15291fbd;
+}
+.practice-stage .draft-detail-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #64725a;
+  padding-bottom: 8px;
+}
+.practice-stage .draft-detail-heading h3 {
+  margin: 0;
+  color: #f4d694;
+  font-size: 18px;
+}
+.practice-stage #doudizhu-close-detail,
+.practice-stage #doudizhu-show-detail {
+  display: none;
+}
+.practice-stage #doudizhu-detail-skills {
+  overflow: auto;
+  min-height: 0;
+  padding: 8px 2px 0;
+  scrollbar-width: thin;
+}
+.practice-stage .draft-detail h4 {
+  color: #e8c47c;
+  margin: 0 0 5px;
+  font-size: 14px;
+}
+.practice-stage .draft-detail p {
+  margin: 0 0 14px;
+  color: #e1e6d8;
+  line-height: 1.7;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.practice-stage .draft-actions {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  min-height: 52px;
+  border-top: 1px solid #68785a;
+  margin: 0;
+  padding: 8px 0 0;
+  min-width: 0;
+  text-align: left;
+}
+.practice-stage .draft-feedback {
+  flex: 1;
+  min-width: 0;
+}
+.practice-stage .draft-feedback p {
+  margin: 0;
+  color: #baccb6;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.practice-stage #doudizhu-error {
+  color: #ffce92;
+}
+.practice-stage .doudizhu-bids,
+.practice-stage #doudizhu-choose-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.practice-stage .draft-actions .button {
+  min-height: 42px;
+  padding: 8px 16px;
+  font-size: 14px;
+  border-radius: 5px;
+}
+.practice-stage .draft-actions .button.primary {
+  background: #e1bd75;
+  border-color: #eed095;
+  color: #24351f;
+}
+.practice-stage .draft-actions .button.secondary {
+  background: #243d30;
+  border: 1px solid #9cad89;
+  color: #ebedce;
+}
+.practice-stage #doudizhu-confirm {
+  width: 228px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.practice-stage #doudizhu-wait {
+  margin: auto;
+  color: #d7dfc9;
+  font-size: 15px;
+}
+.practice-stage #college-rest {
+  position: absolute;
+  inset: 0;
+  overflow: auto;
+  padding: 20px;
+  background: radial-gradient(ellipse at center, #365344, #162e25);
+}
+.practice-stage .college-rest-card {
+  width: min(640px, 100%);
+  margin: 0 auto;
+  text-align: center;
+}
+.practice-stage .stage-eyebrow {
+  margin: 0 0 10px;
+  font-size: 12px;
+  letter-spacing: 0.2em;
+  color: #bfcdb9;
+}
+.practice-stage #college-rest-title {
+  font-size: 27px;
+  color: #f5e4ba;
+  margin: 6px 0;
+}
+.practice-stage #college-rest-score {
+  margin: 8px 0;
+  color: #efd195;
+  font-size: 18px;
+}
+.practice-stage #college-rest-next,
+.practice-stage #college-rest-hint {
+  font-size: 13px;
+  color: #cad7c4;
+}
+.practice-stage #college-rest-players {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 18px 0;
+}
+.practice-stage #college-rest-players li {
+  padding: 9px;
+  text-align: left;
+  font-size: 13px;
+  background: #182e2580;
+}
+.practice-stage .college-rest-actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+}
+.practice-stage .college-rest-actions .button.primary {
+  background: #e1bd75;
+  border-color: #eed095;
+  color: #24351f;
+}
+.practice-stage #college-results {
+  text-align: left;
+  margin-top: 14px;
+  border-top: 1px solid #607965;
+  padding-top: 10px;
+  font-size: 13px;
+  color: #ced8c3;
+}
+.practice-stage #college-results summary {
+  cursor: pointer;
+  padding: 5px;
+}
+.practice-stage #college-results ol {
+  line-height: 1.9;
+}
+.practice-stage .college-spectator {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  padding: 12px 18px;
+  overflow: auto;
+  border: 0;
+  border-radius: 0;
+  background: #223e31;
+  color: #e2eadb;
+  box-shadow: none;
+}
+.practice-stage .college-spectator .panel-heading {
+  margin: 0;
+}
+.practice-stage .college-spectator h2 {
+  margin: 0;
+  font-size: 17px;
+  color: #f5e4ba;
+}
+.practice-stage .college-spectator .hint,
+.practice-stage .college-spectator .observer-round {
+  color: #c2d0ba;
+  margin: 6px 0;
+  font-size: 12px;
+}
+.practice-stage .college-spectator #spectator-refresh {
+  position: absolute;
+  right: 18px;
+  top: 48px;
+  min-height: 30px;
+  padding: 4px 10px;
+  font-size: 12px;
+}
+.practice-stage .college-spectator #spectator-deck {
+  display: none;
+}
+.practice-stage .college-spectator .observer-board {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 12px;
+}
+.practice-stage .college-spectator .observer-seat {
+  border: 1px solid #789173;
+  background: #1a3027;
+  color: #e3ebd7;
+  padding: 12px;
+}
+.practice-stage .college-spectator .observer-seat p {
+  color: #c4d5c0;
+  font-size: 12px;
+  margin: 5px 0;
+}
+.practice-stage .college-spectator .observer-seat h3 {
+  color: #f4e5bf;
+}
+.practice-stage .college-spectator .observer-seat.is-active {
+  border-color: #e3be79;
+  background: #364b35;
+}
+.practice-stage .college-spectator .observer-general {
+  color: #ecd4a0;
+}
+.practice-stage .college-spectator .observer-log h3 {
+  font-size: 14px;
+  color: #d3e1c8;
+}
+.practice-stage .college-spectator .observer-recent {
+  max-height: 135px;
+  color: #d3e1c8;
+  background: #172f26;
+}
+.practice-stage.stage-short .doudizhu-panel {
+  padding: 8px 12px;
+  gap: 6px;
+}
+.practice-stage.stage-short .draft-heading h2 {
+  font-size: 17px;
+}
+.practice-stage.stage-short .draft-heading p {
+  margin-top: 1px;
+}
+.practice-stage.stage-short .draft-heading .draft-clock {
+  padding: 3px 10px;
+  font-size: 17px;
+}
+.practice-stage.stage-short .draft-actions {
+  min-height: 46px;
+  padding-top: 6px;
+}
+.practice-stage.stage-short .draft-actions .button {
+  min-height: 38px;
+  padding: 6px 13px;
+  font-size: 13px;
+}
+.practice-stage.stage-short .draft-progress .draft-seat-progress {
+  padding: 4px 7px;
+}
+.practice-stage.stage-short .draft-pool-heading {
+  padding-bottom: 4px;
+}
+.practice-stage.stage-short #college-rest {
+  padding: 10px 18px;
+}
+.practice-stage.stage-short .stage-eyebrow {
+  display: none;
+}
+.practice-stage.stage-short #college-rest-players {
+  margin: 10px 0;
+}
+.practice-stage.stage-portrait .match-toolbar {
+  gap: 5px;
+  padding: 5px 8px;
+}
+.practice-stage.stage-portrait .stage-heading {
+  display: block;
+  min-width: 0;
+}
+.practice-stage.stage-portrait .stage-heading strong {
+  font-size: 16px;
+  display: block;
+}
+.practice-stage.stage-portrait #college-progress {
+  font-size: 10px;
+}
+.practice-stage.stage-portrait #stage-role {
+  max-width: 110px;
+  white-space: normal;
+  font-size: 11px;
+}
+.practice-stage.stage-portrait .match-toolbar .button {
+  padding: 6px 8px;
+  font-size: 11px;
+}
+.practice-stage.stage-portrait.stage-finished #stage-role {
+  display: none;
+}
+.practice-stage.stage-portrait .draft-progress {
+  gap: 5px;
+}
+.practice-stage.stage-portrait .draft-seat-progress {
+  display: block;
+  padding: 6px;
+}
+.practice-stage.stage-portrait .draft-seat-progress strong,
+.practice-stage.stage-portrait .draft-seat-progress span {
+  display: block;
+  font-size: 11px;
+}
+.practice-stage.stage-portrait .draft-workspace {
+  display: block;
+  position: relative;
+}
+.practice-stage.stage-portrait .draft-pool {
+  height: 100%;
+}
+.practice-stage.stage-portrait .doudizhu-panel {
+  padding: 12px;
+}
+.practice-stage.stage-portrait .doudizhu-candidates {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-auto-rows: 170px;
+}
+.practice-stage.stage-portrait .draft-actions {
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.practice-stage.stage-portrait .draft-feedback {
+  flex-basis: 100%;
+}
+.practice-stage.stage-portrait #doudizhu-choose-actions {
+  width: 100%;
+}
+.practice-stage.stage-portrait #doudizhu-confirm {
+  flex: 1;
+  width: auto;
+  min-width: 0;
+  padding-inline: 8px;
+}
+.practice-stage.stage-portrait .doudizhu-bids {
+  width: 100%;
+  min-width: 0;
+}
+.practice-stage.stage-portrait .doudizhu-bids button {
+  flex: 1;
+  min-width: 0;
+  padding-inline: 4px;
+}
+.practice-stage.stage-portrait #doudizhu-show-detail,
+.practice-stage.stage-portrait #doudizhu-close-detail {
+  display: inline-flex;
+}
+.practice-stage.stage-portrait .draft-detail {
+  display: none;
+  position: absolute;
+  inset: 0;
+  background: #172d24;
+  z-index: 2;
+}
+.practice-stage.stage-portrait .detail-open .draft-detail {
+  display: flex;
+}
+.practice-stage.stage-portrait .college-spectator .observer-board {
+  grid-template-columns: 1fr;
+}
+.practice-stage.stage-portrait .college-spectator #spectator-refresh {
+  position: static;
+}
+.practice-stage.stage-portrait #college-rest-players {
+  grid-template-columns: 1fr;
+}
+.practice-stage.stage-portrait .college-rest-actions {
+  flex-direction: column;
+}

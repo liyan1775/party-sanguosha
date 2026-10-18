@@ -7,6 +7,97 @@ import type { EngineAdapter, EngineEvent } from '../../packages/noname-adapter/s
 import { createPartyServer } from '../../apps/server/src/server.js';
 import { createPublicGateway } from '../../apps/server/src/public-gateway.js';
 
+test('高校赛前界面：快速赛制、AI地主代理、换将及刷新恢复（引擎为协议夹具）', async ({
+  browser,
+}) => {
+  let started: any;
+  const adapter: EngineAdapter = {
+    status: () => ({
+      id: 'noname',
+      ready: true,
+      doudizhuPractice: true,
+      message: '协议夹具，不执行对局',
+    }),
+    start: async (s) => {
+      started = s;
+    },
+  };
+  await withLobby(
+    browser,
+    async ({ base, page }) => {
+      const owner = await page();
+      const code = await createRoom(owner, base, '代理玩家');
+      await owner.locator('[data-mode="college"]').click();
+      await owner.locator('#college-format').selectOption('quick');
+      await waitForSettings(owner);
+      await expect(owner.locator('#general-preset')).toHaveValue('ol-college-2026');
+      await expect(owner.locator('#general-preset')).toBeDisabled();
+      const enemyA = await page();
+      await joinRoom(enemyA, base, code, '农民甲');
+      await owner.locator('#add-bot').click();
+      const enemyB = await page();
+      await joinRoom(enemyB, base, code, '农民乙');
+      for (const p of [owner, enemyA, enemyB]) await p.locator('#ready-button').click();
+      await owner.locator('#start-button').click();
+      const get = async () =>
+        (await (await owner.request.get(`${base}/api/rooms/${code}`)).json()).room as RoomView;
+      let room = await get();
+      const ai = room.players.find((p) => p.kind === 'bot')!;
+      for (let i = 0; i < 4 && room.doudizhu?.phase === 'bidding'; i++) {
+        const bidder = room.doudizhu.bidSeatId;
+        const player =
+          bidder === room.ownerId || bidder === ai.id
+            ? owner
+            : bidder === room.players[1]?.id
+              ? enemyA
+              : enemyB;
+        await player
+          .locator('#doudizhu-bids button')
+          .filter({ hasText: bidder === ai.id ? '叫 4 倍' : '不叫' })
+          .click();
+        await expect
+          .poll(async () => (await get()).doudizhu?.bids.length)
+          .toBeGreaterThan(room.doudizhu.bids.length);
+        room = await get();
+      }
+      expect(room.doudizhu!.landlordId).toBe(ai.id);
+      expect(room.series!.maxGames).toBe(6);
+      const section = owner.locator(`.doudizhu-seat[data-seat="${ai.id}"]`);
+      await expect(section.locator('button[data-general]')).toHaveCount(6);
+      await expect(owner.locator('#stage-role')).toContainText('代理AI队友');
+      await owner.setViewportSize({ width: 844, height: 390 });
+      await expect(owner.locator('.page-hero')).toBeHidden();
+      await section.locator('button[data-general]').first().click();
+      await expect(owner.locator('#doudizhu-confirm')).toBeInViewport();
+      const candidate = await section.locator('button[data-general]').first().elementHandle();
+      const confirmPosition = await owner.locator('#doudizhu-confirm').boundingBox();
+      await section.locator('button[data-general]').nth(1).click();
+      expect(await candidate!.evaluate((node) => node.isConnected)).toBe(true);
+      expect(await owner.locator('#doudizhu-confirm').boundingBox()).toEqual(confirmPosition);
+      await owner.locator('#doudizhu-replace').click();
+      await expect(owner.locator('#doudizhu-quota')).toHaveText('剩余换将 1 次');
+      const before = await (
+        await owner.request.get(`${base}/api/rooms/${code}/me/doudizhu`)
+      ).json();
+      await owner.reload();
+      await expect(owner.locator('#doudizhu-quota')).toHaveText('剩余换将 1 次');
+      const after = await (await owner.request.get(`${base}/api/rooms/${code}/me/doudizhu`)).json();
+      expect(after.preparation.deadline).toBe(before.preparation.deadline);
+      expect(after.seats).toEqual(before.seats);
+      for (const p of [owner, enemyA, enemyB]) {
+        await p.locator('.doudizhu-seat:not([hidden]) button[data-general]').first().click();
+        await p.locator('#doudizhu-confirm').click();
+      }
+      await expect.poll(() => started?.seats?.length).toBe(3);
+      expect(started.seats[0].id).toBe(ai.id);
+      expect(started.seats[0].controllerId).toBe(room.ownerId);
+      expect(started.doudizhu.candidates[ai.id]).toHaveLength(6);
+    },
+    false,
+    adapter,
+  );
+});
+
 for (const internet of [false, true]) {
   test(`${internet ? '公网轮询' : '局域网SSE'}：大家关页后无人房间自动回收，观战不续期，旧邀请失效`, async ({
     browser,
@@ -77,7 +168,7 @@ for (const internet of [false, true]) {
         const code = await createRoom(first, entry, '原房主');
         const second = await page();
         await joinRoom(second, entry, code, '接班朋友');
-        await expect(first.locator('#general-preset option')).toHaveCount(10);
+        await expect(first.locator('#general-preset option')).toHaveCount(GENERAL_PRESETS.length);
         await expect(first.locator('#general-preset option')).not.toContainText(['2024', '2025']);
         await first.locator('#owner-transfer').click();
         const room = party.lobby.get(code);

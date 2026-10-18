@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import type { TestContext } from 'node:test';
 
-async function fixture(t: TestContext, mode: string, seats: any[]) {
+async function fixture(t: TestContext, mode: string, seats: any[], members?: any[]) {
   let now = 100000;
   let sequence = 0;
   let tick = () => {};
@@ -58,7 +58,14 @@ async function fixture(t: TestContext, mode: string, seats: any[]) {
       get: { id: () => `epoch-${++sequence}` },
       _status: status,
     },
-    partyEngine: { setup: { role: 'worker', settings: { mode }, seats } },
+    partyEngine: {
+      setup: {
+        role: 'worker',
+        settings: { mode },
+        seats,
+        ...(members ? { doudizhu: { members } } : {}),
+      },
+    } as any,
     window: { addEventListener() {} },
     setInterval: (fn: () => void) => {
       tick = fn;
@@ -87,6 +94,7 @@ async function fixture(t: TestContext, mode: string, seats: any[]) {
     )
   ).installSurrender();
   return {
+    engine: values.partyEngine,
     enable,
     game,
     players,
@@ -110,6 +118,59 @@ async function fixture(t: TestContext, mode: string, seats: any[]) {
     },
   };
 }
+
+test('高校地主的在线真人待命队友仍须明确同意；对手不能批准本队投降', async (t) => {
+  const members = ['a', 'b', 'c', 'd'].map((id) => ({ id, nickname: id, kind: 'human' }));
+  const f = await fixture(
+    t,
+    'college',
+    [
+      { id: 'a', nickname: 'a', kind: 'human', identity: 'zhu' },
+      { id: 'b', nickname: 'b', kind: 'human', identity: 'fan' },
+      { id: 'd', nickname: 'd', kind: 'human', identity: 'fan' },
+    ],
+    members,
+  );
+  f.engine.setSurrenderPresence(['a', 'b', 'c', 'd']);
+  f.enable();
+  f.command('a', 'request');
+  const state = f.sent.get('a');
+  assert.deepEqual(
+    state.vote.participants.map((p: any) => p.id),
+    ['a', 'c'],
+  );
+  assert.equal(f.status.over, false);
+  f.engine.externalSurrender('b', 'approve', state.vote.epoch);
+  assert.equal(f.status.over, false);
+  f.engine.externalSurrender('c', 'approve', state.vote.epoch);
+  assert.equal(f.status.over, true);
+  assert.equal(f.game.checkOnlineResult(f.lib.playerOL.a), false);
+  assert.equal(f.game.checkOnlineResult(f.lib.playerOL.b), true);
+});
+
+test('高校AI地主由真人接管时只算一个真人；离线待命真人不计入在线投票', async (t) => {
+  const members = [
+    { id: 'a', nickname: '真人', kind: 'human' },
+    { id: 'b', nickname: '对手', kind: 'human' },
+    { id: 'c', nickname: 'AI地主', kind: 'bot' },
+    { id: 'd', nickname: 'AI农民', kind: 'bot' },
+  ];
+  const f = await fixture(
+    t,
+    'college',
+    [
+      { id: 'c', controllerId: 'a', nickname: 'AI地主', kind: 'human', identity: 'zhu' },
+      { id: 'b', nickname: '对手', kind: 'human', identity: 'fan' },
+      { id: 'd', nickname: 'AI农民', kind: 'bot', identity: 'fan' },
+    ],
+    members,
+  );
+  f.engine.setSurrenderPresence(['a', 'b']);
+  f.enable();
+  f.command('c', 'request');
+  assert.equal(f.status.over, true);
+  assert.equal(f.game.checkOnlineResult(f.lib.playerOL.c), false);
+});
 const human = (id: string, extra = {}) => ({
   id,
   nickname: `<b>${id}</b>`,

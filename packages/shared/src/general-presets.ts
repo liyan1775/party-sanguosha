@@ -250,6 +250,32 @@ export const GENERAL_PRESETS = [
       ],
     },
   },
+  {
+    id: 'ol-college-2026',
+    name: 'OL高校联赛（2026）',
+    description:
+      '三国杀OL官方活动将池，已导入 92/93 将；缺少：唐棠。可用于原斗地主；高校练习支持标准12局／20分和快速6局／10分。',
+    cardPile: '军争160张（去木牛流马）',
+    characterCount: 92,
+    official: {
+      platform: '三国杀OL',
+      sourceKind: 'announcement',
+      eventMode: 'doudizhu',
+      publishedAt: '2026-10-10',
+      url: 'https://sanguosha.com/news/20261010_3336_5809',
+      announcedCount: 93,
+      missingGenerals: ['唐棠'],
+      versionNotes: [
+        '王瓘：用户接受固定原生失路摸牌上限5，保留完整谬焰／失路，不改成官网摘要版本；仍验证技能执行和私有选择。',
+        '陆凯：用户接受玄注／謇谔的sp:ol_lukai原生设计，包括扩展区及弃置后等量摸牌；不采用另一陆凯。扩展牌的可见性、事件和恢复仍须验证。',
+        '谋鲁肃：用户接受原生独断／英略／盟势及盟势不能选择同体力两人的限制；不再就该差异等待审批，仍验证阶段交换和限定技恢复。',
+        '谋张让：用户接受原生赂存／蜕生；新的赂牌私有状态、逐牌名／每轮记录、恢复和实际技能路径仍须验证。',
+        '张郃：公告是无界字的张郃，对应巧变的shenhua:zhanghe；不替换成界张郃、SP张郃或闪张郃。',
+        '周泰：采用不屈／奋激的refresh:zhoutai（原生显示界周泰），不采用只有旧不屈的old_zhoutai。原生奋激排除主动赠予／交给，官网摘要未展开此边界，图鉴展示完整规则；须验证被夺／被弃与主动交牌的具体触发。',
+        '族荀粲：用户接受原生蹈节／熨身／伤神／分钗；首个属性伤害、分钗记录及判定恢复仍须验证。',
+      ],
+    },
+  },
 ] as const;
 
 export type GeneralPresetId = (typeof GENERAL_PRESETS)[number]['id'];

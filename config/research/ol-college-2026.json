@@ -1,0 +1,4030 @@
+{
+  "schemaVersion": 3,
+  "status": "implemented-local-candidate",
+  "researchedAt": "2026-10-17",
+  "event": {
+    "id": "ol-college-2026",
+    "name": "三国杀OL 2026高校联赛",
+    "announcedAt": "2026-10-10",
+    "platform": "ol",
+    "modes": ["individual-doudizhu-qualifier", "team-doudizhu-knockout"],
+    "userPreference": "赛前练习，尽量贴近本届OL；未明文规则参照早期同平台规则，并标注继承假设。"
+  },
+  "engine": {
+    "tag": "v1.11.6",
+    "commit": "2367607e246d21aae168dba15c01151ee0651f30"
+  },
+  "rosterPolicy": "完整保留公告93名及顺序。85项沿用已有OL审查；用户指定王瓘、陆凯、谋鲁肃、谋张让、族荀粲采用固定原生设计，接受已记载差异；张郃、周泰按巧变及不屈／奋激的效果选择明确原生版本，完整规则边界需执行核验。唐棠在固定版和本次主分支快照未检出，继续缺项。本地候选启用92项运行白名单，原生执行／隐私／素材验收的覆盖范围以implementation和handoff为准，不宣称穷尽技能分支。五项差异接纳不扩展为其他将池的通用许可，不删技、不拼装、不自动升级上游。",
+  "summary": {
+    "announcedCount": 93,
+    "statusCounts": {
+      "existing-ol-mapping": 85,
+      "user-accepted-native-design": 5,
+      "missing-native": 1,
+      "effect-corresponding-native": 2
+    },
+    "categories": [
+      {
+        "name": "璀璨星河",
+        "sourceImage": "roster-image-1",
+        "count": 27
+      },
+      {
+        "name": "界限突破",
+        "sourceImage": "roster-image-1",
+        "count": 6
+      },
+      {
+        "name": "祈福",
+        "sourceImage": "roster-image-1",
+        "count": 10
+      },
+      {
+        "name": "SP",
+        "sourceImage": "roster-image-1",
+        "count": 6
+      },
+      {
+        "name": "江山如故",
+        "sourceImage": "roster-image-1",
+        "count": 1
+      },
+      {
+        "name": "谋",
+        "sourceImage": "roster-image-2",
+        "count": 16
+      },
+      {
+        "name": "魔",
+        "sourceImage": "roster-image-2",
+        "count": 5
+      },
+      {
+        "name": "神话再临",
+        "sourceImage": "roster-image-2",
+        "count": 8
+      },
+      {
+        "name": "门阀士族",
+        "sourceImage": "roster-image-2",
+        "count": 12
+      },
+      {
+        "name": "一将成名",
+        "sourceImage": "roster-image-2",
+        "count": 2
+      }
+    ],
+    "runtimeEnabled": true,
+    "plannedMappedCount": 92,
+    "implementedMappedCount": 92
+  },
+  "sources": [
+    {
+      "id": "announcement",
+      "kind": "current-official-announcement",
+      "url": "https://sanguosha.com/news/20261010_3336_5809",
+      "retrievedAt": "2026-10-17",
+      "bytes": 39382,
+      "sha256": "72d6af61638c8d9cc03bf4e2c90cf6d5327885738f137a8e242b05e7210f7e1b"
+    },
+    {
+      "id": "rules-image",
+      "kind": "current-official-rules-image",
+      "url": "https://wwwoss.sanguosha.com/uploads/202610/gxL5YLRSoiuVoIMn.jpeg",
+      "retrievedAt": "2026-10-17",
+      "bytes": 1140820,
+      "sha256": "da580e5af5947862844b0f304c8827bad4d9096a89bbb58fe8353ad0984e13e6"
+    },
+    {
+      "id": "roster-image-1",
+      "kind": "current-official-roster-image",
+      "url": "https://wwwoss.sanguosha.com/uploads/202610/8WTnclCr727i2v2e.png",
+      "retrievedAt": "2026-10-17",
+      "bytes": 443602,
+      "sha256": "ddebcb9209a0133330d41a9eff4af343d836c4c8e41d012aa9cb22ef1d3eb197"
+    },
+    {
+      "id": "roster-image-2",
+      "kind": "current-official-roster-image",
+      "url": "https://wwwoss.sanguosha.com/uploads/202610/z01EIjb3CYvk4yWb.png",
+      "retrievedAt": "2026-10-17",
+      "bytes": 389340,
+      "sha256": "f8f85000e8b53a2d2c7d8f651c8f8749c1da156a3df63a05158173895cb19523"
+    },
+    {
+      "id": "hero-directory",
+      "kind": "official-hero-directory",
+      "url": "https://www.sanguosha.com/hero",
+      "retrievedAt": "2026-10-17",
+      "bytes": 1326221,
+      "sha256": "d2faec152568b37bb18b8cde3804902fef68f893ed5ae33bdf4b0d92930a8969"
+    },
+    {
+      "id": "earlier-ol-bidding-image",
+      "kind": "earlier-ol-event-image-in-media-report",
+      "url": "https://i.17173cdn.com/2fhnvk/YWxqaGBf/cms3/InvcQcbtyvDsEvd.png",
+      "retrievedAt": "2026-10-17",
+      "bytes": 295311,
+      "sha256": "aea25932664df29c545a3b6b432909733d733fd0525b86504bf5ec8c07bfba31"
+    },
+    {
+      "id": "earlier-ol-selection-image",
+      "kind": "earlier-ol-event-image-in-media-report",
+      "url": "https://i.17173cdn.com/2fhnvk/YWxqaGBf/cms3/JOxLzjbtyvDsEye.png",
+      "retrievedAt": "2026-10-17",
+      "bytes": 232841,
+      "sha256": "6f6c9bc3e7cfee6ac12ec965079046a9aae77e4aec4cd49d128c1cc3e643f791"
+    },
+    {
+      "id": "hero-553",
+      "kind": "current-official-hero-text",
+      "url": "https://www.sanguosha.com/hero/553",
+      "retrievedAt": "2026-10-17",
+      "bytes": 23956,
+      "sha256": "d5fe184cf533a97092c853b5a6f31c62efcd6ab5b1f33715337231d3a382735d"
+    },
+    {
+      "id": "hero-590",
+      "kind": "current-official-hero-text",
+      "url": "https://www.sanguosha.com/hero/590",
+      "retrievedAt": "2026-10-17",
+      "bytes": 24780,
+      "sha256": "b9fbd1aaf1bf5b2f90f7b0ca6aa680394c5b4ad4990b9168700c41ab11fb8b7d"
+    },
+    {
+      "id": "hero-718",
+      "kind": "current-official-hero-text",
+      "url": "https://www.sanguosha.com/hero/718",
+      "retrievedAt": "2026-10-17",
+      "bytes": 24812,
+      "sha256": "3d3f5a2cb7f762ea9f57b00cf16c178d0f0a304b7fc0c36ee179b43dde800656"
+    },
+    {
+      "id": "hero-697",
+      "kind": "current-official-hero-text",
+      "url": "https://www.sanguosha.com/hero/697",
+      "retrievedAt": "2026-10-17",
+      "bytes": 24783,
+      "sha256": "111699099a853426a2d5d721cd258a13ed1abf53ae75dfd83f2fefc2b2f74716"
+    },
+    {
+      "id": "hero-50",
+      "kind": "current-official-hero-text",
+      "url": "https://www.sanguosha.com/hero/50",
+      "retrievedAt": "2026-10-17",
+      "bytes": 26748,
+      "sha256": "73830c5e4e61ecb98e36e84eed617a15396ad969184a4316bda27cb7f2396977"
+    },
+    {
+      "id": "hero-210",
+      "kind": "current-official-hero-text",
+      "url": "https://www.sanguosha.com/hero/210",
+      "retrievedAt": "2026-10-17",
+      "bytes": 26783,
+      "sha256": "86cab682d638822f731b749cb0171e457d65fe1f47e2741456ca2814ece8daa6"
+    },
+    {
+      "id": "hero-525",
+      "kind": "current-official-hero-text",
+      "url": "https://www.sanguosha.com/hero/525",
+      "retrievedAt": "2026-10-17",
+      "bytes": 25846,
+      "sha256": "7686e6c23a13a99459a2b6d4d5fd86ed29c271b76f0a093b70add5c43f6d208c"
+    },
+    {
+      "id": "hero-744",
+      "kind": "current-official-hero-text",
+      "url": "https://www.sanguosha.com/hero/744",
+      "retrievedAt": "2026-10-17",
+      "bytes": 23632,
+      "sha256": "fb901474fea11580721429132a6aaea4a51ba9dd98515c0ff356a4ce354ff531"
+    },
+    {
+      "id": "earlier-ol-event-rules",
+      "kind": "attributed-earlier-ol-event-report",
+      "title": "《三国杀》2026SGL｜四大赛道开放，挑战者集结踢馆职业？",
+      "url": "https://news.17173.com/content/05152026/213535647.shtml",
+      "publishedAt": "2026-05-15",
+      "attribution": "17173官方资讯栏目，署名三国杀，页面注明来源为公众号；未取得原始公众号链接或本届选手手册。",
+      "use": "供拟继承的OL战队斗地主规则参考，不作为本届明确确认。"
+    }
+  ],
+  "currentNoticeRules": {
+    "source": "rules-image",
+    "qualifier": {
+      "mode": "individual-doudizhu",
+      "start": "2026-10-19",
+      "end": "2026-10-25",
+      "advancingRank": 512,
+      "completionRewardGames": 30,
+      "scoreFormula": null,
+      "dailyGameLimit": null,
+      "totalGameLimit": null
+    },
+    "knockout": {
+      "mode": "team-doudizhu",
+      "initialTeams": 512,
+      "elimination": "single-elimination",
+      "beforeSemifinal": {
+        "maxRegulationGames": 12,
+        "targetScore": 20
+      },
+      "semifinalAndMedalMatches": {
+        "maxRegulationGames": 16,
+        "targetScore": 25
+      },
+      "endCondition": "first-target-score-or-regulation-game-limit-then-higher-score",
+      "tiedAfterRegulation": "one-additional-game-with-first-bid-position-advanced",
+      "dates": {
+        "textStart": "2026-11-01",
+        "calendarStart": "2026-10-30",
+        "end": "2026-11-08",
+        "conflict": "正文和赛历起始日期不同；排期以官方后续通知为准。"
+      }
+    }
+  },
+  "proposedInheritedTeamRules": {
+    "status": "design-assumption-based-on-earlier-ol-event",
+    "source": "earlier-ol-event-rules",
+    "teamMembers": 2,
+    "matchMembers": 4,
+    "activePlayersPerGame": 3,
+    "teamRegistrationPositions": [
+      [1, 3],
+      [2, 4]
+    ],
+    "firstBid": "random-first-game-then-advance-one-registration-position",
+    "initialCandidatesPerMember": 4,
+    "bidOrder": [1, 2, 3, 4],
+    "allPass": {
+      "multiplier": 1,
+      "landlord": "first-bidder"
+    },
+    "biddingImageShowsMultiplier": 4,
+    "proposedBidMultipliers": [1, 2, 3, 4],
+    "bidInteractionStatus": "training-proposal-upper-bound-and-detailed-interaction-unconfirmed",
+    "landlordAdditionalCandidatesFromTeammate": 2,
+    "replacementCardsPerMemberPerGame": 2,
+    "initialHandCardsPerActivePlayer": 4,
+    "handRefreshesPerActivePlayer": 3,
+    "landlordExtraSkills": ["feiyang-online", "bahu", "qiangyi-once-per-other-player-per-game"],
+    "survivingFarmerDeathDraw": 1,
+    "winnerScore": "add-current-bid-multiplier",
+    "loserScore": "unchanged",
+    "maxRounds": 25,
+    "roundLimitWinner": "farmers",
+    "leagueLengthOverride": "practiceDesign.college.matchFormats[selectedMatchFormat]",
+    "replacementTimingAndQuotaPolicy": "practiceDesign.college.replacements",
+    "handRefreshRule": "practiceDesign.openingHandRule"
+  },
+  "unresolvedDetails": [
+    "海选的叫分、选将数量、积分公式、每日或总场数与限时判胜；原斗地主新增叫分采用明确聚会版方案，不把它称作完整海选模拟。",
+    "官方其余同队候选、待命视角及交流规则仍未明确；用户已确定农民互看和人机代理的练习范围，不再作为产品待决。",
+    "高校叫分上限、严格递增、4倍结束、超时等细交互；当前1–4倍为历史图与练习约定。",
+    "官方换将卡的时点、替换范围、地主补将及待命额度归属；当前方案已具体约定但仍需与手册复核。",
+    "地主是否体力及上限+1、飞扬是否限手牌、农民阵亡补牌是否可选、具体牌堆及25轮边界。",
+    "新增7项的素材、私有数据及动态恢复；周泰奋激官方摘要未展开主动交给／赠予边界，验证原生具体触发，保留全部版本说明。"
+  ],
+  "designDocument": "docs/ol-college-league-2026.md",
+  "entries": [
+    {
+      "position": 1,
+      "officialName": "鲍信",
+      "category": "璀璨星河",
+      "sourceImage": "roster-image-1",
+      "categoryPosition": 1,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/728",
+      "status": "existing-ol-mapping",
+      "nativeCandidate": {
+        "id": "baoxin",
+        "name": "鲍信",
+        "pack": "mobile",
+        "hp": "4",
+        "skills": [
+          {
+            "id": "mutao",
+            "name": "募讨"
+          },
+          {
+            "id": "yimou",
+            "name": "毅谋"
+          }
+        ]
+      },
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": ["ol-sgl-2026-stage1"],
+        "note": "核对OL官方募讨／毅谋全文，与固定mobile:baoxin同为分发所有杀后随机伤害、近距受伤获杀或给牌摸牌，技能和参数一致；原生所在包名不作为平台差异依据。",
+        "versionNote": "核对OL官方募讨／毅谋全文，与固定mobile:baoxin同为分发所有杀后随机伤害、近距受伤获杀或给牌摸牌，技能和参数一致；原生所在包名不作为平台差异依据。"
+      }
+    },
+    {
+      "position": 2,
+      "officialName": "曹昂",
+      "category": "璀璨星河",
+      "sourceImage": "roster-image-1",
+      "categoryPosition": 2,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/122",
+      "status": "existing-ol-mapping",
+      "nativeCandidate": {
+        "id": "caoang",
+        "name": "曹昂",
+        "pack": "sp",
+        "hp": "4",
+        "skills": [
+          {
+            "id": "kaikang",
+            "name": "慷忾"
+          }
+        ]
+      },
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": ["ol-doudizhu-s15"]
+      }
+    },
+    {
+      "position": 3,
+      "officialName": "崔琰",
+      "category": "璀璨星河",
+      "sourceImage": "roster-image-1",
+      "categoryPosition": 3,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/739",
+      "status": "existing-ol-mapping",
+      "nativeCandidate": {
+        "id": "ol_cuiyan",
+        "name": "OL崔琰",
+        "pack": "sp",
+        "hp": "3",
+        "skills": [
+          {
+            "id": "olshutong",
+            "name": "束统"
+          },
+          {
+            "id": "olzhijie",
+            "name": "直节"
+          }
+        ]
+      },
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": ["ol-ranked-2026-10-basic", "ol-ranked-2026-10-full"]
+      }
+    },
+    {
+      "position": 4,
+      "officialName": "孙鸢",
+      "category": "璀璨星河",
+      "sourceImage": "roster-image-1",
+      "categoryPosition": 4,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/707",
+      "status": "existing-ol-mapping",
+      "nativeCandidate": {
+        "id": "sunyuan",
+        "name": "孙鸢",
+        "pack": "sp",
+        "hp": "4",
+        "skills": [
+          {
+            "id": "olsaying",
+            "name": "飒影"
+          },
+          {
+            "id": "oltongxin",
+            "name": "恫心"
+          }
+        ]
+      },
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": ["ol-ranked-2026-10-basic", "ol-ranked-2026-10-full"]
+      }
+    },
+    {
+      "position": 5,
+      "officialName": "张曼成",
+      "category": "璀璨星河",
+      "sourceImage": "roster-image-1",
+      "categoryPosition": 5,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/699",
+      "status": "existing-ol-mapping",
+      "nativeCandidate": {
+        "id": "ol_zhangmancheng",
+        "name": "OL张曼成",
+        "pack": "sp",
+        "hp": "4",
+        "skills": [
+          {
+            "id": "olkuangxin",
+            "name": "狂信"
+          },
+          {
+            "id": "olleishi",
+            "name": "雷噬"
+          }
+        ]
+      },
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": ["ol-ranked-2026-10-full", "ol-sgl-2026-stage1"]
+      }
+    },
+    {
+      "position": 6,
+      "officialName": "李傕",
+      "category": "璀璨星河",
+      "sourceImage": "roster-image-1",
+      "categoryPosition": 6,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/418",
+      "status": "existing-ol-mapping",
+      "nativeCandidate": {
+        "id": "lijue",
+        "name": "李傕",
+        "pack": "sp2",
+        "hp": "4/6",
+        "skills": [
+          {
+            "id": "xinfu_langxi",
+            "name": "狼袭"
+          },
+          {
+            "id": "xinfu_yisuan",
+            "name": "亦算"
+          }
+        ]
+      },
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": [
+          "ol-doudizhu-s15",
+          "ol-ranked-2026-10-basic",
+          "ol-ranked-2026-10-full",
+          "ol-sgl-2026-stage1"
+        ]
+      }
+    },
+    {
+      "position": 7,
+      "officialName": "董翓",
+      "category": "璀璨星河",
+      "sourceImage": "roster-image-1",
+      "categoryPosition": 7,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/656",
+      "status": "existing-ol-mapping",
+      "nativeCandidate": {
+        "id": "ol_dongxie",
+        "name": "OL董翓",
+        "pack": "sp",
+        "hp": "3/5",
+        "skills": [
+          {
+            "id": "oljiaowei",
+            "name": "狡威"
+          },
+          {
+            "id": "olbianyu",
+            "name": "鞭御"
+          },
+          {
+            "id": "olfengyao",
+            "name": "凤瑶"
+          }
+        ]
+      },
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": ["ol-ranked-2026-10-full"]
+      }
+    },
+    {
+      "position": 8,
+      "officialName": "刘焉",
+      "category": "璀璨星河",
+      "sourceImage": "roster-image-1",
+      "categoryPosition": 8,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/634",
+      "status": "existing-ol-mapping",
+      "nativeCandidate": {
+        "id": "liuyan",
+        "name": "刘焉",
+        "pack": "sp",
+        "hp": "3",
+        "skills": [
+          {
+            "id": "xinfu_tushe",
+            "name": "图射"
+          },
+          {
+            "id": "xinfu_limu",
+            "name": "立牧"
+          }
+        ]
+      },
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": ["ol-doudizhu-s15", "ol-ranked-2026-10-full"],
+        "note": "按用户2026-10-10确认及OL官方武将页采用图射／立牧；junk_liuyan为偏安／殷积／窥伺的旧版本，不作为本档刘焉。"
+      }
+    },
+    {
+      "position": 9,
+      "officialName": "鲁芝",
+      "category": "璀璨星河",
+      "sourceImage": "roster-image-1",
+      "categoryPosition": 9,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/379",
+      "status": "existing-ol-mapping",
+      "nativeCandidate": {
+        "id": "luzhi",
+        "name": "鲁芝",
+        "pack": "sp",
+        "hp": "3",
+        "skills": [
+          {
+            "id": "qingzhong",
+            "name": "清忠"
+          },
+          {
+            "id": "weijing",
+            "name": "卫境"
+          }
+        ]
+      },
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": ["ol-ranked-2026-10-basic", "ol-ranked-2026-10-full", "ol-sgl-2026-stage1"]
+      }
+    },
+    {
+      "position": 10,
+      "officialName": "吕伯奢",
+      "category": "璀璨星河",
+      "sourceImage": "roster-image-1",
+      "categoryPosition": 10,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/578",
+      "status": "existing-ol-mapping",
+      "nativeCandidate": {
+        "id": "lvboshe",
+        "name": "吕伯奢",
+        "pack": "sp",
+        "hp": "4",
+        "skills": [
+          {
+            "id": "olfushi",
+            "name": "缚豕"
+          },
+          {
+            "id": "oldongdao",
+            "name": "东道"
+          }
+        ]
+      },
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": ["ol-doudizhu-s15", "ol-ranked-2026-10-full", "ol-sgl-2026-stage1"]
+      }
+    },
+    {
+      "position": 11,
+      "officialName": "马良",
+      "category": "璀璨星河",
+      "sourceImage": "roster-image-1",
+      "categoryPosition": 11,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/128",
+      "status": "existing-ol-mapping",
+      "nativeCandidate": {
+        "id": "ol_maliang",
+        "name": "OL马良",
+        "pack": "diy",
+        "hp": "3",
+        "skills": [
+          {
+            "id": "zishu",
+            "name": "自书"
+          },
+          {
+            "id": "xinyingyuan",
+            "name": "应援"
+          }
+        ]
+      },
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": ["ol-doudizhu-s15", "ol-sgl-2026-stage1"],
+        "note": "OL应援从牌堆获得同类型牌；移动版 maliang 交出用过的牌，必须分别选择。"
+      }
+    },
+    {
+      "position": 12,
+      "officialName": "段煨",
+      "category": "璀璨星河",
+      "sourceImage": "roster-image-1",
+      "categoryPosition": 12,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/763",
+      "status": "existing-ol-mapping",
+      "nativeCandidate": {
+        "id": "ol_duanwei",
+        "name": "OL段煨",
+        "pack": "sp",
+        "hp": "4",
+        "skills": [
+          {
+            "id": "oltaohuai",
+            "name": "讨怀"
+          }
+        ]
+      },
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": ["ol-ranked-2026-10-full"]
+      }
+    },
+    {
+      "position": 13,
+      "officialName": "彭羕",
+      "category": "璀璨星河",
+      "sourceImage": "roster-image-1",
+      "categoryPosition": 13,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/572",
+      "status": "existing-ol-mapping",
+      "nativeCandidate": {
+        "id": "ol_pengyang",
+        "name": "彭羕",
+        "pack": "sp",
+        "hp": "3",
+        "skills": [
+          {
+            "id": "olxiaofan",
+            "name": "嚣翻"
+          },
+          {
+            "id": "oltuishi",
+            "name": "侻失"
+          },
+          {
+            "id": "nzry_cunmu",
+            "name": "寸目"
+          }
+        ]
+      },
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": ["ol-ranked-2026-10-full", "ol-sgl-2026-stage1"]
+      }
+    },
+    {
+      "position": 14,
+      "officialName": "麹义",
+      "category": "璀璨星河",
+      "sourceImage": "roster-image-1",
+      "categoryPosition": 14,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/374",
+      "status": "existing-ol-mapping",
+      "nativeCandidate": {
+        "id": "quyi",
+        "name": "麴义",
+        "pack": "sp",
+        "hp": "4",
+        "skills": [
+          {
+            "id": "fuqi",
+            "name": "伏骑"
+          },
+          {
+            "id": "jiaozi",
+            "name": "骄恣"
+          }
+        ]
+      },
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": [
+          "ol-doudizhu-s15",
+          "ol-ranked-2026-10-basic",
+          "ol-ranked-2026-10-full",
+          "ol-sgl-2026-stage1"
+        ]
+      }
+    },
+    {
+      "position": 15,
+      "officialName": "沙摩柯",
+      "category": "璀璨星河",
+      "sourceImage": "roster-image-1",
+      "categoryPosition": 15,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/431",
+      "status": "existing-ol-mapping",
+      "nativeCandidate": {
+        "id": "shamoke",
+        "name": "沙摩柯",
+        "pack": "sp",
+        "hp": "4",
+        "skills": [
+          {
+            "id": "gzjili",
+            "name": "蒺藜"
+          }
+        ]
+      },
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": [
+          "ol-doudizhu-s15",
+          "ol-ranked-2026-10-basic",
+          "ol-ranked-2026-10-full",
+          "ol-sgl-2026-stage1"
+        ]
+      }
+    },
+    {
+      "position": 16,
+      "officialName": "滕芳兰",
+      "category": "璀璨星河",
+      "sourceImage": "roster-image-1",
+      "categoryPosition": 16,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/500",
+      "status": "existing-ol-mapping",
+      "nativeCandidate": {
+        "id": "tengfanglan",
+        "name": "OL滕芳兰",
+        "pack": "sp",
+        "hp": "3",
+        "skills": [
+          {
+            "id": "luochong",
+            "name": "落宠"
+          },
+          {
+            "id": "aichen",
+            "name": "哀尘"
+          }
+        ]
+      },
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": ["ol-ranked-2026-10-full", "ol-sgl-2026-stage1"]
+      }
+    },
+    {
+      "position": 17,
+      "officialName": "王瓘",
+      "category": "璀璨星河",
+      "sourceImage": "roster-image-1",
+      "categoryPosition": 17,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/553",
+      "status": "user-accepted-native-design",
+      "nativeCandidate": {
+        "id": "wangguan",
+        "name": "王瓘",
+        "pack": "sp",
+        "hp": "3",
+        "skills": [
+          {
+            "id": "olmiuyan",
+            "name": "谬焰"
+          },
+          {
+            "id": "olshilu",
+            "name": "失路"
+          }
+        ]
+      },
+      "comparison": "documented-difference-accepted-by-user",
+      "reviewNote": "用户接受固定原生失路摸牌上限5，保留完整谬焰／失路，不改成官网摘要版本；仍验证技能执行和私有选择。",
+      "reviewDecision": {
+        "date": "2026-10-17",
+        "decision": "采用无名杀固定原生设计，已记录差异不再等待产品审批；实际执行、素材、隐私与恢复仍需验证。",
+        "authority": "explicit-user-decision"
+      }
+    },
+    {
+      "position": 18,
+      "officialName": "戏志才",
+      "category": "璀璨星河",
+      "sourceImage": "roster-image-1",
+      "categoryPosition": 18,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/375",
+      "status": "existing-ol-mapping",
+      "nativeCandidate": {
+        "id": "xizhicai",
+        "name": "戏志才",
+        "pack": "sp",
+        "hp": "3",
+        "skills": [
+          {
+            "id": "tiandu",
+            "name": "天妒"
+          },
+          {
+            "id": "xianfu",
+            "name": "先辅"
+          },
+          {
+            "id": "chouce",
+            "name": "筹策"
+          }
+        ]
+      },
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": ["ol-doudizhu-s15", "ol-sgl-2026-stage1"]
+      }
+    },
+    {
+      "position": 19,
+      "officialName": "阎柔",
+      "category": "璀璨星河",
+      "sourceImage": "roster-image-1",
+      "categoryPosition": 19,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/521",
+      "status": "existing-ol-mapping",
+      "nativeCandidate": {
+        "id": "yanrou",
+        "name": "阎柔",
+        "pack": "sp2",
+        "hp": "4",
+        "skills": [
+          {
+            "id": "choutao",
+            "name": "仇讨"
+          },
+          {
+            "id": "xiangshu",
+            "name": "襄戍"
+          }
+        ]
+      },
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": ["ol-ranked-2026-10-full", "ol-sgl-2026-stage1"]
+      }
+    },
+    {
+      "position": 20,
+      "officialName": "辛毗",
+      "category": "璀璨星河",
+      "sourceImage": "roster-image-1",
+      "categoryPosition": 20,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/435",
+      "status": "existing-ol-mapping",
+      "nativeCandidate": {
+        "id": "xinpi",
+        "name": "辛毗",
+        "pack": "sp2",
+        "hp": "3",
+        "skills": [
+          {
+            "id": "xpchijie",
+            "name": "持节"
+          },
+          {
+            "id": "yinju",
+            "name": "引裾"
+          }
+        ]
+      },
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": ["ol-sgl-2026-stage1"],
+        "note": "同平台原生历史触发／次数差异：官网持节为每回合共限一次、受到伤害后令伤害牌无效，或获得未造成伤害的牌；固定xpchijie为每项各限一次、牌对本人结算后令后续目标无效。引裾仍为限定的目标共摸牌／防伤改回血，保留完整原生。",
+        "versionNote": "同平台原生历史触发／次数差异：官网持节为每回合共限一次、受到伤害后令伤害牌无效，或获得未造成伤害的牌；固定xpchijie为每项各限一次、牌对本人结算后令后续目标无效。引裾仍为限定的目标共摸牌／防伤改回血，保留完整原生。"
+      }
+    },
+    {
+      "position": 21,
+      "officialName": "管亥",
+      "category": "璀璨星河",
+      "sourceImage": "roster-image-1",
+      "categoryPosition": 21,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/701",
+      "status": "existing-ol-mapping",
+      "nativeCandidate": {
+        "id": "ol_guanhai",
+        "name": "OL管亥",
+        "pack": "sp",
+        "hp": "4",
+        "skills": [
+          {
+            "id": "olxiewei",
+            "name": "卸尾"
+          },
+          {
+            "id": "olyouque",
+            "name": "诱阙"
+          }
+        ]
+      },
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": ["ol-ranked-2026-10-full"]
+      }
+    },
+    {
+      "position": 22,
+      "officialName": "张华",
+      "category": "璀璨星河",
+      "sourceImage": "roster-image-1",
+      "categoryPosition": 22,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/544",
+      "status": "existing-ol-mapping",
+      "nativeCandidate": {
+        "id": "zhanghua",
+        "name": "张华",
+        "pack": "sp",
+        "hp": "3",
+        "skills": [
+          {
+            "id": "olbihun",
+            "name": "弼昏"
+          },
+          {
+            "id": "oljianhe",
+            "name": "剑合"
+          },
+          {
+            "id": "olchuanwu",
+            "name": "穿屋"
+          }
+        ]
+      },
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": ["ol-ranked-2026-10-full", "ol-sgl-2026-stage1"]
+      }
+    },
+    {
+      "position": 23,
+      "officialName": "张芝",
+      "category": "璀璨星河",
+      "sourceImage": "roster-image-1",
+      "categoryPosition": 23,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/516",
+      "status": "existing-ol-mapping",
+      "nativeCandidate": {
+        "id": "zhangzhi",
+        "name": "张芝",
+        "pack": "sp",
+        "hp": "3",
+        "skills": [
+          {
+            "id": "olbixin",
+            "name": "笔心"
+          },
+          {
+            "id": "olximo",
+            "name": "洗墨"
+          }
+        ]
+      },
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": ["ol-ranked-2026-10-full", "ol-sgl-2026-stage1"]
+      }
+    },
+    {
+      "position": 24,
+      "officialName": "陆凯",
+      "category": "璀璨星河",
+      "sourceImage": "roster-image-1",
+      "categoryPosition": 24,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/590",
+      "status": "user-accepted-native-design",
+      "nativeCandidate": {
+        "id": "ol_lukai",
+        "name": "OL陆凯",
+        "pack": "sp",
+        "hp": "3",
+        "skills": [
+          {
+            "id": "olxuanzhu",
+            "name": "玄注"
+          },
+          {
+            "id": "oljiane",
+            "name": "謇谔"
+          }
+        ]
+      },
+      "comparison": "documented-difference-accepted-by-user",
+      "reviewNote": "用户接受玄注／謇谔的sp:ol_lukai原生设计，包括扩展区及弃置后等量摸牌；不采用另一陆凯。扩展牌的可见性、事件和恢复仍须验证。",
+      "reviewDecision": {
+        "date": "2026-10-17",
+        "decision": "采用无名杀固定原生设计，已记录差异不再等待产品审批；实际执行、素材、隐私与恢复仍需验证。",
+        "authority": "explicit-user-decision"
+      }
+    },
+    {
+      "position": 25,
+      "officialName": "王荣",
+      "category": "璀璨星河",
+      "sourceImage": "roster-image-1",
+      "categoryPosition": 25,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/344",
+      "status": "existing-ol-mapping",
+      "nativeCandidate": {
+        "id": "ol_wangrong",
+        "name": "OL王荣",
+        "pack": "sp",
+        "hp": "3",
+        "skills": [
+          {
+            "id": "olfengzi",
+            "name": "丰姿"
+          },
+          {
+            "id": "oljizhan",
+            "name": "吉占"
+          },
+          {
+            "id": "olfusong",
+            "name": "赋颂"
+          }
+        ]
+      },
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": ["ol-doudizhu-s15", "ol-ranked-2026-10-basic", "ol-ranked-2026-10-full"]
+      }
+    },
+    {
+      "position": 26,
+      "officialName": "唐棠",
+      "category": "璀璨星河",
+      "sourceImage": "roster-image-1",
+      "categoryPosition": 26,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/744",
+      "status": "missing-native",
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": ["ol-ranked-2026-10-basic", "ol-ranked-2026-10-full"],
+        "reason": "OL版为择行／知意；固定引擎角色及技能目录均未收录对应原生版本，不自行实现。",
+        "rejectedIds": []
+      },
+      "reason": "择行／知意对应原生在固定v1.11.6未收录；2026-10-17最新正式版仍为v1.11.6，当次固定main快照26包／78文件亦未检出唐棠注册或名称。继续缺项，不自行实现或借其他武将代替。",
+      "latestUpstreamReview": "upstreamTangtangReview"
+    },
+    {
+      "position": 27,
+      "officialName": "孔淑",
+      "category": "璀璨星河",
+      "sourceImage": "roster-image-1",
+      "categoryPosition": 27,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/654",
+      "status": "existing-ol-mapping",
+      "nativeCandidate": {
+        "id": "kongshu",
+        "name": "孔淑",
+        "pack": "sp",
+        "hp": "3",
+        "skills": [
+          {
+            "id": "leiluan",
+            "name": "累卵"
+          },
+          {
+            "id": "fuchao",
+            "name": "覆巢"
+          }
+        ]
+      },
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": ["ol-ranked-2026-10-full"]
+      }
+    },
+    {
+      "position": 28,
+      "officialName": "界黄盖",
+      "category": "界限突破",
+      "sourceImage": "roster-image-1",
+      "categoryPosition": 1,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/307",
+      "status": "existing-ol-mapping",
+      "nativeCandidate": {
+        "id": "re_huanggai",
+        "name": "界黄盖",
+        "pack": "refresh",
+        "hp": "4",
+        "skills": [
+          {
+            "id": "rekurou",
+            "name": "苦肉"
+          },
+          {
+            "id": "zhaxiang",
+            "name": "诈降"
+          }
+        ]
+      },
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": [
+          "ol-doudizhu-s15",
+          "ol-ranked-2026-10-basic",
+          "ol-ranked-2026-10-full",
+          "ol-sgl-2026-stage1"
+        ]
+      }
+    },
+    {
+      "position": 29,
+      "officialName": "界李儒",
+      "category": "界限突破",
+      "sourceImage": "roster-image-1",
+      "categoryPosition": 2,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/642",
+      "status": "existing-ol-mapping",
+      "nativeCandidate": {
+        "id": "ol_liru",
+        "name": "OL界李儒",
+        "pack": "onlyOL",
+        "hp": "3",
+        "skills": [
+          {
+            "id": "oljuece",
+            "name": "绝策"
+          },
+          {
+            "id": "olmieji",
+            "name": "灭计"
+          },
+          {
+            "id": "dcfencheng",
+            "name": "焚城"
+          }
+        ]
+      },
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": ["ol-doudizhu-s15", "ol-sgl-2026-stage1"]
+      }
+    },
+    {
+      "position": 30,
+      "officialName": "界王异",
+      "category": "界限突破",
+      "sourceImage": "roster-image-1",
+      "categoryPosition": 3,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/621",
+      "status": "existing-ol-mapping",
+      "nativeCandidate": {
+        "id": "ol_wangyi",
+        "name": "OL界王异",
+        "pack": "onlyOL",
+        "hp": "3",
+        "skills": [
+          {
+            "id": "olzhenlie",
+            "name": "贞烈"
+          },
+          {
+            "id": "olmiji",
+            "name": "秘计"
+          }
+        ]
+      },
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": [
+          "ol-doudizhu-s15",
+          "ol-ranked-2026-10-basic",
+          "ol-ranked-2026-10-full",
+          "ol-sgl-2026-stage1"
+        ]
+      }
+    },
+    {
+      "position": 31,
+      "officialName": "界魏延",
+      "category": "界限突破",
+      "sourceImage": "roster-image-1",
+      "categoryPosition": 4,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/456",
+      "status": "existing-ol-mapping",
+      "nativeCandidate": {
+        "id": "ol_weiyan",
+        "name": "界魏延",
+        "pack": "refresh",
+        "hp": "4",
+        "skills": [
+          {
+            "id": "xinkuanggu",
+            "name": "狂骨"
+          },
+          {
+            "id": "reqimou",
+            "name": "奇谋"
+          }
+        ]
+      },
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": ["ol-doudizhu-s15", "ol-sgl-2026-stage1"]
+      }
+    },
+    {
+      "position": 32,
+      "officialName": "界徐盛",
+      "category": "界限突破",
+      "sourceImage": "roster-image-1",
+      "categoryPosition": 5,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/587",
+      "status": "existing-ol-mapping",
+      "nativeCandidate": {
+        "id": "re_xusheng",
+        "name": "手杀界徐盛",
+        "pack": "mobile",
+        "hp": "4",
+        "skills": [
+          {
+            "id": "repojun",
+            "name": "破军"
+          }
+        ]
+      },
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": [
+          "ol-doudizhu-s15",
+          "ol-ranked-2026-10-basic",
+          "ol-ranked-2026-10-full",
+          "ol-sgl-2026-stage1"
+        ],
+        "note": "复核OL官方页的完整破军文本，含手牌数和装备数均不多于本人时伤害+1；固定原生repojun/repojun2/repojun3与此规则对应。原生显示名虽为手杀界徐盛，其规则与当前OL版相同，不采用带额外弃装备／摸牌的xin_xusheng。"
+      }
+    },
+    {
+      "position": 33,
+      "officialName": "界张春华",
+      "category": "界限突破",
+      "sourceImage": "roster-image-1",
+      "categoryPosition": 6,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/625",
+      "status": "existing-ol-mapping",
+      "nativeCandidate": {
+        "id": "ol_zhangchunhua",
+        "name": "OL界张春华",
+        "pack": "onlyOL",
+        "hp": "3",
+        "skills": [
+          {
+            "id": "jueqing",
+            "name": "绝情"
+          },
+          {
+            "id": "shangshi",
+            "name": "伤逝"
+          },
+          {
+            "id": "oljianmie",
+            "name": "翦灭"
+          }
+        ]
+      },
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": [
+          "ol-doudizhu-s15",
+          "ol-ranked-2026-10-basic",
+          "ol-ranked-2026-10-full",
+          "ol-sgl-2026-stage1"
+        ]
+      }
+    },
+    {
+      "position": 34,
+      "officialName": "曹金玉",
+      "category": "祈福",
+      "sourceImage": "roster-image-1",
+      "categoryPosition": 1,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/740",
+      "status": "existing-ol-mapping",
+      "nativeCandidate": {
+        "id": "ol_caojinyu",
+        "name": "OL曹金玉",
+        "pack": "sp",
+        "hp": "3",
+        "skills": [
+          {
+            "id": "olchunhui",
+            "name": "春晖"
+          },
+          {
+            "id": "olxiasheng",
+            "name": "夏晟"
+          },
+          {
+            "id": "olqiumu",
+            "name": "秋暮"
+          }
+        ]
+      },
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": ["ol-ranked-2026-10-full"]
+      }
+    },
+    {
+      "position": 35,
+      "officialName": "鲍三娘",
+      "category": "祈福",
+      "sourceImage": "roster-image-1",
+      "categoryPosition": 2,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/351",
+      "status": "existing-ol-mapping",
+      "nativeCandidate": {
+        "id": "baosanniang",
+        "name": "鲍三娘",
+        "pack": "sp",
+        "hp": "4",
+        "skills": [
+          {
+            "id": "newwuniang",
+            "name": "武娘"
+          },
+          {
+            "id": "newzhennan",
+            "name": "镇南"
+          },
+          {
+            "id": "newxushen",
+            "name": "许身"
+          }
+        ]
+      },
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": ["ol-doudizhu-s15", "ol-sgl-2026-stage1"]
+      }
+    },
+    {
+      "position": 36,
+      "officialName": "曹纯",
+      "category": "祈福",
+      "sourceImage": "roster-image-1",
+      "categoryPosition": 3,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/426",
+      "status": "existing-ol-mapping",
+      "nativeCandidate": {
+        "id": "caochun",
+        "name": "曹纯",
+        "pack": "sp",
+        "hp": "4",
+        "skills": [
+          {
+            "id": "olshanjia",
+            "name": "缮甲"
+          }
+        ]
+      },
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": ["ol-doudizhu-s15", "ol-ranked-2026-10-full", "ol-sgl-2026-stage1"]
+      }
+    },
+    {
+      "position": 37,
+      "officialName": "曹婴",
+      "category": "祈福",
+      "sourceImage": "roster-image-1",
+      "categoryPosition": 4,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/353",
+      "status": "existing-ol-mapping",
+      "nativeCandidate": {
+        "id": "caoying",
+        "name": "曹婴",
+        "pack": "sp",
+        "hp": "4",
+        "skills": [
+          {
+            "id": "ollingren",
+            "name": "凌人"
+          },
+          {
+            "id": "olfujian",
+            "name": "伏间"
+          }
+        ]
+      },
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": ["ol-doudizhu-s15", "ol-ranked-2026-10-full", "ol-sgl-2026-stage1"]
+      }
+    },
+    {
+      "position": 38,
+      "officialName": "费祎",
+      "category": "祈福",
+      "sourceImage": "roster-image-1",
+      "categoryPosition": 5,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/568",
+      "status": "existing-ol-mapping",
+      "nativeCandidate": {
+        "id": "ol_feiyi",
+        "name": "费祎",
+        "pack": "sp",
+        "hp": "3",
+        "skills": [
+          {
+            "id": "yanru",
+            "name": "晏如"
+          },
+          {
+            "id": "hezhong",
+            "name": "和衷"
+          }
+        ]
+      },
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": ["ol-doudizhu-s15", "ol-sgl-2026-stage1"]
+      }
+    },
+    {
+      "position": 39,
+      "officialName": "郭照",
+      "category": "祈福",
+      "sourceImage": "roster-image-1",
+      "categoryPosition": 6,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/662",
+      "status": "existing-ol-mapping",
+      "nativeCandidate": {
+        "id": "ol_guozhao",
+        "name": "OL郭照",
+        "pack": "sp",
+        "hp": "3",
+        "skills": [
+          {
+            "id": "oljiaoyu",
+            "name": "椒遇"
+          },
+          {
+            "id": "olneixun",
+            "name": "内训"
+          }
+        ]
+      },
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": ["ol-ranked-2026-10-full", "ol-sgl-2026-stage1"]
+      }
+    },
+    {
+      "position": 40,
+      "officialName": "蒋琬",
+      "category": "祈福",
+      "sourceImage": "roster-image-1",
+      "categoryPosition": 7,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/576",
+      "status": "existing-ol-mapping",
+      "nativeCandidate": {
+        "id": "ol_jiangwan",
+        "name": "蒋琬",
+        "pack": "sp",
+        "hp": "3",
+        "skills": [
+          {
+            "id": "olziruo",
+            "name": "自若"
+          },
+          {
+            "id": "olxvfa",
+            "name": "蓄发"
+          }
+        ]
+      },
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": ["ol-doudizhu-s15", "ol-ranked-2026-10-full", "ol-sgl-2026-stage1"]
+      }
+    },
+    {
+      "position": 41,
+      "officialName": "徐荣",
+      "category": "祈福",
+      "sourceImage": "roster-image-1",
+      "categoryPosition": 8,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/417",
+      "status": "existing-ol-mapping",
+      "nativeCandidate": {
+        "id": "xurong",
+        "name": "徐荣",
+        "pack": "xianding",
+        "hp": "4",
+        "skills": [
+          {
+            "id": "xinfu_xionghuo",
+            "name": "凶镬"
+          },
+          {
+            "id": "xinfu_shajue",
+            "name": "杀绝"
+          }
+        ]
+      },
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": ["ol-doudizhu-s15", "ol-sgl-2026-stage1"]
+      }
+    },
+    {
+      "position": 42,
+      "officialName": "周处",
+      "category": "祈福",
+      "sourceImage": "roster-image-1",
+      "categoryPosition": 9,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/518",
+      "status": "existing-ol-mapping",
+      "nativeCandidate": {
+        "id": "jin_zhouchu",
+        "name": "周处",
+        "pack": "sp",
+        "hp": "4",
+        "skills": [
+          {
+            "id": "shanduan",
+            "name": "善断"
+          },
+          {
+            "id": "yilie",
+            "name": "义烈"
+          }
+        ]
+      },
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": [
+          "ol-doudizhu-s15",
+          "ol-ranked-2026-10-basic",
+          "ol-ranked-2026-10-full",
+          "ol-sgl-2026-stage1"
+        ]
+      }
+    },
+    {
+      "position": 43,
+      "officialName": "吕玲绮",
+      "category": "祈福",
+      "sourceImage": "roster-image-1",
+      "categoryPosition": 10,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/716",
+      "status": "existing-ol-mapping",
+      "nativeCandidate": {
+        "id": "ol_lvlingqi",
+        "name": "OL吕玲绮",
+        "pack": "sp",
+        "hp": "4",
+        "skills": [
+          {
+            "id": "olqiwu",
+            "name": "绮武"
+          },
+          {
+            "id": "olzhuangrong",
+            "name": "妆戎"
+          }
+        ]
+      },
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": ["ol-ranked-2026-10-full", "ol-sgl-2026-stage1"]
+      }
+    },
+    {
+      "position": 44,
+      "officialName": "SP刘备",
+      "category": "SP",
+      "sourceImage": "roster-image-1",
+      "categoryPosition": 1,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/664",
+      "status": "existing-ol-mapping",
+      "nativeCandidate": {
+        "id": "sp_ol_liubei",
+        "name": "SP刘备",
+        "pack": "sp",
+        "hp": "4",
+        "skills": [
+          {
+            "id": "spolxudai",
+            "name": "虚待"
+          },
+          {
+            "id": "spolzhujiu",
+            "name": "煮酒"
+          },
+          {
+            "id": "spoljinglei",
+            "name": "惊雷"
+          }
+        ]
+      },
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": ["ol-ranked-2026-10-full", "ol-sgl-2026-stage1"]
+      }
+    },
+    {
+      "position": 45,
+      "officialName": "SP孙策",
+      "category": "SP",
+      "sourceImage": "roster-image-1",
+      "categoryPosition": 2,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/633",
+      "status": "existing-ol-mapping",
+      "nativeCandidate": {
+        "id": "sp_sunce",
+        "name": "SP孙策",
+        "pack": "sp",
+        "hp": "4",
+        "skills": [
+          {
+            "id": "junkliantao",
+            "name": "连讨"
+          }
+        ]
+      },
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": [
+          "ol-doudizhu-s15",
+          "ol-ranked-2026-10-basic",
+          "ol-ranked-2026-10-full",
+          "ol-sgl-2026-stage1"
+        ]
+      }
+    },
+    {
+      "position": 46,
+      "officialName": "周群",
+      "category": "SP",
+      "sourceImage": "roster-image-1",
+      "categoryPosition": 3,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/543",
+      "status": "existing-ol-mapping",
+      "nativeCandidate": {
+        "id": "ol_zhouqun",
+        "name": "周群",
+        "pack": "sp",
+        "hp": "4",
+        "skills": [
+          {
+            "id": "oltianhou",
+            "name": "天候"
+          },
+          {
+            "id": "olchenshuo",
+            "name": "谶说"
+          }
+        ]
+      },
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": ["ol-ranked-2026-10-full"],
+        "note": "同平台原生历史修订差异：官网天候于准备阶段观看顶一张、谶说于结束阶段自己展示；固定ol_zhouqun为结束阶段观看顶三张的天候、准备阶段可令一名角色展示的谶说，完整保留固定历史版本。",
+        "versionNote": "同平台原生历史修订差异：官网天候于准备阶段观看顶一张、谶说于结束阶段自己展示；固定ol_zhouqun为结束阶段观看顶三张的天候、准备阶段可令一名角色展示的谶说，完整保留固定历史版本。"
+      }
+    },
+    {
+      "position": 47,
+      "officialName": "SP赵云",
+      "category": "SP",
+      "sourceImage": "roster-image-1",
+      "categoryPosition": 4,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/108",
+      "status": "existing-ol-mapping",
+      "nativeCandidate": {
+        "id": "sp_zhaoyun",
+        "name": "SP赵云",
+        "pack": "sp",
+        "hp": "3",
+        "skills": [
+          {
+            "id": "ollongdan",
+            "name": "龙胆"
+          },
+          {
+            "id": "chongzhen",
+            "name": "冲阵"
+          }
+        ]
+      },
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": [
+          "ol-doudizhu-s15",
+          "ol-ranked-2026-10-basic",
+          "ol-ranked-2026-10-full",
+          "ol-sgl-2026-stage1"
+        ]
+      }
+    },
+    {
+      "position": 48,
+      "officialName": "祢衡",
+      "category": "SP",
+      "sourceImage": "roster-image-1",
+      "categoryPosition": 5,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/709",
+      "status": "existing-ol-mapping",
+      "nativeCandidate": {
+        "id": "ol_miheng",
+        "name": "OL祢衡",
+        "pack": "sp",
+        "hp": "3",
+        "skills": [
+          {
+            "id": "olkuangjuan",
+            "name": "狂狷"
+          },
+          {
+            "id": "olfeibian",
+            "name": "飞辩"
+          }
+        ]
+      },
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": ["ol-doudizhu-s15", "ol-ranked-2026-10-full", "ol-sgl-2026-stage1"]
+      }
+    },
+    {
+      "position": 49,
+      "officialName": "蒲元",
+      "category": "SP",
+      "sourceImage": "roster-image-1",
+      "categoryPosition": 6,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/510",
+      "status": "existing-ol-mapping",
+      "nativeCandidate": {
+        "id": "ol_puyuan",
+        "name": "OL蒲元",
+        "pack": "sp",
+        "hp": "4",
+        "skills": [
+          {
+            "id": "olshengong",
+            "name": "神工"
+          },
+          {
+            "id": "olqisi",
+            "name": "奇思"
+          }
+        ]
+      },
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": ["ol-ranked-2026-10-full", "ol-sgl-2026-stage1"]
+      }
+    },
+    {
+      "position": 50,
+      "officialName": "闪朱儁",
+      "category": "江山如故",
+      "sourceImage": "roster-image-1",
+      "categoryPosition": 1,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/720",
+      "status": "existing-ol-mapping",
+      "nativeCandidate": {
+        "id": "ol_jsrg_zhujun",
+        "name": "闪朱儁",
+        "pack": "onlyOL",
+        "hp": "4",
+        "skills": [
+          {
+            "id": "olfendi",
+            "name": "分敌"
+          },
+          {
+            "id": "oljuxiang",
+            "name": "拒降"
+          }
+        ]
+      },
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": ["ol-ranked-2026-10-full"]
+      }
+    },
+    {
+      "position": 51,
+      "officialName": "谋邓艾",
+      "category": "谋",
+      "sourceImage": "roster-image-2",
+      "categoryPosition": 1,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/601",
+      "status": "existing-ol-mapping",
+      "nativeCandidate": {
+        "id": "ol_sb_dengai",
+        "name": "OL谋邓艾",
+        "pack": "onlyOL",
+        "hp": "4/5",
+        "skills": [
+          {
+            "id": "olsbjigu",
+            "name": "积谷"
+          },
+          {
+            "id": "olsbjiewan",
+            "name": "解腕"
+          }
+        ]
+      },
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": ["ol-ranked-2026-10-full", "ol-sgl-2026-stage1"],
+        "note": "同平台原生历史体力参数差异：OL英雄目录标5体力且未列初始体力，固定ol_sb_dengai为4/5；保留固定完整积谷／解腕及原生体力。",
+        "versionNote": "同平台原生历史体力参数差异：OL英雄目录标5体力且未列初始体力，固定ol_sb_dengai为4/5；保留固定完整积谷／解腕及原生体力。"
+      }
+    },
+    {
+      "position": 52,
+      "officialName": "谋董卓",
+      "category": "谋",
+      "sourceImage": "roster-image-2",
+      "categoryPosition": 2,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/605",
+      "status": "existing-ol-mapping",
+      "nativeCandidate": {
+        "id": "ol_sb_dongzhuo",
+        "name": "OL谋董卓",
+        "pack": "onlyOL",
+        "hp": "4",
+        "skills": [
+          {
+            "id": "olguanbian",
+            "name": "观变"
+          },
+          {
+            "id": "olxiongni",
+            "name": "凶逆"
+          },
+          {
+            "id": "olfengshang",
+            "name": "封赏"
+          },
+          {
+            "id": "olzhibin",
+            "name": "执柄"
+          }
+        ]
+      },
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": ["ol-doudizhu-s15", "ol-ranked-2026-10-full", "ol-sgl-2026-stage1"]
+      }
+    },
+    {
+      "position": 53,
+      "officialName": "谋公孙瓒",
+      "category": "谋",
+      "sourceImage": "roster-image-2",
+      "categoryPosition": 3,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/648",
+      "status": "existing-ol-mapping",
+      "nativeCandidate": {
+        "id": "ol_sb_gongsunzan",
+        "name": "OL谋公孙瓒",
+        "pack": "onlyOL",
+        "hp": "4",
+        "skills": [
+          {
+            "id": "olsbjiaodi",
+            "name": "剿狄"
+          },
+          {
+            "id": "olsbbaojing",
+            "name": "保京"
+          }
+        ]
+      },
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": ["ol-doudizhu-s15", "ol-ranked-2026-10-full", "ol-sgl-2026-stage1"]
+      }
+    },
+    {
+      "position": 54,
+      "officialName": "谋关羽",
+      "category": "谋",
+      "sourceImage": "roster-image-2",
+      "categoryPosition": 4,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/593",
+      "status": "existing-ol-mapping",
+      "nativeCandidate": {
+        "id": "ol_sb_guanyu",
+        "name": "OL谋关羽",
+        "pack": "onlyOL",
+        "hp": "4",
+        "skills": [
+          {
+            "id": "olsbweilin",
+            "name": "威临"
+          },
+          {
+            "id": "olsbduoshou",
+            "name": "夺首"
+          }
+        ]
+      },
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": [
+          "ol-doudizhu-s15",
+          "ol-ranked-2026-10-basic",
+          "ol-ranked-2026-10-full",
+          "ol-sgl-2026-stage1"
+        ]
+      }
+    },
+    {
+      "position": 55,
+      "officialName": "谋华雄",
+      "category": "谋",
+      "sourceImage": "roster-image-2",
+      "categoryPosition": 5,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/644",
+      "status": "existing-ol-mapping",
+      "nativeCandidate": {
+        "id": "ol_sb_huaxiong",
+        "name": "OL谋华雄",
+        "pack": "onlyOL",
+        "hp": "6",
+        "skills": [
+          {
+            "id": "olsbbojue",
+            "name": "搏决"
+          },
+          {
+            "id": "olsbyangwei",
+            "name": "扬威"
+          }
+        ]
+      },
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": ["ol-ranked-2026-10-full", "ol-sgl-2026-stage1"]
+      }
+    },
+    {
+      "position": 56,
+      "officialName": "谋鲁肃",
+      "category": "谋",
+      "sourceImage": "roster-image-2",
+      "categoryPosition": 6,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/718",
+      "status": "user-accepted-native-design",
+      "nativeCandidate": {
+        "id": "ol_sb_lusu",
+        "name": "OL谋鲁肃",
+        "pack": "onlyOL",
+        "hp": "3",
+        "skills": [
+          {
+            "id": "olsbduduan",
+            "name": "独断"
+          },
+          {
+            "id": "olsbyinglve",
+            "name": "英略"
+          },
+          {
+            "id": "olsbmengshi",
+            "name": "盟势"
+          }
+        ]
+      },
+      "comparison": "documented-difference-accepted-by-user",
+      "reviewNote": "用户接受原生独断／英略／盟势及盟势不能选择同体力两人的限制；不再就该差异等待审批，仍验证阶段交换和限定技恢复。",
+      "reviewDecision": {
+        "date": "2026-10-17",
+        "decision": "采用无名杀固定原生设计，已记录差异不再等待产品审批；实际执行、素材、隐私与恢复仍需验证。",
+        "authority": "explicit-user-decision"
+      }
+    },
+    {
+      "position": 57,
+      "officialName": "谋卢植",
+      "category": "谋",
+      "sourceImage": "roster-image-2",
+      "categoryPosition": 7,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/692",
+      "status": "existing-ol-mapping",
+      "nativeCandidate": {
+        "id": "ol_sb_yl_luzhi",
+        "name": "OL谋卢植",
+        "pack": "onlyOL",
+        "hp": "3/4",
+        "skills": [
+          {
+            "id": "olsibing",
+            "name": "司兵"
+          },
+          {
+            "id": "olliance",
+            "name": "敛策"
+          }
+        ]
+      },
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": ["ol-doudizhu-s15", "ol-ranked-2026-10-full"]
+      }
+    },
+    {
+      "position": 58,
+      "officialName": "谋姜维",
+      "category": "谋",
+      "sourceImage": "roster-image-2",
+      "categoryPosition": 8,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/586",
+      "status": "existing-ol-mapping",
+      "nativeCandidate": {
+        "id": "ol_sb_jiangwei",
+        "name": "OL谋姜维",
+        "pack": "onlyOL",
+        "hp": "4",
+        "skills": [
+          {
+            "id": "olsbzhuri",
+            "name": "逐日"
+          },
+          {
+            "id": "olsbranji",
+            "name": "燃己"
+          }
+        ]
+      },
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": ["ol-doudizhu-s15", "ol-ranked-2026-10-full"]
+      }
+    },
+    {
+      "position": 59,
+      "officialName": "谋孙坚",
+      "category": "谋",
+      "sourceImage": "roster-image-2",
+      "categoryPosition": 9,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/609",
+      "status": "existing-ol-mapping",
+      "nativeCandidate": {
+        "id": "ol_sb_sunjian",
+        "name": "OL谋孙坚",
+        "pack": "onlyOL",
+        "hp": "4/5",
+        "skills": [
+          {
+            "id": "olsbhulie",
+            "name": "虎烈"
+          },
+          {
+            "id": "olsbyipo",
+            "name": "毅魄"
+          }
+        ]
+      },
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": [
+          "ol-doudizhu-s15",
+          "ol-ranked-2026-10-basic",
+          "ol-ranked-2026-10-full",
+          "ol-sgl-2026-stage1"
+        ]
+      }
+    },
+    {
+      "position": 60,
+      "officialName": "谋文丑",
+      "category": "谋",
+      "sourceImage": "roster-image-2",
+      "categoryPosition": 10,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/681",
+      "status": "existing-ol-mapping",
+      "nativeCandidate": {
+        "id": "ol_sb_wenchou",
+        "name": "OL谋文丑",
+        "pack": "onlyOL",
+        "hp": "4",
+        "skills": [
+          {
+            "id": "olsblunzhan",
+            "name": "轮战"
+          },
+          {
+            "id": "olsbjuejue",
+            "name": "决绝"
+          }
+        ]
+      },
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": ["ol-doudizhu-s15", "ol-ranked-2026-10-full", "ol-sgl-2026-stage1"]
+      }
+    },
+    {
+      "position": 61,
+      "officialName": "谋小乔",
+      "category": "谋",
+      "sourceImage": "roster-image-2",
+      "categoryPosition": 11,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/705",
+      "status": "existing-ol-mapping",
+      "nativeCandidate": {
+        "id": "ol_sb_xiaoqiao",
+        "name": "OL谋小乔",
+        "pack": "onlyOL",
+        "hp": "3",
+        "skills": [
+          {
+            "id": "olmiluo",
+            "name": "迷落"
+          },
+          {
+            "id": "oljueyan",
+            "name": "绝颜"
+          }
+        ]
+      },
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": ["ol-ranked-2026-10-basic", "ol-ranked-2026-10-full", "ol-sgl-2026-stage1"]
+      }
+    },
+    {
+      "position": 62,
+      "officialName": "谋诸葛亮",
+      "category": "谋",
+      "sourceImage": "roster-image-2",
+      "categoryPosition": 12,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/717",
+      "status": "existing-ol-mapping",
+      "nativeCandidate": {
+        "id": "ol_sb_zhugeliang",
+        "name": "OL谋诸葛亮",
+        "pack": "onlyOL",
+        "hp": "3",
+        "skills": [
+          {
+            "id": "olsbzhitian",
+            "name": "知天"
+          },
+          {
+            "id": "olsbwujing",
+            "name": "武靖"
+          },
+          {
+            "id": "olsbzhijue",
+            "name": "智绝"
+          }
+        ]
+      },
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": ["ol-doudizhu-s15", "ol-ranked-2026-10-full", "ol-sgl-2026-stage1"]
+      }
+    },
+    {
+      "position": 63,
+      "officialName": "谋袁术",
+      "category": "谋",
+      "sourceImage": "roster-image-2",
+      "categoryPosition": 13,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/646",
+      "status": "existing-ol-mapping",
+      "nativeCandidate": {
+        "id": "ol_sb_yuanshu",
+        "name": "OL谋袁术",
+        "pack": "onlyOL",
+        "hp": "4",
+        "skills": [
+          {
+            "id": "olsbjinming",
+            "name": "矜名"
+          },
+          {
+            "id": "olsbxiaoshi",
+            "name": "枭噬"
+          },
+          {
+            "id": "olsbyanliang",
+            "name": "厌粱"
+          }
+        ]
+      },
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": ["ol-ranked-2026-10-full", "ol-sgl-2026-stage1"]
+      }
+    },
+    {
+      "position": 64,
+      "officialName": "谋张绣",
+      "category": "谋",
+      "sourceImage": "roster-image-2",
+      "categoryPosition": 14,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/687",
+      "status": "existing-ol-mapping",
+      "nativeCandidate": {
+        "id": "ol_sb_zhangxiu",
+        "name": "OL谋张绣",
+        "pack": "onlyOL",
+        "hp": "4",
+        "skills": [
+          {
+            "id": "olsbchoulie",
+            "name": "仇猎"
+          },
+          {
+            "id": "olsbzhuijiao",
+            "name": "追剿"
+          }
+        ]
+      },
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": ["ol-doudizhu-s15", "ol-sgl-2026-stage1"]
+      }
+    },
+    {
+      "position": 65,
+      "officialName": "谋程昱",
+      "category": "谋",
+      "sourceImage": "roster-image-2",
+      "categoryPosition": 15,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/734",
+      "status": "existing-ol-mapping",
+      "nativeCandidate": {
+        "id": "ol_sb_chengyu",
+        "name": "OL谋程昱",
+        "pack": "onlyOL",
+        "hp": "3",
+        "skills": [
+          {
+            "id": "olsbliduan",
+            "name": "戾断"
+          },
+          {
+            "id": "olsbdanchi",
+            "name": "胆持"
+          }
+        ]
+      },
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": ["ol-ranked-2026-10-basic", "ol-ranked-2026-10-full"]
+      }
+    },
+    {
+      "position": 66,
+      "officialName": "谋张让",
+      "category": "谋",
+      "sourceImage": "roster-image-2",
+      "categoryPosition": 16,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/697",
+      "status": "user-accepted-native-design",
+      "nativeCandidate": {
+        "id": "ol_sb_zhangrang",
+        "name": "OL谋张让",
+        "pack": "onlyOL",
+        "hp": "3",
+        "skills": [
+          {
+            "id": "olsblucun",
+            "name": "赂存"
+          },
+          {
+            "id": "olsbtuisheng",
+            "name": "蜕生"
+          }
+        ]
+      },
+      "comparison": "core-skill-text-corresponds",
+      "reviewNote": "用户接受原生赂存／蜕生；新的赂牌私有状态、逐牌名／每轮记录、恢复和实际技能路径仍须验证。",
+      "reviewDecision": {
+        "date": "2026-10-17",
+        "decision": "采用无名杀固定原生设计，已记录差异不再等待产品审批；实际执行、素材、隐私与恢复仍需验证。",
+        "authority": "explicit-user-decision"
+      }
+    },
+    {
+      "position": 67,
+      "officialName": "魔曹操",
+      "category": "魔",
+      "sourceImage": "roster-image-2",
+      "categoryPosition": 1,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/713",
+      "status": "existing-ol-mapping",
+      "nativeCandidate": {
+        "id": "dm_caocao",
+        "name": "OL魔曹操",
+        "pack": "onlyOL",
+        "hp": "4",
+        "skills": [
+          {
+            "id": "olbachao",
+            "name": "霸朝"
+          },
+          {
+            "id": "olfuzai",
+            "name": "覆载"
+          }
+        ]
+      },
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": ["ol-doudizhu-s15", "ol-sgl-2026-stage1"]
+      }
+    },
+    {
+      "position": 68,
+      "officialName": "魔貂蝉",
+      "category": "魔",
+      "sourceImage": "roster-image-2",
+      "categoryPosition": 2,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/715",
+      "status": "existing-ol-mapping",
+      "nativeCandidate": {
+        "id": "dm_diaochan",
+        "name": "魔貂蝉",
+        "pack": "onlyOL",
+        "hp": "3",
+        "skills": [
+          {
+            "id": "olhuanhuo",
+            "name": "幻惑"
+          },
+          {
+            "id": "olqingshi",
+            "name": "倾世"
+          }
+        ]
+      },
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": ["ol-ranked-2026-10-full", "ol-sgl-2026-stage1"]
+      }
+    },
+    {
+      "position": 69,
+      "officialName": "魔吕布",
+      "category": "魔",
+      "sourceImage": "roster-image-2",
+      "categoryPosition": 3,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/714",
+      "status": "existing-ol-mapping",
+      "nativeCandidate": {
+        "id": "dm_lvbu",
+        "name": "魔吕布",
+        "pack": "onlyOL",
+        "hp": "4",
+        "skills": [
+          {
+            "id": "olduoqi",
+            "name": "夺炁"
+          },
+          {
+            "id": "olkuangmo",
+            "name": "狂魔"
+          },
+          {
+            "id": "olgangquan",
+            "name": "罡拳"
+          }
+        ]
+      },
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": ["ol-doudizhu-s15", "ol-sgl-2026-stage1"]
+      }
+    },
+    {
+      "position": 70,
+      "officialName": "魔司马懿",
+      "category": "魔",
+      "sourceImage": "roster-image-2",
+      "categoryPosition": 4,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/710",
+      "status": "existing-ol-mapping",
+      "nativeCandidate": {
+        "id": "dm_simayi",
+        "name": "魔司马懿",
+        "pack": "onlyOL",
+        "hp": "3",
+        "skills": [
+          {
+            "id": "olguifu",
+            "name": "诡伏"
+          },
+          {
+            "id": "olmoubian",
+            "name": "谋变"
+          }
+        ]
+      },
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": ["ol-ranked-2026-10-full", "ol-sgl-2026-stage1"]
+      }
+    },
+    {
+      "position": 71,
+      "officialName": "魔孙权",
+      "category": "魔",
+      "sourceImage": "roster-image-2",
+      "categoryPosition": 5,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/711",
+      "status": "existing-ol-mapping",
+      "nativeCandidate": {
+        "id": "dm_sunquan",
+        "name": "魔孙权",
+        "pack": "onlyOL",
+        "hp": "4",
+        "skills": [
+          {
+            "id": "olquanyu",
+            "name": "权御"
+          },
+          {
+            "id": "oltianen",
+            "name": "天恩"
+          },
+          {
+            "id": "olqiangang",
+            "name": "乾纲"
+          }
+        ]
+      },
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": ["ol-sgl-2026-stage1"]
+      }
+    },
+    {
+      "position": 72,
+      "officialName": "神典韦",
+      "category": "神话再临",
+      "sourceImage": "roster-image-2",
+      "categoryPosition": 1,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/229",
+      "status": "existing-ol-mapping",
+      "nativeCandidate": {
+        "id": "shen_dianwei",
+        "name": "神典韦",
+        "pack": "onlyOL",
+        "hp": "4",
+        "skills": [
+          {
+            "id": "juanjia",
+            "name": "捐甲"
+          },
+          {
+            "id": "qiexie",
+            "name": "挈挟"
+          },
+          {
+            "id": "cuijue",
+            "name": "摧决"
+          }
+        ]
+      },
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": ["ol-doudizhu-s15", "ol-ranked-2026-10-full", "ol-sgl-2026-stage1"]
+      }
+    },
+    {
+      "position": 73,
+      "officialName": "神甘宁",
+      "category": "神话再临",
+      "sourceImage": "roster-image-2",
+      "categoryPosition": 2,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/224",
+      "status": "existing-ol-mapping",
+      "nativeCandidate": {
+        "id": "shen_ganning",
+        "name": "神甘宁",
+        "pack": "extra",
+        "hp": "3/6",
+        "skills": [
+          {
+            "id": "drlt_poxi",
+            "name": "魄袭"
+          },
+          {
+            "id": "drlt_jieying",
+            "name": "劫营"
+          }
+        ]
+      },
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": ["ol-doudizhu-s15", "ol-ranked-2026-10-full", "ol-sgl-2026-stage1"]
+      }
+    },
+    {
+      "position": 74,
+      "officialName": "神陆逊",
+      "category": "神话再临",
+      "sourceImage": "roster-image-2",
+      "categoryPosition": 3,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/221",
+      "status": "existing-ol-mapping",
+      "nativeCandidate": {
+        "id": "shen_luxun",
+        "name": "神陆逊",
+        "pack": "extra",
+        "hp": "4",
+        "skills": [
+          {
+            "id": "nzry_junlve",
+            "name": "军略"
+          },
+          {
+            "id": "nzry_cuike",
+            "name": "摧克"
+          },
+          {
+            "id": "nzry_dinghuo",
+            "name": "绽火"
+          }
+        ]
+      },
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": [
+          "ol-doudizhu-s15",
+          "ol-ranked-2026-10-basic",
+          "ol-ranked-2026-10-full",
+          "ol-sgl-2026-stage1"
+        ]
+      }
+    },
+    {
+      "position": 75,
+      "officialName": "神张角",
+      "category": "神话再临",
+      "sourceImage": "roster-image-2",
+      "categoryPosition": 4,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/227",
+      "status": "existing-ol-mapping",
+      "nativeCandidate": {
+        "id": "junk_zhangjiao",
+        "name": "OL神张角",
+        "pack": "onlyOL",
+        "hp": "3",
+        "skills": [
+          {
+            "id": "yizhao",
+            "name": "异兆"
+          },
+          {
+            "id": "junksijun",
+            "name": "肆军"
+          },
+          {
+            "id": "tianjie",
+            "name": "天劫"
+          }
+        ]
+      },
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": ["ol-doudizhu-s15", "ol-ranked-2026-10-full", "ol-sgl-2026-stage1"]
+      }
+    },
+    {
+      "position": 76,
+      "officialName": "神赵云",
+      "category": "神话再临",
+      "sourceImage": "roster-image-2",
+      "categoryPosition": 5,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/207",
+      "status": "existing-ol-mapping",
+      "nativeCandidate": {
+        "id": "shen_zhaoyun",
+        "name": "神赵云",
+        "pack": "extra",
+        "hp": "2",
+        "skills": [
+          {
+            "id": "xinjuejing",
+            "name": "绝境"
+          },
+          {
+            "id": "relonghun",
+            "name": "龙魂"
+          }
+        ]
+      },
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": ["ol-sgl-2026-stage1"],
+        "note": "已核对OL官方绝境／龙魂全文，对应shen_zhaoyun的同花色1至2张转化版本；不采用旧神赵云按体力值转化版本。"
+      }
+    },
+    {
+      "position": 77,
+      "officialName": "张郃",
+      "category": "神话再临",
+      "sourceImage": "roster-image-2",
+      "categoryPosition": 6,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/50",
+      "status": "effect-corresponding-native",
+      "nativeCandidate": {
+        "id": "zhanghe",
+        "name": "张郃",
+        "pack": "shenhua",
+        "hp": "4",
+        "skills": [
+          {
+            "id": "qiaobian",
+            "name": "巧变"
+          }
+        ]
+      },
+      "comparison": "core-skill-text-corresponds",
+      "reviewNote": "公告是无界字的张郃，对应巧变的shenhua:zhanghe；不替换成界张郃、SP张郃或闪张郃。",
+      "reviewDecision": {
+        "date": "2026-10-17",
+        "decision": "按普通巧变效果采用shenhua:zhanghe，不采用界张郃的变标记机制；保留完整原生定义并验证跳阶段／移牌恢复。",
+        "authority": "user-required-effect-correspondence-with-specific-native-version-review"
+      }
+    },
+    {
+      "position": 78,
+      "officialName": "周泰",
+      "category": "神话再临",
+      "sourceImage": "roster-image-2",
+      "categoryPosition": 7,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/210",
+      "status": "effect-corresponding-native",
+      "nativeCandidate": {
+        "id": "zhoutai",
+        "name": "界周泰",
+        "pack": "refresh",
+        "hp": "4",
+        "skills": [
+          {
+            "id": "buqu",
+            "name": "不屈"
+          },
+          {
+            "id": "fenji",
+            "name": "奋激"
+          }
+        ]
+      },
+      "comparison": "skill-effects-correspond-with-detailed-native-boundary-not-expanded-in-official-summary",
+      "reviewNote": "采用不屈／奋激的refresh:zhoutai（原生显示界周泰），不采用只有旧不屈的old_zhoutai。原生奋激排除主动赠予／交给，官网摘要未展开此边界，图鉴展示完整规则；须验证被夺／被弃与主动交牌的具体触发。",
+      "reviewDecision": {
+        "date": "2026-10-17",
+        "decision": "按不屈／奋激效果采用refresh:zhoutai，原生显示界周泰；不用old_zhoutai或其他奋激版本。原生排除主动赠予／交给，官网摘要未展开边界；展示完整规则并验证被夺／被弃及主动交牌，不声称短摘要证明所有事件一致。",
+        "authority": "user-required-effect-correspondence-with-specific-native-version-review"
+      }
+    },
+    {
+      "position": 79,
+      "officialName": "神黄忠",
+      "category": "神话再临",
+      "sourceImage": "roster-image-2",
+      "categoryPosition": 8,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/230",
+      "status": "existing-ol-mapping",
+      "nativeCandidate": {
+        "id": "ol_shen_huangzhong",
+        "name": "OL神黄忠",
+        "pack": "onlyOL",
+        "hp": "4",
+        "skills": [
+          {
+            "id": "shenyu",
+            "name": "神御"
+          },
+          {
+            "id": "huaren",
+            "name": "化刃"
+          }
+        ]
+      },
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": ["ol-ranked-2026-10-full"]
+      }
+    },
+    {
+      "position": 80,
+      "officialName": "族王沈",
+      "category": "门阀士族",
+      "sourceImage": "roster-image-2",
+      "categoryPosition": 1,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/647",
+      "status": "existing-ol-mapping",
+      "nativeCandidate": {
+        "id": "clan_wangshen",
+        "name": "族王沈",
+        "pack": "clan",
+        "hp": "3",
+        "skills": [
+          {
+            "id": "clananran",
+            "name": "岸然"
+          },
+          {
+            "id": "clangaobian",
+            "name": "告变"
+          },
+          {
+            "id": "clanzhongliu",
+            "name": "中流"
+          }
+        ]
+      },
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": ["ol-ranked-2026-10-full"]
+      }
+    },
+    {
+      "position": 81,
+      "officialName": "族荀采",
+      "category": "门阀士族",
+      "sourceImage": "roster-image-2",
+      "categoryPosition": 2,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/524",
+      "status": "existing-ol-mapping",
+      "nativeCandidate": {
+        "id": "clan_xuncai",
+        "name": "族荀采",
+        "pack": "clan",
+        "hp": "3",
+        "skills": [
+          {
+            "id": "clanlieshi",
+            "name": "烈誓"
+          },
+          {
+            "id": "clandianzhan",
+            "name": "点盏"
+          },
+          {
+            "id": "clanhuanyin",
+            "name": "还阴"
+          },
+          {
+            "id": "clandaojie",
+            "name": "蹈节"
+          }
+        ]
+      },
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": ["ol-ranked-2026-10-full", "ol-sgl-2026-stage1"]
+      }
+    },
+    {
+      "position": 82,
+      "officialName": "族荀谌",
+      "category": "门阀士族",
+      "sourceImage": "roster-image-2",
+      "categoryPosition": 3,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/523",
+      "status": "existing-ol-mapping",
+      "nativeCandidate": {
+        "id": "clan_xunchen",
+        "name": "族荀谌",
+        "pack": "clan",
+        "hp": "3",
+        "skills": [
+          {
+            "id": "clansankuang",
+            "name": "三恇"
+          },
+          {
+            "id": "clanbeishi",
+            "name": "卑势"
+          },
+          {
+            "id": "clandaojie",
+            "name": "蹈节"
+          }
+        ]
+      },
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": ["ol-ranked-2026-10-full", "ol-sgl-2026-stage1"]
+      }
+    },
+    {
+      "position": 83,
+      "officialName": "族荀莳",
+      "category": "门阀士族",
+      "sourceImage": "roster-image-2",
+      "categoryPosition": 4,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/738",
+      "status": "existing-ol-mapping",
+      "nativeCandidate": {
+        "id": "clan_xunshi",
+        "name": "族荀莳",
+        "pack": "clan",
+        "hp": "3",
+        "skills": [
+          {
+            "id": "clanqingjue",
+            "name": "清绝"
+          },
+          {
+            "id": "clanxsyingxiang",
+            "name": "萦香"
+          },
+          {
+            "id": "clandaojie",
+            "name": "蹈节"
+          }
+        ]
+      },
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": ["ol-ranked-2026-10-full", "ol-sgl-2026-stage1"]
+      }
+    },
+    {
+      "position": 84,
+      "officialName": "族荀攸",
+      "category": "门阀士族",
+      "sourceImage": "roster-image-2",
+      "categoryPosition": 5,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/573",
+      "status": "existing-ol-mapping",
+      "nativeCandidate": {
+        "id": "clan_xunyou",
+        "name": "族荀攸",
+        "pack": "clan",
+        "hp": "3",
+        "skills": [
+          {
+            "id": "clanbaichu",
+            "name": "百出"
+          },
+          {
+            "id": "clandaojie",
+            "name": "蹈节"
+          }
+        ]
+      },
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": ["ol-doudizhu-s15", "ol-ranked-2026-10-full", "ol-sgl-2026-stage1"]
+      }
+    },
+    {
+      "position": 85,
+      "officialName": "族荀粲",
+      "category": "门阀士族",
+      "sourceImage": "roster-image-2",
+      "categoryPosition": 6,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/525",
+      "status": "user-accepted-native-design",
+      "nativeCandidate": {
+        "id": "clan_xuncan",
+        "name": "族荀粲",
+        "pack": "clan",
+        "hp": "3",
+        "skills": [
+          {
+            "id": "clanyunshen",
+            "name": "熨身"
+          },
+          {
+            "id": "clanshangshen",
+            "name": "伤神"
+          },
+          {
+            "id": "clanfenchai",
+            "name": "分钗"
+          },
+          {
+            "id": "clandaojie",
+            "name": "蹈节"
+          }
+        ]
+      },
+      "comparison": "core-skill-text-corresponds",
+      "reviewNote": "用户接受原生蹈节／熨身／伤神／分钗；首个属性伤害、分钗记录及判定恢复仍须验证。",
+      "reviewDecision": {
+        "date": "2026-10-17",
+        "decision": "采用无名杀固定原生设计，已记录差异不再等待产品审批；实际执行、素材、隐私与恢复仍需验证。",
+        "authority": "explicit-user-decision"
+      }
+    },
+    {
+      "position": 86,
+      "officialName": "族杨彪",
+      "category": "门阀士族",
+      "sourceImage": "roster-image-2",
+      "categoryPosition": 7,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/700",
+      "status": "existing-ol-mapping",
+      "nativeCandidate": {
+        "id": "clan_yangbiao",
+        "name": "族杨彪",
+        "pack": "clan",
+        "hp": "3",
+        "skills": [
+          {
+            "id": "clanjiannan",
+            "name": "间难"
+          },
+          {
+            "id": "clanyichi",
+            "name": "义叱"
+          },
+          {
+            "id": "clanquhuo",
+            "name": "去惑"
+          }
+        ]
+      },
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": ["ol-doudizhu-s15", "ol-ranked-2026-10-full", "ol-sgl-2026-stage1"]
+      }
+    },
+    {
+      "position": 87,
+      "officialName": "族钟会",
+      "category": "门阀士族",
+      "sourceImage": "roster-image-2",
+      "categoryPosition": 8,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/567",
+      "status": "existing-ol-mapping",
+      "nativeCandidate": {
+        "id": "clan_zhonghui",
+        "name": "族钟会",
+        "pack": "clan",
+        "hp": "3/4",
+        "skills": [
+          {
+            "id": "clanyuzhi",
+            "name": "迂志"
+          },
+          {
+            "id": "clanxieshu",
+            "name": "挟术"
+          },
+          {
+            "id": "clanbaozu",
+            "name": "保族"
+          }
+        ]
+      },
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": ["ol-doudizhu-s15", "ol-ranked-2026-10-full", "ol-sgl-2026-stage1"]
+      }
+    },
+    {
+      "position": 88,
+      "officialName": "族钟琰",
+      "category": "门阀士族",
+      "sourceImage": "roster-image-2",
+      "categoryPosition": 9,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/548",
+      "status": "existing-ol-mapping",
+      "nativeCandidate": {
+        "id": "clan_zhongyan",
+        "name": "族钟琰",
+        "pack": "clan",
+        "hp": "3",
+        "skills": [
+          {
+            "id": "clanguangu",
+            "name": "观骨"
+          },
+          {
+            "id": "clanxiaoyong",
+            "name": "啸咏"
+          },
+          {
+            "id": "clanbaozu",
+            "name": "保族"
+          }
+        ]
+      },
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": ["ol-doudizhu-s15", "ol-sgl-2026-stage1"]
+      }
+    },
+    {
+      "position": 89,
+      "officialName": "族陆郁生",
+      "category": "门阀士族",
+      "sourceImage": "roster-image-2",
+      "categoryPosition": 10,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/751",
+      "status": "existing-ol-mapping",
+      "nativeCandidate": {
+        "id": "clan_luyusheng",
+        "name": "族陆郁生",
+        "pack": "clan",
+        "hp": "3",
+        "skills": [
+          {
+            "id": "clanshixi",
+            "name": "拾昔"
+          },
+          {
+            "id": "clanjianbai",
+            "name": "坚白"
+          },
+          {
+            "id": "clanzelie",
+            "name": "泽烈"
+          }
+        ]
+      },
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": ["ol-ranked-2026-10-basic", "ol-ranked-2026-10-full"]
+      }
+    },
+    {
+      "position": 90,
+      "officialName": "族王明山",
+      "category": "门阀士族",
+      "sourceImage": "roster-image-2",
+      "categoryPosition": 11,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/608",
+      "status": "existing-ol-mapping",
+      "nativeCandidate": {
+        "id": "clan_wangmingshan",
+        "name": "族王明山",
+        "pack": "clan",
+        "hp": "3",
+        "skills": [
+          {
+            "id": "clantanque",
+            "name": "弹雀"
+          },
+          {
+            "id": "clanshengmo",
+            "name": "剩墨"
+          },
+          {
+            "id": "clanzhongliu",
+            "name": "中流"
+          }
+        ]
+      },
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": ["ol-ranked-2026-10-full"]
+      }
+    },
+    {
+      "position": 91,
+      "officialName": "族杨修",
+      "category": "门阀士族",
+      "sourceImage": "roster-image-2",
+      "categoryPosition": 12,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/694",
+      "status": "existing-ol-mapping",
+      "nativeCandidate": {
+        "id": "clan_yangxiu",
+        "name": "族杨修",
+        "pack": "clan",
+        "hp": "3",
+        "skills": [
+          {
+            "id": "clanjiewu",
+            "name": "捷悟"
+          },
+          {
+            "id": "clangaoshi",
+            "name": "高视"
+          },
+          {
+            "id": "clanquhuo",
+            "name": "去惑"
+          }
+        ]
+      },
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": ["ol-ranked-2026-10-full"]
+      }
+    },
+    {
+      "position": 92,
+      "officialName": "秦宓",
+      "category": "一将成名",
+      "sourceImage": "roster-image-2",
+      "categoryPosition": 1,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/393",
+      "status": "existing-ol-mapping",
+      "nativeCandidate": {
+        "id": "qinmi",
+        "name": "秦宓",
+        "pack": "yijiang",
+        "hp": "3",
+        "skills": [
+          {
+            "id": "jianzheng",
+            "name": "谏征"
+          },
+          {
+            "id": "zhuandui",
+            "name": "专对"
+          },
+          {
+            "id": "tianbian",
+            "name": "天辩"
+          }
+        ]
+      },
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": [
+          "ol-doudizhu-s15",
+          "ol-ranked-2026-10-basic",
+          "ol-ranked-2026-10-full",
+          "ol-sgl-2026-stage1"
+        ]
+      }
+    },
+    {
+      "position": 93,
+      "officialName": "吴懿",
+      "category": "一将成名",
+      "sourceImage": "roster-image-2",
+      "categoryPosition": 2,
+      "officialHeroUrl": "https://www.sanguosha.com/hero/324",
+      "status": "existing-ol-mapping",
+      "nativeCandidate": {
+        "id": "wuyi",
+        "name": "吴懿",
+        "pack": "yijiang",
+        "hp": "4",
+        "skills": [
+          {
+            "id": "olbenxi",
+            "name": "奔袭"
+          }
+        ]
+      },
+      "priorReview": {
+        "reviewedAt": "2026-10-12",
+        "source": "config/official-rosters.json",
+        "presetIds": ["ol-doudizhu-s15", "ol-ranked-2026-10-full", "ol-sgl-2026-stage1"]
+      }
+    }
+  ],
+  "revisedAt": "2026-10-17",
+  "userDecisions": {
+    "date": "2026-10-17",
+    "nativeDesignAccepted": ["王瓘", "陆凯", "谋鲁肃", "谋张让", "族荀粲"],
+    "effectCorrespondingVersions": ["张郃", "周泰"],
+    "tangtang": "check-new-upstream-version-without-automatic-engine-upgrade",
+    "entries": ["improve-existing-three-player-doudizhu", "new-four-member-college-practice"],
+    "separateThreePlayerPractice": false,
+    "humanWithAi": {
+      "pregameProxy": ["bid", "replace-general", "choose-general"],
+      "aiTeammateIsLandlord": "human-controls-ai-landlord-including-luck-cards-responses-and-skills-with-native-autoplay-available",
+      "bothAreFarmers": "human-controls-self-and-native-ai-plays-ai-teammate"
+    },
+    "defaultCollegeFormat": "standard",
+    "collegeFormats": {
+      "standard": {
+        "maxRegulationGames": 12,
+        "targetScore": 20,
+        "tieBreakerGames": 1
+      },
+      "quick": {
+        "maxRegulationGames": 6,
+        "targetScore": 10,
+        "tieBreakerGames": 1
+      }
+    },
+    "latestRevisionScope": [
+      "farmer-teammate-hand-visibility",
+      "competition-opening-hand-refresh-limit",
+      "quick-six-games-first-ten-points"
+    ],
+    "farmerHandSharing": {
+      "enabled": true,
+      "scope": ["ordinary-doudizhu", "college-standard", "college-quick"],
+      "includesAi": true,
+      "readOnly": true
+    },
+    "openingHandRefresh": "match-competition-inherited-three-refreshes-per-active-seat-per-game"
+  },
+  "upstreamTangtangReview": {
+    "checkedAt": "2026-10-17T08:25:37.295Z",
+    "status": "not-found-in-pinned-release-or-reviewed-main-snapshot",
+    "latestStable": {
+      "tag": "v1.11.6",
+      "commit": "2367607e246d21aae168dba15c01151ee0651f30",
+      "url": "https://github.com/libnoname/noname/releases/tag/v1.11.6",
+      "discoveryUrl": "https://github.com/libnoname/noname/releases/latest",
+      "discoveryDocument": {
+        "bytes": 229300,
+        "sha256": "a8b6df5f80477c92f3eeede0c02eae8f50ef9cad0a7521255b72c4ed4e344be6"
+      },
+      "pinnedInventory": "config/native-character-inventory.json",
+      "foundTangtang": false
+    },
+    "main": {
+      "repository": "https://github.com/libnoname/noname",
+      "commit": "08b0f659a05ecbd3b74f31e9e3df4e5b199377e4",
+      "commitUrl": "https://github.com/libnoname/noname/commit/08b0f659a05ecbd3b74f31e9e3df4e5b199377e4",
+      "directory": "apps/core/character",
+      "discoveryUrl": "https://github.com/libnoname/noname/tree/main/apps/core/character",
+      "discoveryDocument": {
+        "bytes": 274394,
+        "sha256": "6a5175badae56bb4dc9075a036571f0cd031306434b1ac988c4e0a8d4e8b9504"
+      },
+      "packs": [
+        "bingshi",
+        "clan",
+        "collab",
+        "diy",
+        "extra",
+        "huicui",
+        "jsrg",
+        "key",
+        "mobile",
+        "newjiang",
+        "offline",
+        "old",
+        "onlyOL",
+        "refresh",
+        "sb",
+        "shenhua",
+        "shiji",
+        "sixiang",
+        "sp",
+        "sp2",
+        "standard",
+        "sxrm",
+        "tw",
+        "xianding",
+        "yijiang",
+        "yingbian"
+      ],
+      "filesPerPack": ["character.js", "translate.js", "index.js"],
+      "fileCount": 78,
+      "complete": true,
+      "searchTerms": ["唐棠（含中间空白）", "tangtang", "tang_tang", "择行"],
+      "matches": [],
+      "sourceManifest": [
+        {
+          "path": "apps/core/character/bingshi/character.js",
+          "url": "https://raw.githubusercontent.com/libnoname/noname/08b0f659a05ecbd3b74f31e9e3df4e5b199377e4/apps/core/character/bingshi/character.js",
+          "bytes": 4005,
+          "sha256": "d8339e10ff9f79ccaf3466d7bb40f90109cf8be03d35d71baa2037c75bb44202"
+        },
+        {
+          "path": "apps/core/character/bingshi/index.js",
+          "url": "https://raw.githubusercontent.com/libnoname/noname/08b0f659a05ecbd3b74f31e9e3df4e5b199377e4/apps/core/character/bingshi/index.js",
+          "bytes": 1117,
+          "sha256": "5ee146a3f054b0a8273b0908df1ddb21c30423a4dddde1a1550e0ff722424cb5"
+        },
+        {
+          "path": "apps/core/character/bingshi/translate.js",
+          "url": "https://raw.githubusercontent.com/libnoname/noname/08b0f659a05ecbd3b74f31e9e3df4e5b199377e4/apps/core/character/bingshi/translate.js",
+          "bytes": 28126,
+          "sha256": "520777f27a8d029125e14cc557ead5f7ebf20bc35d0e9bd78d7bf41195097c6d"
+        },
+        {
+          "path": "apps/core/character/clan/character.js",
+          "url": "https://raw.githubusercontent.com/libnoname/noname/08b0f659a05ecbd3b74f31e9e3df4e5b199377e4/apps/core/character/clan/character.js",
+          "bytes": 5989,
+          "sha256": "f6f71e208dea6a10e889955f1fbed3992d3d39845f8fc5e409985c575c5beda7"
+        },
+        {
+          "path": "apps/core/character/clan/index.js",
+          "url": "https://raw.githubusercontent.com/libnoname/noname/08b0f659a05ecbd3b74f31e9e3df4e5b199377e4/apps/core/character/clan/index.js",
+          "bytes": 1029,
+          "sha256": "290ff6cb2d8c5b0d54b3776261073b9cd8f35d62822cf329f723b4f4601ada52"
+        },
+        {
+          "path": "apps/core/character/clan/translate.js",
+          "url": "https://raw.githubusercontent.com/libnoname/noname/08b0f659a05ecbd3b74f31e9e3df4e5b199377e4/apps/core/character/clan/translate.js",
+          "bytes": 26362,
+          "sha256": "eb5dbbf64a47babdd89b8b30c7cc5ee958578b2424fff346785b378e2d8f463e"
+        },
+        {
+          "path": "apps/core/character/collab/character.js",
+          "url": "https://raw.githubusercontent.com/libnoname/noname/08b0f659a05ecbd3b74f31e9e3df4e5b199377e4/apps/core/character/collab/character.js",
+          "bytes": 9827,
+          "sha256": "952f8f9a9f491e4ce2767436a745034783dc3e59c6b9762c82e31c980d72b350"
+        },
+        {
+          "path": "apps/core/character/collab/index.js",
+          "url": "https://raw.githubusercontent.com/libnoname/noname/08b0f659a05ecbd3b74f31e9e3df4e5b199377e4/apps/core/character/collab/index.js",
+          "bytes": 1514,
+          "sha256": "ad306570be3fb7aa3df9e9e6835534a54fe352f405c35656f6bc2bf8ffd9331f"
+        },
+        {
+          "path": "apps/core/character/collab/translate.js",
+          "url": "https://raw.githubusercontent.com/libnoname/noname/08b0f659a05ecbd3b74f31e9e3df4e5b199377e4/apps/core/character/collab/translate.js",
+          "bytes": 46866,
+          "sha256": "c1cb5ee5d9e8bf5f62d6415fbc0d841d5bab00c42e1331d12b28aa14ebc68578"
+        },
+        {
+          "path": "apps/core/character/diy/character.js",
+          "url": "https://raw.githubusercontent.com/libnoname/noname/08b0f659a05ecbd3b74f31e9e3df4e5b199377e4/apps/core/character/diy/character.js",
+          "bytes": 7272,
+          "sha256": "756c2df43a3c4734d6947966bd64ca292086ff2c1d31eb8cc14f3ea7faa2e49d"
+        },
+        {
+          "path": "apps/core/character/diy/index.js",
+          "url": "https://raw.githubusercontent.com/libnoname/noname/08b0f659a05ecbd3b74f31e9e3df4e5b199377e4/apps/core/character/diy/index.js",
+          "bytes": 1268,
+          "sha256": "f806024b66b5d88afa3306401907b013ecdac7ca022849af983c14d66f03b794"
+        },
+        {
+          "path": "apps/core/character/diy/translate.js",
+          "url": "https://raw.githubusercontent.com/libnoname/noname/08b0f659a05ecbd3b74f31e9e3df4e5b199377e4/apps/core/character/diy/translate.js",
+          "bytes": 33328,
+          "sha256": "476fd5c1b48c1b6b6e345e9a3273e9b2ca256d614f66e054d00db284480380b9"
+        },
+        {
+          "path": "apps/core/character/extra/character.js",
+          "url": "https://raw.githubusercontent.com/libnoname/noname/08b0f659a05ecbd3b74f31e9e3df4e5b199377e4/apps/core/character/extra/character.js",
+          "bytes": 1702,
+          "sha256": "0d65543e9f8764683454bbfeb3de262d9b62b09192322520f7d5cc98ea5f14b6"
+        },
+        {
+          "path": "apps/core/character/extra/index.js",
+          "url": "https://raw.githubusercontent.com/libnoname/noname/08b0f659a05ecbd3b74f31e9e3df4e5b199377e4/apps/core/character/extra/index.js",
+          "bytes": 1067,
+          "sha256": "e15505ed27d300579d6a1c9d7f351ee98db8b08981a8e9b9b74d9d50a438e37f"
+        },
+        {
+          "path": "apps/core/character/extra/translate.js",
+          "url": "https://raw.githubusercontent.com/libnoname/noname/08b0f659a05ecbd3b74f31e9e3df4e5b199377e4/apps/core/character/extra/translate.js",
+          "bytes": 15705,
+          "sha256": "6f3b48a4bb38529c439e8e6a70e8866c32d75be1f3b30c407649be98459c7646"
+        },
+        {
+          "path": "apps/core/character/huicui/character.js",
+          "url": "https://raw.githubusercontent.com/libnoname/noname/08b0f659a05ecbd3b74f31e9e3df4e5b199377e4/apps/core/character/huicui/character.js",
+          "bytes": 12526,
+          "sha256": "acd79169a444681af33b3130b70a4fee1528b3e4995d1b0b5c9712d441c61f32"
+        },
+        {
+          "path": "apps/core/character/huicui/index.js",
+          "url": "https://raw.githubusercontent.com/libnoname/noname/08b0f659a05ecbd3b74f31e9e3df4e5b199377e4/apps/core/character/huicui/index.js",
+          "bytes": 1033,
+          "sha256": "fa1343d8b22f188a146c06d8bc0c519356676c23f12313606dccaddd4c5de3df"
+        },
+        {
+          "path": "apps/core/character/huicui/translate.js",
+          "url": "https://raw.githubusercontent.com/libnoname/noname/08b0f659a05ecbd3b74f31e9e3df4e5b199377e4/apps/core/character/huicui/translate.js",
+          "bytes": 76250,
+          "sha256": "555157171334b9c511ba4ea3b3960cd20972c6ece14224b4e065f02e3ebc406f"
+        },
+        {
+          "path": "apps/core/character/jsrg/character.js",
+          "url": "https://raw.githubusercontent.com/libnoname/noname/08b0f659a05ecbd3b74f31e9e3df4e5b199377e4/apps/core/character/jsrg/character.js",
+          "bytes": 9518,
+          "sha256": "731ecbcc2d853dda1ed91d16bc4a689fa57d52c37fd453ce93d05e0b6ea48ffc"
+        },
+        {
+          "path": "apps/core/character/jsrg/index.js",
+          "url": "https://raw.githubusercontent.com/libnoname/noname/08b0f659a05ecbd3b74f31e9e3df4e5b199377e4/apps/core/character/jsrg/index.js",
+          "bytes": 1106,
+          "sha256": "06a59735d12186e4115b3c3843974619bbd60c18f0e314a351b6929e2de5fb76"
+        },
+        {
+          "path": "apps/core/character/jsrg/translate.js",
+          "url": "https://raw.githubusercontent.com/libnoname/noname/08b0f659a05ecbd3b74f31e9e3df4e5b199377e4/apps/core/character/jsrg/translate.js",
+          "bytes": 49352,
+          "sha256": "1d241ef194aea3932bbf27b8ab8070d4d797c1edf6214554826f9751f61b57a8"
+        },
+        {
+          "path": "apps/core/character/key/character.js",
+          "url": "https://raw.githubusercontent.com/libnoname/noname/08b0f659a05ecbd3b74f31e9e3df4e5b199377e4/apps/core/character/key/character.js",
+          "bytes": 11971,
+          "sha256": "c493f3def7fdcf49760c426908e71132f3be6a8f246be0dce25d750565fa2600"
+        },
+        {
+          "path": "apps/core/character/key/index.js",
+          "url": "https://raw.githubusercontent.com/libnoname/noname/08b0f659a05ecbd3b74f31e9e3df4e5b199377e4/apps/core/character/key/index.js",
+          "bytes": 1692,
+          "sha256": "78affb7d3d9f2e47db753940315547dfbb41d1ae472758f2e804e489a199c08c"
+        },
+        {
+          "path": "apps/core/character/key/translate.js",
+          "url": "https://raw.githubusercontent.com/libnoname/noname/08b0f659a05ecbd3b74f31e9e3df4e5b199377e4/apps/core/character/key/translate.js",
+          "bytes": 60865,
+          "sha256": "ce54116a87c87010ac8c2a8728be5d99d550fbde7e412d7dfb8f73806c15eac5"
+        },
+        {
+          "path": "apps/core/character/mobile/character.js",
+          "url": "https://raw.githubusercontent.com/libnoname/noname/08b0f659a05ecbd3b74f31e9e3df4e5b199377e4/apps/core/character/mobile/character.js",
+          "bytes": 23392,
+          "sha256": "172ccd63a7216c34a6b40016c42ce86ac11613d4ed3a786bb5ceeb78e1006110"
+        },
+        {
+          "path": "apps/core/character/mobile/index.js",
+          "url": "https://raw.githubusercontent.com/libnoname/noname/08b0f659a05ecbd3b74f31e9e3df4e5b199377e4/apps/core/character/mobile/index.js",
+          "bytes": 3093,
+          "sha256": "b26eec25d4a4bfceabd72be8677320d7fd8ebeb2e40158ff15dcbbde4cc404ea"
+        },
+        {
+          "path": "apps/core/character/mobile/translate.js",
+          "url": "https://raw.githubusercontent.com/libnoname/noname/08b0f659a05ecbd3b74f31e9e3df4e5b199377e4/apps/core/character/mobile/translate.js",
+          "bytes": 133175,
+          "sha256": "0635af8def835afd4bf1e8bdc1e5e4696b0dd209816da3db471134e50d7ceba8"
+        },
+        {
+          "path": "apps/core/character/newjiang/character.js",
+          "url": "https://raw.githubusercontent.com/libnoname/noname/08b0f659a05ecbd3b74f31e9e3df4e5b199377e4/apps/core/character/newjiang/character.js",
+          "bytes": 4470,
+          "sha256": "3f6105c450f85431224fe7e37af546a94d05308134ad2565f2b8d2dba0222d10"
+        },
+        {
+          "path": "apps/core/character/newjiang/index.js",
+          "url": "https://raw.githubusercontent.com/libnoname/noname/08b0f659a05ecbd3b74f31e9e3df4e5b199377e4/apps/core/character/newjiang/index.js",
+          "bytes": 1197,
+          "sha256": "b475cb438308dfa92673f35d2f7c37b77f6afdd8f86c960bf2111d7fc4e232da"
+        },
+        {
+          "path": "apps/core/character/newjiang/translate.js",
+          "url": "https://raw.githubusercontent.com/libnoname/noname/08b0f659a05ecbd3b74f31e9e3df4e5b199377e4/apps/core/character/newjiang/translate.js",
+          "bytes": 29242,
+          "sha256": "f694c47891211f2c4d612ef042264bbe697271173f89c96628917d27e16769ba"
+        },
+        {
+          "path": "apps/core/character/offline/character.js",
+          "url": "https://raw.githubusercontent.com/libnoname/noname/08b0f659a05ecbd3b74f31e9e3df4e5b199377e4/apps/core/character/offline/character.js",
+          "bytes": 47183,
+          "sha256": "6cb119b7df13508586dcd35eb38b0926d6f1c5d4de59f12d8fa5419788372c6e"
+        },
+        {
+          "path": "apps/core/character/offline/index.js",
+          "url": "https://raw.githubusercontent.com/libnoname/noname/08b0f659a05ecbd3b74f31e9e3df4e5b199377e4/apps/core/character/offline/index.js",
+          "bytes": 1759,
+          "sha256": "3d7a75ac1021f4ec76ab515b1d37e38e67ae8598ffabaddd9f31327efba88a00"
+        },
+        {
+          "path": "apps/core/character/offline/translate.js",
+          "url": "https://raw.githubusercontent.com/libnoname/noname/08b0f659a05ecbd3b74f31e9e3df4e5b199377e4/apps/core/character/offline/translate.js",
+          "bytes": 216395,
+          "sha256": "0f77707d5e6184c6376ae2664c99cb1e5fef3d36f22f0106000e8307dc962e14"
+        },
+        {
+          "path": "apps/core/character/old/character.js",
+          "url": "https://raw.githubusercontent.com/libnoname/noname/08b0f659a05ecbd3b74f31e9e3df4e5b199377e4/apps/core/character/old/character.js",
+          "bytes": 10017,
+          "sha256": "ef03230410123f3916bef7887f20544e3252191225a8ebb7f74cba7555a83dfd"
+        },
+        {
+          "path": "apps/core/character/old/index.js",
+          "url": "https://raw.githubusercontent.com/libnoname/noname/08b0f659a05ecbd3b74f31e9e3df4e5b199377e4/apps/core/character/old/index.js",
+          "bytes": 1027,
+          "sha256": "7d0724944a333471ea011881eb15cd9c15e6a17fd8b2bd341583d78a6270fd28"
+        },
+        {
+          "path": "apps/core/character/old/translate.js",
+          "url": "https://raw.githubusercontent.com/libnoname/noname/08b0f659a05ecbd3b74f31e9e3df4e5b199377e4/apps/core/character/old/translate.js",
+          "bytes": 10264,
+          "sha256": "0fe4e2e4501ffde11611a04d1113b9408fb8f03ff4681fae4cfb6e74cdf473a9"
+        },
+        {
+          "path": "apps/core/character/onlyOL/character.js",
+          "url": "https://raw.githubusercontent.com/libnoname/noname/08b0f659a05ecbd3b74f31e9e3df4e5b199377e4/apps/core/character/onlyOL/character.js",
+          "bytes": 10074,
+          "sha256": "b8137af23e77e763d74a67f1842fdd9da15ea10ea30b738b9864c448d90ddbdc"
+        },
+        {
+          "path": "apps/core/character/onlyOL/index.js",
+          "url": "https://raw.githubusercontent.com/libnoname/noname/08b0f659a05ecbd3b74f31e9e3df4e5b199377e4/apps/core/character/onlyOL/index.js",
+          "bytes": 1403,
+          "sha256": "b8fe58c0216bec83d24bb809e56aa10468b87fe7eaa4365738760bb4fdb85425"
+        },
+        {
+          "path": "apps/core/character/onlyOL/translate.js",
+          "url": "https://raw.githubusercontent.com/libnoname/noname/08b0f659a05ecbd3b74f31e9e3df4e5b199377e4/apps/core/character/onlyOL/translate.js",
+          "bytes": 57129,
+          "sha256": "d398cb62ca3236c872e9476b5c4f954783236f92bf604fe807d3ccb51d1b6943"
+        },
+        {
+          "path": "apps/core/character/refresh/character.js",
+          "url": "https://raw.githubusercontent.com/libnoname/noname/08b0f659a05ecbd3b74f31e9e3df4e5b199377e4/apps/core/character/refresh/character.js",
+          "bytes": 13581,
+          "sha256": "ac5045f6c9eda9a074c6e21954872fad9a017f82e6c9d34d19a94df9a33b716d"
+        },
+        {
+          "path": "apps/core/character/refresh/index.js",
+          "url": "https://raw.githubusercontent.com/libnoname/noname/08b0f659a05ecbd3b74f31e9e3df4e5b199377e4/apps/core/character/refresh/index.js",
+          "bytes": 1117,
+          "sha256": "2189ddad117154eda491003b7fc3815f933f4fc1152fc2e81c32a5e430d22e24"
+        },
+        {
+          "path": "apps/core/character/refresh/translate.js",
+          "url": "https://raw.githubusercontent.com/libnoname/noname/08b0f659a05ecbd3b74f31e9e3df4e5b199377e4/apps/core/character/refresh/translate.js",
+          "bytes": 69935,
+          "sha256": "289681f65786e9c9e71f4fcf920911a1cca622c2bd6c664dd247a5d545bb619b"
+        },
+        {
+          "path": "apps/core/character/sb/character.js",
+          "url": "https://raw.githubusercontent.com/libnoname/noname/08b0f659a05ecbd3b74f31e9e3df4e5b199377e4/apps/core/character/sb/character.js",
+          "bytes": 6112,
+          "sha256": "10c8591bfd055505f8879d78bfbee1e2be8ac531704eb5df64312f5b658e47a3"
+        },
+        {
+          "path": "apps/core/character/sb/index.js",
+          "url": "https://raw.githubusercontent.com/libnoname/noname/08b0f659a05ecbd3b74f31e9e3df4e5b199377e4/apps/core/character/sb/index.js",
+          "bytes": 1156,
+          "sha256": "8e5b23520fdf99eb6bce7331f4e1537b7e659c271ee2048479bbef81c95e0cbb"
+        },
+        {
+          "path": "apps/core/character/sb/translate.js",
+          "url": "https://raw.githubusercontent.com/libnoname/noname/08b0f659a05ecbd3b74f31e9e3df4e5b199377e4/apps/core/character/sb/translate.js",
+          "bytes": 46377,
+          "sha256": "e9e24c5e2fb0d772a395fbe830d08754c9432b61191db7dfc62f8083f57e538e"
+        },
+        {
+          "path": "apps/core/character/shenhua/character.js",
+          "url": "https://raw.githubusercontent.com/libnoname/noname/08b0f659a05ecbd3b74f31e9e3df4e5b199377e4/apps/core/character/shenhua/character.js",
+          "bytes": 5274,
+          "sha256": "2b615c4533ef3068a36cf234145f4908a349fe8bff430dd04acf877f58cad515"
+        },
+        {
+          "path": "apps/core/character/shenhua/index.js",
+          "url": "https://raw.githubusercontent.com/libnoname/noname/08b0f659a05ecbd3b74f31e9e3df4e5b199377e4/apps/core/character/shenhua/index.js",
+          "bytes": 1117,
+          "sha256": "d0de0b6bd0690e013b92a3c5b0c856dd1c9905bfb5aaa18a7c034095d531c08d"
+        },
+        {
+          "path": "apps/core/character/shenhua/translate.js",
+          "url": "https://raw.githubusercontent.com/libnoname/noname/08b0f659a05ecbd3b74f31e9e3df4e5b199377e4/apps/core/character/shenhua/translate.js",
+          "bytes": 31175,
+          "sha256": "0b6b0ecff56397e830bbd6353ce8ce69621882d5afcb179102021337d93a1db0"
+        },
+        {
+          "path": "apps/core/character/shiji/character.js",
+          "url": "https://raw.githubusercontent.com/libnoname/noname/08b0f659a05ecbd3b74f31e9e3df4e5b199377e4/apps/core/character/shiji/character.js",
+          "bytes": 5232,
+          "sha256": "fc72a309e484e58427b719e0515b4652d4b372496c42988f122497167a986bc9"
+        },
+        {
+          "path": "apps/core/character/shiji/index.js",
+          "url": "https://raw.githubusercontent.com/libnoname/noname/08b0f659a05ecbd3b74f31e9e3df4e5b199377e4/apps/core/character/shiji/index.js",
+          "bytes": 1113,
+          "sha256": "2c2c16c8d2639b302c196290b2fc09cd6ce48a83d4193208dbd4a1693ef4c371"
+        },
+        {
+          "path": "apps/core/character/shiji/translate.js",
+          "url": "https://raw.githubusercontent.com/libnoname/noname/08b0f659a05ecbd3b74f31e9e3df4e5b199377e4/apps/core/character/shiji/translate.js",
+          "bytes": 45879,
+          "sha256": "649abac7f43fe00e022dab80b142c577994e37b105763fa94c8d19bbc77b4b0e"
+        },
+        {
+          "path": "apps/core/character/sixiang/character.js",
+          "url": "https://raw.githubusercontent.com/libnoname/noname/08b0f659a05ecbd3b74f31e9e3df4e5b199377e4/apps/core/character/sixiang/character.js",
+          "bytes": 10516,
+          "sha256": "b96bdbb9ba2af894a4e2ec9510f26db3fc41de0bf12ea58ab593965e102d8d4b"
+        },
+        {
+          "path": "apps/core/character/sixiang/index.js",
+          "url": "https://raw.githubusercontent.com/libnoname/noname/08b0f659a05ecbd3b74f31e9e3df4e5b199377e4/apps/core/character/sixiang/index.js",
+          "bytes": 1117,
+          "sha256": "fcbb29c1827b95fbdd6ac4f124de2a04a0728959e3b5e75214a0dbf8090d9111"
+        },
+        {
+          "path": "apps/core/character/sixiang/translate.js",
+          "url": "https://raw.githubusercontent.com/libnoname/noname/08b0f659a05ecbd3b74f31e9e3df4e5b199377e4/apps/core/character/sixiang/translate.js",
+          "bytes": 34586,
+          "sha256": "256e0d3d42cc8c470d4c46db38735d27ef957bfdbc39c3240488b2a89fe5b4c8"
+        },
+        {
+          "path": "apps/core/character/sp/character.js",
+          "url": "https://raw.githubusercontent.com/libnoname/noname/08b0f659a05ecbd3b74f31e9e3df4e5b199377e4/apps/core/character/sp/character.js",
+          "bytes": 21927,
+          "sha256": "6590dfbdf0194207895925052d1443a3eb2eeb6bda5a8032942dd1f9c9c71641"
+        },
+        {
+          "path": "apps/core/character/sp/index.js",
+          "url": "https://raw.githubusercontent.com/libnoname/noname/08b0f659a05ecbd3b74f31e9e3df4e5b199377e4/apps/core/character/sp/index.js",
+          "bytes": 1203,
+          "sha256": "a3053a189ea76eb8d546d75a56aea4dd0ed369365266be38c32d929fbac42b84"
+        },
+        {
+          "path": "apps/core/character/sp/translate.js",
+          "url": "https://raw.githubusercontent.com/libnoname/noname/08b0f659a05ecbd3b74f31e9e3df4e5b199377e4/apps/core/character/sp/translate.js",
+          "bytes": 169878,
+          "sha256": "39df36dfba6e7eafc27d07adf628b2511cf859c62d57246ac721cec9e682cc40"
+        },
+        {
+          "path": "apps/core/character/sp2/character.js",
+          "url": "https://raw.githubusercontent.com/libnoname/noname/08b0f659a05ecbd3b74f31e9e3df4e5b199377e4/apps/core/character/sp2/character.js",
+          "bytes": 11609,
+          "sha256": "80b615d5df2506bea386feb25752aa36c333caddbe79778916bea336eed25292"
+        },
+        {
+          "path": "apps/core/character/sp2/index.js",
+          "url": "https://raw.githubusercontent.com/libnoname/noname/08b0f659a05ecbd3b74f31e9e3df4e5b199377e4/apps/core/character/sp2/index.js",
+          "bytes": 1109,
+          "sha256": "8b1a13d463fe59ad48f55301c5bbb36724db500327cb092cc6fe6918bb5f1ac5"
+        },
+        {
+          "path": "apps/core/character/sp2/translate.js",
+          "url": "https://raw.githubusercontent.com/libnoname/noname/08b0f659a05ecbd3b74f31e9e3df4e5b199377e4/apps/core/character/sp2/translate.js",
+          "bytes": 70290,
+          "sha256": "4e2031c4ca1708a1290c1eaecdadba78829b38b4b3b1f25ff40f98644761373f"
+        },
+        {
+          "path": "apps/core/character/standard/character.js",
+          "url": "https://raw.githubusercontent.com/libnoname/noname/08b0f659a05ecbd3b74f31e9e3df4e5b199377e4/apps/core/character/standard/character.js",
+          "bytes": 3269,
+          "sha256": "943620d557dadb30e254d088ba1dc6cd317103007d8e362fa7788d4b440fb419"
+        },
+        {
+          "path": "apps/core/character/standard/index.js",
+          "url": "https://raw.githubusercontent.com/libnoname/noname/08b0f659a05ecbd3b74f31e9e3df4e5b199377e4/apps/core/character/standard/index.js",
+          "bytes": 1119,
+          "sha256": "a96e3c4fcd8a72785c8f07b53c84233ddc67aee0af348c7813c3686c6fcb8c09"
+        },
+        {
+          "path": "apps/core/character/standard/translate.js",
+          "url": "https://raw.githubusercontent.com/libnoname/noname/08b0f659a05ecbd3b74f31e9e3df4e5b199377e4/apps/core/character/standard/translate.js",
+          "bytes": 9867,
+          "sha256": "e707194277de0fe2ac9ce7142d3cb5a7765bda395a33e6c55a1465a384d34dd8"
+        },
+        {
+          "path": "apps/core/character/sxrm/character.js",
+          "url": "https://raw.githubusercontent.com/libnoname/noname/08b0f659a05ecbd3b74f31e9e3df4e5b199377e4/apps/core/character/sxrm/character.js",
+          "bytes": 3006,
+          "sha256": "fca7843b02b10d7072a25977296aae1095812581b87ebc43a8e82f45a37c0d18"
+        },
+        {
+          "path": "apps/core/character/sxrm/index.js",
+          "url": "https://raw.githubusercontent.com/libnoname/noname/08b0f659a05ecbd3b74f31e9e3df4e5b199377e4/apps/core/character/sxrm/index.js",
+          "bytes": 1056,
+          "sha256": "be35ed518f67037b0301b209e1739e6fa669828d3a545392c1ae9ee53a7d69c5"
+        },
+        {
+          "path": "apps/core/character/sxrm/translate.js",
+          "url": "https://raw.githubusercontent.com/libnoname/noname/08b0f659a05ecbd3b74f31e9e3df4e5b199377e4/apps/core/character/sxrm/translate.js",
+          "bytes": 15082,
+          "sha256": "19e19b21dd2562a9063aea48d6465785cc8e032a727720ef22d72911f3cdac87"
+        },
+        {
+          "path": "apps/core/character/tw/character.js",
+          "url": "https://raw.githubusercontent.com/libnoname/noname/08b0f659a05ecbd3b74f31e9e3df4e5b199377e4/apps/core/character/tw/character.js",
+          "bytes": 20261,
+          "sha256": "a99fdcedf83d7dd5be97fc6e4b3f79422c807b233dcec1d5309092671c737263"
+        },
+        {
+          "path": "apps/core/character/tw/index.js",
+          "url": "https://raw.githubusercontent.com/libnoname/noname/08b0f659a05ecbd3b74f31e9e3df4e5b199377e4/apps/core/character/tw/index.js",
+          "bytes": 1330,
+          "sha256": "b4ec926289d4f6e1119440a540c772efa439361e11a099c0bc97130276b5d9f2"
+        },
+        {
+          "path": "apps/core/character/tw/translate.js",
+          "url": "https://raw.githubusercontent.com/libnoname/noname/08b0f659a05ecbd3b74f31e9e3df4e5b199377e4/apps/core/character/tw/translate.js",
+          "bytes": 114052,
+          "sha256": "6599bdfed1aaa01fe6213a00fef7290208689b39e0c7844e615343c1350c1aa9"
+        },
+        {
+          "path": "apps/core/character/xianding/character.js",
+          "url": "https://raw.githubusercontent.com/libnoname/noname/08b0f659a05ecbd3b74f31e9e3df4e5b199377e4/apps/core/character/xianding/character.js",
+          "bytes": 24205,
+          "sha256": "a5a527ead8d3f6210b27b0aa42a8bda72708e896de42a30656ae816db01397f9"
+        },
+        {
+          "path": "apps/core/character/xianding/index.js",
+          "url": "https://raw.githubusercontent.com/libnoname/noname/08b0f659a05ecbd3b74f31e9e3df4e5b199377e4/apps/core/character/xianding/index.js",
+          "bytes": 1743,
+          "sha256": "d66a50c538007fc7b4e1da29fec6ff3ef9a8f387b0302393dcc408975f573d16"
+        },
+        {
+          "path": "apps/core/character/xianding/translate.js",
+          "url": "https://raw.githubusercontent.com/libnoname/noname/08b0f659a05ecbd3b74f31e9e3df4e5b199377e4/apps/core/character/xianding/translate.js",
+          "bytes": 159337,
+          "sha256": "8010ceed4f26730467e8824ae8a201c8db2f6691fedbead39cca50ac969e5771"
+        },
+        {
+          "path": "apps/core/character/yijiang/character.js",
+          "url": "https://raw.githubusercontent.com/libnoname/noname/08b0f659a05ecbd3b74f31e9e3df4e5b199377e4/apps/core/character/yijiang/character.js",
+          "bytes": 7074,
+          "sha256": "f6bb73cd615fd5b603566341c27396f9cf1bdbe9439124dabc59ff76fce9479c"
+        },
+        {
+          "path": "apps/core/character/yijiang/index.js",
+          "url": "https://raw.githubusercontent.com/libnoname/noname/08b0f659a05ecbd3b74f31e9e3df4e5b199377e4/apps/core/character/yijiang/index.js",
+          "bytes": 1174,
+          "sha256": "af011e3bb433bfbb1268e3c904e04c6eea96bbd2a3a142c65c422196094519a1"
+        },
+        {
+          "path": "apps/core/character/yijiang/translate.js",
+          "url": "https://raw.githubusercontent.com/libnoname/noname/08b0f659a05ecbd3b74f31e9e3df4e5b199377e4/apps/core/character/yijiang/translate.js",
+          "bytes": 52911,
+          "sha256": "ccad4ad8dec1d3e4c426b203e81dbe57c696650b6eac15cd916e03e6b0940603"
+        },
+        {
+          "path": "apps/core/character/yingbian/character.js",
+          "url": "https://raw.githubusercontent.com/libnoname/noname/08b0f659a05ecbd3b74f31e9e3df4e5b199377e4/apps/core/character/yingbian/character.js",
+          "bytes": 2845,
+          "sha256": "e032c8ae974a3cc04dfe6c1aa357c2e6852087fb8ab6e70e8cc354de276c315f"
+        },
+        {
+          "path": "apps/core/character/yingbian/index.js",
+          "url": "https://raw.githubusercontent.com/libnoname/noname/08b0f659a05ecbd3b74f31e9e3df4e5b199377e4/apps/core/character/yingbian/index.js",
+          "bytes": 1119,
+          "sha256": "492bcb694cc6a4351b3175fb72b4b68ed6fc576147e45b18b9a75443c2e973e3"
+        },
+        {
+          "path": "apps/core/character/yingbian/translate.js",
+          "url": "https://raw.githubusercontent.com/libnoname/noname/08b0f659a05ecbd3b74f31e9e3df4e5b199377e4/apps/core/character/yingbian/translate.js",
+          "bytes": 20174,
+          "sha256": "0fca99e00aae03d0405701a0022b582e3ac4b1903a107450326d2f5042283ad9"
+        }
+      ]
+    },
+    "scopeLimit": "检索对应名称、拼音及择行的角色定义、翻译和注册入口；不证明不存在未合并PR、社区扩展或后续提交。读取源码而未导入执行，未变更运行引擎。"
+  },
+  "practiceDesign": {
+    "status": "confirmed-product-scope-with-explicit-training-assumptions",
+    "ordinaryDoudizhu": {
+      "newEntry": false,
+      "members": 3,
+      "flow": [
+        "private-candidates",
+        "bid",
+        "landlord-top-up",
+        "choose-general",
+        "luck-cards",
+        "native-game"
+      ],
+      "initialCandidatesPerSeat": 6,
+      "landlordAdditionalCandidatesFromRemainingPool": 4,
+      "finalCandidates": {
+        "landlord": 10,
+        "farmer": 6
+      },
+      "proposedBidMultipliers": [1, 2, 3],
+      "preserveExistingRosters": true,
+      "addCollegeRoster": true,
+      "allowGeneralSelection": "preference-in-own-initial-six-does-not-guarantee-landlord",
+      "status": "party-training-rules-not-confirmed-current-qualifier-rules"
+    },
+    "college": {
+      "newEntry": true,
+      "displayName": "高校联赛练习",
+      "members": 4,
+      "activePlayersPerGame": 3,
+      "roster": "ol-college-2026",
+      "allowFormatSwitch": true,
+      "allowGeneralSelection": false,
+      "minimumHumanMembers": 1,
+      "teamChangeDuringSeries": false,
+      "initialCandidatesPerSeat": 4,
+      "landlordAdditionalCandidatesFromTeammate": 2,
+      "landlordAdditionalSelection": "one-random-sample-after-bidding-not-human-assigned",
+      "finalCandidates": {
+        "landlord": 6,
+        "farmer": 4
+      },
+      "farmerCandidates": "separate-four-per-seat-never-unrestricted-eight-choose-two",
+      "replacements": {
+        "status": "training-assumption-detailed-official-timing-and-scope-unconfirmed",
+        "phase": "after-roles-and-landlord-top-up-before-locking-general",
+        "perActiveRegisteredSeat": 2,
+        "costPerReplacement": 1,
+        "replacedCandidateCount": 1,
+        "canReplaceLandlordSupplement": true,
+        "benchQuotaTransfer": false,
+        "proxyUses": "subject-ai-seat-own-quota",
+        "drawFrom": "remaining-pool-excluding-all-assigned-and-already-replaced-candidates-this-game"
+      },
+      "defaultMatchFormat": "standard",
+      "matchFormats": {
+        "standard": {
+          "maxRegulationGames": 12,
+          "targetScore": 20,
+          "tieBreakerGames": 1
+        },
+        "quick": {
+          "maxRegulationGames": 6,
+          "targetScore": 10,
+          "tieBreakerGames": 1
+        }
+      },
+      "matchFormatSources": {
+        "standard": "currentNoticeRules.knockout.beforeSemifinal",
+        "quick": "explicit-user-request-training-variant"
+      },
+      "formatChangeDuringSeries": false,
+      "formatChangeRequiresReadyAgain": true,
+      "formatFreezeAt": "series-start"
+    },
+    "controls": {
+      "pregame": {
+        "normalHuman": "own-registered-seat",
+        "humanWithRegisteredAiTeammate": ["own-seat", "same-team-ai-seat"],
+        "actions": ["bid", "replace-general", "choose-general"],
+        "keepBidTurnAndCandidateOwnership": true,
+        "disconnectedHumanIsNotAi": true,
+        "partyOwnerCanControlOpponentAi": false
+      },
+      "play": {
+        "humanLandlord": "human-controls-self-ai-teammate-benched",
+        "aiLandlordWithHumanTeammate": "benched-human-controls-single-ai-landlord-seat",
+        "aiLandlordProxyActions": [
+          "luck-cards",
+          "play-card",
+          "respond",
+          "skill-choice",
+          "other-authorized-native-private-choices"
+        ],
+        "farmersHumanAndAi": "human-controls-self-native-ai-controls-ai-current-hands-shared-read-only",
+        "humanLandlordWithHumanTeammate": "landlord-controls-self-teammate-public-observer",
+        "aiOnlyTeam": "native-ai-for-active-seats",
+        "defaultAiLandlordControl": "human",
+        "nativeAutoplayAvailable": true,
+        "oneDecisionMakerPerEnginePlayer": true,
+        "controlChange": "host-acknowledged-choice-boundary-with-monotonic-control-version",
+        "proxyRevokedOnGameEnd": true
+      },
+      "privacy": {
+        "pregameProxyDoesNotGrantHandAccess": true,
+        "aiLandlordControllerPrivateView": "exactly-that-engine-player-through-existing-filter-and-inbound-card-reference-validation",
+        "publicSnapshotContainsPrivateCandidatesOrHands": false,
+        "privilegedComputerServicePage": false,
+        "farmerTeammateHandView": {
+          "enabled": true,
+          "scope": ["ordinary-doudizhu", "college-standard", "college-quick"],
+          "authority": "explicit-user-practice-rule-not-confirmed-current-official-notice",
+          "recipient": "other-farmer-in-same-native-game",
+          "includesAi": true,
+          "startsAt": "initial-deal",
+          "updates": ["hand-refresh", "gain", "lose", "reconnect"],
+          "readOnly": true,
+          "grantsPlayOrRefreshControl": false,
+          "grantsOtherPrivateSkillZones": false,
+          "grantsDeckOrder": false,
+          "grantsLandlordOrLandlordTeammateAccess": false,
+          "publicVisibility": false,
+          "useGlobalPublicCardMarkers": false,
+          "rebuildForEachGameRoleAssignment": true
+        }
+      },
+      "recovery": {
+        "preserve": [
+          "candidates",
+          "landlord-supplement",
+          "replacement-history",
+          "quotas",
+          "locked-choices",
+          "bids",
+          "controller",
+          "control-version",
+          "scores",
+          "original-deadline",
+          "selected-match-format",
+          "hand-refresh-counts",
+          "current-farmer-hand-visibility"
+        ],
+        "timeoutBid": "pass",
+        "timeoutReplacement": "stop-without-spending-unused-quota",
+        "timeoutUnconfirmedSelection": "native-ai-within-remaining-legal-candidates",
+        "replayCompletedDecision": false,
+        "addTimeForProxy": false
+      }
+    },
+    "automaticPregamePolicy": {
+      "status": "proposed-adapter-training-heuristic-not-native-four-member-team-ai",
+      "visibleInformation": "own-legal-candidates-only-no-opponent-candidates-or-future-draws",
+      "rating": "fixed-native-get.rank(name,true)",
+      "maxBidByRating": {
+        "6": 1,
+        "7": 2,
+        "8": 3,
+        "9": 4
+      },
+      "belowSixBid": 0,
+      "ordinaryBidCap": 3,
+      "cannotExceedCurrentBid": "pass",
+      "replacement": "lowest-own-candidate-only-when-rated-below-six-up-to-own-quota",
+      "generalSelection": "native-selection-callback-restricted-to-own-legal-pool"
+    },
+    "implementationStatus": "implemented-native-runtime-and-private-protocol-verified-see-handoff",
+    "openingHandRule": {
+      "initialHandCards": 4,
+      "maxRefreshesPerActiveSeatPerGame": 3,
+      "source": "earlier-ol-event-rules",
+      "sourceStatus": "explicit-earlier-same-platform-rule-inherited-current-notice-silent",
+      "evidenceUrl": "https://news.17173.com/content/05152026/213535647.shtml",
+      "initialDealConsumesRefresh": false,
+      "scope": ["ordinary-doudizhu", "college-standard", "college-quick"],
+      "aiAndHumanSameLimit": true,
+      "proxyAddsQuota": false,
+      "reconnectRestoresConsumedCount": true,
+      "quotaSharingBetweenSeats": false
+    }
+  },
+  "implementation": {
+    "appVersion": "0.8.0",
+    "publiclyReleased": false,
+    "roster": "config/official-rosters.json#ol-college-2026",
+    "rules": "config/mode-rules.json",
+    "currentVerification": "docs/handoff.md",
+    "fixedEngineUnchanged": true,
+    "physicalPhoneValidation": false,
+    "allSkillBranchesExhaustivelyValidated": false
+  }
+}

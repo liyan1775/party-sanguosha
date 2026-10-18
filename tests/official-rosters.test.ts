@@ -26,7 +26,7 @@ test('2024及2025移动版群雄逐鹿已从公告映射、运行白名单、图
 test('官方公告全部逐项保留，缺项不进白名单；前后端、图鉴、固定引擎来源一致', () => {
   assert.equal(official.engine.commit, candidate.commit);
   assert.equal(official.engine.tag, candidate.tag);
-  assert.equal(official.rosters.length, 8);
+  assert.equal(official.rosters.length, 9);
   assert.equal(presets.length, GENERAL_PRESETS.length);
   const counts: Record<string, [number, number]> = {
     'ol-doudizhu-s15': [92, 92],
@@ -37,6 +37,7 @@ test('官方公告全部逐项保留，缺项不进白名单；前后端、图�
     'ol-ranked-2026-10-full': [284, 288],
     'ol-sgl-2026-stage1': [83, 83],
     'mobile-time-field-2026-10': [258, 326],
+    'ol-college-2026': [92, 93],
   };
   for (const roster of official.rosters) {
     const native = presets.find((preset: any) => preset.id === roster.id);

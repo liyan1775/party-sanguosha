@@ -138,13 +138,27 @@ export function createPartyServer(options: ServerOptions) {
     });
   });
   if (engine instanceof NativeNonameService)
-    engine.attach(server, (code, token) => {
-      try {
-        return lobby.get(code).session(token);
-      } catch {
-        return undefined;
-      }
-    });
+    engine.attach(
+      server,
+      (code, token) => {
+        try {
+          return lobby.get(code).session(token);
+        } catch {
+          return undefined;
+        }
+      },
+      (code) => {
+        try {
+          return lobby
+            .get(code)
+            .snapshot()
+            .players.filter((p) => p.kind === 'human' && p.online)
+            .map((p) => p.id);
+        } catch {
+          return [];
+        }
+      },
+    );
 
   const closeStreams = () => {
     for (const stream of eventStreams) stream.end();
@@ -340,7 +354,7 @@ export function createPartyServer(options: ServerOptions) {
     }
 
     const roomRoute =
-      /^\/api\/rooms\/([A-F0-9]{6})(?:\/(players(?:\/[\w-]+)?|me(?:\/(?:ready|general))?|owner(?:\/claim)?|start|rematch|bots|events))?$/.exec(
+      /^\/api\/rooms\/([A-F0-9]{6})(?:\/(players(?:\/[\w-]+)?|me(?:\/(?:ready|general|doudizhu))?|owner(?:\/claim)?|start|rematch|bots|events|team|series\/end))?$/.exec(
         url.pathname,
       );
     if (roomRoute) {
@@ -355,6 +369,8 @@ export function createPartyServer(options: ServerOptions) {
         'POST bots',
         'PUT owner',
         'POST owner/claim',
+        'POST me/doudizhu',
+        'PUT team',
       ].includes(operation)
         ? await readBody(request)
         : undefined;
@@ -388,6 +404,20 @@ export function createPartyServer(options: ServerOptions) {
           return;
         case 'GET me/general':
           json(response, 200, room.generalChoice(playerToken));
+          return;
+        case 'GET me/doudizhu':
+          json(response, 200, room.doudizhuChoice(playerToken));
+          return;
+        case 'POST me/doudizhu':
+          json(response, 200, room.doudizhuAction(playerToken, body));
+          return;
+        case 'PUT team':
+          room.setCollegeSeat(body!.playerId, body!.position, playerToken);
+          json(response, 200, room.snapshot());
+          return;
+        case 'POST series/end':
+          room.endSeries(playerToken);
+          json(response, 200, room.snapshot());
           return;
         case 'PUT me/general':
           json(response, 200, room.setGeneralChoice(playerToken, body!.general));

@@ -566,6 +566,17 @@ export function installPrivacy() {
   function visible(card) {
     if (!receiver || _status.over) return true;
     if (card.isKnownBy(receiver)) return true;
+    const farmer = get.owner(card);
+    if (
+      globalThis.partyEngine?.setup?.farmerHandSharing &&
+      ['doudizhu', 'college'].includes(globalThis.partyEngine.setup.settings.mode) &&
+      receiver.identity === 'fan' &&
+      farmer?.identity === 'fan' &&
+      farmer !== receiver &&
+      get.position(card, true) === 'h' &&
+      farmer.getCards('h').includes(card)
+    )
+      return true;
     if (
       addressedTo === receiver &&
       choiceDisclosure?.player === receiver &&

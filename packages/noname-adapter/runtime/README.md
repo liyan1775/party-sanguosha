@@ -1,5 +1,13 @@
 # 正式无名杀适配
 
+v0.8.0高校候选：`DoudizhuPreparation`在原生引擎启动前处理三／四报名席位的私有候选、竞价和锁将，服务器只发布公开进度，真正选将与发牌后仍由引擎确认开局。高校固定92／93白名单、标准12／20或快速6／10，RoomStore保留整场，原生实例只载入三个出场角色；AI地主保留原ID并以controllerId绑定真人。HTTP、WebSocket、持续推送和LAN入口共用角色映射，待命真人只走公开观战及本队投降表态。
+
+农民互看由privacy.js按同局两农民当前手牌逐次判定，farmer-hands.js定向只读显示；不写全局公开标记，不能据此代出队友牌。controlVersions能力为auto／unauto和原生结果增加单调私有版本，旧连接／旧版本结果被拒绝；未声明能力的旧服务继续原协议。手气每出场席位每小局最多3次，AI地主的真人操作者使用同一份次数，重连保留原期限与剩余次数。具体代码、协议、验收证据及限制见ADR-045和handoff.md。
+
+`npm run engine:verify:college`执行独立真实快速整场、人机角色、手气与恢复；`npm run engine:verify:college-matrix`执行多人组合、待命与投降确认，并区别自然结束、投降及仅发牌。需要Node24和完整固定引擎，默认使用本机Edge；可设置`E2E_BROWSER_CHANNEL`。常规`npm run test:browser`在本机使用`E2E_BROWSER_CHANNEL=msedge`，不能把未安装Playwright Chromium的启动失败当作页面失败。
+
+`npm run engine:verify:college-ui`使用独立3真人会话＋1登记AI，验证赛前横竖屏／短屏、稳定候选与确认位置、分席额度／期限恢复、本人到AI的任务切换，真实选将发牌后检查队友牌条与公开待命，再通过真实全票投降验证计分、整场休息和下一局。截图与结果写入忽略的`.runtime/college-ui/`，属于桌面Edge手机尺寸模拟；不冒称自然整局、微信实机或官方手机界面的完整复刻。队友牌条由玩家端`installFarmerHandView`渲染，规则端定向同步及privacy授权不变，见ADR-046。
+
 v0.7.9接入层审查补丁：玩家序列化与公开记录共用publicCardVisible；补齐直接判定、公开获得／置于武将牌、批次置牌及虚拟装备的首次同步和恢复。公开放置记录只在同一拥有者x区域有效，私人再次放置／原生清除知情者撤销；虚拟显示牌只在对应原生渲染广播中授权，blankCard除外。定向消息的无主材料仅限显式参数，不扩散到父事件或storage；补齐shenhua:guhuo_guess的质疑保密及翻牌，原生技能、知情者、AI和入站卡牌保护保持。见ADR-039。
 
 原生广播创建的仍打开公开牌池在reinit确认后按原videoId和当前剩余按钮恢复，再重发原选择；不延长期限，私人／暗置／已关闭弹窗不重建。`ENGINE_VERIFY_ADAPTER_AUDIT=1 npm run engine:verify:table`独立三真人真实选将／发牌后，验证直接判定、公开交牌、单人／批次置牌、虚拟装备、其余手牌隐私、三端刷新、公开展示池及五谷丰登剩余牌池恢复／关闭。原生无懈请求用真实UI取消，取牌仍由原生规则执行；夹具不等于自然整局或微信真机。可加ENGINE_VERIFY_DESKTOP=1或ENGINE_VERIFY_HTTP=1；ENGINE_VERIFY_TABLE_BLUFF=re_yuji复核时光场另一版蛊惑，值1仍验证旧于吉。

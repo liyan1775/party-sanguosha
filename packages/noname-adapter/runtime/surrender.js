@@ -28,7 +28,15 @@ export function installSurrender() {
     return;
   }
 
-  const humans = engine.setup.seats.filter((seat) => seat.kind === 'human');
+  const college = engine.setup.settings.mode === 'college' && engine.setup.doudizhu;
+  const humans = (college ? college.members : engine.setup.seats).filter(
+    (seat) => seat.kind === 'human',
+  );
+  const engineId = (id) =>
+    engine.setup.seats.find((seat) => (seat.controllerId ?? seat.id) === id)?.id ?? id;
+  const memberId = (id) => engine.setup.seats.find((seat) => seat.id === id)?.controllerId ?? id;
+  const playerFor = (id) => lib.playerOL[engineId(id)];
+  let onlineMembers = null;
   const kind = engine.setup.settings.mode === 'identity' ? 'end' : 'surrender';
   const cooldowns = new Map();
   let active = false;
@@ -42,6 +50,7 @@ export function installSurrender() {
   const team = (player) => {
     switch (engine.setup.settings.mode) {
       case 'doudizhu':
+      case 'college':
         return player.identity === 'zhu' ? 'landlord' : 'farmers';
       case 'versus':
         return player.side;
@@ -50,10 +59,15 @@ export function installSurrender() {
     }
   };
   const voters = (initiator) =>
-    humans.filter(
-      (seat) =>
-        kind === 'end' ||
-        living().some((player) => player.playerid === seat.id && team(player) === team(initiator)),
+    humans.filter((seat) =>
+      college
+        ? college.members.findIndex((s) => s.id === seat.id) % 2 ===
+            college.members.findIndex((s) => s.id === initiator.playerid) % 2 &&
+          (onlineMembers ? onlineMembers.has(seat.id) : !!playerFor(seat.id)?.ws)
+        : kind === 'end' ||
+          living().some(
+            (player) => player.playerid === seat.id && team(player) === team(initiator),
+          ),
     );
   const signature = () =>
     JSON.stringify([
@@ -61,13 +75,16 @@ export function installSurrender() {
         .map((player) => player.playerid)
         .sort(),
       humans.map((seat) => (cooldowns.get(seat.id) ?? 0) > Date.now()),
+      onlineMembers ? [...onlineMembers].sort() : null,
     ]);
   const state = (id) => ({
     kind,
     available:
       active &&
       !_status.over &&
-      (kind === 'end' || living().some((player) => player.playerid === id)),
+      (kind === 'end' ||
+        living().some((player) => player.playerid === engineId(id)) ||
+        !!vote?.voters.some((seat) => seat.id === id)),
     cooldownMs: Math.max(0, (cooldowns.get(id) ?? 0) - Date.now()),
     notice,
     vote: vote
@@ -85,10 +102,16 @@ export function installSurrender() {
         }
       : null,
   });
-  const send = (id) =>
-    lib.playerOL[id]?.send(function (state) {
+  const send = (id) => {
+    const value = state(id);
+    playerFor(id)?.send(function (state) {
       globalThis.partyEngine.showSurrender?.(state);
-    }, state(id));
+    }, value);
+    if (college && engine.ruleSocket?.readyState === 1)
+      engine.ruleSocket.send(
+        JSON.stringify({ type: 'surrender-state', memberId: id, state: value }),
+      );
+  };
   const publish = () => {
     lastSignature = signature();
     for (const seat of humans) send(seat.id);
@@ -103,7 +126,7 @@ export function installSurrender() {
   const finish = () => {
     const current = vote;
     if (!current || _status.over) return;
-    const initiator = lib.playerOL[current.initiator];
+    const initiator = playerFor(current.initiator);
     // Determine results explicitly without fake deaths, death skills or changes
     // to HP/cards. Native game.over and reinit both use this authoritative result.
     if (kind === 'end') {
@@ -142,7 +165,7 @@ export function installSurrender() {
     if (!active || _status.over) return;
     if (vote) {
       if (Date.now() >= vote.deadline) return cancel('投票超时，本局继续。');
-      const initiator = lib.playerOL[vote.initiator];
+      const initiator = playerFor(vote.initiator);
       const current =
         initiator &&
         voters(initiator)
@@ -154,55 +177,63 @@ export function installSurrender() {
     if (signature() !== lastSignature) publish();
   };
   lib.message.server.giveup = () => {};
-  lib.message.server.partySurrender = function (action, epoch) {
-    const player = lib.playerOL[this.id];
-    if (
-      !active ||
-      _status.over ||
-      player?.ws !== this ||
-      this.closed ||
-      !humans.some((seat) => seat.id === this.id)
-    )
-      return;
+  const act = function (id, action, epoch) {
+    const player = playerFor(id);
+    if (!active || _status.over || !humans.some((seat) => seat.id === id)) return;
     reconcile();
     if (action === 'request') {
       if (
         epoch !== '' ||
         vote ||
-        !state(this.id).available ||
-        (cooldowns.get(this.id) ?? 0) > Date.now()
+        !player ||
+        !living().includes(player) ||
+        !state(id).available ||
+        (cooldowns.get(id) ?? 0) > Date.now()
       )
-        return send(this.id);
-      cooldowns.set(this.id, Date.now() + 60000);
+        return send(id);
+      cooldowns.set(id, Date.now() + 60000);
       notice = '';
       vote = {
         epoch: get.id(),
-        initiator: this.id,
+        initiator: id,
         deadline: Date.now() + 30000,
         voters: voters(player),
-        approved: new Set([this.id]),
+        approved: new Set([id]),
       };
       game.log(player, kind === 'end' ? '发起提前结束投票' : '发起本方投降投票');
     } else {
       if (
         !vote ||
         epoch !== vote.epoch ||
-        !vote.voters.some((seat) => seat.id === this.id) ||
+        !vote.voters.some((seat) => seat.id === id) ||
         !['approve', 'reject'].includes(action)
       )
-        return send(this.id);
+        return send(id);
       if (action === 'reject') return cancel('有玩家选择继续，本局继续。');
-      vote.approved.add(this.id);
+      vote.approved.add(id);
     }
     if (vote.voters.every((seat) => vote.approved.has(seat.id))) finish();
     else publish();
+  };
+  lib.message.server.partySurrender = function (action, epoch) {
+    const player = lib.playerOL[this.id];
+    if (player?.ws !== this || this.closed) return;
+    return act(memberId(this.id), action, epoch);
+  };
+  engine.externalSurrender = (id, action, epoch) => {
+    if (college) act(id, action, epoch);
+  };
+  engine.setSurrenderPresence = (ids) => {
+    if (!college || !Array.isArray(ids)) return;
+    onlineMembers = new Set(ids.filter((id) => humans.some((seat) => seat.id === id)));
+    reconcile();
   };
   const reinited = lib.message.server.reinited;
   lib.message.server.reinited = function (...args) {
     reinited.apply(this, args);
     if (lib.playerOL[this.id]?.ws === this) {
       reconcile();
-      send(this.id);
+      send(memberId(this.id));
       if (_status.over) engine.surrenderProof.endedReinit++;
       if (_status.over && settlement) {
         const player = lib.playerOL[this.id];

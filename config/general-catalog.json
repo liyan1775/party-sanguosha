@@ -27169,6 +27169,2187 @@
           "description": "锁定技，你始终跳过准备阶段，判定阶段，结束阶段。你不能被选择为延时锦囊牌的目标。"
         }
       ]
+    },
+    {
+      "id": "baoxin",
+      "preset": "ol-college-2026",
+      "name": "鲍信",
+      "versionNote": "核对OL官方募讨／毅谋全文，与固定mobile:baoxin同为分发所有杀后随机伤害、近距受伤获杀或给牌摸牌，技能和参数一致；原生所在包名不作为平台差异依据。",
+      "officialName": "鲍信",
+      "faction": "qun",
+      "hp": "4",
+      "portrait": "/engine/core/image/character/baoxin.jpg",
+      "skills": [
+        {
+          "id": "mutao",
+          "name": "募讨",
+          "description": "出牌阶段限一次。你可以选择一名角色，令其将手牌中所有的【杀】置于武将牌上，然后将这些牌依次随机交给其下家开始的每一名角色。然后其对最后一名以此法获得【杀】的角色A造成X点伤害（X为A手牌中【杀】的数量且至多为2）。"
+        },
+        {
+          "id": "yimou",
+          "name": "毅谋",
+          "description": "当与你距离1以内的一名角色受到伤害后，你可以选择一项：1.令其从牌堆中获得一张【杀】；2.令其将一张手牌交给另一名角色，然后摸一张牌。"
+        }
+      ]
+    },
+    {
+      "id": "caoang",
+      "preset": "ol-college-2026",
+      "name": "曹昂",
+      "officialName": "曹昂",
+      "faction": "wei",
+      "hp": "4",
+      "portrait": "/engine/core/image/character/caoang.jpg",
+      "skills": [
+        {
+          "id": "kaikang",
+          "name": "慷忾",
+          "description": "当一名角色成为【杀】的目标后，若你至该角色的距离为1，你可以摸一张牌。若如此做，你交给其一张牌并展示之。若为装备牌，该角色可以使用此牌。"
+        }
+      ]
+    },
+    {
+      "id": "ol_cuiyan",
+      "preset": "ol-college-2026",
+      "name": "OL崔琰",
+      "officialName": "崔琰",
+      "faction": "wei",
+      "hp": "3",
+      "portrait": "/engine/core/image/character/ol_cuiyan.jpg",
+      "skills": [
+        {
+          "id": "olshutong",
+          "name": "束统",
+          "description": "锁定技，你使用一张牌指定目标后，本回合你与目标角色使用的下一张牌不能为此花色。若目标角色均与你体力值相同，你摸一张牌。"
+        },
+        {
+          "id": "olzhijie",
+          "name": "直节",
+          "description": "锁定技，每回合结束时，若你此回合使用或打出过牌，且你成为过牌的目标，你对攻击范围内的一名角色造成1点伤害。"
+        }
+      ]
+    },
+    {
+      "id": "sunyuan",
+      "preset": "ol-college-2026",
+      "name": "孙鸢",
+      "officialName": "孙鸢",
+      "faction": "wu",
+      "hp": "4",
+      "portrait": "/engine/core/image/character/sunyuan.jpg",
+      "skills": [
+        {
+          "id": "olsaying",
+          "name": "飒影",
+          "description": "出牌阶段开始时，你可以获得一名其他角色区域里一张牌，然后若你在其攻击范围内，其可对你使用一张【杀】；若你不在其攻击范围内，本轮你与其视为在对方的攻击范围内。"
+        },
+        {
+          "id": "oltongxin",
+          "name": "恫心",
+          "description": "每回合各限一次，你造成或受到伤害后，可弃置受伤角色X+1张牌并对伤害来源造成1点伤害（X为受伤角色已损失体力值），然后你获得其中的【杀】且你使用这些牌无次数限制。"
+        }
+      ]
+    },
+    {
+      "id": "ol_zhangmancheng",
+      "preset": "ol-college-2026",
+      "name": "OL张曼成",
+      "officialName": "张曼成",
+      "faction": "qun",
+      "hp": "4",
+      "portrait": "/engine/core/image/character/ol_zhangmancheng.jpg",
+      "skills": [
+        {
+          "id": "olkuangxin",
+          "name": "狂信",
+          "description": "锁定技，出牌阶段开始时，你失去任意点体力，摸等量的牌并展示已损失体力值+1张手牌。结束阶段，你调整体力值与上个准备阶段结束后相同。"
+        },
+        {
+          "id": "olleishi",
+          "name": "雷噬",
+          "description": "出牌阶段限X次（X为你上次发动〖狂信〗展示牌的数量），你使用本回合展示过的牌结算完成后，可进行一次判定并获得判定牌，若判定结果与使用牌的花色：相同，你对一名角色造成1点雷电伤害；不同，你展示一张牌，本回合下次判定时，若此牌在你的手牌区内，将此牌作为判定牌。"
+        }
+      ]
+    },
+    {
+      "id": "lijue",
+      "preset": "ol-college-2026",
+      "name": "李傕",
+      "officialName": "李傕",
+      "faction": "qun",
+      "hp": "4/6",
+      "portrait": "/engine/core/image/character/lijue.jpg",
+      "skills": [
+        {
+          "id": "xinfu_langxi",
+          "name": "狼袭",
+          "description": "准备阶段，你可以对一名体力小于或等于你的其他角色造成0～2点随机伤害。"
+        },
+        {
+          "id": "xinfu_yisuan",
+          "name": "亦算",
+          "description": "出牌阶段限一次。当你于出牌阶段内使用的锦囊牌结算结束后，你可以减1点体力上限并获得此牌对应的所有实体牌。"
+        }
+      ]
+    },
+    {
+      "id": "ol_dongxie",
+      "preset": "ol-college-2026",
+      "name": "OL董翓",
+      "officialName": "董翓",
+      "faction": "qun",
+      "hp": "3/5",
+      "portrait": "/engine/core/image/character/ol_dongxie.jpg",
+      "skills": [
+        {
+          "id": "oljiaowei",
+          "name": "狡威",
+          "description": "锁定技。①你的黑色牌不计入手牌上限。②若你的手牌数大于体力值，则你对体力值不大于你的角色使用黑色牌无距离限制，且其无法响应此牌。"
+        },
+        {
+          "id": "olbianyu",
+          "name": "鞭御",
+          "description": "锁定技，当你使用【杀】造成伤害后或受到【杀】造成的伤害后，你选择受伤角色至多X张手牌（X为其已损失的体力值），令这些牌视为无次数限制的【杀】直到其使用非基本牌。然后若你或其手牌均为【杀】，你摸两张牌。"
+        },
+        {
+          "id": "olfengyao",
+          "name": "凤瑶",
+          "description": "锁定技。①每有一张黑桃牌离开装备区后，你回复1点体力。②当你对其他角色造成伤害时，你弃置你或其场上的一张黑桃牌，令此伤害+1。"
+        }
+      ]
+    },
+    {
+      "id": "liuyan",
+      "preset": "ol-college-2026",
+      "name": "刘焉",
+      "officialName": "刘焉",
+      "faction": "qun",
+      "hp": "3",
+      "portrait": "/engine/core/image/character/liuyan.jpg",
+      "skills": [
+        {
+          "id": "xinfu_tushe",
+          "name": "图射",
+          "description": "当你使用非装备牌指定目标后，若你没有基本牌，则你可以摸X张牌。（X为此牌指定的目标数）"
+        },
+        {
+          "id": "xinfu_limu",
+          "name": "立牧",
+          "description": "出牌阶段，你可以将一张♦牌当做【乐不思蜀】对自己使用，然后回复1点体力。只要你的判定区内有牌，你对攻击范围内的其他角色使用牌便没有次数和距离限制。"
+        }
+      ]
+    },
+    {
+      "id": "luzhi",
+      "preset": "ol-college-2026",
+      "name": "鲁芝",
+      "officialName": "鲁芝",
+      "faction": "wei",
+      "hp": "3",
+      "portrait": "/engine/core/image/character/luzhi.jpg",
+      "skills": [
+        {
+          "id": "qingzhong",
+          "name": "清忠",
+          "description": "出牌阶段开始时，你可以摸两张牌，若如此做，此阶段结束时，你与手牌数最少的角色交换手牌。"
+        },
+        {
+          "id": "weijing",
+          "name": "卫境",
+          "description": "每轮限一次，当你需要使用【杀】或【闪】时，你可以视为使用一张【杀】或【闪】。"
+        }
+      ]
+    },
+    {
+      "id": "lvboshe",
+      "preset": "ol-college-2026",
+      "name": "吕伯奢",
+      "officialName": "吕伯奢",
+      "faction": "qun",
+      "hp": "4",
+      "portrait": "/engine/core/image/character/lvboshe.jpg",
+      "skills": [
+        {
+          "id": "olfushi",
+          "name": "缚豕",
+          "description": "①一名角色使用【杀】结算结束后，若你至其的距离不大于1，你将此【杀】对应的所有实体牌置于武将牌上。②当你需要使用一张【杀】时，你可以将任意张“缚豕”牌置入弃牌堆并摸等量的牌，视为使用一张【杀】并选择X项（X为你以此法重铸的牌数且至多为3）：1.你为此【杀】额外指定一个目标；2.你选择此【杀】的一个目标角色，此牌对其造成的伤害-1；3.你选择此【杀】的一个目标角色，此【杀】对其造成的伤害+1。当此【杀】指定最后一个目标后，若此牌被选择的效果选项相邻且此牌的目标角色座位连续，则此【杀】不计入次数限制。"
+        },
+        {
+          "id": "oldongdao",
+          "name": "东道",
+          "description": "农民的回合结束时：阳，你可以令地主进行一个额外回合；阴，其可以进行一个额外回合。"
+        }
+      ]
+    },
+    {
+      "id": "ol_maliang",
+      "preset": "ol-college-2026",
+      "name": "OL马良",
+      "officialName": "马良",
+      "faction": "shu",
+      "hp": "3",
+      "portrait": "/engine/core/image/character/ol_maliang.jpg",
+      "skills": [
+        {
+          "id": "zishu",
+          "name": "自书",
+          "description": "锁定技。①其他角色的结束阶段结束时，你将手牌区里所有你于此回合得到过的牌置入弃牌堆。②当你于回合内不因〖自书②〗而得到牌后，你摸一张牌。"
+        },
+        {
+          "id": "xinyingyuan",
+          "name": "应援",
+          "description": "当你于回合内使用一张牌后，你可以令一名其他角色随机从牌堆获得一张与该牌类型相同的牌（每种类型的牌每回合限一次）。"
+        }
+      ]
+    },
+    {
+      "id": "ol_duanwei",
+      "preset": "ol-college-2026",
+      "name": "OL段煨",
+      "officialName": "段煨",
+      "faction": "qun",
+      "hp": "4",
+      "portrait": "/engine/core/image/character/ol_duanwei.jpg",
+      "skills": [
+        {
+          "id": "oltaohuai",
+          "name": "讨怀",
+          "description": "转换技，你使用手牌中点数\n阳：最大的牌\n阴：最小的牌\n时摸一张牌，否则你可以弃置一张牌。"
+        }
+      ]
+    },
+    {
+      "id": "ol_pengyang",
+      "preset": "ol-college-2026",
+      "name": "彭羕",
+      "officialName": "彭羕",
+      "faction": "shu",
+      "hp": "3",
+      "portrait": "/engine/core/image/character/ol_pengyang.jpg",
+      "skills": [
+        {
+          "id": "olxiaofan",
+          "name": "嚣翻",
+          "description": "当你需要使用牌时，你可以观看牌堆底的X+1张牌并使用其中的一张。此牌结算结束时，你依次弃置以下前X个区域中的所有牌：⒈判定区、⒉装备区、⒊手牌区（X为本回合你使用过的牌中包含的类型数）。"
+        },
+        {
+          "id": "oltuishi",
+          "name": "侻失",
+          "description": "锁定技。①你不能使用【无懈可击】。②当你使用点数为字母的牌时，你令此牌无效并摸一张牌，且你对手牌数小于你的角色使用的下一张牌无距离和次数限制。③当你使用牌结算完毕后，若此牌为你本回合使用的第三张或以上未造成伤害的伤害类卡牌，则你令〖嚣翻〗于本回合失效。"
+        },
+        {
+          "id": "nzry_cunmu",
+          "name": "寸目",
+          "description": "锁定技，当你摸牌时，改为从牌堆底摸牌。"
+        }
+      ]
+    },
+    {
+      "id": "quyi",
+      "preset": "ol-college-2026",
+      "name": "麴义",
+      "officialName": "麹义",
+      "faction": "qun",
+      "hp": "4",
+      "portrait": "/engine/core/image/character/quyi.jpg",
+      "skills": [
+        {
+          "id": "fuqi",
+          "name": "伏骑",
+          "description": "锁定技，当你使用牌时，你令所有与你距离为1的其他角色不能使用或打出牌响应此牌。"
+        },
+        {
+          "id": "jiaozi",
+          "name": "骄恣",
+          "description": "锁定技，若你的手牌数为全场唯一最多，则当你造成或受到伤害时，此伤害+1。"
+        }
+      ]
+    },
+    {
+      "id": "shamoke",
+      "preset": "ol-college-2026",
+      "name": "沙摩柯",
+      "officialName": "沙摩柯",
+      "faction": "shu",
+      "hp": "4",
+      "portrait": "/engine/core/image/character/shamoke.jpg",
+      "skills": [
+        {
+          "id": "gzjili",
+          "name": "蒺藜",
+          "description": "当你于一回合内使用或打出第X张牌时，你可以摸X张牌（X为你的攻击范围）。"
+        }
+      ]
+    },
+    {
+      "id": "tengfanglan",
+      "preset": "ol-college-2026",
+      "name": "OL滕芳兰",
+      "officialName": "滕芳兰",
+      "faction": "wu",
+      "hp": "3",
+      "portrait": "/engine/core/image/character/tengfanglan.jpg",
+      "skills": [
+        {
+          "id": "luochong",
+          "name": "落宠",
+          "description": "准备阶段开始时/当你于一回合内首次受到伤害后，你可选择本轮内未选择过的一项（每名角色每轮限选一次）：⒈令一名角色回复1点体力。⒉令一名角色失去1点体力。⒊令一名角色弃置两张牌。⒋令一名角色摸两张牌。"
+        },
+        {
+          "id": "aichen",
+          "name": "哀尘",
+          "description": "锁定技。当你进入濒死状态时，若「落宠」中的剩余选项数大于1，则你选择移去「落宠」中的一个选项。"
+        }
+      ]
+    },
+    {
+      "id": "wangguan",
+      "preset": "ol-college-2026",
+      "name": "王瓘",
+      "officialName": "王瓘",
+      "faction": "wei",
+      "hp": "3",
+      "portrait": "/engine/core/image/character/wangguan.jpg",
+      "skills": [
+        {
+          "id": "olmiuyan",
+          "name": "谬焰",
+          "description": "转换技。你可以将一张黑色牌当做【火攻】使用。然后若此技能：处于阳状态且此牌造成了伤害，则你获得此阶段内所有被展示过的手牌；处于阴状态且未造成伤害，则你令此技能失效直到本轮结束。"
+        },
+        {
+          "id": "olshilu",
+          "name": "失路",
+          "description": "锁定技。当你受到伤害后，你摸X张牌（X为你的体力值且至多为5）。然后你展示攻击范围内一名角色的一张手牌并令此牌视为无属性【杀】。"
+        }
+      ]
+    },
+    {
+      "id": "xizhicai",
+      "preset": "ol-college-2026",
+      "name": "戏志才",
+      "officialName": "戏志才",
+      "faction": "wei",
+      "hp": "3",
+      "portrait": "/engine/core/image/character/xizhicai.jpg",
+      "skills": [
+        {
+          "id": "tiandu",
+          "name": "天妒",
+          "description": "当你的判定牌生效后，你可以获得之。"
+        },
+        {
+          "id": "xianfu",
+          "name": "先辅",
+          "description": "锁定技，游戏开始时，你选择一名其他角色，当其受到伤害后，你受到等量的伤害，当其回复体力后，你回复等量的体力。"
+        },
+        {
+          "id": "chouce",
+          "name": "筹策",
+          "description": "当你受到1点伤害后，你可以判定，若结果为：黑色，你弃置一名角色区域里的一张牌；红色，你选择一名角色，其摸一张牌，若其是〖先辅〗选择的角色，改为其摸两张牌。"
+        }
+      ]
+    },
+    {
+      "id": "yanrou",
+      "preset": "ol-college-2026",
+      "name": "阎柔",
+      "officialName": "阎柔",
+      "faction": "wei",
+      "hp": "4",
+      "portrait": "/engine/core/image/character/yanrou.jpg",
+      "skills": [
+        {
+          "id": "choutao",
+          "name": "仇讨",
+          "description": "当你使用【杀】时，或成为【杀】的目标后，你可以弃置此【杀】使用者的一张牌，令此【杀】不可被响应。若你是此【杀】的使用者，则你令此【杀】不计入次数限制。"
+        },
+        {
+          "id": "xiangshu",
+          "name": "襄戍",
+          "description": "限定技。结束阶段开始时，若你本回合内造成过伤害，则你可以选择一名已受伤的角色。该角色回复X点体力并摸X张牌（X为你本回合内造成的伤害值总和且至多为5）。"
+        }
+      ]
+    },
+    {
+      "id": "xinpi",
+      "preset": "ol-college-2026",
+      "name": "辛毗",
+      "versionNote": "同平台原生历史触发／次数差异：官网持节为每回合共限一次、受到伤害后令伤害牌无效，或获得未造成伤害的牌；固定xpchijie为每项各限一次、牌对本人结算后令后续目标无效。引裾仍为限定的目标共摸牌／防伤改回血，保留完整原生。",
+      "officialName": "辛毗",
+      "faction": "wei",
+      "hp": "3",
+      "portrait": "/engine/core/image/character/xinpi.jpg",
+      "skills": [
+        {
+          "id": "xpchijie",
+          "name": "持节",
+          "description": "每回合每项各限一次。1.当其他角色使用的牌对你结算结束后，你可以令此牌对所有后续目标无效。2.其他角色使用的牌结算完成时，若你是此牌的目标之一且此牌未造成过伤害，则你可以获得此牌对应的所有实体牌。"
+        },
+        {
+          "id": "yinju",
+          "name": "引裾",
+          "description": "限定技，出牌阶段，你可以选择一名其他角色。若如此做，直到回合结束：1.当你使用牌指定其为目标后，你与其各摸一张牌；2.当你即将对其造成伤害时，防止此伤害，然后其回复等量的体力。"
+        }
+      ]
+    },
+    {
+      "id": "ol_guanhai",
+      "preset": "ol-college-2026",
+      "name": "OL管亥",
+      "officialName": "管亥",
+      "faction": "qun",
+      "hp": "4",
+      "portrait": "/engine/core/image/character/ol_guanhai.jpg",
+      "skills": [
+        {
+          "id": "olxiewei",
+          "name": "卸尾",
+          "description": "你可以将两张手牌置于武将牌上，称为「饵」，视为使用一张【杀】或【闪】。"
+        },
+        {
+          "id": "olyouque",
+          "name": "诱阙",
+          "description": "出牌阶段，你可以用点数最小的「饵」拼点。没赢的角色弃置点数大于其拼点牌的所有手牌，视为对赢的角色使用一张【杀】。此【杀】造成伤害后，你摸两张牌，若「饵」的花色没有黑桃，此技能本阶段失效。"
+        }
+      ]
+    },
+    {
+      "id": "zhanghua",
+      "preset": "ol-college-2026",
+      "name": "张华",
+      "officialName": "张华",
+      "faction": "jin",
+      "hp": "3",
+      "portrait": "/engine/core/image/character/zhanghua.jpg",
+      "skills": [
+        {
+          "id": "olbihun",
+          "name": "弼昏",
+          "description": "锁定技。当你使用牌指定其他角色为目标时，若你的手牌数大于手牌上限，取消之；然后若此牌的目标数为1，其获得此牌。"
+        },
+        {
+          "id": "oljianhe",
+          "name": "剑合",
+          "description": "出牌阶段每名角色限一次。你可以重铸至少两张同名牌或至少两张装备牌，然后令一名角色选择一项：1.重铸等量张与你以此法重铸的牌类型相同的牌；2.受到你造成的1点雷电伤害。"
+        },
+        {
+          "id": "olchuanwu",
+          "name": "穿屋",
+          "description": "锁定技。当你造成或受到伤害后，你令武将牌上的前X个未失效的技能失效直到回合结束。然后你摸等同于你此次失效的技能数张牌（X为你的攻击范围）。"
+        }
+      ]
+    },
+    {
+      "id": "zhangzhi",
+      "preset": "ol-college-2026",
+      "name": "张芝",
+      "officialName": "张芝",
+      "faction": "qun",
+      "hp": "3",
+      "portrait": "/engine/core/image/character/zhangzhi.jpg",
+      "skills": [
+        {
+          "id": "olbixin",
+          "name": "笔心",
+          "description": "一名角色的准备阶段或结束阶段，你可以声明一种牌的类型（每种类型限[1]次），并选择一种你本轮未使用过且有合法目标的基本牌。你摸[3]张牌，然后若你有此类型的手牌，你将所有此类型的手牌当此基本牌使用。"
+        },
+        {
+          "id": "olximo",
+          "name": "洗墨",
+          "description": "锁定技。当你发动「笔心」后，你移除其描述的前五个字符。若你已发动三次「笔心」，交换中括号中的两个数字，失去〖洗墨〗并获得「飞白」。"
+        },
+        {
+          "id": "olfeibai",
+          "name": "飞白（关联技能）",
+          "description": "转换技，锁定技。阳：当你因执行你使用的非黑色牌的效果而造成伤害时，此伤害值+1；阴：当你因执行你使用的非红色牌的效果而回复体力时，此回复值+1。"
+        }
+      ]
+    },
+    {
+      "id": "ol_lukai",
+      "preset": "ol-college-2026",
+      "name": "OL陆凯",
+      "officialName": "陆凯",
+      "faction": "wu",
+      "hp": "3",
+      "portrait": "/engine/core/image/character/ol_lukai.jpg",
+      "skills": [
+        {
+          "id": "olxuanzhu",
+          "name": "玄注",
+          "description": "转换技，每回合限一次，你可以将一张牌称为“玄”置于武将牌上，然后视为使用：阳，任意基本牌；阴，任意普通锦囊牌（须指定目标且仅指定一个目标）。若此次置于武将牌上的“玄”：不为装备牌，你弃置一张牌；为装备牌，你将所有“玄”置入弃牌堆，然后摸等量的牌。"
+        },
+        {
+          "id": "oljiane",
+          "name": "謇谔",
+          "description": "锁定技。①当你对其他角色使用的牌生效后，其本回合无法抵消牌。②当你抵消牌后，你本回合无法成为牌的目标。"
+        }
+      ]
+    },
+    {
+      "id": "ol_wangrong",
+      "preset": "ol-college-2026",
+      "name": "OL王荣",
+      "officialName": "王荣",
+      "faction": "qun",
+      "hp": "3",
+      "portrait": "/engine/core/image/character/ol_wangrong.jpg",
+      "skills": [
+        {
+          "id": "olfengzi",
+          "name": "丰姿",
+          "description": "出牌阶段限一次。当你使用有目标的基本牌或普通锦囊牌时，你可弃置一张与此牌类型相同的牌，然后令此牌结算两次。"
+        },
+        {
+          "id": "oljizhan",
+          "name": "吉占",
+          "description": "摸牌阶段开始时，你可以放弃摸牌。你亮出牌堆顶的一张牌，并猜测牌堆顶的下一张牌点数大于或小于此牌。若你猜对，你可继续重复此流程。然后你获得以此法展示的所有牌。"
+        },
+        {
+          "id": "olfusong",
+          "name": "赋颂",
+          "description": "当你死亡时，你可以选择一名体力上限大于你的其他角色。其选择获得〖吉占〗或〖丰姿〗。"
+        }
+      ]
+    },
+    {
+      "id": "kongshu",
+      "preset": "ol-college-2026",
+      "name": "孔淑",
+      "officialName": "孔淑",
+      "faction": "qun",
+      "hp": "3",
+      "portrait": "/engine/core/image/character/kongshu.jpg",
+      "skills": [
+        {
+          "id": "leiluan",
+          "name": "累卵",
+          "description": "你可以将X张牌当一张你本轮未使用过的基本牌使用（X为已连环的角色数且至少为1）。若你以此法失去最后的手牌，你摸两张牌，从本回合弃牌堆中获得一张普通锦囊牌，然后此技能失效，直到你下次受到伤害后。"
+        },
+        {
+          "id": "fuchao",
+          "name": "覆巢",
+          "description": "锁定技，你使用基本牌后，当前回合角色进入连环状态。每轮结束时，你与已连环的角色各摸一张牌，然后已连环的角色弃置X张牌（X为已连环的角色数且至少为1）。"
+        }
+      ]
+    },
+    {
+      "id": "re_huanggai",
+      "preset": "ol-college-2026",
+      "name": "界黄盖",
+      "officialName": "界黄盖",
+      "faction": "wu",
+      "hp": "4",
+      "portrait": "/engine/core/image/character/re_huanggai.jpg",
+      "skills": [
+        {
+          "id": "rekurou",
+          "name": "苦肉",
+          "description": "出牌阶段限一次，你可以弃置一张牌，然后失去1点体力。"
+        },
+        {
+          "id": "zhaxiang",
+          "name": "诈降",
+          "description": "锁定技。当你失去1点体力后，你摸三张牌。然后若此时是你的出牌阶段，则你本回合获得此下效果：使用【杀】的次数上限+1，使用红色【杀】无距离限制且不能被【闪】响应。"
+        }
+      ]
+    },
+    {
+      "id": "ol_liru",
+      "preset": "ol-college-2026",
+      "name": "OL界李儒",
+      "officialName": "界李儒",
+      "faction": "qun",
+      "hp": "3",
+      "portrait": "/engine/core/image/character/ol_liru.jpg",
+      "skills": [
+        {
+          "id": "oljuece",
+          "name": "绝策",
+          "description": "结束阶段，你可以对一名手牌数不大于你的其他角色造成1点伤害。"
+        },
+        {
+          "id": "olmieji",
+          "name": "灭计",
+          "description": "出牌阶段限一次，你可以将一张锦囊牌置于牌堆顶，然后令一名有手牌的其他角色弃置一张锦囊牌或依次弃置两张牌。"
+        },
+        {
+          "id": "dcfencheng",
+          "name": "焚城",
+          "description": "限定技。出牌阶段，你可以指定一名其他角色，令从其开始的其他角色依次选择一项：⒈弃置至少X张牌（X为上一名角色弃置的牌数+1）。⒉你对其造成2点火焰伤害。"
+        }
+      ]
+    },
+    {
+      "id": "ol_wangyi",
+      "preset": "ol-college-2026",
+      "name": "OL界王异",
+      "officialName": "界王异",
+      "faction": "wei",
+      "hp": "3",
+      "portrait": "/engine/core/image/character/ol_wangyi.jpg",
+      "skills": [
+        {
+          "id": "olzhenlie",
+          "name": "贞烈",
+          "description": "当你成为其他角色使用【杀】或普通锦囊牌的目标后，你可以失去1点体力并令此牌对你无效，然后你选择一项：①获得使用者的一张牌；②于本回合的结束阶段发动一次「秘计」（每回合限一次）。"
+        },
+        {
+          "id": "olmiji",
+          "name": "秘计",
+          "description": "结束阶段，若你已受伤，则你可以摸X张牌，然后你可以将至多X张牌任意分配给其他角色（X为你已损失的体力值）。"
+        }
+      ]
+    },
+    {
+      "id": "ol_weiyan",
+      "preset": "ol-college-2026",
+      "name": "界魏延",
+      "officialName": "界魏延",
+      "faction": "shu",
+      "hp": "4",
+      "portrait": "/engine/core/image/character/ol_weiyan.jpg",
+      "skills": [
+        {
+          "id": "xinkuanggu",
+          "name": "狂骨",
+          "description": "当你造成1点伤害后，若受伤角色受到此伤害时你与其的距离不大于1，则你可以回复1点体力或摸一张牌。"
+        },
+        {
+          "id": "reqimou",
+          "name": "奇谋",
+          "description": "限定技，出牌阶段，你可以失去任意点体力并摸等量的牌，然后直到回合结束，你计算与其他角色的距离时-X，且你可以多使用X张【杀】（X为你失去的体力值）。"
+        }
+      ]
+    },
+    {
+      "id": "re_xusheng",
+      "preset": "ol-college-2026",
+      "name": "手杀界徐盛",
+      "officialName": "界徐盛",
+      "faction": "wu",
+      "hp": "4",
+      "portrait": "/engine/core/image/character/re_xusheng.jpg",
+      "skills": [
+        {
+          "id": "repojun",
+          "name": "破军",
+          "description": "当你使用【杀】指定目标后，你可以将其的至多X张牌置于其武将牌上（X为其体力值），然后其于当前回合结束时获得这些牌。当你使用【杀】对一名角色造成伤害时，若该角色的手牌数和装备区内的牌数均不大于你，则此伤害+1。"
+        }
+      ]
+    },
+    {
+      "id": "ol_zhangchunhua",
+      "preset": "ol-college-2026",
+      "name": "OL界张春华",
+      "officialName": "界张春华",
+      "faction": "wei",
+      "hp": "3",
+      "portrait": "/engine/core/image/character/ol_zhangchunhua.jpg",
+      "skills": [
+        {
+          "id": "jueqing",
+          "name": "绝情",
+          "description": "锁定技，你即将造成的伤害均视为失去体力。"
+        },
+        {
+          "id": "shangshi",
+          "name": "伤逝",
+          "description": "当你的手牌数小于X时，你可以将手牌摸至X张（X为你已损失的体力值）。"
+        },
+        {
+          "id": "oljianmie",
+          "name": "翦灭",
+          "description": "出牌阶段限一次，你可以选择一名其他角色，你与其同时选择一个颜色，然后弃置各自选择颜色的手牌，若你/其以此法弃置了更多手牌，则你/其视为对其/你使用一张【决斗】。"
+        }
+      ]
+    },
+    {
+      "id": "ol_caojinyu",
+      "preset": "ol-college-2026",
+      "name": "OL曹金玉",
+      "officialName": "曹金玉",
+      "faction": "wei",
+      "hp": "3",
+      "portrait": "/engine/core/image/character/ol_caojinyu.jpg",
+      "skills": [
+        {
+          "id": "olchunhui",
+          "name": "春晖",
+          "description": "准备阶段或当你受到伤害后，令一名其他角色交给你一张手牌。若此牌为黑色，本回合你或其下一次成为红色牌的目标时，各弃置一张手牌。"
+        },
+        {
+          "id": "olxiasheng",
+          "name": "夏晟",
+          "description": "锁定技，若你手牌中：红色牌较多，你使用黑色牌时摸一张牌；黑色牌较多，你使用红色牌可多指定一个目标（无距离限制）。"
+        },
+        {
+          "id": "olqiumu",
+          "name": "秋暮",
+          "description": "锁定技，本回合成为过你的红色牌目标的角色进入濒死状态时，你将「春晖」、「夏晟」或〖秋暮〗描述中的“红色”改为“黑色”，若描述变化，你获得其所有黑色手牌。"
+        }
+      ]
+    },
+    {
+      "id": "baosanniang",
+      "preset": "ol-college-2026",
+      "name": "鲍三娘",
+      "officialName": "鲍三娘",
+      "faction": "shu",
+      "hp": "4",
+      "portrait": "/engine/core/image/character/baosanniang.jpg",
+      "skills": [
+        {
+          "id": "newwuniang",
+          "name": "武娘",
+          "description": "你可以将一张非基本牌当作无距离限制且不可响应的【杀】使用，然后你可以获得其中一名目标角色的一张牌。若此牌不为基本牌，你可失去1点体力，重置所有角色的〖镇南〗。"
+        },
+        {
+          "id": "newzhennan",
+          "name": "镇南",
+          "description": "限定技，准备阶段，你可以弃置两张牌，视为使用一张指定任意名目标的【南蛮入侵】。然后若你对指定目标：造成了伤害，其随机弃置一张牌，未造成伤害，你本回合对其使用牌无次数限制。"
+        },
+        {
+          "id": "newxushen",
+          "name": "许身",
+          "description": "限定技，当你进入濒死状态时，你可以令一名其他角色选择一项：①失去所有技能，获得〖征南〗；②获得〖镇南〗。"
+        },
+        {
+          "id": "zhengnan",
+          "name": "征南（关联技能）",
+          "description": "其他角色死亡后，你可以摸三张牌并获得下列技能中的任意一个：〖武圣〗、〖当先〗和〖制蛮〗。"
+        },
+        {
+          "id": "new_rewusheng",
+          "name": "武圣（关联技能）",
+          "description": "你可以将一张红色牌当做【杀】使用或打出。你使用的方片【杀】没有距离限制。"
+        },
+        {
+          "id": "oldangxian",
+          "name": "当先（关联技能）",
+          "description": "回合开始时，你执行一个额外的出牌阶段。此阶段开始时，你可以从牌堆或弃牌堆获得一张无距离限制的【杀】，若如此做，此阶段结束时，若你未于此阶段造成过伤害，则你对自己造成1点伤害。"
+        },
+        {
+          "id": "rezhiman",
+          "name": "制蛮（关联技能）",
+          "description": "当你对一名其他角色造成伤害时，你可以防止此伤害，然后获得其区域内的一张牌。"
+        }
+      ]
+    },
+    {
+      "id": "caochun",
+      "preset": "ol-college-2026",
+      "name": "曹纯",
+      "officialName": "曹纯",
+      "faction": "wei",
+      "hp": "4",
+      "portrait": "/engine/core/image/character/caochun.jpg",
+      "skills": [
+        {
+          "id": "olshanjia",
+          "name": "缮甲",
+          "description": "①游戏开始时，你获得3枚“损”标记。②当你不因使用而失去一张装备牌后，你失去1枚“损”标记。③出牌阶段限一次，你可以摸三张牌，然后你可以使用一张【杀】。本阶段你使用下X张手牌时弃置一张牌（X为你拥有的“损”标记数）；本阶段结束时，若你本阶段未因此法弃置过非装备牌，则你可以视为使用一张无距离限制的【杀】。"
+        }
+      ]
+    },
+    {
+      "id": "caoying",
+      "preset": "ol-college-2026",
+      "name": "曹婴",
+      "officialName": "曹婴",
+      "faction": "wei",
+      "hp": "4",
+      "portrait": "/engine/core/image/character/caoying.jpg",
+      "skills": [
+        {
+          "id": "ollingren",
+          "name": "凌人",
+          "description": "每回合限一次，当你使用【杀】或伤害锦囊牌时，你可以猜测其中一个目标的手牌中是否有基本牌、锦囊牌或装备牌，若至少猜对：一项，本回合你下次对其伤害+1；两项，此牌不计入次数且你摸两张牌；三项，你获得「奸雄」「行殇」直到你下回合开始。"
+        },
+        {
+          "id": "olfujian",
+          "name": "伏间",
+          "description": "锁定技，准备阶段和结束阶段，你随机观看一名手牌数不为唯一最多的其他角色的手牌。"
+        },
+        {
+          "id": "new_rejianxiong",
+          "name": "奸雄（关联技能）",
+          "description": "当你受到伤害后，你可以获得对你造成伤害的牌并摸一张牌。"
+        },
+        {
+          "id": "rexingshang",
+          "name": "行殇（关联技能）",
+          "description": "当其他角色死亡后，你可以选择一项：回复1点体力，或获得其所有牌。"
+        }
+      ]
+    },
+    {
+      "id": "ol_feiyi",
+      "preset": "ol-college-2026",
+      "name": "费祎",
+      "officialName": "费祎",
+      "faction": "shu",
+      "hp": "3",
+      "portrait": "/engine/core/image/character/ol_feiyi.jpg",
+      "skills": [
+        {
+          "id": "yanru",
+          "name": "晏如",
+          "description": "出牌阶段各限一次，若你的手牌数为：①奇数，你可以摸三张牌，然后弃置至少一半手牌（向下取整）；②偶数，你可以弃置至少一半手牌，然后摸三张牌。"
+        },
+        {
+          "id": "hezhong",
+          "name": "和衷",
+          "description": "每回合每项限一次，当你的手牌数变为1后，你可以展示唯一手牌并摸一张牌，然后你选择一项：①本回合使用的下一张点数大于此牌的点数的普通锦囊牌额外结算一次；②本回合使用的下一张点数小于此牌的点数的普通锦囊牌额外结算一次。"
+        }
+      ]
+    },
+    {
+      "id": "ol_guozhao",
+      "preset": "ol-college-2026",
+      "name": "OL郭照",
+      "officialName": "郭照",
+      "faction": "wei",
+      "hp": "3",
+      "portrait": "/engine/core/image/character/ol_guozhao.jpg",
+      "skills": [
+        {
+          "id": "oljiaoyu",
+          "name": "椒遇",
+          "description": "锁定技。每轮开始时，你进行X次判定（X为你空置装备栏数），然后你声明一种颜色并获得此颜色的判定牌，且你的下回合结束时，你执行一个额外的出牌阶段。此阶段内：你不能使用与声明颜色不同的牌；其他角色不能使用与你装备区牌颜色相同的牌直到有角色受到伤害时。"
+        },
+        {
+          "id": "olneixun",
+          "name": "内训",
+          "description": "锁定技，其他角色于回合内使用第一张非装备牌后，若此牌与你本轮〖椒遇〗声明的颜色相同/不同，你交给/获得其一张牌，然后失去牌的角色摸一张牌。你以此法获得的牌不计入手牌上限直到你回合结束。"
+        }
+      ]
+    },
+    {
+      "id": "ol_jiangwan",
+      "preset": "ol-college-2026",
+      "name": "蒋琬",
+      "officialName": "蒋琬",
+      "faction": "shu",
+      "hp": "3",
+      "portrait": "/engine/core/image/character/ol_jiangwan.jpg",
+      "skills": [
+        {
+          "id": "olziruo",
+          "name": "自若",
+          "description": "转换技，锁定技。①当你使用最{阳：左；阴：右}侧的手牌时，你摸一张牌。②你以此法摸牌后本回合不能整理手牌。"
+        },
+        {
+          "id": "olxvfa",
+          "name": "蓄发",
+          "description": "出牌阶段各限一次，你可以：①将至少一半手牌称为“蓄发”置于武将牌上，然后你可以将一张牌当作“蓄发”牌中的一张普通锦囊牌使用；②移去至少一半“蓄发”牌，然后你可以将一张牌当作其中一张普通锦囊牌使用。"
+        }
+      ]
+    },
+    {
+      "id": "xurong",
+      "preset": "ol-college-2026",
+      "name": "徐荣",
+      "officialName": "徐荣",
+      "faction": "qun",
+      "hp": "4",
+      "portrait": "/engine/core/image/character/xurong.jpg",
+      "skills": [
+        {
+          "id": "xinfu_xionghuo",
+          "name": "凶镬",
+          "description": "游戏开始时，你获得3个“暴戾”标记（标记上限为3）。出牌阶段，你可以交给一名其他角色一个“暴戾”标记。当你对有“暴戾”标记的其他角色造成伤害时，此伤害+1。有“暴戾”标记的其他角色的出牌阶段开始时，其移去所有“暴戾”标记并随机执行一项：1.受到1点火焰伤害且本回合不能对你使用【杀】；2.失去1点体力且本回合手牌上限-1；3.你随机获得其两张牌。"
+        },
+        {
+          "id": "xinfu_shajue",
+          "name": "杀绝",
+          "description": "锁定技，其他角色进入濒死状态时，你获得一个“暴戾”标记。然后若其体力值小于0，你获得使其进入濒死状态的牌。"
+        }
+      ]
+    },
+    {
+      "id": "jin_zhouchu",
+      "preset": "ol-college-2026",
+      "name": "周处",
+      "officialName": "周处",
+      "faction": "jin",
+      "hp": "4",
+      "portrait": "/engine/core/image/character/jin_zhouchu.jpg",
+      "skills": [
+        {
+          "id": "shanduan",
+          "name": "善断",
+          "description": "锁定技。①摸牌/出牌/弃牌阶段开始时，你为本回合摸牌阶段摸牌数/攻击范围和使用【杀】的限制次数/手牌上限的默认值从数组R=[1，2，3，4]中分配数值。②当你于回合外受到伤害后，你令下回合〖善断①〗以此法分配的数值集合R中的最小值+1。"
+        },
+        {
+          "id": "yilie",
+          "name": "义烈",
+          "description": "每轮每种牌名限一次。你可以将两张颜色相同的手牌当做任意一种基本牌使用。"
+        }
+      ]
+    },
+    {
+      "id": "ol_lvlingqi",
+      "preset": "ol-college-2026",
+      "name": "OL吕玲绮",
+      "officialName": "吕玲绮",
+      "faction": "qun",
+      "hp": "4",
+      "portrait": "/engine/core/image/character/ol_lvlingqi.jpg",
+      "skills": [
+        {
+          "id": "olqiwu",
+          "name": "绮武",
+          "description": "出牌阶段限一次，你可以弃置任意张牌，视为使用一张无距离次数限制的【杀】并令目标角色弃置X张牌（X为你弃置牌包含的花色数）。若你与其因此弃置的牌：包含【闪】，你获得其中的【闪】且这些牌本回合不计入手牌上限；不包含【闪】，此【杀】不可被响应。"
+        },
+        {
+          "id": "olzhuangrong",
+          "name": "妆戎",
+          "description": "①锁定技，回合开始时，将「束发紫金冠」、「玲珑狮蛮带」、「红棉百花袍」和「无双方天戟」中的随机一件装备从游戏外置入你的对应空置装备栏（每件装备限一次，且这些牌离开你的装备区后，销毁之）。②每局游戏限一次，每回合结束时，若你发动过至少两次这些装备的效果，你增加1点体力上限并回复1点体力。"
+        },
+        {
+          "id": "shufazijinguan",
+          "name": "束发紫金冠（关联技能）",
+          "description": "准备阶段，你可以对一名其他角色造成1点伤害。"
+        },
+        {
+          "id": "linglongshimandai",
+          "name": "玲珑狮蛮带（关联技能）",
+          "description": "当你成为其他角色使用的牌的唯一目标后，你可以进行判定。若判定结果为♥，则此牌对你无效。"
+        },
+        {
+          "id": "hongmianbaihuapao",
+          "name": "红棉百花袍（关联技能）",
+          "description": "锁定技，当你受到属性伤害时，防止此伤害。"
+        },
+        {
+          "id": "wushuangfangtianji",
+          "name": "无双方天戟（关联技能）",
+          "description": "当你因执行【杀】的效果而造成伤害后，你可选择一项：⒈摸一张牌；⒉弃置目标角色的一张牌。"
+        }
+      ]
+    },
+    {
+      "id": "sp_ol_liubei",
+      "preset": "ol-college-2026",
+      "name": "SP刘备",
+      "officialName": "SP刘备",
+      "faction": "qun",
+      "hp": "4",
+      "portrait": "/engine/core/image/character/sp_ol_liubei.jpg",
+      "skills": [
+        {
+          "id": "spolxudai",
+          "name": "虚待",
+          "description": "限定技，当你响应牌或受到伤害后，你可以令一名其他角色获得「煮酒」。"
+        },
+        {
+          "id": "spolzhujiu",
+          "name": "煮酒",
+          "description": "你可以将至少X+1张牌当【酒】使用（X为你本回合已使用过【酒】的次数），然后若这些牌存在非梅花牌，此技能失效直到回合结束。"
+        },
+        {
+          "id": "spoljinglei",
+          "name": "惊雷",
+          "description": "每回合限一次，一名角色使用【酒】结算结束后，若没有处于濒死的角色，你可以受到1点无来源的雷电伤害，令一名拥有〖煮酒〗的角色将手牌调整至体力上限（至多摸至5），然后若该角色不为你：其须将以此法弃置的牌交给你。"
+        }
+      ]
+    },
+    {
+      "id": "sp_sunce",
+      "preset": "ol-college-2026",
+      "name": "SP孙策",
+      "officialName": "SP孙策",
+      "faction": "qun",
+      "hp": "4",
+      "portrait": "/engine/core/image/character/sp_sunce.jpg",
+      "skills": [
+        {
+          "id": "junkliantao",
+          "name": "连讨",
+          "description": "出牌阶段开始时，你可以令一名其他角色选择一个颜色，然后你展示所有手牌并依次将此颜色的手牌当作【决斗】对其使用直到有一方进入濒死状态，然后你摸X张牌（X为你本次以此法造成的伤害数）。若其未因本次技能结算受到伤害，你摸一张牌，本回合手牌上限+1且本回合你不能使用【杀】。"
+        }
+      ]
+    },
+    {
+      "id": "ol_zhouqun",
+      "preset": "ol-college-2026",
+      "name": "周群",
+      "versionNote": "同平台原生历史修订差异：官网天候于准备阶段观看顶一张、谶说于结束阶段自己展示；固定ol_zhouqun为结束阶段观看顶三张的天候、准备阶段可令一名角色展示的谶说，完整保留固定历史版本。",
+      "officialName": "周群",
+      "faction": "shu",
+      "hp": "4",
+      "portrait": "/engine/core/image/character/ol_zhouqun.jpg",
+      "skills": [
+        {
+          "id": "oltianhou",
+          "name": "天候",
+          "description": "锁定技，结束阶段，你观看牌堆顶的三张牌并选择是否用你的手牌交换之，然后你展示牌堆顶三张牌中的一张，令一名角色根据此牌的花色获得对应的技能直到你下次发动此技能：♠「骤雨」；♥「烈暑」；♣「严霜」；♦「凝雾」。"
+        },
+        {
+          "id": "olchenshuo",
+          "name": "谶说",
+          "description": "准备阶段，你可以令一名角色展示一张手牌，然后亮出牌堆顶的一张牌。若这两张牌类型/花色/点数/牌名字数中任一项相同且已展示的牌数小于3，则你重复此流程，然后你获得所有因此技能展示的牌。"
+        },
+        {
+          "id": "oltianhou_spade",
+          "name": "骤雨（关联技能）",
+          "description": "锁定技。其他角色造成火属性伤害时，取消之；一名角色受到雷属性伤害后，所有与其座次相邻的角色失去1点体力。"
+        },
+        {
+          "id": "oltianhou_heart",
+          "name": "烈暑（关联技能）",
+          "description": "锁定技。其他角色的结束阶段开始时，若其体力值为全场最大，则其失去1点体力。"
+        },
+        {
+          "id": "oltianhou_club",
+          "name": "严霜（关联技能）",
+          "description": "锁定技。其他角色的结束阶段开始时，若其体力值为全场最小，则其失去1点体力。"
+        },
+        {
+          "id": "oltianhou_diamond",
+          "name": "凝雾（关联技能）",
+          "description": "锁定技。其他角色使用【杀】指定与其座次不相邻唯一目标时，则其判定。若判定结果的点数大于此【杀】，则此【杀】对其无效。"
+        }
+      ]
+    },
+    {
+      "id": "sp_zhaoyun",
+      "preset": "ol-college-2026",
+      "name": "SP赵云",
+      "officialName": "SP赵云",
+      "faction": "qun",
+      "hp": "3",
+      "portrait": "/engine/core/image/character/sp_zhaoyun.jpg",
+      "skills": [
+        {
+          "id": "ollongdan",
+          "name": "龙胆",
+          "description": "你可以将一张【杀】当做【闪】、【闪】当做【杀】、【酒】当做【桃】、【桃】当做【酒】使用或打出。"
+        },
+        {
+          "id": "chongzhen",
+          "name": "冲阵",
+          "description": "当你因发动〖龙胆〗而使用或打出【杀】或【闪】时，你可以获得对方的一张手牌。"
+        }
+      ]
+    },
+    {
+      "id": "ol_miheng",
+      "preset": "ol-college-2026",
+      "name": "OL祢衡",
+      "officialName": "祢衡",
+      "faction": "qun",
+      "hp": "3",
+      "portrait": "/engine/core/image/character/ol_miheng.jpg",
+      "skills": [
+        {
+          "id": "olkuangjuan",
+          "name": "狂狷",
+          "description": "出牌阶段限X次（X为你的体力上限），你可将手牌调整至与一名其他角色相同，然后你摸弃置牌数的牌。你因此技能获得的牌本回合无次数限制。"
+        },
+        {
+          "id": "olfeibian",
+          "name": "飞辩",
+          "description": "锁定技。①游戏开始时，你调整出牌时间为15s。②当你于回合内使用一张牌后，或其他角色对你使用一张牌后。使用牌的角色随机弃置一张手牌，且本轮出牌时间-1s（至多减至1s）。③一名角色的回合结束时，你令所有本回合出牌超时的角色失去1点体力。"
+        }
+      ]
+    },
+    {
+      "id": "ol_puyuan",
+      "preset": "ol-college-2026",
+      "name": "OL蒲元",
+      "officialName": "蒲元",
+      "faction": "shu",
+      "hp": "4",
+      "portrait": "/engine/core/image/character/ol_puyuan.jpg",
+      "skills": [
+        {
+          "id": "olshengong",
+          "name": "神工",
+          "description": "出牌阶段每项限一次。你可以弃置一张武器牌/防具牌/其他装备牌，并发起一次“锻造”。然后你从锻造结果中选择一张牌，置于一名角色的装备区内（可替换原装备）。当有因你发动〖神工〗而加入游戏的牌进入弃牌堆后，你将此牌移出游戏，然后你于当前回合的结束阶段摸一张牌。"
+        },
+        {
+          "id": "olqisi",
+          "name": "奇思",
+          "description": "①游戏开始时，你获得两张副类别不同的牌，并将这些牌置入你的装备区。②摸牌阶段开始时，你可以少摸一张牌并声明一种装备牌的副类别，然后从牌堆或弃牌堆中获得一张该副类别的牌。"
+        }
+      ]
+    },
+    {
+      "id": "ol_jsrg_zhujun",
+      "preset": "ol-college-2026",
+      "name": "闪朱儁",
+      "officialName": "闪朱儁",
+      "faction": "qun",
+      "hp": "4",
+      "portrait": "/engine/core/image/character/ol_jsrg_zhujun.jpg",
+      "skills": [
+        {
+          "id": "olfendi",
+          "name": "分敌",
+          "description": "你使用【杀】指定唯一目标后，可以展示其至多X张手牌（X为你的体力上限）。若如此做，直到此【杀】结算结束，其只能使用或打出对应实体牌全为这些牌的牌，且此【杀】对其造成伤害后，你获得其手牌或弃牌堆中的这些牌。"
+        },
+        {
+          "id": "oljuxiang",
+          "name": "拒降",
+          "description": "每回合限一次，你于摸牌阶段外获得牌后，可以弃置这些牌，令当前回合角色本回合出【杀】次数+X（X为你以此法弃置的牌数）。"
+        }
+      ]
+    },
+    {
+      "id": "ol_sb_dengai",
+      "preset": "ol-college-2026",
+      "name": "OL谋邓艾",
+      "versionNote": "同平台原生历史体力参数差异：OL英雄目录标5体力且未列初始体力，固定ol_sb_dengai为4/5；保留固定完整积谷／解腕及原生体力。",
+      "officialName": "谋邓艾",
+      "faction": "wei",
+      "hp": "4/5",
+      "portrait": "/engine/core/image/character/ol_sb_dengai.jpg",
+      "skills": [
+        {
+          "id": "olsbjigu",
+          "name": "积谷",
+          "description": "锁定技。一名角色于其出牌阶段外使用的牌进入弃牌堆后，若“谷”的数量小于你的体力上限，你将其中的非♥牌置于你的武将牌上，称为“谷”。体力上限与你相同的角色的回合开始时，你可以用任意张手牌替换等量“谷”。"
+        },
+        {
+          "id": "olsbjiewan",
+          "name": "解腕",
+          "description": "①每个准备阶段，你可以减少1点体力上限或移去两张“谷”，然后将一张手牌当距离限制为X的【顺手牵羊】使用（X为你的“谷”数且至少为1）。②每个结束阶段，若你的手牌数与“谷”的数量相同且你的体力上限不为全场唯一最高，你增加1点体力上限。"
+        }
+      ]
+    },
+    {
+      "id": "ol_sb_dongzhuo",
+      "preset": "ol-college-2026",
+      "name": "OL谋董卓",
+      "officialName": "谋董卓",
+      "faction": "qun",
+      "hp": "4",
+      "portrait": "/engine/core/image/character/ol_sb_dongzhuo.jpg",
+      "skills": [
+        {
+          "id": "olguanbian",
+          "name": "观变",
+          "description": "锁定技。①游戏开始时，你的手牌上限、其他角色计算与你的距离、你计算与其他角色的距离+X（X为游戏人数）。②首轮结束时，或当你发动〖凶逆〗或〖封赏〗后，你失去〖观变〗。"
+        },
+        {
+          "id": "olxiongni",
+          "name": "凶逆",
+          "description": "出牌阶段开始时，你可以弃置一张牌，然后所有其他角色选择一项：1.弃置一张与此牌花色相同的牌；2.受到你的1点伤害。"
+        },
+        {
+          "id": "olfengshang",
+          "name": "封赏",
+          "description": "出牌阶段限一次或有角色进入濒死状态时（每回合限一次），你可以将两张本回合进入弃牌堆中的本轮未以此法选择过的相同花色的牌分配给等量角色。若你未以此法获得牌，你视为使用一张不计入次数的【酒】。"
+        },
+        {
+          "id": "olzhibin",
+          "name": "执柄",
+          "description": "主公技，锁定技。准备阶段，若其他群势力角色累计使用黑色牌的次数达到：三张，你增加1点体力上限并回复1点体力；六张，你获得「焚城」；九张：你获得「崩坏」。"
+        },
+        {
+          "id": "dcfencheng",
+          "name": "焚城（关联技能）",
+          "description": "限定技。出牌阶段，你可以指定一名其他角色，令从其开始的其他角色依次选择一项：⒈弃置至少X张牌（X为上一名角色弃置的牌数+1）。⒉你对其造成2点火焰伤害。"
+        },
+        {
+          "id": "benghuai",
+          "name": "崩坏（关联技能）",
+          "description": "锁定技。结束阶段，若你的体力不为全场最少，你失去1点体力或减1点体力上限。"
+        }
+      ]
+    },
+    {
+      "id": "ol_sb_gongsunzan",
+      "preset": "ol-college-2026",
+      "name": "OL谋公孙瓒",
+      "officialName": "谋公孙瓒",
+      "faction": "qun",
+      "hp": "4",
+      "portrait": "/engine/core/image/character/ol_sb_gongsunzan.jpg",
+      "skills": [
+        {
+          "id": "olsbjiaodi",
+          "name": "剿狄",
+          "description": "锁定技。①你的攻击范围视为你的体力值。②当你使用【杀】指定唯一目标时，若其攻击范围：小于等于你，你令此牌造成的伤害+1，获得其一张手牌；大于等于你，你弃置其区域一张牌，选择一名角色作为此牌的额外目标。"
+        },
+        {
+          "id": "olsbbaojing",
+          "name": "保京",
+          "description": "出牌阶段限一次，你可以令一名其他角色的攻击范围+1或-1（至多减至1）直到你的下个出牌阶段开始。"
+        }
+      ]
+    },
+    {
+      "id": "ol_sb_guanyu",
+      "preset": "ol-college-2026",
+      "name": "OL谋关羽",
+      "officialName": "谋关羽",
+      "faction": "shu",
+      "hp": "4",
+      "portrait": "/engine/core/image/character/ol_sb_guanyu.jpg",
+      "skills": [
+        {
+          "id": "olsbweilin",
+          "name": "威临",
+          "description": "每回合限一次，你可以将一张牌当作任意【杀】或【酒】使用，且目标角色本回合与此牌颜色相同的手牌均视为【杀】。"
+        },
+        {
+          "id": "olsbduoshou",
+          "name": "夺首",
+          "description": "锁定技。①你每回合使用的第一张红色牌无距离限制。②你每回合使用的第一张基本牌不计入使用次数。③你每回合第一次造成伤害后，你摸一张牌。"
+        }
+      ]
+    },
+    {
+      "id": "ol_sb_huaxiong",
+      "preset": "ol-college-2026",
+      "name": "OL谋华雄",
+      "officialName": "谋华雄",
+      "faction": "qun",
+      "hp": "6",
+      "portrait": "/engine/core/image/character/ol_sb_huaxiong.jpg",
+      "skills": [
+        {
+          "id": "olsbbojue",
+          "name": "搏决",
+          "description": "出牌阶段限两次，你可以选择一名其他角色，然后同时与其选择摸一张牌或弃置一张牌，然后若你与其的手牌数之和的变化值为：0，你与其依次弃置对方一张牌；2，你与其依次视为对对方使用一张【杀】。"
+        },
+        {
+          "id": "olsbyangwei",
+          "name": "扬威",
+          "description": "锁定技。当你于摸牌/弃牌阶段外摸/弃置了本回合的第二张牌后，你下一次造成/受到的伤害+1。"
+        }
+      ]
+    },
+    {
+      "id": "ol_sb_lusu",
+      "preset": "ol-college-2026",
+      "name": "OL谋鲁肃",
+      "officialName": "谋鲁肃",
+      "faction": "wu",
+      "hp": "3",
+      "portrait": "/engine/core/image/character/ol_sb_lusu.jpg",
+      "skills": [
+        {
+          "id": "olsbduduan",
+          "name": "独断",
+          "description": "回合开始时，你可以摸一张牌，跳过本回合判定、摸牌、出牌和弃牌阶段中的一个阶段（每阶段限一次），并交换其中另外两个阶段。"
+        },
+        {
+          "id": "olsbyinglve",
+          "name": "英略",
+          "description": "出牌阶段各限一次，你可以令一名角色：1.失去1点体力，下个摸牌阶段摸牌数+2；2.摸两张牌，下个弃牌阶段手牌上限-2。"
+        },
+        {
+          "id": "olsbmengshi",
+          "name": "盟势",
+          "description": "限定技，结束阶段，你可以选择两名其他角色并失去X点体力（X为这两名角色体力值之差且不能为0），令这两名角色交换体力值。然后直到其中一名角色死亡，每回合结束时，你摸一张牌并回复1点体力。"
+        }
+      ]
+    },
+    {
+      "id": "ol_sb_yl_luzhi",
+      "preset": "ol-college-2026",
+      "name": "OL谋卢植",
+      "officialName": "谋卢植",
+      "faction": "qun",
+      "hp": "3/4",
+      "portrait": "/engine/core/image/character/ol_sb_yl_luzhi.jpg",
+      "skills": [
+        {
+          "id": "olsibing",
+          "name": "司兵",
+          "description": "每回合限一次。①当你使用伤害牌指定唯一目标时，你可以弃置任意张红色牌令目标弃置等量红色手牌，否则不能响应该牌；②以你为目标的伤害牌结算完成后，若未对你造成伤害，你可以弃置一张黑色牌并视为使用一张【杀】。"
+        },
+        {
+          "id": "olliance",
+          "name": "敛策",
+          "description": "每轮限一次，当你的手牌数变化后，若为全场最少，你可将手牌摸至体力上限，然后本回合下一次有角色造成伤害时，此伤害+1。"
+        }
+      ]
+    },
+    {
+      "id": "ol_sb_jiangwei",
+      "preset": "ol-college-2026",
+      "name": "OL谋姜维",
+      "officialName": "谋姜维",
+      "faction": "shu",
+      "hp": "4",
+      "portrait": "/engine/core/image/character/ol_sb_jiangwei.jpg",
+      "skills": [
+        {
+          "id": "olsbzhuri",
+          "name": "逐日",
+          "description": "你的阶段结束时，若你本阶段失去过手牌或得到过牌，则你可以与一名角色拼点。若你赢，你可以使用其中一张拼点牌；若你没赢，你失去1点体力或令此技能于本回合无效。"
+        },
+        {
+          "id": "olsbranji",
+          "name": "燃己",
+          "description": "限定技，结束阶段。若你本回合使用过牌的阶段数大于等于/小于等于体力值，你可以获得技能「困奋」/「诈降」（同时满足则都获得，以此法获得的〖困奋〗直接修改为非锁定技）。若如此做，你将手牌数调整至手牌上限或将体力值回复至体力上限，然后你不能回复体力直到你杀死角色。"
+        },
+        {
+          "id": "kunfenx",
+          "name": "困奋（关联技能）",
+          "description": "结束阶段开始时，你可以失去1点体力，然后摸两张牌。"
+        },
+        {
+          "id": "zhaxiang",
+          "name": "诈降（关联技能）",
+          "description": "锁定技。当你失去1点体力后，你摸三张牌。然后若此时是你的出牌阶段，则你本回合获得此下效果：使用【杀】的次数上限+1，使用红色【杀】无距离限制且不能被【闪】响应。"
+        }
+      ]
+    },
+    {
+      "id": "ol_sb_sunjian",
+      "preset": "ol-college-2026",
+      "name": "OL谋孙坚",
+      "officialName": "谋孙坚",
+      "faction": "wu",
+      "hp": "4/5",
+      "portrait": "/engine/core/image/character/ol_sb_sunjian.jpg",
+      "skills": [
+        {
+          "id": "olsbhulie",
+          "name": "虎烈",
+          "description": "每回合各限一次，当你使用【杀】或【决斗】指定唯一目标后，你可以令此牌伤害值基数+1。若此牌未造成伤害，你可以令目标角色视为对你使用一张【杀】。"
+        },
+        {
+          "id": "olsbyipo",
+          "name": "毅魄",
+          "description": "你的体力值变化后，若你体力值大于0且为你首次达到，你可以选择一名角色并选择一项：1.令其摸X张牌，然后弃置一张牌；2.令其摸一张牌，然后其弃置X张牌（X为你已损失体力值且至少为1）。"
+        }
+      ]
+    },
+    {
+      "id": "ol_sb_wenchou",
+      "preset": "ol-college-2026",
+      "name": "OL谋文丑",
+      "officialName": "谋文丑",
+      "faction": "qun",
+      "hp": "4",
+      "portrait": "/engine/core/image/character/ol_sb_wenchou.jpg",
+      "skills": [
+        {
+          "id": "olsblunzhan",
+          "name": "轮战",
+          "description": "出牌阶段，你可将任意张牌当作【决斗】使用（至多五张，且选择的转化牌数不得为你本回合发动〖轮战〗已经转化过的牌数）。若你因此对唯一目标造成了伤害，你可以摸X张牌，然后你本回合不能再对其发动此技能（X为本回合你使用牌指定其为目标的次数）。"
+        },
+        {
+          "id": "olsbjuejue",
+          "name": "决绝",
+          "description": "锁定技，当你于回合内首次仅使用所有手牌指定仅一名其他角色为目标时，你令其弃置X张牌（X为本回合你使用牌指定其为目标的次数）。"
+        }
+      ]
+    },
+    {
+      "id": "ol_sb_xiaoqiao",
+      "preset": "ol-college-2026",
+      "name": "OL谋小乔",
+      "officialName": "谋小乔",
+      "faction": "wu",
+      "hp": "3",
+      "portrait": "/engine/core/image/character/ol_sb_xiaoqiao.jpg",
+      "skills": [
+        {
+          "id": "olmiluo",
+          "name": "迷落",
+          "description": "出牌阶段限一次，你可展示并交给至多两名其他角色各一张牌，这些牌本轮称为“迷落”牌。每轮结束时，你可令其中一名手牌中没有/有“迷落”牌的角色失去/回复1点体力。"
+        },
+        {
+          "id": "oljueyan",
+          "name": "绝颜",
+          "description": "每轮各限一次，当你需要使用手牌中一张普通锦囊牌或红色基本牌时，可改为展示并视为使用之；你每轮首次展示一种花色的手牌后摸一张牌。"
+        }
+      ]
+    },
+    {
+      "id": "ol_sb_zhugeliang",
+      "preset": "ol-college-2026",
+      "name": "OL谋诸葛亮",
+      "officialName": "谋诸葛亮",
+      "faction": "shu",
+      "hp": "3",
+      "portrait": "/engine/core/image/character/ol_sb_zhugeliang.jpg",
+      "skills": [
+        {
+          "id": "olsbzhitian",
+          "name": "知天",
+          "description": "出牌阶段，牌堆顶的七张牌对你可见。你的【火攻】结算中，你可观看并选择牌堆顶七张牌中的一张牌代替【火攻】弃牌。"
+        },
+        {
+          "id": "olsbwujing",
+          "name": "武靖",
+          "description": "锁定技，你的回合内，有牌不因使用而进入弃牌堆后，你使用的下一张牌无次数限制；每回合首次有不为手牌的牌进入弃牌堆后，你摸一张牌。"
+        },
+        {
+          "id": "olsbzhijue",
+          "name": "智绝",
+          "description": "转换技，阳：出牌阶段，你可将牌堆顶的一张牌当【火攻】使用；阴：将一种颜色的手牌置入弃牌堆（每种颜色每回合限一次），然后可视为使用其中一张基本牌或普通锦囊牌。若你以此法未造成伤害，你令〖知天〗可见牌与观看牌数-1（至多减至1），然后你摸两张牌。"
+        }
+      ]
+    },
+    {
+      "id": "ol_sb_yuanshu",
+      "preset": "ol-college-2026",
+      "name": "OL谋袁术",
+      "officialName": "谋袁术",
+      "faction": "qun",
+      "hp": "4",
+      "portrait": "/engine/core/image/character/ol_sb_yuanshu.jpg",
+      "skills": [
+        {
+          "id": "olsbjinming",
+          "name": "矜名",
+          "description": "锁定技，回合开始时，你选择一项：1.回复过1点体力；2.弃置过两张牌；3.使用过三种类型的牌；4.造成过4点伤害。然后本回合结束时你摸X张牌，若未满足选择的条件，则删除此选项（X为你最后一次发动〖矜名〗选择的选项序号）。"
+        },
+        {
+          "id": "olsbxiaoshi",
+          "name": "枭噬",
+          "description": "出牌阶段限一次，你使用牌可以额外指定一个目标（无距离限制）。此牌结算完毕后，若此牌未造成过伤害，你失去1点体力或令其中一个目标摸X张牌（X为你最后一次发动「矜名」选择的选项序号）。"
+        },
+        {
+          "id": "olsbyanliang",
+          "name": "厌粱",
+          "description": "主公技，其他群势力角色的出牌阶段限一次，其可以交给你一张装备牌，视为使用一张【酒】。"
+        }
+      ]
+    },
+    {
+      "id": "ol_sb_zhangxiu",
+      "preset": "ol-college-2026",
+      "name": "OL谋张绣",
+      "officialName": "谋张绣",
+      "faction": "qun",
+      "hp": "4",
+      "portrait": "/engine/core/image/character/ol_sb_zhangxiu.jpg",
+      "skills": [
+        {
+          "id": "olsbchoulie",
+          "name": "仇猎",
+          "description": "限定技，回合开始时，你可选择一名其他角色。本回合你的每个阶段开始时，你可弃置一张牌视为对其使用一张【杀】。当其成为此【杀】的目标后，其可弃置一张基本牌或武器牌令此【杀】无效。"
+        },
+        {
+          "id": "olsbzhuijiao",
+          "name": "追剿",
+          "description": "锁定技。你使用【杀】时，若你使用的上一张牌未造成伤害，则你摸一张牌并令此【杀】伤害+1。此【杀】结算后，若仍未造成伤害，你弃置一张牌。"
+        }
+      ]
+    },
+    {
+      "id": "ol_sb_chengyu",
+      "preset": "ol-college-2026",
+      "name": "OL谋程昱",
+      "officialName": "谋程昱",
+      "faction": "wei",
+      "hp": "3",
+      "portrait": "/engine/core/image/character/ol_sb_chengyu.jpg",
+      "skills": [
+        {
+          "id": "olsbliduan",
+          "name": "戾断",
+          "description": "你使用【杀】后，令你使用的下一张锦囊牌可以多指定一个目标；你使用锦囊牌后，令你使用的下一张【杀】可以多指定一个目标。"
+        },
+        {
+          "id": "olsbdanchi",
+          "name": "胆持",
+          "description": "每回合限一次，与你距离1以内的角色受到伤害后，你可令受到伤害的角色选择一个类型。然后伤害来源本回合使用下一张牌后，你视为使用一张【无中生有】，若与”胆持”选择的类型不同，你可额外视为使用一张【杀】。"
+        }
+      ]
+    },
+    {
+      "id": "ol_sb_zhangrang",
+      "preset": "ol-college-2026",
+      "name": "OL谋张让",
+      "officialName": "谋张让",
+      "faction": "qun",
+      "hp": "3",
+      "portrait": "/engine/core/image/character/ol_sb_zhangrang.jpg",
+      "skills": [
+        {
+          "id": "olsblucun",
+          "name": "赂存",
+          "description": "①每轮每项各限一次，你可以视为使用一张未以此法使用过的有目标的基本牌或普通锦囊牌，然后目标中手牌最多的随机一名角色将一张手牌置于你的武将牌上，称为“赂”。②每个回合结束时，你随机移去一张“赂”，然后摸一张牌。"
+        },
+        {
+          "id": "olsbtuisheng",
+          "name": "蜕生",
+          "description": "限定技，准备阶段或当你进入濒死状态时，你可以重置本局「赂存」使用过的牌名，然后你选择一项并回复1点体力：①将所有手牌置于你的武将牌上，称为“赂”；②你随机从弃牌堆中获得游戏轮数张重置前“赂存”使用牌名的牌。"
+        }
+      ]
+    },
+    {
+      "id": "dm_caocao",
+      "preset": "ol-college-2026",
+      "name": "OL魔曹操",
+      "officialName": "魔曹操",
+      "faction": "wei",
+      "hp": "4",
+      "portrait": "/engine/core/image/character/dm_caocao.jpg",
+      "skills": [
+        {
+          "id": "olbachao",
+          "name": "霸朝",
+          "description": "出牌阶段开始时，你可以令所有其他角色同时选择是否交给你一张牌，然后你可对一名未以此法交给你非基本牌的角色造成1点伤害；若该角色为你，本阶段你使用当前手牌无距离次数限制并「rule_rumo」。"
+        },
+        {
+          "id": "olfuzai",
+          "name": "覆载",
+          "description": "锁定技，①你的装备牌只能当【借刀杀人】或【无中生有】使用。②若你的装备区没有牌，你视为装备着随机武器和防具各一件（优先装备攻击距离/牌名字数与你的体力值相同的武器/防具）。"
+        }
+      ]
+    },
+    {
+      "id": "dm_diaochan",
+      "preset": "ol-college-2026",
+      "name": "魔貂蝉",
+      "officialName": "魔貂蝉",
+      "faction": "qun",
+      "hp": "3",
+      "portrait": "/engine/core/image/character/dm_diaochan.jpg",
+      "skills": [
+        {
+          "id": "olhuanhuo",
+          "name": "幻惑",
+          "description": "每轮开始时，你摸两张牌，然后弃置至多两张牌并选择等量其他角色。其下回合出牌阶段获得以下效果直到其本阶段使用了两张牌：①若其有可用的手牌，其不能使用主动技能且当其需要使用牌时，其强制使用其中随机的一张牌。②其使用一张牌后随机弃一张牌。"
+        },
+        {
+          "id": "olqingshi",
+          "name": "倾世",
+          "description": "准备阶段，你可「rule_rumo」，令所有角色获得一张单目标伤害牌。其他角色使用此牌指定唯一目标时，你可弃置一张牌，重新指定牌的目标（无距离限制)。这些牌：造成伤害后，你摸一张牌；未因使用进入弃牌堆后，你获得之。（准备阶段，若这些牌均离开其手牌区，你再令所有角色获得牌。）"
+        }
+      ]
+    },
+    {
+      "id": "dm_lvbu",
+      "preset": "ol-college-2026",
+      "name": "魔吕布",
+      "officialName": "魔吕布",
+      "faction": "qun",
+      "hp": "4",
+      "portrait": "/engine/core/image/character/dm_lvbu.jpg",
+      "skills": [
+        {
+          "id": "olduoqi",
+          "name": "夺炁",
+          "description": "锁定技。①所有角色的初始手牌称为“炁”。②一号位首个回合开始前，你执行一个不能使用延时锦囊牌的出牌阶段。③你每回合对一名角色首次造成伤害后，你从弃牌堆、牌堆、场上角色的区域内中获得其一张“炁”。"
+        },
+        {
+          "id": "olkuangmo",
+          "name": "狂魔",
+          "description": "出牌阶段，你可以「rule_rumo」并选择一名其他角色，你与其成为“狂”角色，每回合对彼此首次造成的伤害+1；杀死对方后，获得对方所有“炁”。“狂”角色死亡后，你重新指定。"
+        },
+        {
+          "id": "olgangquan",
+          "name": "罡拳",
+          "description": "若你使用的上一张牌为“炁”，你可以将一张装备牌当指定相邻角色为目标的火【杀】使用；否则，你可以将一张锦囊牌当【决斗】使用。"
+        }
+      ]
+    },
+    {
+      "id": "dm_simayi",
+      "preset": "ol-college-2026",
+      "name": "魔司马懿",
+      "officialName": "魔司马懿",
+      "faction": "wei",
+      "hp": "3",
+      "portrait": "/engine/core/image/character/dm_simayi.jpg",
+      "skills": [
+        {
+          "id": "olguifu",
+          "name": "诡伏",
+          "description": "①每轮开始时或当你的体力值变化后，你可以随机从牌堆或弃牌堆获得一张不计入手牌上限的【闪】。②本局游戏中牌或技能直接造成伤害后，你记录此牌名或技能。③每回合每种牌名限一次，你可以将因此技能获得的【闪】当做不计入次数限制的〖诡伏②〗记录过的牌名使用。"
+        },
+        {
+          "id": "olmoubian",
+          "name": "谋变",
+          "description": "准备阶段，若你记录的牌名和技能之和大于等于3，你可以「rule_rumo」，获得记录的全部技能，然后获得「骤袭」。"
+        },
+        {
+          "id": "olzhouxi",
+          "name": "骤袭（关联技能）",
+          "description": "①准备阶段，你从三个可造成伤害的技能中选择一个获得直到你的下回合开始。②本轮受到你伤害的角色于本轮结束时视为对你使用一张【杀】。"
+        }
+      ]
+    },
+    {
+      "id": "dm_sunquan",
+      "preset": "ol-college-2026",
+      "name": "魔孙权",
+      "officialName": "魔孙权",
+      "faction": "wu",
+      "hp": "4",
+      "portrait": "/engine/core/image/character/dm_sunquan.jpg",
+      "skills": [
+        {
+          "id": "olquanyu",
+          "name": "权御",
+          "description": "锁定技，每轮开始时，你令所有角色同时选择一项其本局未选择过的“权御（白虹：伤害+1\n青冥：目标+1\n辟邪：无视防具\n紫电：不可响应\n百里：额外结算\n流星：无次数限制）”效果，然后你摸X张牌（X为与你选择效果相同的角色数且至多为3）。你使用的指定唯一目标的【杀】附带你本轮所选的“权御”效果。"
+        },
+        {
+          "id": "oltianen",
+          "name": "天恩",
+          "description": "锁定技，每回合各限一次，你使用牌指定唯一目标后：若本轮你与其选择的“权御”效果不同，你随机弃置其一张牌，对其发动一次「权御」；若与你相同，你从牌堆获得一张不计入手牌上限的【杀】。"
+        },
+        {
+          "id": "olqiangang",
+          "name": "乾纲",
+          "description": "出牌阶段，你可「rule_rumo」，失去「天恩」，然后本局你使用指定唯一目标的【杀】均执行目标所选择过的所有“权御”效果。"
+        },
+        {
+          "id": "olrumo",
+          "name": "入魔（关联技能）",
+          "description": "每局游戏限一次，当你满足条件后，可入魔。入魔后，每轮结束时，若本轮你未造成过伤害，你失去1点体力。"
+        }
+      ]
+    },
+    {
+      "id": "shen_dianwei",
+      "preset": "ol-college-2026",
+      "name": "神典韦",
+      "officialName": "神典韦",
+      "faction": "shen",
+      "hp": "4",
+      "portrait": "/engine/core/image/character/shen_dianwei.jpg",
+      "skills": [
+        {
+          "id": "juanjia",
+          "name": "捐甲",
+          "description": "锁定技。游戏开始时，你废除一个防具栏，然后获得一个额外的武器栏。"
+        },
+        {
+          "id": "qiexie",
+          "name": "挈挟",
+          "description": "锁定技。准备阶段，你在剩余武将牌堆中随机观看五张牌，选择其中的任意张，将其转化为武器牌（1.此牌不具有花色和点数，且其攻击范围等于此武将牌的体力上限。\n2.此武器牌的技能为该武将牌上所有描述中包含“【杀】”且不具有锁定技以外的标签的技能。\n3.此武器牌离开你的装备区时，改为放回武将牌堆。）置入你的武器栏。"
+        },
+        {
+          "id": "cuijue",
+          "name": "摧决",
+          "description": "每回合每名角色限一次。出牌阶段，你可以弃置一张牌，然后对攻击范围内距离最远的一名其他角色造成1点伤害（没有则不选）。"
+        }
+      ]
+    },
+    {
+      "id": "shen_ganning",
+      "preset": "ol-college-2026",
+      "name": "神甘宁",
+      "officialName": "神甘宁",
+      "faction": "shen",
+      "hp": "3/6",
+      "portrait": "/engine/core/image/character/shen_ganning.jpg",
+      "skills": [
+        {
+          "id": "drlt_poxi",
+          "name": "魄袭",
+          "description": "出牌阶段限一次，你可以观看一名其他角色的手牌，然后你可以弃置你与其手牌中的四张花色不同的牌。若如此做，根据此次弃置你的牌的数量执行以下效果：零张，扣减1点体力上限；一张，你结束出牌阶段且本回合手牌上限-1；三张，你回复1点体力；四张，你摸四张牌。"
+        },
+        {
+          "id": "drlt_jieying",
+          "name": "劫营",
+          "description": "回合开始时，若场上没有拥有“营”标记的角色，你获得1个“营”标记；结束阶段，你可以将你的一个“营”标记交给一名角色；有“营”标记的角色摸牌阶段多摸一张牌，出牌阶段使用【杀】的次数上限+1，手牌上限+1。有“营”的其他角色回合结束时，其移去“营”标记，然后你获得其所有手牌。"
+        }
+      ]
+    },
+    {
+      "id": "shen_luxun",
+      "preset": "ol-college-2026",
+      "name": "神陆逊",
+      "officialName": "神陆逊",
+      "faction": "shen",
+      "hp": "4",
+      "portrait": "/engine/core/image/character/shen_luxun.jpg",
+      "skills": [
+        {
+          "id": "nzry_junlve",
+          "name": "军略",
+          "description": "锁定技，当你受到或造成伤害后，你获得X个“军略”标记(X为伤害点数)。"
+        },
+        {
+          "id": "nzry_cuike",
+          "name": "摧克",
+          "description": "出牌阶段开始时，若“军略”标记的数量为奇数，你可以对一名角色造成1点伤害；若“军略”标记的数量为偶数，你可以横置一名角色并弃置其区域内的一张牌。然后，若“军略”标记的数量超过7个，你可以移去全部“军略”标记并对所有其他角色造成1点伤害。"
+        },
+        {
+          "id": "nzry_dinghuo",
+          "name": "绽火",
+          "description": "限定技，出牌阶段，你可以移去全部“军略”标记，令至多等量的已横置角色弃置所有装备区内的牌。然后，你对其中一名角色造成1点火焰伤害。"
+        }
+      ]
+    },
+    {
+      "id": "junk_zhangjiao",
+      "preset": "ol-college-2026",
+      "name": "OL神张角",
+      "officialName": "神张角",
+      "faction": "shen",
+      "hp": "3",
+      "portrait": "/engine/core/image/character/junk_zhangjiao.jpg",
+      "skills": [
+        {
+          "id": "yizhao",
+          "name": "异兆",
+          "description": "锁定技。当你使用或打出牌时，你获得等同于此牌点数枚“黄”标记。然后若“黄”的十位数发生变化，你获得牌堆中一张点数为你“黄”的十位数的牌。"
+        },
+        {
+          "id": "junksijun",
+          "name": "肆军",
+          "description": "准备阶段，若“黄”数大于牌堆的牌数，你可以移去所有“黄”，然后从牌堆中随机获得任意张点数之和为36的牌（若牌堆没有点数和为36的组合则获得牌堆顶点数和刚好超过36的牌组）。"
+        },
+        {
+          "id": "tianjie",
+          "name": "天劫",
+          "description": "一名角色的回合结束时，若本回合牌堆洗过牌，你可以选择至多三名其他角色。你依次对每名目标角色造成X点雷电伤害（X为其手牌中【闪】的数量，至少为1）。"
+        }
+      ]
+    },
+    {
+      "id": "shen_zhaoyun",
+      "preset": "ol-college-2026",
+      "name": "神赵云",
+      "officialName": "神赵云",
+      "faction": "shen",
+      "hp": "2",
+      "portrait": "/engine/core/image/character/shen_zhaoyun.jpg",
+      "skills": [
+        {
+          "id": "xinjuejing",
+          "name": "绝境",
+          "description": "锁定技。①你的手牌上限+2。②当你进入或脱离濒死状态时，你摸一张牌。"
+        },
+        {
+          "id": "relonghun",
+          "name": "龙魂",
+          "description": "你可以将同花色的一至两张牌按下列规则使用或打出：红桃当【桃】，方块当火【杀】，梅花当【闪】，黑桃当【无懈可击】。若你以此法转化了两张：红色牌，则此牌回复值或伤害值+1；黑色牌，则你弃置当前回合角色一张牌。"
+        }
+      ]
+    },
+    {
+      "id": "zhanghe",
+      "preset": "ol-college-2026",
+      "name": "张郃",
+      "officialName": "张郃",
+      "faction": "wei",
+      "hp": "4",
+      "portrait": "/engine/core/image/character/zhanghe.jpg",
+      "skills": [
+        {
+          "id": "qiaobian",
+          "name": "巧变",
+          "description": "你可以弃置一张手牌并跳过自己的一个阶段（准备阶段和结束阶段除外）。若你以此法跳过了摸牌阶段，则你可以获得至多两名其他角色的各一张手牌；若你以此法跳过了出牌阶段，则你可以移动场上的一张牌。"
+        }
+      ]
+    },
+    {
+      "id": "zhoutai",
+      "preset": "ol-college-2026",
+      "name": "界周泰",
+      "officialName": "周泰",
+      "faction": "wu",
+      "hp": "4",
+      "portrait": "/engine/core/image/character/zhoutai.jpg",
+      "skills": [
+        {
+          "id": "buqu",
+          "name": "不屈",
+          "description": "锁定技，当你处于濒死状态时，你亮出牌堆顶的一张牌并置于你的武将牌上，称之为“创”。若此牌的点数与你武将牌上已有的“创”点数均不同，则你回复至1体力。若点数相同，则将此牌置入弃牌堆。只要你的武将牌上有“创”，你的手牌上限便与“创”的数量相等。"
+        },
+        {
+          "id": "fenji",
+          "name": "奋激",
+          "description": "当一名角色的手牌不因赠予或交给而被另一名角色得到后，或一名角色的手牌被另一名角色弃置后，你可以失去1点体力，令其摸两张牌。"
+        }
+      ]
+    },
+    {
+      "id": "ol_shen_huangzhong",
+      "preset": "ol-college-2026",
+      "name": "OL神黄忠",
+      "officialName": "神黄忠",
+      "faction": "shen",
+      "hp": "4",
+      "portrait": "/engine/core/image/character/ol_shen_huangzhong.jpg",
+      "skills": [
+        {
+          "id": "shenyu",
+          "name": "神御",
+          "description": "出牌阶段开始时，你可视为使用一张无距离限制的【杀】，然后将「赤血刃」置入唯一目标角色的装备区（替换原装备）。每个结束阶段，若你本回合造成过伤害或使用过至少两张伤害牌，且「赤血刃」在其他角色装备区，你可将其移动至你的装备区（替换原装备），获得其和其与你之间角色各随机一张牌。"
+        },
+        {
+          "id": "huaren",
+          "name": "化刃",
+          "description": "限定技，准备阶段，你可将场上或你的一张武器牌永久移出游戏，摸等同于其攻击范围数里的牌，视为拥有其技能。"
+        },
+        {
+          "id": "chixueren",
+          "name": "赤血刃（关联技能）",
+          "description": "锁定技，每回合首次你的【杀】对攻击范围内最远角色造成伤害时，此伤害+1。此牌首次替换其他武器牌后，获得该武器牌的技能。"
+        }
+      ]
+    },
+    {
+      "id": "clan_wangshen",
+      "preset": "ol-college-2026",
+      "name": "族王沈",
+      "officialName": "族王沈",
+      "faction": "wei",
+      "hp": "3",
+      "portrait": "/engine/core/image/character/clan_wangshen.jpg",
+      "skills": [
+        {
+          "id": "clananran",
+          "name": "岸然",
+          "description": "出牌阶段开始时或当你受到伤害后，你可以选择一项：①摸X张牌；②令至多X名角色各摸一张牌。以此法获得牌的角色本回合使用的下一张牌不能为这些牌。（X为此技能发动次数且至多为4）"
+        },
+        {
+          "id": "clangaobian",
+          "name": "告变",
+          "description": "锁定技，其他角色的回合结束时，若本回合仅有一名角色受伤，则令其选择一项：①使用本回合进入弃牌堆的一张【杀】；②失去1点体力。"
+        },
+        {
+          "id": "clanzhongliu",
+          "name": "中流",
+          "description": "宗族技，锁定技。当你使用牌时，若此牌对应的实体牌均不为你或太原王氏角色的手牌，你重置武将牌上的技能的发动次数。"
+        }
+      ]
+    },
+    {
+      "id": "clan_xuncai",
+      "preset": "ol-college-2026",
+      "name": "族荀采",
+      "officialName": "族荀采",
+      "faction": "qun",
+      "hp": "3",
+      "portrait": "/engine/core/image/character/clan_xuncai.jpg",
+      "skills": [
+        {
+          "id": "clanlieshi",
+          "name": "烈誓",
+          "description": "出牌阶段，你可以选择一项：1.废除判定区并受到你造成的1点火焰伤害；2.弃置所有【闪】；3.弃置所有【杀】。然后令一名其他角色从你未选择的选项中选择一项。"
+        },
+        {
+          "id": "clandianzhan",
+          "name": "点盏",
+          "description": "锁定技。当你每轮第一次使用一种花色的牌后：若此牌的目标数为1且目标未横置，你横置此牌目标；若你有此花色的手牌，你重铸这些牌。均执行后你摸一张牌。"
+        },
+        {
+          "id": "clanhuanyin",
+          "name": "还阴",
+          "description": "锁定技。当你进入濒死状态时，将手牌补至四张。"
+        },
+        {
+          "id": "clandaojie",
+          "name": "蹈节",
+          "description": "宗族技，锁定技。当你每回合第一次使用非伤害类普通锦囊牌后，你须失去一个锁定技或失去1点体力，令你或一名颍川荀氏角色获得此牌对应的所有实体牌。"
+        }
+      ]
+    },
+    {
+      "id": "clan_xunchen",
+      "preset": "ol-college-2026",
+      "name": "族荀谌",
+      "officialName": "族荀谌",
+      "faction": "qun",
+      "hp": "3",
+      "portrait": "/engine/core/image/character/clan_xunchen.jpg",
+      "skills": [
+        {
+          "id": "clansankuang",
+          "name": "三恇",
+          "description": "锁定技。当你每轮第一次使用一种类别的牌后，你令一名其他角色交给你至少X张牌，然后于装备区或处理区内获得你使用的牌对应的所有实体牌（X为以下条件中其满足的项数：场上有牌、已受伤、体力值小于手牌数）。"
+        },
+        {
+          "id": "clanbeishi",
+          "name": "卑势",
+          "description": "锁定技。当一名角色失去最后的手牌后，若其是你首次发动「三恇」的目标角色，你回复1点体力。"
+        },
+        {
+          "id": "clandaojie",
+          "name": "蹈节",
+          "description": "宗族技，锁定技。当你每回合第一次使用非伤害类普通锦囊牌后，你须失去一个锁定技或失去1点体力，令你或一名颍川荀氏角色获得此牌对应的所有实体牌。"
+        }
+      ]
+    },
+    {
+      "id": "clan_xunshi",
+      "preset": "ol-college-2026",
+      "name": "族荀莳",
+      "officialName": "族荀莳",
+      "faction": "wei",
+      "hp": "3",
+      "portrait": "/engine/core/image/character/clan_xunshi.jpg",
+      "skills": [
+        {
+          "id": "clanqingjue",
+          "name": "清绝",
+          "description": "锁定技。①你手牌中每个花色仅一张的牌不计入手牌上限。②当你每回合体力值首次变化后，你弃置手牌中任意张花色数量不为一的牌，并执行以下等量项：1.将这些牌交给一名其他角色；2.从牌堆中获得手牌中未拥有花色的牌各一张。"
+        },
+        {
+          "id": "clanxsyingxiang",
+          "name": "萦香",
+          "description": "锁定技，当其他角色获得你的牌后，将此牌称为“萦香”牌。“萦香”牌被使用后，你和手牌中有“萦香”牌的角色各摸一张牌。若“萦香”牌不因使用而失去，你发动一次「清绝」（每轮限一次）。"
+        },
+        {
+          "id": "clandaojie",
+          "name": "蹈节",
+          "description": "宗族技，锁定技。当你每回合第一次使用非伤害类普通锦囊牌后，你须失去一个锁定技或失去1点体力，令你或一名颍川荀氏角色获得此牌对应的所有实体牌。"
+        }
+      ]
+    },
+    {
+      "id": "clan_xunyou",
+      "preset": "ol-college-2026",
+      "name": "族荀攸",
+      "officialName": "族荀攸",
+      "faction": "wei",
+      "hp": "3",
+      "portrait": "/engine/core/image/character/clan_xunyou.jpg",
+      "skills": [
+        {
+          "id": "clanbaichu",
+          "name": "百出",
+          "description": "锁定技，当你使用一张牌结算完毕后，若你：未记录过此牌的花色和类型组合，则你记录此组合并记录一个普通锦囊牌名，否则你于本轮获得技能「奇策」；已记录此牌牌名，你回复1点体力或摸一张牌。"
+        },
+        {
+          "id": "clandaojie",
+          "name": "蹈节",
+          "description": "宗族技，锁定技。当你每回合第一次使用非伤害类普通锦囊牌后，你须失去一个锁定技或失去1点体力，令你或一名颍川荀氏角色获得此牌对应的所有实体牌。"
+        },
+        {
+          "id": "qice",
+          "name": "奇策（关联技能）",
+          "description": "出牌阶段限一次，你可以将所有的手牌（至少一张）当做任意一张普通锦囊牌使用。"
+        }
+      ]
+    },
+    {
+      "id": "clan_xuncan",
+      "preset": "ol-college-2026",
+      "name": "族荀粲",
+      "officialName": "族荀粲",
+      "faction": "wei",
+      "hp": "3",
+      "portrait": "/engine/core/image/character/clan_xuncan.jpg",
+      "skills": [
+        {
+          "id": "clanyunshen",
+          "name": "熨身",
+          "description": "出牌阶段限一次。你可以令一名其他角色回复1点体力，然后选择一项：1.你视为对其使用一张冰【杀】；2.其视为对你使用一张冰【杀】。"
+        },
+        {
+          "id": "clanshangshen",
+          "name": "伤神",
+          "description": "当一名角色受到属性伤害后，若本回合此前没有角色或已死亡的角色受到过属性伤害，你可以执行目标角色为你的【闪电】效果，然后其将手牌摸至四张。"
+        },
+        {
+          "id": "clanfenchai",
+          "name": "分钗",
+          "description": "锁定技。若你首次发动技能指定的异性目标角色中：存在存活角色，你的判定牌视为♥；不存在存活角色，你的判定牌视为♠。"
+        },
+        {
+          "id": "clandaojie",
+          "name": "蹈节",
+          "description": "宗族技，锁定技。当你每回合第一次使用非伤害类普通锦囊牌后，你须失去一个锁定技或失去1点体力，令你或一名颍川荀氏角色获得此牌对应的所有实体牌。"
+        }
+      ]
+    },
+    {
+      "id": "clan_yangbiao",
+      "preset": "ol-college-2026",
+      "name": "族杨彪",
+      "officialName": "族杨彪",
+      "faction": "qun",
+      "hp": "3",
+      "portrait": "/engine/core/image/character/clan_yangbiao.jpg",
+      "skills": [
+        {
+          "id": "clanjiannan",
+          "name": "间难",
+          "description": "出牌阶段开始时，你可以摸两张牌。若如此做，此阶段一名角色失去所有“间难”牌或最后的手牌后，若没有角色处于濒死状态，你令一名角色执行一项：1.弃置两张牌；2.摸两张牌；3.重铸所有装备牌；4.将一张锦囊牌置于牌堆顶或失去1点体力（每回合每项各限一次）。"
+        },
+        {
+          "id": "clanyichi",
+          "name": "义叱",
+          "description": "结束阶段，你可以拼点。若你赢，没赢的角色依次执行〖间难〗的前X个选项（X为你本回合发动〖间难〗的次数）。"
+        },
+        {
+          "id": "clanquhuo",
+          "name": "去惑",
+          "description": "宗族技，你每回合不因使用、打出或弃置而首次失去手牌中的【酒】或装备牌后，你可以令你或一名弘农杨氏角色回复1点体力。"
+        }
+      ]
+    },
+    {
+      "id": "clan_zhonghui",
+      "preset": "ol-college-2026",
+      "name": "族钟会",
+      "officialName": "族钟会",
+      "faction": "wei",
+      "hp": "3/4",
+      "portrait": "/engine/core/image/character/clan_zhonghui.jpg",
+      "skills": [
+        {
+          "id": "clanyuzhi",
+          "name": "迂志",
+          "description": "锁定技。①每轮开始时，你展示一张手牌，然后摸X张牌（X为此牌牌名字数）。②每轮结束时，你弃置本轮因〖迂志〗展示的手牌，然后若你本轮使用的牌数或你上一轮因〖迂志〗摸的牌数小于你本轮因〖迂志〗摸的牌数，你受到1点雷属性伤害或失去〖保族〗。"
+        },
+        {
+          "id": "clanxieshu",
+          "name": "挟术",
+          "description": "当你因牌造成或受到伤害后，你可以横置武将牌并弃置Y张牌，然后摸你已损失体力值张牌（Y为此牌牌名字数）。你以此法摸牌后，若本回合有角色进入过濒死状态，则〖挟术〗于本回合失效。"
+        },
+        {
+          "id": "clanbaozu",
+          "name": "保族",
+          "description": "宗族技，限定技。当你或一名颍川钟氏角色进入濒死状态时，你可以令其横置并回复1点体力。"
+        }
+      ]
+    },
+    {
+      "id": "clan_zhongyan",
+      "preset": "ol-college-2026",
+      "name": "族钟琰",
+      "officialName": "族钟琰",
+      "faction": "jin",
+      "hp": "3",
+      "portrait": "/engine/core/image/character/clan_zhongyan.jpg",
+      "skills": [
+        {
+          "id": "clanguangu",
+          "name": "观骨",
+          "description": "转换技，出牌阶段限一次。阳：你可以观看牌堆顶的至多四张牌；阴：你可以观看一名角色的至多四张手牌。然后你可以使用其中的一张牌。"
+        },
+        {
+          "id": "clanxiaoyong",
+          "name": "啸咏",
+          "description": "锁定技。当你于回合内首次使用字数为X的牌时，你重置「观骨」（X为你上次发动「观骨」观看的牌数）。"
+        },
+        {
+          "id": "clanbaozu",
+          "name": "保族",
+          "description": "宗族技，限定技。当你或一名颍川钟氏角色进入濒死状态时，你可以令其横置并回复1点体力。"
+        }
+      ]
+    },
+    {
+      "id": "clan_luyusheng",
+      "preset": "ol-college-2026",
+      "name": "族陆郁生",
+      "officialName": "族陆郁生",
+      "faction": "wu",
+      "hp": "3",
+      "portrait": "/engine/core/image/character/clan_luyusheng.jpg",
+      "skills": [
+        {
+          "id": "clanshixi",
+          "name": "拾昔",
+          "description": "你可以将一种花色的所有牌置入弃牌堆，视为使用你本局游戏首次使用的此花色单目标普通锦囊牌。"
+        },
+        {
+          "id": "clanjianbai",
+          "name": "坚白",
+          "description": "锁定技，当你每回合首次使用一种类别的牌后，你选择一种花色的所有牌，然后重铸所有其余花色的牌；当前回合结束时，你交给一名其他角色一张牌，然后摸X张牌（X为此牌本回合被选择的次数）。"
+        },
+        {
+          "id": "clanzelie",
+          "name": "泽烈",
+          "description": "宗族技，当你或一名吴郡陆氏角色失去其场上的所有牌后，你可令一名角色本回合下次摸牌/弃置牌后，其摸一张牌/弃置一张牌。"
+        }
+      ]
+    },
+    {
+      "id": "clan_wangmingshan",
+      "preset": "ol-college-2026",
+      "name": "族王明山",
+      "officialName": "族王明山",
+      "faction": "wei",
+      "hp": "3",
+      "portrait": "/engine/core/image/character/clan_wangmingshan.jpg",
+      "skills": [
+        {
+          "id": "clantanque",
+          "name": "弹雀",
+          "description": "每回合限一次。当你使用牌结算结束后，你可以对一名体力值或手牌数为X且不为0的角色造成1点伤害（X为此牌点数与你上一张使用的牌的点数之差）。"
+        },
+        {
+          "id": "clanshengmo",
+          "name": "剩墨",
+          "description": "每轮限一次，当你需要使用基本牌时，你可以获得一张于本回合进入弃牌堆的牌（每种点数限一次），然后若此牌点数不为这些牌中最大且不为这些牌中最小，你视为使用未以此法使用过的基本牌。"
+        },
+        {
+          "id": "clanzhongliu",
+          "name": "中流",
+          "description": "宗族技，锁定技。当你使用牌时，若此牌对应的实体牌均不为你或太原王氏角色的手牌，你重置武将牌上的技能的发动次数。"
+        }
+      ]
+    },
+    {
+      "id": "clan_yangxiu",
+      "preset": "ol-college-2026",
+      "name": "族杨修",
+      "officialName": "族杨修",
+      "faction": "wei",
+      "hp": "3",
+      "portrait": "/engine/core/image/character/clan_yangxiu.jpg",
+      "skills": [
+        {
+          "id": "clanjiewu",
+          "name": "捷悟",
+          "description": "出牌阶段开始时，你可以令一名角色的手牌此阶段始终对你可见。然后你此阶段使用牌指定其他角色为目标后，你可以展示「捷悟」角色一张手牌，若：两张牌花色相同，你摸一张牌，若此牌本回合以此法展示过的次数大于1，你将你与其之中手牌较多的角色一张牌置于牌堆顶。"
+        },
+        {
+          "id": "clangaoshi",
+          "name": "高视",
+          "description": "结束阶段，你可以依次亮出牌堆顶的牌，直到你亮出了你本回合使用过的牌名，或亮出了至少X张牌（X为本回合你发动〖捷悟〗的次数），然后你可以使用亮出的牌，若你因此使用了所有亮出牌，你摸两张牌。"
+        },
+        {
+          "id": "clanquhuo",
+          "name": "去惑",
+          "description": "宗族技，你每回合不因使用、打出或弃置而首次失去手牌中的【酒】或装备牌后，你可以令你或一名弘农杨氏角色回复1点体力。"
+        }
+      ]
+    },
+    {
+      "id": "qinmi",
+      "preset": "ol-college-2026",
+      "name": "秦宓",
+      "officialName": "秦宓",
+      "faction": "shu",
+      "hp": "3",
+      "portrait": "/engine/core/image/character/qinmi.jpg",
+      "skills": [
+        {
+          "id": "jianzheng",
+          "name": "谏征",
+          "description": "当一名其他角色使用【杀】指定目标时，若你在其攻击范围内且你不是目标，则你可以将一张手牌置于牌堆顶，取消所有目标，然后若此【杀】不为黑色，你成为目标。"
+        },
+        {
+          "id": "zhuandui",
+          "name": "专对",
+          "description": "当你使用【杀】指定目标/成为【杀】的目标后，你可以与目标角色/此【杀】使用者拼点，若你赢，此【杀】不能被【闪】响应/对你无效。"
+        },
+        {
+          "id": "tianbian",
+          "name": "天辩",
+          "description": "你拼点时，可以改为用牌堆顶的一张牌进行拼点；当你拼点的牌亮出后，若此牌花色为红桃，则此牌的点数视为K。"
+        }
+      ]
+    },
+    {
+      "id": "wuyi",
+      "preset": "ol-college-2026",
+      "name": "吴懿",
+      "officialName": "吴懿",
+      "faction": "shu",
+      "hp": "4",
+      "portrait": "/engine/core/image/character/wuyi.jpg",
+      "skills": [
+        {
+          "id": "olbenxi",
+          "name": "奔袭",
+          "description": "锁定技。①当你于回合内使用牌时，你本回合计算与其他角色的距离-1。②当你于回合内使用指定唯一目标【杀】或普通锦囊牌时，若你至场上所有其他角色的距离均不大于1，则你选择至多两项：1.为此牌额外指定一个目标；2.令此牌无视防具；3.令此牌不可被抵消；4.此牌造成伤害后，你摸一张牌。"
+        }
+      ]
     }
   ]
 }

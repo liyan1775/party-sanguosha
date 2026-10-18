@@ -60,9 +60,19 @@ for (const roster of official.rosters) {
   const existing = settings.presets.find((preset) => preset.id === roster.id);
   const definitionPacks = {
     characters: [
-      ...new Set(['standard', ...enabledPacks, ...(existing?.definitionPacks.characters ?? [])]),
+      ...new Set([
+        'standard',
+        ...enabledPacks,
+        ...(existing?.definitionPacks.characters ?? []),
+        ...(roster.id === 'ol-college-2026' ? ['tw'] : []),
+      ]),
     ],
-    cards: existing?.definitionPacks.cards ?? ['standard', 'extra', 'zhulu'],
+    cards: [
+      ...new Set([
+        ...(existing?.definitionPacks.cards ?? ['standard', 'extra', 'zhulu']),
+        ...(roster.id === 'ol-college-2026' ? ['yingbian'] : []),
+      ]),
+    ],
   };
   presets.push({
     id: roster.id,
@@ -79,7 +89,7 @@ for (const roster of official.rosters) {
   metadata.push({
     id: roster.id,
     name: roster.name,
-    description: `${roster.platformName}${roster.source.kind === 'public-client-directory' ? '公开客户端固定目录' : '官方活动将池'}，已导入 ${present.length}/${roster.announcedCount} 将${missing.length ? `；缺少：${missing.map((entry) => entry.officialName).join('、')}` : ''}。沿用本项目四种玩法。`,
+    description: `${roster.platformName}${roster.source.kind === 'public-client-directory' ? '公开客户端固定目录' : '官方活动将池'}，已导入 ${present.length}/${roster.announcedCount} 将${missing.length ? `；缺少：${missing.map((entry) => entry.officialName).join('、')}` : ''}。${roster.id === 'ol-college-2026' ? '可用于原斗地主；高校练习支持标准12局／20分和快速6局／10分。' : '沿用本项目四种玩法。'}`,
     cardPile: military.name,
     characterCount: present.length,
     official: {
@@ -135,7 +145,7 @@ await writeFile(
 );
 await writeFile(
   `${root}/docs/official-rosters.md`,
-  `# 官方活动将池核对\n\n核对日期：${official.reviewedAt}。固定无名杀 ${candidate.tag}，commit \`${candidate.commit}\`。\n\n按官方完整公告的名单导入已有原生角色，保留活动、平台、届次和年份。游戏平台版本必须对应：OL谋关羽使用 \`ol_sb_guanyu\`，不用手杀 \`sb_guanyu\` 或新杀 \`dc_sb_guanyu\`。别名、界字和原生ID前缀不能代替技能核对。无法对应的角色保留在公告清单中，但从可选白名单排除；不替换、不删技能、不自行实现角色，也不为此升级引擎。用户2026-10-12确认按非主公技能核对，名称可以不同，允许原生多出主公技；保留完整原生技能及主公标记。例如张绣保留踞襄，OL界孙坚保留破虏，OL界黄忠对应原生黄忠 \`re_huangzhong\`。大厅与图鉴显示具体版本提示。关联技能也参与核对，非主公机制不同仍列为缺项。\n\n只导入将池。本项目仍采用现有身份、斗地主、OL常规2v2和单武将单挑规则，新增档位使用军争160张（去木牛流马），不复刻赛事BP、报名、计分、换将道具或赛事专用牌堆。图鉴技能取固定引擎同版本文本，不能将本表理解为商业客户端所有历次技能修订的复刻。\n\n| 官方将池 | 公告日期 | 已导入 / 公告 | 缺项 |\n| --- | --- | --- | --- |\n${summary.join('\n')}\n\n持久依据为 [official-rosters.json](../config/official-rosters.json)，运行白名单为 [roster-presets.json](../config/roster-presets.json)。运行 \`npm run engine:update-official-rosters\` 可从已审查映射重建白名单、跨端说明和本文；原始下载页和图片仅在忽略的.local中保留过程副本，官方链接可重新获取。该生成器不会凭同名自动匹配武将。\n\n${sections.join('\n')}`,
+  `# 官方活动将池核对\n\n核对日期：${official.reviewedAt}。固定无名杀 ${candidate.tag}，commit \`${candidate.commit}\`。\n\n按官方完整公告的名单导入已有原生角色，保留活动、平台、届次和年份。游戏平台版本必须对应：OL谋关羽使用 \`ol_sb_guanyu\`，不用手杀 \`sb_guanyu\` 或新杀 \`dc_sb_guanyu\`。别名、界字和原生ID前缀不能代替技能核对。无法对应的角色保留在公告清单中，但从可选白名单排除；不替换、不删技能、不自行实现角色，也不为此升级引擎。用户2026-10-12确认按非主公技能核对，名称可以不同，允许原生多出主公技；保留完整原生技能及主公标记。例如张绣保留踞襄，OL界孙坚保留破虏，OL界黄忠对应原生黄忠 \`re_huangzhong\`。大厅与图鉴显示具体版本提示。关联技能也参与核对，非主公机制不同仍列为缺项。\n\n旧有官方档位仍只导入将池，沿用本项目身份、斗地主、OL常规2v2和单武将单挑规则，使用军争160张（去木牛流马），不复制原活动计分。2026-10-17用户另行批准OL高校联赛练习，接入四人战队叫分、选将与12／20或6／10整场；其中训练约定及官方未明文细则见高校联赛设计。王瓘等五项按用户指定接受完整原生差异，其他档位的版本政策保持原约定。图鉴技能取固定引擎同版本文本，不能将本表理解为商业客户端所有历次技能修订的复刻。\n\n| 官方将池 | 公告日期 | 已导入 / 公告 | 缺项 |\n| --- | --- | --- | --- |\n${summary.join('\n')}\n\n持久依据为 [official-rosters.json](../config/official-rosters.json)，运行白名单为 [roster-presets.json](../config/roster-presets.json)。运行 \`npm run engine:update-official-rosters\` 可从已审查映射重建白名单、跨端说明和本文；原始下载页和图片仅在忽略的.local中保留过程副本，官方链接可重新获取。该生成器不会凭同名自动匹配武将。\n\n${sections.join('\n')}`,
 );
 console.log(
   `Official rosters: ${official.rosters.length} presets; ${metadata.reduce((sum, preset) => sum + preset.characterCount, 0)} guide entries.`,

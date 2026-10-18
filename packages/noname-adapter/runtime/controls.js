@@ -339,6 +339,25 @@ export function installRuleSkillChoices() {
     }
     const event = get.event?.();
     if (
+      globalThis.partyEngine.setup.farmerHandSharing &&
+      this.identity === 'fan' &&
+      event?.player === this &&
+      ['chooseToUse', 'chooseToRespond', 'chooseCard', 'chooseToDiscard'].includes(event.name) &&
+      Array.isArray(result?.cards) &&
+      result.cards.some((card) => {
+        if (get.itemtype(card) !== 'card') return false;
+        const owner = get.owner(card);
+        return (
+          owner &&
+          owner !== this &&
+          owner.identity === 'fan' &&
+          owner.getCards('h').includes(card) &&
+          !event.cards?.includes(card)
+        );
+      })
+    )
+      return false;
+    if (
       result &&
       typeof result === 'object' &&
       event?.player === this &&
