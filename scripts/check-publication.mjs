@@ -47,6 +47,7 @@ const patterns = [
   ],
 ];
 const forbidden = (path) =>
+  /^data(?:\/|$)/.test(path) ||
   /(^|\/)(\.local|\.runtime|node_modules|dist|test-results|playwright-report)(\/|$)/.test(path) ||
   (/(^|\/)\.env($|\.)/.test(path) && !path.endsWith('.env.example')) ||
   /\.(pfx|p12|pem)$/i.test(path);

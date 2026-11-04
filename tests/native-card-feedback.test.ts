@@ -565,7 +565,7 @@ test('重连只恢复原生广播仍有效的公开牌池，使用当前剩余�
   publicPool.buttons.shift();
   replayPublicDialogs(viewer);
   assert.equal(sent.length, 1);
-  assert.deepEqual(sent[0]!.slice(2), [20, '当前原生公开牌池', true]);
+  assert.deepEqual(sent[0]!.slice(2), [20, '当前原生公开牌池', true, '公开牌池']);
   assert((sent[0]![1] as string[])[0]!.includes('PUBLIC-TWO'));
   assert.equal((sent[0]![1] as string[]).length, 1, 'picked cards are not restored');
   publicPool.buttons.push({ link: secret, classList: { contains: () => false } });

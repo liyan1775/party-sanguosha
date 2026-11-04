@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 import { lib, game, get, ui, _status } from 'noname';
+import { sharesHandWith } from './privacy.js';
 
 /** Client-only presentation. Only its expanded preference survives a reload. */
 export function installFarmerHandView() {
@@ -21,8 +22,8 @@ export function installFarmerHandView() {
     #party-farmer-hand header{display:flex;align-items:center;gap:10px;height:19px;margin-bottom:4px}
     #party-farmer-hand strong{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;font-weight:400}
     #party-farmer-hand button{background:none;border:0;color:#f2e9cc;padding:0 3px;font:12px system-ui;cursor:pointer}
-    .party-farmer-cards{display:flex;gap:5px;overflow:auto;height:calc(100% - 23px);scrollbar-width:thin;overscroll-behavior:contain}
-    .party-farmer-card{box-sizing:border-box;display:flex;align-items:center;justify-content:center;gap:3px;flex-shrink:0;min-width:56px;max-width:96px;height:100%;padding:3px 6px;background:#f3ead4;border:1px solid #cfbb8c;border-radius:3px;color:#273529;font-size:12px;pointer-events:none}
+    .party-farmer-cards{position:relative;box-sizing:border-box;width:100%;min-width:0;display:flex;gap:5px;overflow-x:auto;overflow-y:hidden;height:calc(100% - 23px);scrollbar-width:thin;overscroll-behavior:contain;touch-action:pan-x}
+    .party-farmer-card{box-sizing:border-box;display:flex;align-items:center;justify-content:center;gap:3px;flex-shrink:0;min-width:56px;max-width:96px;height:100%;padding:3px 6px;background:#f3ead4;border:1px solid #cfbb8c;border-radius:3px;color:#273529;font-size:12px;white-space:normal;overflow-wrap:anywhere;text-align:center;pointer-events:none}
     .party-farmer-card.is-red{color:#9b332d}
   `;
   document.head.append(style);
@@ -65,7 +66,7 @@ export function installFarmerHandView() {
       list = document.createElement('div');
       list.className = 'party-farmer-cards';
       tray.append(header, list);
-      for (const event of ['click', 'mousedown', 'touchstart', 'touchend'])
+      for (const event of ['click', 'mousedown', 'touchstart', 'touchmove', 'touchend', 'wheel'])
         tray.addEventListener(event, stop);
       document.body.append(tray);
     }
@@ -94,13 +95,7 @@ export function installFarmerHandView() {
     button.style.lineHeight = `${20 / zoom}px`;
     button.style.minWidth = `${94 / zoom}px`;
     button.style.bottom = `${-29 / zoom}px`;
-    // The native dialog and target/skill choice always have priority. Reopen
-    // only after it closes, without resetting a choice or extending its timer.
-    const choosing =
-      !!ui.dialog?.isConnected &&
-      !ui.dialog.hidden &&
-      getComputedStyle(ui.dialog).display !== 'none';
-    tray.hidden = !expanded || choosing;
+    tray.hidden = !expanded;
     button.setAttribute('aria-expanded', String(!tray.hidden));
     if (tray.hidden) return;
     const hand = ui.handcards1Container?.getBoundingClientRect();
@@ -110,21 +105,45 @@ export function installFarmerHandView() {
     if (hand?.height) protectedAreas.push(hand);
     for (const control of ui.controls ?? [])
       if (control.isConnected) protectedAreas.push(control.getBoundingClientRect());
+    // Short prompts can remain visible outside ui.dialog. Every visible
+    // inquiry and control has priority over this read-only display.
+    for (const node of document.querySelectorAll(
+      '#arena .dialog, .prompt, #control, #party-wugu-preview, .party-turn-badge, #party-table-count',
+    )) {
+      const style = getComputedStyle(node);
+      if (
+        node.isConnected &&
+        !node.hidden &&
+        style.display !== 'none' &&
+        style.visibility !== 'hidden' &&
+        style.opacity !== '0'
+      )
+        protectedAreas.push(node.getBoundingClientRect());
+    }
     const w = innerWidth,
       h = innerHeight;
     let placement;
     for (const height of [88, 62]) {
-      for (const width of [Math.min(440, w - 24), Math.min(280, w - 24)]) {
-        const xs = [(w - width) / 2, 12, w - width - 12];
+      for (const width of [Math.min(440, w - 24), Math.min(280, w - 24), Math.min(200, w - 24)]) {
+        const xs = [
+          (w - width) / 2,
+          ...protectedAreas.flatMap((r) => [r.right + 6, r.left - width - 6]),
+          12,
+          w - width - 12,
+        ];
         const ys = [
-          Math.max(8, (hand?.top ?? h - 100) - height - 7),
           8,
+          ...protectedAreas.flatMap((r) => [r.bottom + 6, r.top - height - 6]),
+          Math.max(8, (hand?.top ?? h - 100) - height - 7),
           Math.max(8, h / 2 - height / 2),
         ];
         for (const top of ys)
           for (const left of xs) {
             if (
               placement ||
+              left < 8 ||
+              left + width > w - 8 ||
+              top < 8 ||
               top + height > h - 5 ||
               protectedAreas.some(
                 (r) =>
@@ -143,7 +162,11 @@ export function installFarmerHandView() {
     }
     if (placement)
       for (const [key, value] of Object.entries(placement)) tray.style[key] = `${value}px`;
-    else tray.hidden = true;
+    else {
+      tray.hidden = true;
+      button.textContent = `手牌${cards.length}张 · 暂收起`;
+      button.title = '当前询问或牌桌空间不足，结束后自动展开队友手牌';
+    }
     button.setAttribute('aria-expanded', String(!tray.hidden));
   }
   globalThis.partyEngine.updateFarmerHands = (incoming, id, name) => {
@@ -190,17 +213,14 @@ export function installFarmerHandView() {
   window.addEventListener('pagehide', clear, { once: true });
 }
 
-/** Same-game farmer hands are private read-only data, never public-card markers. */
+/** Same-game team hands are private read-only data, never public-card markers. */
 export function installFarmerHands() {
   const signatures = new Map();
   const publish = () => {
     if (_status.over) return;
     for (const seat of globalThis.partyEngine.setup.seats.filter((s) => s.kind === 'human')) {
       const player = lib.playerOL[seat.id];
-      if (player?.identity !== 'fan') continue;
-      const mate = [...game.players, ...game.dead].find(
-        (p) => p !== player && p.identity === 'fan',
-      );
+      const mate = [...game.players, ...game.dead].find((p) => sharesHandWith(player, p));
       if (!mate) continue;
       const cards = mate.getCards('h');
       const signature =

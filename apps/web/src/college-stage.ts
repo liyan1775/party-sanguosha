@@ -160,7 +160,7 @@ export function bindCollegeStage(end: HTMLButtonElement, vote: HTMLButtonElement
         : standby
           ? `${team} · 本局待命`
           : actual
-            ? `${college ? `${team} · ` : ''}${actual === room.doudizhu?.landlordId ? '地主' : '农民'}${proxy ? ' · 代理AI队友' : ''} · ${room.matchFailure ? '本局中断' : room.phase === 'finished' ? '本局结束' : automatic ? '托管中' : '你来操作'}`
+            ? `${college ? `${team} · ` : ''}${(room.doudizhu?.activeSeatIds.indexOf(actual) ?? -1) + 1}号位·${actual === room.doudizhu?.landlordId ? '地主' : '农民'}${proxy ? ' · 代理AI队友' : ''} · ${room.matchFailure ? '本局中断' : room.phase === 'finished' ? '本局结束' : automatic ? '托管中' : '你来操作'}`
             : `${college ? `${team} · ` : ''}赛前准备`;
       role.classList.toggle('is-proxy', proxy);
       role.classList.toggle('is-automatic', automatic && room.phase === 'playing');

@@ -4,6 +4,7 @@ import type {
   ExtensionInfo,
   RoomSummary,
   SessionView,
+  ResolvedCustomRoster,
 } from '../../../packages/shared/src/contracts.js';
 import { AppError } from './errors.js';
 import { normalizeNickname, RoomStore } from './room.js';
@@ -17,6 +18,7 @@ export class LobbyStore {
   constructor(
     private readonly engine: EngineAdapter,
     private readonly catalog: ExtensionInfo[] = [],
+    private readonly resolveRoster?: (id: string, revision: number) => ResolvedCustomRoster,
   ) {}
 
   list(): RoomSummary[] {
@@ -74,8 +76,9 @@ export class LobbyStore {
     nickname = normalizeNickname(nickname);
     token = this.identify(token);
     this.assertAvailable(token);
-    let room = new RoomStore(this.engine, this.catalog);
-    while (this.rooms.has(room.code)) room = new RoomStore(this.engine, this.catalog);
+    let room = new RoomStore(this.engine, this.catalog, this.resolveRoster);
+    while (this.rooms.has(room.code))
+      room = new RoomStore(this.engine, this.catalog, this.resolveRoster);
     const player = room.join(nickname, token);
     this.rooms.set(room.code, room);
     const unsubscribe = room.subscribe((snapshot) => {

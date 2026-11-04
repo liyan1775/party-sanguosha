@@ -47,6 +47,14 @@ export function installSelectionRecovery() {
       ['reguhuo_guess', 'old_guhuo_guess'].some((name) => event.getParent?.(name)?.name === name) &&
       args.length === 5 &&
       Array.isArray(args[1]);
+    const directWuxie =
+      event?.name === '_wuxie' &&
+      args.length === 5 &&
+      args[0] === event.send &&
+      args[1] === this &&
+      args[2] === event._info_map &&
+      typeof event.id === 'string' &&
+      args[2]?.id === event.id;
     const originalHuashen =
       ['huashen', 'huashen_cost'].includes(event?.name) &&
       event.player === this &&
@@ -61,12 +69,17 @@ export function installSelectionRecovery() {
       typeof args[0] === 'function' &&
       (ownChoice ||
         directChallenge ||
+        directWuxie ||
         originalHuashen ||
         // Native startup and 蛊惑 challenges send chooseButtonOL directly.
         // Other dialog updates must not replace an outstanding choice.
         (selecting() && event?.name === 'chooseButtonOL' && Array.isArray(args[1])))
     )
-      pending.set(this.playerid, { args, event: ownChoice ? sendingChoice : undefined });
+      pending.set(this.playerid, {
+        args,
+        event: ownChoice ? sendingChoice : undefined,
+        wuxie: directWuxie ? event : undefined,
+      });
     return playerSend.apply(this, args);
   };
   const unwait = lib.element.Player.prototype.unwait;
@@ -140,6 +153,7 @@ export function installSelectionRecovery() {
       !player?.ws ||
       lib.playerOL[player.playerid] !== player ||
       !request ||
+      (request.wuxie && (request.wuxie.wuxieresult || request.wuxie.id !== request.args[2]?.id)) ||
       (waiting !== '_noname_waiting' && !waiting?._noname_waiting)
     )
       return false;

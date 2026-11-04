@@ -20,6 +20,7 @@ import { isLocalRequest, parseUpgradeUrl } from '../../../packages/noname-adapte
 import { AppError } from './errors.js';
 import { findHomeUrls } from './network.js';
 import { LobbyStore } from './lobby.js';
+import { RosterLibrary } from './roster-library.js';
 
 interface ServerOptions {
   webRoot: string;
@@ -28,6 +29,7 @@ interface ServerOptions {
   adapter?: EngineAdapter;
   extensions?: ExtensionInfo[];
   entryMode?: EntryInfo['mode'];
+  rosterDirectory?: string;
 }
 
 function cookies(request: IncomingMessage): Record<string, string> {
@@ -54,12 +56,12 @@ function json(response: ServerResponse, status: number, body: unknown): void {
   response.end(JSON.stringify(body));
 }
 
-async function readBody(request: IncomingMessage): Promise<Record<string, unknown>> {
+async function readBody(request: IncomingMessage, limit = 4096): Promise<Record<string, unknown>> {
   let length = 0;
   const chunks: Buffer[] = [];
   for await (const chunk of request) {
     length += chunk.length;
-    if (length > 4096) throw new AppError(413, 'BODY_TOO_LARGE', '请求内容过长。');
+    if (length > limit) throw new AppError(413, 'BODY_TOO_LARGE', '请求内容过长。');
     chunks.push(Buffer.from(chunk));
   }
   try {
@@ -78,7 +80,10 @@ export function createPartyServer(options: ServerOptions) {
   const consoleToken = randomBytes(32).toString('base64url');
   const extensions = options.extensions ?? [];
   const engine = options.adapter ?? new NonameAdapter();
-  const lobby = new LobbyStore(engine, extensions);
+  const rosters = new RosterLibrary(options.rosterDirectory);
+  const lobby = new LobbyStore(engine, extensions, (id, revision) => rosters.select(id, revision));
+  if (engine instanceof NativeNonameService)
+    engine.setRosterResolver((id, revision) => rosters.resolve(id, revision));
   const eventStreams = new Set<ServerResponse>();
   let internetUrl: string | undefined;
   let entry: EntryInfo =
@@ -226,6 +231,62 @@ export function createPartyServer(options: ServerOptions) {
       if (!validOrigin) throw new AppError(403, 'INVALID_ORIGIN', '请从本机房间页面操作。');
     }
     const playerToken = cookies(request).party_player;
+    const rosterEditor = () => {
+      const previous = cookies(request).party_roster_editor;
+      const value =
+        previous && /^[A-Za-z0-9_-]{43}$/.test(previous)
+          ? previous
+          : randomBytes(32).toString('base64url');
+      if (value !== previous)
+        response.setHeader(
+          'Set-Cookie',
+          `party_roster_editor=${value}; Path=/; HttpOnly; SameSite=Strict; Max-Age=31536000${request.headers['x-party-ingress'] === 'public' ? '; Secure' : ''}`,
+        );
+      return value;
+    };
+    if (route === 'GET /api/rosters') {
+      json(response, 200, { rosters: rosters.list(rosterEditor()), presets: rosters.builtins() });
+      return;
+    }
+    if (route === 'GET /api/rosters/catalog') {
+      json(response, 200, { characters: rosters.catalog() });
+      return;
+    }
+    const rosterDetail = /^\/api\/rosters\/([a-f0-9-]{36})\/([1-9]\d*)$/.exec(url.pathname);
+    if (request.method === 'GET' && rosterDetail) {
+      json(response, 200, rosters.resolve(rosterDetail[1]!, Number(rosterDetail[2])));
+      return;
+    }
+    const rosterWrite = /^\/api\/rooms\/([A-F0-9]{6})\/rosters(?:\/([a-f0-9-]{36}))?$/.exec(
+      url.pathname,
+    );
+    if (rosterWrite && ['POST', 'PUT', 'DELETE'].includes(request.method ?? '')) {
+      const room = lobby.get(rosterWrite[1]!);
+      const expected = request.headers['x-party-player'];
+      if (expected !== undefined && room.session(playerToken)?.id !== expected)
+        throw new AppError(409, 'SEAT_CHANGED', '你的席位已经变化，请刷新房间后再操作。');
+      room.requireRosterOwner(playerToken);
+      const body = await readBody(request, 65536);
+      // Reading a streamed body yields: the seat, owner or phase may change.
+      if (expected !== undefined && room.session(playerToken)?.id !== expected)
+        throw new AppError(409, 'SEAT_CHANGED', '你的席位已经变化，请刷新房间后再操作。');
+      room.requireRosterOwner(playerToken);
+      const editor = rosterEditor();
+      if (request.method === 'DELETE' && rosterWrite[2]) {
+        if (Object.keys(body).some((key) => key !== 'expectedRevision'))
+          throw new AppError(400, 'INVALID_ROSTER', '归档请求无效。');
+        rosters.archive(rosterWrite[2], body.expectedRevision, editor);
+        json(response, 200, { ok: true });
+      } else if (
+        (request.method === 'POST' && !rosterWrite[2]) ||
+        (request.method === 'PUT' && rosterWrite[2])
+      ) {
+        json(response, request.method === 'POST' ? 201 : 200, {
+          roster: rosters.save(body, editor, rosterWrite[2]),
+        });
+      } else throw new AppError(404, 'NOT_FOUND', '没有找到这个操作。');
+      return;
+    }
     if (url.pathname.startsWith('/api/console')) {
       if (!isLocalRequest(request) || !matches(cookies(request).party_console, consoleToken))
         throw new AppError(403, 'CONSOLE_REQUIRED', '请在服务器电脑的控制台操作。');

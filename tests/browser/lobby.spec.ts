@@ -62,6 +62,41 @@ test('高校赛前界面：快速赛制、AI地主代理、换将及刷新恢复
       }
       expect(room.doudizhu!.landlordId).toBe(ai.id);
       expect(room.series!.maxGames).toBe(6);
+      const friendId = room.players[3]!.id;
+      await enemyA.locator(`.draft-task[data-seat="${friendId}"]`).click();
+      await expect(enemyA.locator('.draft-task[aria-pressed="true"]')).toContainText('真人队友');
+      await expect(enemyA.locator('#doudizhu-quota')).toHaveText('只读 · 队友自行确认');
+      await expect(enemyA.locator('#doudizhu-confirm')).toBeHidden();
+      await expect(enemyA.locator('#doudizhu-replace')).toBeHidden();
+      await enemyA.locator('.doudizhu-seat:not([hidden]) [data-general]').last().click();
+      const friendView = await (
+        await enemyA.request.get(`${base}/api/rooms/${code}/me/doudizhu`)
+      ).json();
+      expect(friendView.seats.map((s: any) => s.id)).toEqual([room.players[1]!.id]);
+      expect(friendView.teammates.map((s: any) => s.id)).toEqual([friendId]);
+      const denied = await enemyA.request.post(`${base}/api/rooms/${code}/me/doudizhu`, {
+        data: {
+          id: friendView.preparation.id,
+          phaseId: friendView.preparation.phaseId,
+          seatId: friendId,
+          revision: friendView.teammates[0].revision,
+          action: 'choose',
+          general: friendView.teammates[0].candidates[0],
+        },
+      });
+      expect(denied.ok()).toBe(false);
+      for (const size of [
+        { width: 390, height: 844 },
+        { width: 844, height: 390 },
+        { width: 667, height: 375 },
+      ]) {
+        await enemyA.setViewportSize(size);
+        await expect(enemyA.locator('#doudizhu-panel')).toBeInViewport();
+        await expect(enemyA.locator('#doudizhu-status')).toContainText('只读');
+      }
+      await enemyA.locator(`.draft-task[data-seat="${room.players[1]!.id}"]`).click();
+      await expect(owner.locator('#doudizhu-progress')).toContainText('1号位·地主');
+      await expect(enemyA.locator('#doudizhu-seat-title')).toContainText('本局');
       const section = owner.locator(`.doudizhu-seat[data-seat="${ai.id}"]`);
       await expect(section.locator('button[data-general]')).toHaveCount(6);
       await expect(owner.locator('#stage-role')).toContainText('代理AI队友');
@@ -1871,6 +1906,14 @@ test('局外图鉴可查看两档技能、筛选和搜索，保持成员在线�
     await member.locator('.guide-entry summary').click();
     await expect(member.locator('.guide-entry dl')).toContainText('荐言（关联技能）');
     await member.screenshot({ path: '.runtime/previews/general-guide.png' });
+    await member.getByLabel('势力', { exact: true }).selectOption('');
+    await member.getByLabel('查找武将或技能').fill('');
+    await member.locator('#guide-preset').selectOption('sxrm');
+    await expect(member.locator('#guide-count')).toHaveText('显示 27 / 27 位武将');
+    await member.getByLabel('势力', { exact: true }).selectOption('devil');
+    await expect(member.locator('.guide-entry')).toHaveCount(3);
+    await expect(member.locator('.guide-entry').first()).toContainText('魔 · 体力');
+    await member.screenshot({ path: '.runtime/previews/general-guide-sxrm.png' });
     await member.getByRole('button', { name: '关闭武将图鉴' }).click();
     await expect(member.getByRole('button', { name: '我准备好了' })).toBeEnabled();
   });

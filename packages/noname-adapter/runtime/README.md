@@ -1,5 +1,9 @@
 # 正式无名杀适配
 
+v0.8.1：独立蚀心入魔27将，固定名单见`config/native-rosters.json`，军争160张，完整原生依赖与资源清单可重建。高校赛前另提供`teammates`只读候选，原`seats`仍只含本人和可代理AI；实际行动座次由activeSeatIds统一到原生seatNum与reinit。`privacy.js`导出的`sharesHandWith`共用两农民／2v2同side当前h区的牌面授权与入站代用保护；farmer-hands只读牌列避让询问，窄条受背景约束并可横滑。五谷无懈显示独立剩余牌条，公开池和原生直发无懈询问一起按原等待恢复。
+
+`engine:verify:team`补充4／2／1真人的牌面、对手隐私、只读结构、原生询问避让、横滑与刷新；单真人选将超时为宿主回调注入，牌条验收先恢复发牌态。`ENGINE_VERIFY_ADAPTER_AUDIT=1 npm run engine:verify:table`先完成斗地主竞价，再验证公开材料、五谷无懈牌条及原询问恢复。`engine:verify:college-ui`含长昵称真人队友只读候选、换将／锁定不抢页签。以上是桌面浏览器原生夹具，非实体微信验收；证据与自然结算另见handoff.md。
+
 v0.8.0高校候选：`DoudizhuPreparation`在原生引擎启动前处理三／四报名席位的私有候选、竞价和锁将，服务器只发布公开进度，真正选将与发牌后仍由引擎确认开局。高校固定92／93白名单、标准12／20或快速6／10，RoomStore保留整场，原生实例只载入三个出场角色；AI地主保留原ID并以controllerId绑定真人。HTTP、WebSocket、持续推送和LAN入口共用角色映射，待命真人只走公开观战及本队投降表态。
 
 农民互看由privacy.js按同局两农民当前手牌逐次判定，farmer-hands.js定向只读显示；不写全局公开标记，不能据此代出队友牌。controlVersions能力为auto／unauto和原生结果增加单调私有版本，旧连接／旧版本结果被拒绝；未声明能力的旧服务继续原协议。手气每出场席位每小局最多3次，AI地主的真人操作者使用同一份次数，重连保留原期限与剩余次数。具体代码、协议、验收证据及限制见ADR-045和handoff.md。
@@ -111,7 +115,7 @@ v0.5.1 的局域网入口直接使用本机素材和 WebSocket，不依赖临时
 - 固定画布采用 overflow:clip，避免浏览器选将时滚动整个画布导致头像/手牌裁切；手牌与弹窗保留各自的滚动。自动化检查手机横屏中所有参赛头像位于可视范围。
 - 微信竖屏默认旋转外层横向牌桌；方向按钮和尺寸变化保留 iframe。公开出牌在离开手牌前按事件材料识别，ordering 中的观星继续私有；占位牌以牌背显示。
 - 身份阵亡适配显式发送公开身份并修正死亡标记；五谷丰登只公开 native useCard 的 wuguShownCards，涯角只公开 reyajiao 的翻牌，不扩大其他 ordering 的权限。
-- 新手档为 slow、duration=1000ms，在 loadConfig 重设 duration 之后应用；进阶档 fast/500ms。电脑与手机使用相同节奏，AI 原生决策不变。
+- 所有档位当前为 slow、基础 duration=1000ms，由 mode.js 在 loadConfig 重设后统一应用；bootstrap.js 按档位设置的初始 duration 不是最终生效值。原生技能可额外等待，不是每张牌固定耗时。电脑与手机使用相同节奏，AI 原生决策不变。
 - audio.js 由真实手机触摸解锁 Web Audio，按需播放已校验的本地原生卡牌/技能/阵亡音效；对局工具条可静音，电脑不播放，音效不阻塞载入。原生菜单回调不可恢复，下滑设置与快捷入口关闭。
 - v0.4.1 主页与 waiting 房间通过 `/engine/preload` 取得当前档/模式的公共静态清单，以低优先级逐项读取完整响应，由浏览器缓存复用；后台暂停、开局停止发起新请求，不执行引擎或播放声音。资源 URL 使用上游 commit/构建哈希，支持异步 gzip/Brotli、并发去重与压缩后 64MiB 缓存上限。
 - `scripts/build-native-portraits.mjs` 对已验证原图生成 256px WebP 小图，189 张总量约 3.1MiB，源图约 34.1MiB 保留；服务验证派生 SHA-256 后供选将与牌桌使用。构建变换去掉进阶状态计数额外注册的大日文字体。

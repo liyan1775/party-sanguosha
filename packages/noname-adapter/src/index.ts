@@ -1,9 +1,16 @@
-import type { EngineStatus, MatchFailureCode, RoomSettings } from '../../shared/src/contracts.js';
+import type {
+  EngineStatus,
+  MatchFailureCode,
+  ResolvedCustomRoster,
+  RoomSettings,
+} from '../../shared/src/contracts.js';
 
 export interface MatchSetup {
   roomCode: string;
   ownerPlayerId: string;
   settings: RoomSettings;
+  /** Immutable, server-resolved whitelist; the inherited preset still controls rules and deck. */
+  customRoster?: ResolvedCustomRoster;
   seats: { id: string; nickname: string; kind: 'human' | 'bot'; controllerId?: string }[];
   /** 复用上游完整原生 AI 决策；不是玩家可调的难度或对人类仇视程度。 */
   aiPolicy: 'strongest-native';

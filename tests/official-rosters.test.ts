@@ -11,6 +11,33 @@ const inventory = (await read('config/native-character-inventory.json')).charact
 const candidate = await read('config/noname-candidate.json');
 const audio = await read('config/noname-lab-assets.json');
 
+test('蚀心入魔独立27将固定内置嗔慢疑版本，图鉴和资源齐备，不增加额外将池角色', async () => {
+  const source = await read('config/native-rosters.json');
+  assert.equal(source.engine.commit, candidate.commit);
+  const native = presets.find((p: any) => p.id === 'sxrm');
+  const series = inventory.filter((c: any) => c.pack === 'sxrm');
+  assert.equal(series.length, 27);
+  assert.deepEqual(
+    native.characters,
+    series.map((c: any) => c.id),
+  );
+  assert.deepEqual(native.characters, source.presets[0].characters);
+  assert.equal(native.cardPile.cardCount, 160);
+  assert.deepEqual(native.cardPile.excludedCards, ['muniu']);
+  assert.equal(native.characterOverrides, undefined);
+  assert.deepEqual(native.enabledPacks, ['sxrm']);
+  assert.equal(GENERAL_PRESETS.find((p) => p.id === 'sxrm')!.characterCount, 27);
+  const guide = catalog.filter((c: any) => c.preset === 'sxrm');
+  assert.deepEqual(
+    guide.map((c: any) => c.id),
+    native.characters,
+  );
+  for (const c of guide) {
+    assert(c.skills.every((s: any) => s.description));
+    assert(audio.assets.some((a: any) => c.portrait.endsWith(a.path)));
+  }
+});
+
 test('2024及2025移动版群雄逐鹿已从公告映射、运行白名单、图鉴和音效档位移除', async () => {
   const { validateCardPile } = await import('../packages/noname-adapter/runtime/card-pile.js');
   for (const id of ['mobile-qunxiong-12', 'mobile-qunxiong-16']) {

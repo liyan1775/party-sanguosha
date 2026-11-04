@@ -18,6 +18,15 @@ export const GENERAL_PRESETS = [
     official: null,
   },
   {
+    id: 'sxrm',
+    name: '蚀心入魔27将',
+    description:
+      '固定无名杀内置嗔、慢、疑各9将，保留完整原生技能与AI；独立将池，不混入海外服同名版本。',
+    cardPile: '军争160张（去木牛流马）',
+    characterCount: 27,
+    official: null,
+  },
+  {
     id: 'ol-doudizhu-s15',
     name: 'OL全民斗地主S15（2026）',
     description: '三国杀OL官方活动将池，已导入 92/92 将。沿用本项目四种玩法。',

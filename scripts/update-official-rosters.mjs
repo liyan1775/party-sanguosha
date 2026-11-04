@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 const root = fileURLToPath(new URL('../', import.meta.url));
 const read = async (path) => JSON.parse(await readFile(`${root}/${path}`, 'utf8'));
 const official = await read('config/official-rosters.json');
+const nativeRosters = await read('config/native-rosters.json');
 const candidate = await read('config/noname-candidate.json');
 const inventory = (await read('config/native-character-inventory.json')).characters;
 const settings = await read('config/roster-presets.json');
@@ -32,6 +33,35 @@ const metadata = [
   },
 ];
 const presets = [...base];
+assert.equal(nativeRosters.engine.commit, candidate.commit);
+assert.equal(nativeRosters.engine.tag, candidate.tag);
+for (const roster of nativeRosters.presets) {
+  assert.equal(new Set(roster.characters).size, roster.characters.length);
+  for (const id of roster.characters)
+    assert(
+      inventory.some((c) => c.id === id && roster.enabledPacks.includes(c.pack)),
+      `Missing reviewed native character ${id}`,
+    );
+  presets.push({
+    id: roster.id,
+    name: roster.name,
+    cardPile: military,
+    completePacks: [],
+    packGroups: {},
+    additionalCharacters: [],
+    enabledPacks: roster.enabledPacks,
+    definitionPacks: roster.definitionPacks,
+    characters: roster.characters,
+  });
+  metadata.push({
+    id: roster.id,
+    name: roster.name,
+    description: roster.description,
+    cardPile: military.name,
+    characterCount: roster.characters.length,
+    official: null,
+  });
+}
 const summary = [];
 const sections = [];
 for (const roster of official.rosters) {

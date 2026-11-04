@@ -5,6 +5,8 @@ import {
   findMode,
   matchStartTimeout,
   type GeneralChoiceView,
+  type CustomRosterRef,
+  type CustomRosterSummary,
   type MembershipResult,
   type ModeId,
   type RoomInfo,
@@ -37,6 +39,7 @@ import { bindRoomSpectator } from './room-spectator.js';
 import { bindMatchExperience } from './match-experience.js';
 import { bindDoudizhuPanel } from './doudizhu-panel.js';
 import { bindCollegeStage } from './college-stage.js';
+import { bindCustomRosters, rosterKey } from './custom-rosters.js';
 
 export function showRoomPage(initial: RoomInfo, initialSession: SessionView): void {
   let room = initial.room;
@@ -50,6 +53,8 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
   let settingsGeneration = 0;
   let settingsTimer: ReturnType<typeof setTimeout> | undefined;
   let draftMode: ModeId = room.settings.mode;
+  let draftRoster: CustomRosterRef | undefined = room.settings.customRoster;
+  let draftRosterSummary: CustomRosterSummary | undefined = room.roster;
   let wasOwner = false;
   let qrBound = false;
   let matchId: string | null = null;
@@ -239,16 +244,26 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
   matchLeave.textContent = '离开房间';
   matchLeave.hidden = true;
   element('#rematch-button').after(matchLeave);
-  const generalGuide = bindGeneralGuide(() => room.settings.generalPreset, {
-    sharedTeamPool: () => room.settings.mode === 'versus',
-    enabled: () =>
-      room.phase === 'waiting' &&
-      room.settings.allowGeneralSelection === true &&
-      session.roomCode === room.code &&
-      room.players.some((player) => player.id === session.playerId),
-    read: () => roomApi<GeneralChoiceView>(`${roomPath}/me/general`),
-    choose: (general) => roomApi<GeneralChoiceView>(`${roomPath}/me/general`, 'PUT', { general }),
-  });
+  const generalGuide = bindGeneralGuide(
+    () => room.settings.generalPreset,
+    {
+      sharedTeamPool: () => room.settings.mode === 'versus',
+      enabled: () =>
+        room.phase === 'waiting' &&
+        room.settings.allowGeneralSelection === true &&
+        session.roomCode === room.code &&
+        room.players.some((player) => player.id === session.playerId),
+      read: () => roomApi<GeneralChoiceView>(`${roomPath}/me/general`),
+      choose: (general) => roomApi<GeneralChoiceView>(`${roomPath}/me/general`, 'PUT', { general }),
+    },
+    () =>
+      room.settings.customRoster
+        ? {
+            ref: room.settings.customRoster,
+            ...(room.roster ? { summary: room.roster } : {}),
+          }
+        : undefined,
+  );
   const preloadStatus = document.createElement('p');
   preloadStatus.id = 'engine-preload';
   preloadStatus.className = 'hint';
@@ -610,23 +625,53 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
     element('#mode-description').textContent = mode.description;
     element('#college-format-setting').hidden = modeId !== 'college';
     if (modeId === 'college') {
+      draftRoster = undefined;
+      draftRosterSummary = undefined;
       element<HTMLSelectElement>('#general-preset').value = 'ol-college-2026';
       element<HTMLInputElement>('#allow-general-selection').checked = false;
     }
     preloader.update(
       Boolean(room.engine.preload) && room.phase === 'waiting',
-      element<HTMLSelectElement>('#general-preset').value,
+      selectedPreset(),
       draftMode,
+      draftRoster,
     );
   }
 
+  function selectedPreset(): RoomSettings['generalPreset'] {
+    return (
+      draftRosterSummary?.basePreset ??
+      (element<HTMLSelectElement>('#general-preset').value as RoomSettings['generalPreset'])
+    );
+  }
+
+  function syncRosterOption() {
+    const select = element<HTMLSelectElement>('#general-preset');
+    for (const option of [...select.options])
+      if (option.value.startsWith('custom:')) option.remove();
+    if (draftRoster && draftRosterSummary)
+      select.add(
+        new Option(
+          `自定义 · ${draftRosterSummary.name}（${draftRosterSummary.characterCount}将）`,
+          rosterKey(draftRoster),
+        ),
+      );
+    select.value = draftRoster ? rosterKey(draftRoster) : room.settings.generalPreset;
+  }
+
   function presetDescription(): void {
-    const selected = element<HTMLSelectElement>('#general-preset').value;
-    element('#preset-description').textContent =
-      GENERAL_PRESETS.find((preset) => preset.id === selected)?.description ?? '';
-    renderRosterSource(element('#preset-source'), selected);
+    const selected = selectedPreset();
+    element('#preset-description').textContent = draftRosterSummary
+      ? `${draftRosterSummary.name} · ${draftRosterSummary.characterCount} 将 · 继承 ${GENERAL_PRESETS.find((preset) => preset.id === selected)?.name ?? selected} 的规则；可随时切回上方内置名单。`
+      : (GENERAL_PRESETS.find((preset) => preset.id === selected)?.description ?? '');
+    renderRosterSource(element('#preset-source'), selected, draftRosterSummary);
     element('#preset-deck').textContent = cardPileDescription(selected);
-    preloader.update(Boolean(room.engine.preload) && room.phase === 'waiting', selected, draftMode);
+    preloader.update(
+      Boolean(room.engine.preload) && room.phase === 'waiting',
+      selected,
+      draftMode,
+      draftRoster,
+    );
   }
 
   function cardPileDescription(presetId: string): string {
@@ -648,10 +693,9 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
     }
     preloader.update(
       Boolean(room.engine.preload) && room.phase === 'waiting',
-      settingsDirty
-        ? element<HTMLSelectElement>('#general-preset').value
-        : room.settings.generalPreset,
+      settingsDirty ? selectedPreset() : room.settings.generalPreset,
       settingsDirty ? draftMode : room.settings.mode,
+      settingsDirty ? draftRoster : room.settings.customRoster,
     );
     const me =
       session.roomCode === room.code
@@ -872,22 +916,27 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
     const empty = room.settings.playerCount - room.players.length;
     const mode = findMode(room.settings.mode)!;
     const preset = GENERAL_PRESETS.find((entry) => entry.id === room.settings.generalPreset);
-    renderRosterSource(element('#summary-roster-source'), room.settings.generalPreset);
+    renderRosterSource(element('#summary-roster-source'), room.settings.generalPreset, room.roster);
     element('#player-counter').textContent =
       `${room.players.length} / ${room.settings.playerCount} 席`;
     element('#seat-count').textContent = `${humans.length} 位真人 · ${bots.length} 个 AI`;
     element('#player-room-code').textContent = room.code;
     element('#summary-mode').textContent = mode.name;
     element('#summary-details').textContent =
-      `${room.settings.playerCount} 席 · ${preset?.name ?? '将池已移除'}`;
-    element('#summary-preset').textContent =
-      preset?.description ?? '请房主选择当前可用的武将范围，再准备下一局。';
+      `${room.settings.playerCount} 席 · ${room.roster?.name ?? preset?.name ?? '将池已移除'}`;
+    element('#summary-preset').textContent = room.roster
+      ? `自定义名单 ${room.roster.characterCount} 将 · 第 ${room.roster.revision} 版；继承 ${preset?.name ?? room.settings.generalPreset} 的规则和牌堆。`
+      : (preset?.description ?? '请房主选择当前可用的武将范围，再准备下一局。');
     element('#summary-deck').textContent = cardPileDescription(room.settings.generalPreset);
     if (room.engine.luckCards)
       element('#summary-deck').textContent +=
         ' 每位真人每局可免费刷新起手牌3次，30秒内完成；AI保留原牌。';
+    const ordinaryChoices = Math.min(
+      room.settings.generalPreset === 'beginner' ? 3 : 6,
+      Math.floor(((room.roster?.characterCount ?? 1) - 1) / (room.settings.playerCount - 1)),
+    );
     element('#summary-selection').textContent =
-      `${room.settings.allowGeneralSelection ? '点将已开放' : '点将未开放'}${room.settings.mode === 'identity' ? ` · 主公 ${room.settings.generalPreset === 'beginner' ? 5 : 10} 名候选，其余每人 ${room.settings.generalPreset === 'beginner' ? 3 : 6} 名；主公先选并展示` : ''}`;
+      `${room.settings.allowGeneralSelection ? '点将已开放' : '点将未开放'}${room.settings.mode === 'identity' ? ` · 主公 ${room.settings.generalPreset === 'beginner' ? 5 : 10} 名候选，其余每人 ${room.roster ? `最多 ${ordinaryChoices}` : room.settings.generalPreset === 'beginner' ? 3 : 6} 名；主公先选并展示` : room.settings.mode === 'duel' && room.roster ? ` · 每人最多 ${Math.min(5, Math.floor(room.roster.characterCount / 2))} 名候选，一人一将` : ''}`;
     element('#summary-rules').hidden = room.settings.mode !== 'versus';
     element('#summary-rules').textContent =
       'OL 常规 2v2：随机座次，1、4 号位同队，2、3 号位同队，按 1→2→3→4 行动。每队共享 10 名候选，两名队友从同一将池各选一名；已选武将保留在将池，标明「队友已选」且不可重复选择。起手分别 4/4/4/5 张，1 号位首回合摸牌阶段少摸 1 张；队友阵亡可摸 1 张，击杀无额外奖惩，敌方全部阵亡获胜。';
@@ -942,14 +991,17 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
     );
     collegeStage.context(room, me?.id ?? null, inMatch, standby, inStage);
     if (!settingsDirty) {
+      draftRoster = room.settings.customRoster;
+      draftRosterSummary = room.roster;
       setDraftMode(room.settings.mode, room.settings.playerCount);
-      element<HTMLSelectElement>('#general-preset').value = room.settings.generalPreset;
+      syncRosterOption();
       element<HTMLInputElement>('#allow-general-selection').checked =
         room.settings.allowGeneralSelection === true;
       element<HTMLSelectElement>('#college-format').value =
         room.settings.collegeFormat ?? 'standard';
       presetDescription();
     }
+    customRosters.update();
     const settingsState = element('#settings-state');
     renderOwnership();
     refreshSuccessors();
@@ -1215,8 +1267,8 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
   const draftSettings = (): RoomSettings => ({
     mode: draftMode,
     playerCount: Number(element<HTMLSelectElement>('#player-count').value),
-    generalPreset: element<HTMLSelectElement>('#general-preset')
-      .value as RoomSettings['generalPreset'],
+    generalPreset: selectedPreset(),
+    ...(draftRoster ? { customRoster: draftRoster } : {}),
     allowGeneralSelection: element<HTMLInputElement>('#allow-general-selection').checked,
     extensions: [],
     ...(draftMode === 'college'
@@ -1240,7 +1292,10 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
     settingsError = '';
     refresh();
     try {
-      const updated = await roomApi<RoomView>(roomPath, 'PUT', settings);
+      const updated = await roomApi<RoomView>(roomPath, 'PUT', {
+        ...settings,
+        ...(room.settings.customRoster && !settings.customRoster ? { customRoster: null } : {}),
+      });
       if (generation !== settingsGeneration || !owner() || room.phase !== 'waiting') return;
       // SSE can publish this response before HTTP finishes. A newer local edit
       // keeps the form dirty, so neither response can overwrite its controls.
@@ -1283,10 +1338,54 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
   element('#college-format').addEventListener('change', markDirty);
   element('#allow-general-selection').addEventListener('change', markDirty);
   element('#general-preset').addEventListener('change', () => {
+    if (!element<HTMLSelectElement>('#general-preset').value.startsWith('custom:')) {
+      draftRoster = undefined;
+      draftRosterSummary = undefined;
+    }
     presetDescription();
     markDirty();
   });
   element('#save-settings').addEventListener('click', () => void saveSettings());
+  const customRosters = bindCustomRosters({
+    anchor: element('#preset-description'),
+    room: () => room,
+    writable: () =>
+      owner() &&
+      room.phase === 'waiting' &&
+      draftMode !== 'college' &&
+      !(room.series && !room.series.finished),
+    request: roomApi,
+    flush: async () => {
+      clearTimeout(settingsTimer);
+      const generation = settingsGeneration;
+      while (settingsSaving) await new Promise((resolve) => setTimeout(resolve, 50));
+      if (generation !== settingsGeneration || !owner() || room.phase !== 'waiting')
+        throw new Error('房主或房间状态已变化，请重新打开将池。');
+      if (settingsDirty) await saveSettings();
+      if (settingsDirty || settingsError)
+        throw new Error(settingsError || '请先完成房间设置保存。');
+    },
+    apply: async (roster) => {
+      if (!owner() || room.phase !== 'waiting' || draftMode === 'college')
+        throw new Error('当前不能更换将池，请回到等待中的房间操作。');
+      const generation = settingsGeneration;
+      settingsSaving = true;
+      try {
+        const updated = await roomApi<RoomView>(roomPath, 'PUT', {
+          ...room.settings,
+          generalPreset: roster.basePreset,
+          customRoster: { id: roster.id, revision: roster.revision },
+        });
+        if (generation !== settingsGeneration || !owner() || room.phase !== 'waiting')
+          throw new Error('房主或房间状态已变化，请核对当前名单。');
+        renderRoom(updated);
+        message('自定义将池已用于本房间，请真人玩家重新准备。', true);
+      } finally {
+        settingsSaving = false;
+        refresh();
+      }
+    },
+  });
   renderRoom(room);
   connectEvents();
 }

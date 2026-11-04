@@ -1,10 +1,24 @@
 import { GENERAL_PRESETS } from '../../../packages/shared/src/contracts.js';
+import type { CustomRosterSummary } from '../../../packages/shared/src/contracts.js';
 
 /** Show the reviewed edition and omissions beside the selected roster. */
-export function renderRosterSource(container: HTMLElement, presetId: string): void {
-  if (container.dataset.preset === presetId) return;
-  container.dataset.preset = presetId;
+export function renderRosterSource(
+  container: HTMLElement,
+  presetId: string,
+  custom?: CustomRosterSummary,
+): void {
+  const key = custom ? `${custom.id}:${custom.revision}` : presetId;
+  if (container.dataset.preset === key) return;
+  container.dataset.preset = key;
   container.replaceChildren();
+  if (custom) {
+    container.hidden = false;
+    const line = document.createElement('p');
+    line.className = 'hint';
+    line.textContent = `自定义名单 · ${custom.characterCount} 将 · 第 ${custom.revision} 版。仅调整武将范围，不代表官方赛事完整名单。`;
+    container.append(line);
+    return;
+  }
   const preset = GENERAL_PRESETS.find((entry) => entry.id === presetId);
   container.hidden = !preset?.official;
   if (!preset?.official) return;

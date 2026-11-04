@@ -1,3 +1,4 @@
+import type { CustomRosterRef } from '../../../packages/shared/src/contracts.js';
 /** Cache public, versioned assets while players read skills and wait in the lobby. */
 export function createAssetPreloader(status: HTMLElement, lightweight = false) {
   const completed = new Set<string>();
@@ -57,10 +58,10 @@ export function createAssetPreloader(status: HTMLElement, lightweight = false) {
       current = undefined;
     }
   }
-  async function load(preset: string, mode: string, ticket: number) {
+  async function load(preset: string, mode: string, ticket: number, roster?: CustomRosterRef) {
     try {
       const response = await fetch(
-        `/engine/preload?preset=${encodeURIComponent(preset)}&mode=${encodeURIComponent(mode)}${lightweight ? '&client=light' : ''}`,
+        `/engine/preload?preset=${encodeURIComponent(preset)}&mode=${encodeURIComponent(mode)}${roster ? `&roster=${encodeURIComponent(roster.id)}&revision=${roster.revision}` : ''}${lightweight ? '&client=light' : ''}`,
         { cache: 'no-store' },
       );
       if (!response.ok) throw new Error('Preload unavailable');
@@ -82,18 +83,24 @@ export function createAssetPreloader(status: HTMLElement, lightweight = false) {
       if (ticket === generation && enabled) status.textContent = '游戏素材会在开局时载入。';
     }
   }
-  function update(active: boolean, preset = 'beginner', mode = 'identity') {
+  function update(
+    active: boolean,
+    preset = 'beginner',
+    mode = 'identity',
+    roster?: CustomRosterRef,
+  ) {
     enabled = active;
     status.hidden = !enabled;
     if (!enabled || disposed) return;
-    const next = `${preset}:${mode}`;
+    const next = `${preset}:${mode}:${roster?.id ?? ''}:${roster?.revision ?? ''}`;
     if (next !== variant) {
       variant = next;
+      plan = [];
       const ticket = ++generation;
       clearTimeout(startTimer);
       // Give the nickname form/room layout and guide their first paint.
       startTimer = setTimeout(() => {
-        void load(preset, mode, ticket);
+        void load(preset, mode, ticket, roster);
       }, 1000);
     } else void run();
     progress();

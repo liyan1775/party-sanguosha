@@ -1,6 +1,16 @@
 // SPDX-License-Identifier: GPL-3.0-only
 import { lib, game, ui, get, _status } from 'noname';
 
+/** Only the current match's explicit team rules authorize a second hand. */
+export function sharesHandWith(player, other, setup = globalThis.partyEngine?.setup) {
+  if (!setup?.farmerHandSharing || !player || !other || player === other) return false;
+  const mode = setup.settings?.mode;
+  if (mode === 'versus') return typeof player.side === 'boolean' && player.side === other.side;
+  return (
+    ['doudizhu', 'college'].includes(mode) && player.identity === 'fan' && other.identity === 'fan'
+  );
+}
+
 let discloseChoice = (_event, send) => send();
 let publicRendering;
 const publicExpansions = new WeakMap();
@@ -79,9 +89,9 @@ export function replayPublicDialogs(player) {
     )
       continue;
     player.send(
-      function (cards, id, caption, isStatic) {
+      function (cards, id, caption, isStatic, title) {
         if (get.idDialog(id)?.isConnected) return;
-        const dialog = ui.create.dialog('公开牌池', cards, isStatic);
+        const dialog = ui.create.dialog(title, cards, isStatic);
         dialog.videoId = id;
         dialog.content.firstChild.textContent = caption;
       },
@@ -89,6 +99,7 @@ export function replayPublicDialogs(player) {
       id,
       String(dialog.content?.firstChild?.textContent ?? '公开牌池').slice(0, 500),
       dialog.static === true,
+      dialog._args?.includes('五谷丰登') ? '五谷丰登' : '公开牌池',
     );
   }
 }
@@ -568,11 +579,7 @@ export function installPrivacy() {
     if (card.isKnownBy(receiver)) return true;
     const farmer = get.owner(card);
     if (
-      globalThis.partyEngine?.setup?.farmerHandSharing &&
-      ['doudizhu', 'college'].includes(globalThis.partyEngine.setup.settings.mode) &&
-      receiver.identity === 'fan' &&
-      farmer?.identity === 'fan' &&
-      farmer !== receiver &&
+      sharesHandWith(receiver, farmer) &&
       get.position(card, true) === 'h' &&
       farmer.getCards('h').includes(card)
     )

@@ -14,6 +14,7 @@ import {
   type ObserverState,
   type PlayerNetwork,
   type SurrenderState,
+  type ResolvedCustomRoster,
 } from '../../shared/src/contracts.js';
 import { ObserverJournal, sanitizeObserver } from './observer.js';
 import { EngineAssets } from './assets.js';
@@ -24,6 +25,8 @@ import { sanitizeTable, tableAction } from './table.js';
 import type { TableState } from '../../shared/src/table.js';
 import { validateCardPile, type CardPile } from '../runtime/card-pile.js';
 import { RuleClock } from './rule-clock.js';
+import { customRosterDigest } from './custom-roster-policy.js';
+import nativeInventory from '../../../config/native-character-inventory.json' with { type: 'json' };
 
 type Match = {
   id: string;
@@ -61,7 +64,15 @@ type RosterPreset = {
   characters: string[];
   cardPile: CardPile;
   definitionPacks: { characters: string[]; cards: string[] };
+  enabledPacks?: string[];
 };
+function freezeSnapshot<T>(value: T): T {
+  if (value && typeof value === 'object') {
+    for (const item of Object.values(value)) freezeSnapshot(item);
+    Object.freeze(value);
+  }
+  return value;
+}
 type Membership = (roomCode: string, token?: string) => { id: string } | undefined;
 type Portraits = {
   commit: string;
@@ -187,6 +198,7 @@ export class NativeNonameService implements EngineAdapter {
   private hostOnline = false;
   private membership: Membership = () => undefined;
   private onlineMembers: (room: string) => string[] = () => [];
+  private rosterResolver?: (id: string, revision: number) => ResolvedCustomRoster;
   private readonly lan = new LanBridge(
     (room, token) => this.membership(room, token),
     (request) => this.hostAuthorized(request),
@@ -320,14 +332,151 @@ export class NativeNonameService implements EngineAdapter {
       )
     );
   }
-  start(setup: MatchSetup): Promise<void> {
+  setRosterResolver(resolver: (id: string, revision: number) => ResolvedCustomRoster): void {
+    this.rosterResolver = resolver;
+  }
+  private effectivePreset(basePreset: string, custom?: ResolvedCustomRoster): RosterPreset {
     const presets = JSON.parse(
       readFileSync(resolve(this.projectRoot, 'config/roster-presets.json'), 'utf8'),
     ) as { presets: RosterPreset[] };
-    const preset = presets.presets.find((item) => item.id === setup.settings.generalPreset);
-    if (!preset?.characters.length) return Promise.reject(new Error('缺少武将白名单'));
+    const preset = presets.presets.find((item) => item.id === basePreset);
+    if (!preset?.characters.length) throw new Error('缺少武将白名单');
+    validateCardPile(preset);
+    if (!custom) return freezeSnapshot(structuredClone(preset));
+    const invalid = () => new Error('自定义将池快照无效或与固定引擎不匹配');
+    const keys = (value: unknown, expected: string[]) =>
+      !!value &&
+      typeof value === 'object' &&
+      !Array.isArray(value) &&
+      Object.keys(value).length === expected.length &&
+      expected.every((key) => Object.hasOwn(value, key));
+    const list = (value: unknown, allowed: Set<string>) =>
+      Array.isArray(value) &&
+      value.length > 0 &&
+      new Set(value).size === value.length &&
+      value.every((id) => typeof id === 'string' && allowed.has(id));
+    const allCharacters = new Set(presets.presets.flatMap((p) => p.characters));
+    const characterPacks = new Set(presets.presets.flatMap((p) => p.definitionPacks.characters));
+    const cardPacks = new Set(presets.presets.flatMap((p) => p.definitionPacks.cards));
+    if (
+      !keys(custom, [
+        'summary',
+        'characters',
+        'definitionPacks',
+        'enabledPacks',
+        'engineCommit',
+        'digest',
+      ]) ||
+      !keys(custom.summary, [
+        'id',
+        'revision',
+        'name',
+        'basePreset',
+        'characterCount',
+        'archived',
+      ]) ||
+      !keys(custom.definitionPacks, ['characters', 'cards']) ||
+      !/^[a-f0-9-]{36}$/.test(custom.summary.id) ||
+      !Number.isSafeInteger(custom.summary.revision) ||
+      custom.summary.revision < 1 ||
+      typeof custom.summary.name !== 'string' ||
+      !custom.summary.name.trim() ||
+      custom.summary.name.length > 96 ||
+      typeof custom.summary.archived !== 'boolean' ||
+      custom.summary.archived ||
+      custom.summary.basePreset !== basePreset ||
+      custom.engineCommit !== this.assetVersion ||
+      !list(custom.characters, allCharacters) ||
+      custom.characters.length < 2 ||
+      custom.summary.characterCount !== custom.characters.length ||
+      !list(custom.definitionPacks.characters, characterPacks) ||
+      !list(custom.definitionPacks.cards, cardPacks) ||
+      !list(custom.enabledPacks, new Set(custom.definitionPacks.characters)) ||
+      !preset.cardPile.packs.every((pack) => custom.definitionPacks.cards.includes(pack)) ||
+      !/^[a-f0-9]{64}$/.test(custom.digest) ||
+      customRosterDigest(custom) !== custom.digest
+    )
+      throw invalid();
+    if (this.rosterResolver) {
+      const registered = this.rosterResolver(custom.summary.id, custom.summary.revision);
+      if (registered.digest !== custom.digest || customRosterDigest(registered) !== custom.digest)
+        throw invalid();
+    }
+    const sources = new Set([preset.id]);
+    const nativePacks = new Map(nativeInventory.characters.map((entry) => [entry.id, entry.pack]));
+    for (const id of custom.characters) {
+      const source = preset.characters.includes(id)
+        ? preset
+        : presets.presets.find((p) => p.characters.includes(id));
+      if (!source || !nativePacks.has(id) || !custom.enabledPacks.includes(nativePacks.get(id)!))
+        throw invalid();
+      sources.add(source.id);
+    }
+    for (const source of presets.presets.filter((p) => sources.has(p.id))) {
+      if (
+        source.definitionPacks.characters.some(
+          (pack) => !custom.definitionPacks.characters.includes(pack),
+        ) ||
+        source.definitionPacks.cards.some((pack) => !custom.definitionPacks.cards.includes(pack))
+      )
+        throw invalid();
+    }
+    return freezeSnapshot({
+      ...structuredClone(preset),
+      characters: [...custom.characters],
+      definitionPacks: structuredClone(custom.definitionPacks),
+      enabledPacks: [...custom.enabledPacks],
+    });
+  }
+  private audioFiles(
+    preset: RosterPreset,
+    assets: {
+      audioFilesByPreset?: Record<string, string[]>;
+      assets: { path: string }[];
+    },
+  ): string[] {
+    const presets = JSON.parse(
+      readFileSync(resolve(this.projectRoot, 'config/roster-presets.json'), 'utf8'),
+    ) as { presets: RosterPreset[] };
+    const sources = new Set([preset.id]);
+    for (const id of preset.characters) {
+      const source =
+        presets.presets.find((p) => p.id === preset.id && p.characters.includes(id)) ??
+        presets.presets.find((p) => p.characters.includes(id));
+      if (source) sources.add(source.id);
+    }
+    if (assets.audioFilesByPreset && [...sources].every((id) => assets.audioFilesByPreset![id]))
+      return [...new Set([...sources].flatMap((id) => assets.audioFilesByPreset![id]!))];
+    return assets.assets
+      .filter((entry) => entry.path.startsWith('audio/'))
+      .map((entry) => entry.path.slice(6));
+  }
+  start(setup: MatchSetup): Promise<void> {
+    let preset: RosterPreset;
     try {
-      validateCardPile(preset);
+      const ref = setup.settings.customRoster;
+      if (
+        !!ref !== !!setup.customRoster ||
+        (ref &&
+          (ref.id !== setup.customRoster!.summary.id ||
+            ref.revision !== setup.customRoster!.summary.revision)) ||
+        (setup.customRoster && setup.settings.mode === 'college')
+      )
+        throw new Error('自定义将池引用与本局快照不一致');
+      preset = this.effectivePreset(setup.settings.generalPreset, setup.customRoster);
+      if (
+        setup.customRoster &&
+        (Object.values(setup.generalSelections ?? {}).some(
+          (id) => !preset.characters.includes(id),
+        ) ||
+          Object.values(setup.doudizhu?.candidates ?? {})
+            .flat()
+            .some((id) => !preset.characters.includes(id)) ||
+          Object.values(setup.doudizhu?.selectedGenerals ?? {}).some(
+            (id) => !preset.characters.includes(id),
+          ))
+      )
+        throw new Error('点将或候选不在本局自定义将池中');
     } catch (error) {
       return Promise.reject(error);
     }
@@ -336,8 +485,8 @@ export class NativeNonameService implements EngineAdapter {
       const id = randomUUID();
       const match: Match = {
         id,
-        setup: structuredClone(setup),
-        preset: structuredClone(preset),
+        setup: freezeSnapshot(structuredClone(setup)),
+        preset,
         state: 'starting',
         recovering: new Set(),
         players: new Map(),
@@ -1224,6 +1373,33 @@ export class NativeNonameService implements EngineAdapter {
           json(response, 400, {});
           return true;
         }
+        let effective: RosterPreset;
+        try {
+          const roster = url.searchParams.get('roster');
+          const revision = url.searchParams.get('revision');
+          if (
+            url.searchParams.getAll('roster').length > 1 ||
+            url.searchParams.getAll('revision').length > 1 ||
+            ((roster !== null || revision !== null) &&
+              (!roster ||
+                !revision ||
+                !/^[1-9]\d*$/.test(revision) ||
+                !Number.isSafeInteger(Number(revision)) ||
+                !this.rosterResolver ||
+                mode === 'college'))
+          )
+            throw new Error('Invalid custom roster');
+          const resolved = roster ? this.rosterResolver!(roster, Number(revision)) : undefined;
+          if (
+            resolved &&
+            (resolved.summary.id !== roster || resolved.summary.revision !== Number(revision))
+          )
+            throw new Error('Invalid roster reference');
+          effective = this.effectivePreset(preset, resolved);
+        } catch {
+          json(response, 400, { error: { message: '自定义将池版本不存在或无效，请重新选择。' } });
+          return true;
+        }
         if (!this.resourcesReady) {
           json(response, 503, {});
           return true;
@@ -1235,12 +1411,7 @@ export class NativeNonameService implements EngineAdapter {
         const manifest = JSON.parse(
           await readFile(resolve(this.projectRoot, 'dist/engine/manifest.json'), 'utf8'),
         );
-        const presets = JSON.parse(
-          await readFile(resolve(this.projectRoot, 'config/roster-presets.json'), 'utf8'),
-        );
-        const definitions = presets.presets.find(
-          (item: { id: string }) => item.id === preset,
-        ).definitionPacks;
+        const definitions = effective.definitionPacks;
         const base = `/engine/core/${this.assetVersion}/`;
         const paths = [
           'layout/default/layout.css',
@@ -1293,10 +1464,36 @@ export class NativeNonameService implements EngineAdapter {
             'tiesuo',
           ].map((name) => `image/card/${name}.png`),
         ];
+        const extraAssets: string[] = [];
+        if (url.searchParams.has('roster')) {
+          const assets = JSON.parse(
+            await readFile(resolve(this.projectRoot, 'config/noname-lab-assets.json'), 'utf8'),
+          );
+          const portraitNames = new Set(
+            effective.characters.flatMap((name) => [
+              name,
+              ...(assets.portraitVariants?.[name] ?? []),
+            ]),
+          );
+          for (const name of portraitNames) {
+            const file = this.portraits?.characters[name];
+            if (file)
+              extraAssets.push(
+                `/engine/portraits/${this.portraits!.files[file]!.version ?? this.portraits!.hash}/${file}`,
+              );
+            else {
+              const path = assets.portraitAliases?.[name] ?? `image/character/${name}.jpg`;
+              if (assets.assets.some((entry: { path: string }) => entry.path === path))
+                paths.push(path);
+            }
+          }
+          paths.push(...this.audioFiles(effective, assets).map((path) => `audio/${path}`));
+        }
         json(response, 200, {
           assets: [
             `/engine/bundle/noname-${manifest.hash}.js`,
             ...paths.map((path) => base + path),
+            ...extraAssets,
           ],
         });
         return true;
@@ -1534,7 +1731,9 @@ export class NativeNonameService implements EngineAdapter {
             ...match.setup,
             generalSelections: worker ? match.setup.generalSelections : undefined,
             doudizhu: worker ? match.setup.doudizhu : undefined,
-            farmerHandSharing: ['doudizhu', 'college'].includes(match.setup.settings.mode),
+            farmerHandSharing: ['doudizhu', 'college', 'versus'].includes(
+              match.setup.settings.mode,
+            ),
             role: worker ? 'worker' : 'player',
             playerId: worker ? null : view ? viewId : seat!.id,
             tableView: view,
@@ -1559,11 +1758,7 @@ export class NativeNonameService implements EngineAdapter {
                     ]),
                 )
               : {},
-            audioFiles:
-              assets.audioFilesByPreset?.[match.preset.id] ??
-              assets.assets
-                .filter((entry: { path: string }) => entry.path.startsWith('audio/'))
-                .map((entry: { path: string }) => entry.path.slice(6)),
+            audioFiles: this.audioFiles(match.preset, assets),
             config,
           });
         } else {

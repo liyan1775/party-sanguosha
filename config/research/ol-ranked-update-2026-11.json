@@ -1,0 +1,101 @@
+{
+  "schemaVersion": 1,
+  "reviewedAt": "2026-11-04",
+  "purpose": "官方将池自主更新方案的新增项预检，不进入运行白名单",
+  "scope": "仅2026年11月OL排位公告新增11项；未完成完整基础／进阶名单映射与对局验收",
+  "engine": {
+    "tag": "v1.11.6",
+    "commit": "2367607e246d21aae168dba15c01151ee0651f30"
+  },
+  "source": {
+    "title": "2026年11月排位赛将池调整公告",
+    "url": "https://www.sanguosha.mobi/news/20261027_4744_0516",
+    "publishedAt": "2026-10-31T19:19:12+08:00",
+    "format": "HTML正文，含完整基础／进阶表和新增／删减说明",
+    "addedCount": 11,
+    "removedCount": 18
+  },
+  "policy": "按同平台已审原生ID复用；名称或前缀不证明版本一致。已接入不代表全部技能分支穷尽。固定引擎目录有候选但未接入的项继续待核。",
+  "counts": {
+    "existingOlMappingAndIntegrated": 7,
+    "nativeCandidatePendingIntegration": 3,
+    "olEditionPendingReview": 1
+  },
+  "entries": [
+    {
+      "officialName": "魔张飞",
+      "status": "native-candidate-pending-integration",
+      "candidates": [{ "id": "dm_zhangfei", "pack": "onlyOL" }]
+    },
+    {
+      "officialName": "魔孙权",
+      "status": "existing-ol-mapping",
+      "nativeId": "dm_sunquan",
+      "nativePack": "onlyOL"
+    },
+    {
+      "officialName": "魔曹操",
+      "status": "existing-ol-mapping",
+      "nativeId": "dm_caocao",
+      "nativePack": "onlyOL",
+      "note": "不得用蚀心入魔sxrm_caocao替代；两者技能不同"
+    },
+    {
+      "officialName": "谋张绣",
+      "status": "existing-ol-mapping",
+      "nativeId": "ol_sb_zhangxiu",
+      "nativePack": "onlyOL"
+    },
+    {
+      "officialName": "界李儒",
+      "status": "existing-ol-mapping",
+      "nativeId": "ol_liru",
+      "nativePack": "onlyOL"
+    },
+    {
+      "officialName": "杨艳",
+      "status": "existing-ol-mapping",
+      "nativeId": "yangyan",
+      "nativePack": "yingbian"
+    },
+    {
+      "officialName": "羊祜",
+      "status": "existing-ol-mapping",
+      "nativeId": "jin_yanghu",
+      "nativePack": "sp",
+      "note": "不得按同名替换为移动版羊祜"
+    },
+    {
+      "officialName": "徐荣",
+      "status": "existing-ol-mapping",
+      "nativeId": "xurong",
+      "nativePack": "xianding",
+      "note": "复用时保留既有SGL映射的随机取牌历史差异说明"
+    },
+    {
+      "officialName": "界夏侯惇",
+      "status": "ol-edition-pending-review",
+      "candidates": [
+        { "id": "re_xiahoudun", "pack": "refresh" },
+        { "id": "xin_xiahoudun", "pack": "mobile" }
+      ],
+      "note": "两候选已接入其他池，但没有既有OL平台判定；不自动选择其中一个"
+    },
+    {
+      "officialName": "刘宏",
+      "status": "native-candidate-pending-integration",
+      "candidates": [{ "id": "liuhong", "pack": "sp2" }]
+    },
+    {
+      "officialName": "诸葛瑾",
+      "status": "native-candidate-pending-integration",
+      "candidates": [{ "id": "zhugejin", "pack": "sp" }],
+      "note": "移动平台缺项结论不能直接移用于OL"
+    }
+  ],
+  "reproducibleInputs": [
+    "config/official-rosters.json中的platform=ol映射",
+    "config/roster-presets.json中characters的跨池去重并集",
+    "config/native-character-inventory.json固定引擎目录"
+  ]
+}

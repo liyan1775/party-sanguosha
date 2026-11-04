@@ -35,6 +35,7 @@ const party = createPartyServer({
   ...(publicUrl ? { publicUrl } : {}),
   extensions,
   adapter,
+  rosterDirectory: path.join(root, 'data/rosters'),
   entryMode: entryMode as 'internet' | 'lan',
 });
 let port = preferredPort;

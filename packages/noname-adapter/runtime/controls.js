@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 import { lib, game, ui, get, _status } from 'noname';
+import { sharesHandWith } from './privacy.js';
 
 /** Restore native declarative filter data without treating JSON as function text. */
 export function installNativeFilterDecoding() {
@@ -165,9 +166,52 @@ export function installDeckCounter() {
 export function installDialogFocus() {
   if (globalThis.partyEngine.setup.role === 'worker') return;
   const prototype = lib.element.Dialog.prototype;
+  let preview,
+    signature = '';
+  const showWugu = () => {
+    const pool = ui.dialogs?.find(
+      (dialog) => dialog.static && dialog !== ui.dialog && dialog._args?.includes('五谷丰登'),
+    );
+    const responding =
+      !_status.over && (_status.event?.type === 'wuxie' || get.event?.()?.type === 'wuxie');
+    if (!pool || !responding || !pool.buttons?.length) {
+      preview?.remove();
+      preview = undefined;
+      signature = '';
+      return;
+    }
+    if (!preview) {
+      preview = document.createElement('section');
+      preview.id = 'party-wugu-preview';
+      preview.setAttribute('aria-label', '五谷丰登剩余展示牌，只读');
+      for (const event of ['click', 'mousedown', 'touchstart', 'touchmove', 'touchend', 'wheel'])
+        preview.addEventListener(event, (event) => event.stopPropagation());
+      document.body.append(preview);
+    }
+    preview.style.zoom = String(1 / (game.documentZoom || 1));
+    preview.style.width = `${Math.min(520, innerWidth - (innerWidth > 600 ? 240 : 24))}px`;
+    const cards = pool.buttons
+      .map((button) => button.link)
+      .filter((card) => card?.name && card.name !== 'party_unknown');
+    const next = JSON.stringify(cards.map((c) => [c.cardid, c.name, c.suit, c.number, c.nature]));
+    if (next === signature) return;
+    signature = next;
+    const title = document.createElement('strong');
+    title.textContent = `五谷丰登 · 剩余${cards.length}张 · 仅查看`;
+    const list = document.createElement('div');
+    for (const card of cards) {
+      const item = document.createElement('span');
+      if (['heart', 'diamond'].includes(card.suit)) item.className = 'is-red';
+      const suit = { spade: '♠', heart: '♥', club: '♣', diamond: '♦' }[card.suit] ?? '';
+      const rank = { 1: 'A', 11: 'J', 12: 'Q', 13: 'K' }[card.number] ?? card.number;
+      item.textContent = `${suit}${rank ?? ''} ${get.translation(card.nature ?? '')}${get.translation(card.name)}`;
+      list.append(item);
+    }
+    preview.replaceChildren(title, list);
+  };
   const update = () => {
-    const hasBackground = ui.dialogs.some((dialog) => dialog !== ui.dialog && dialog.static);
-    for (const dialog of ui.dialogs) {
+    const hasBackground = ui.dialogs?.some((dialog) => dialog !== ui.dialog && dialog.static);
+    for (const dialog of ui.dialogs ?? []) {
       dialog.classList.toggle(
         'party-background-dialog',
         dialog !== ui.dialog && Boolean(dialog.static) && !ui.dialog?.peaceDialog,
@@ -177,6 +221,7 @@ export function installDialogFocus() {
         dialog === ui.dialog && hasBackground && !dialog.peaceDialog,
       );
     }
+    showWugu();
   };
   for (const method of ['open', 'close']) {
     const original = prototype[method];
@@ -187,6 +232,15 @@ export function installDialogFocus() {
       return result;
     };
   }
+  const timer = setInterval(showWugu, 100);
+  window.addEventListener(
+    'pagehide',
+    () => {
+      clearInterval(timer);
+      preview?.remove();
+    },
+    { once: true },
+  );
 }
 
 /** Separate native OK/Cancel touch targets, including reused confirm controls. */
@@ -340,7 +394,6 @@ export function installRuleSkillChoices() {
     const event = get.event?.();
     if (
       globalThis.partyEngine.setup.farmerHandSharing &&
-      this.identity === 'fan' &&
       event?.player === this &&
       ['chooseToUse', 'chooseToRespond', 'chooseCard', 'chooseToDiscard'].includes(event.name) &&
       Array.isArray(result?.cards) &&
@@ -349,8 +402,7 @@ export function installRuleSkillChoices() {
         const owner = get.owner(card);
         return (
           owner &&
-          owner !== this &&
-          owner.identity === 'fan' &&
+          sharesHandWith(this, owner) &&
           owner.getCards('h').includes(card) &&
           !event.cards?.includes(card)
         );
@@ -645,6 +697,19 @@ export function installControls() {
   });
   ui.click.cardPile = () => {};
   const hideMenus = () => {
+    if (['doudizhu', 'college'].includes(globalThis.partyEngine.setup.settings.mode)) {
+      for (const player of [...game.players, ...game.dead]) {
+        if (!player.isConnected || !Number.isInteger(player.seatNum)) continue;
+        let badge = player.querySelector('.party-seat-number');
+        if (!badge) {
+          badge = document.createElement('span');
+          badge.className = 'party-seat-number';
+          player.append(badge);
+        }
+        const text = `${player.seatNum}号位`;
+        if (badge.textContent !== text) badge.textContent = text;
+      }
+    }
     for (const key of [
       'config',
       'config2',

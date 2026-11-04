@@ -426,6 +426,28 @@ test('斗地主农民互看仅允许同局队友当前手牌，不公开标记�
   hand.position = 'o';
   assert.deepEqual(faces(new f.Client('target').send('cards', [hand])), ['party_unknown']);
   hand.position = 'h';
+  setup.settings.mode = 'versus';
+  f.actor.identity = f.target.identity = f.viewer.identity = 'zhong';
+  (f.actor as any).side = (f.target as any).side = true;
+  (f.viewer as any).side = false;
+  assert.deepEqual(faces(new f.Client('target').send('cards', [hand, expansion, landlord])), [
+    'FARMER-HAND',
+    'party_unknown',
+    'party_unknown',
+  ]);
+  assert.deepEqual(faces(new f.Client('viewer').send('cards', [hand, expansion])), [
+    'party_unknown',
+    'party_unknown',
+  ]);
+  assert.equal(f.runtime.publicCardVisible(hand), false);
+  (f.target as any).side = false;
+  assert.deepEqual(faces(new f.Client('target').send('cards', [hand])), ['party_unknown']);
+  (f.target as any).side = true;
+  for (const mode of ['identity', 'duel']) {
+    setup.settings.mode = mode;
+    assert.deepEqual(faces(new f.Client('target').send('cards', [hand])), ['party_unknown']);
+  }
+  setup.settings.mode = 'versus';
   setup.farmerHandSharing = false;
   assert.deepEqual(faces(new f.Client('target').send('cards', [hand])), ['party_unknown']);
 });

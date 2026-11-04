@@ -93,6 +93,25 @@ async function runtime(name: string) {
   );
 }
 
+test('公开牌池显示轮询在原生UI建立前保持可用，不能中断首次载入', async (t) => {
+  let poll = () => {};
+  class Dialog {
+    open() {}
+    close() {}
+  }
+  globals(t, {
+    partyEngine: { setup: { role: 'player' } },
+    nativeFixture: { lib: { element: { Dialog } }, ui: {}, game: {}, get: {}, _status: {} },
+    window: new EventTarget(),
+    setInterval: (callback: () => void) => {
+      poll = callback;
+      return 1;
+    },
+  });
+  (await runtime('controls')).installDialogFocus();
+  assert.doesNotThrow(poll);
+});
+
 test('原生转化技能：点击技能打开选项，选项、材料和目标仍须明确确认；AI保持原生行为', async (t) => {
   let submitted = 0;
   let finished = 0;
@@ -476,6 +495,7 @@ test('宗护电脑核验交牌成本，拒绝零张、重复及他人牌；原�
   // Shared farmer cards are visible, but an ordinary personal use cannot submit them.
   const fixtureGlobals = globalThis as any;
   fixtureGlobals.partyEngine.setup.farmerHandSharing = true;
+  fixtureGlobals.partyEngine.setup.settings = { mode: 'college' };
   (actor as any).identity = 'fan';
   (recipient as any).identity = 'fan';
   recipient.getCards = () => [foreign];
@@ -483,6 +503,11 @@ test('宗护电脑核验交牌成本，拒绝零张、重复及他人牌；原�
   fixtureGlobals.nativeFixture.get.owner = (card: unknown) =>
     card === foreign ? recipient : actor;
   assert.equal(actor.unwait({ bool: true, cards: [foreign] }), false);
+  assert.equal(received, 0);
+  fixtureGlobals.partyEngine.setup.settings.mode = 'versus';
+  (actor as any).side = (recipient as any).side = true;
+  (actor as any).identity = (recipient as any).identity = 'zhong';
+  assert.equal(actor.unwait({ bool: true, cards: [foreign] }), false, '2v2同队可见不授予出牌权');
   assert.equal(received, 0);
   assert.deepEqual(sent.at(-1), request);
   for (const cards of [[], [own[0]], [own[0], own[0]], [own[0], foreign], own]) {
@@ -910,6 +935,66 @@ test('宴戏公开池刷新：本人恢复原猜牌、旁人恢复三明牌，�
   sent.length = 0;
   lib.message.server.reinited.call(actorClient);
   assert.equal(sent.length, 0, 'closed completed choices stay closed');
+});
+
+test('原生无懈直发询问可刷新恢复，保留等待与期限；别人已响应、已提交及伪造直发不重放', async (t) => {
+  const sent: unknown[][] = [],
+    waiting: Record<string, unknown> = {};
+  class Player {
+    playerid = 'actor';
+    ws: unknown;
+    send(...args: unknown[]) {
+      sent.push(args);
+    }
+    unwait(result: unknown) {
+      waiting.actor = result;
+    }
+  }
+  class Client {
+    id = 'actor';
+    close() {
+      actor.unwait('ai');
+    }
+  }
+  class Choice {
+    send() {}
+  }
+  const actor = new Player(),
+    client = new Client();
+  actor.ws = client;
+  const map = { id: 'wuxie-original', card: { name: 'wugu' } };
+  const event: any = { name: '_wuxie', id: map.id, _info_map: map, send: () => {} };
+  const lib = {
+    element: { Player, Client, GameEvent: Choice },
+    playerOL: { actor },
+    node: { torespond: waiting, torespondtimeout: { actor: 12345 } },
+    message: { server: { reinited() {} } },
+  };
+  globals(t, {
+    partyEngine: { proof: { started: true } },
+    nativeFixture: {
+      lib,
+      get: { event: () => event },
+      withChoiceDisclosure: (_event: unknown, send: () => unknown) => send(),
+    },
+  });
+  const recovery = (await runtime('selection-recovery')).installSelectionRecovery();
+  waiting.actor = '_noname_waiting';
+  actor.send(event.send, actor, map, {}, {});
+  client.close();
+  assert.equal(waiting.actor, '_noname_waiting');
+  lib.message.server.reinited.call(client);
+  assert.equal(sent.length, 2);
+  assert.equal(sent[1]![2], map);
+  assert.equal(lib.node.torespondtimeout.actor, 12345);
+  event.wuxieresult = {};
+  assert.equal(recovery.replay(actor), false);
+  delete event.wuxieresult;
+  actor.unwait({ bool: false, id: map.id });
+  assert.equal(recovery.replay(actor), false);
+  waiting.actor = '_noname_waiting';
+  actor.send(() => {}, actor, map, {}, {});
+  assert.equal(recovery.replay(actor), false, '相同参数的其他回调不能变成无懈恢复请求');
 });
 
 test('共享将池冲突重试：重发原请求的剩余候选，保留原等待与期限，已选和换席位拒绝', async (t) => {

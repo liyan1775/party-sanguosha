@@ -165,7 +165,14 @@ export function generalChoices(setup, pool, players = game.players) {
       // Keep the agreed total even when other seats reserved the usual lords.
       // A preference occupies its own category's slot; it never adds a button.
       candidates.push(...ordinary.randomRemove(5 * scale - candidates.length));
-      if (candidates.length !== 5 * scale) throw new Error('主公武将候选不足');
+      if (candidates.length !== 5 * scale)
+        throw new Error(
+          setup.customRoster
+            ? '主公武将候选不足：本规则档最多提供' +
+                3 * scale +
+                '名原生主公候选，请在自定义将池增加无主公标记的武将，或减少其他席位的点将预留'
+            : '主公武将候选不足',
+        );
       return [
         player,
         ['主公先选择一名武将', [candidates, 'character']],
@@ -598,7 +605,7 @@ const start = async function start() {
     player.nickname = seat.nickname;
     player.setNickname();
     player.identity = roles[index];
-    if (setup.settings.mode === 'versus') player.seatNum = index + 1;
+    if (['versus', 'doudizhu', 'college'].includes(setup.settings.mode)) player.seatNum = index + 1;
     player.side = setup.settings.mode === 'versus' ? index === 0 || index === 3 : index % 2 === 0;
     player.ai.shown = player.identity === 'zhu' || setup.settings.mode !== 'identity' ? 1 : 0;
     player.identityShown = player.ai.shown === 1;
@@ -621,6 +628,7 @@ const start = async function start() {
           : current.identity,
       shown: current.identityShown,
       side: current.side,
+      seatNum: current.seatNum,
     }));
     player.send(
       function (map, config, variant, pile, natures) {
@@ -645,6 +653,7 @@ const start = async function start() {
           current.identityShown = seat.shown;
           current.ai.shown = seat.shown ? 1 : 0;
           current.side = seat.side;
+          current.seatNum = seat.seatNum;
           current.setIdentity(seat.identity);
           if (seat.identity === 'zhu') {
             game.zhu = current;

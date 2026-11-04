@@ -87,6 +87,62 @@
         visibility: hidden !important;
         pointer-events: none !important;
       }
+      #party-wugu-preview {
+        position: fixed;
+        z-index: 49;
+        left: 50%;
+        top: 8px;
+        transform: translateX(-50%);
+        box-sizing: border-box;
+        padding: 6px 8px;
+        border: 1px solid #d3bc82;
+        border-radius: 6px;
+        background: #192b22f5;
+        color: #f4e4bb;
+        font: 12px/1.4 system-ui;
+      }
+      #party-wugu-preview strong {
+        display: block;
+        font-weight: 500;
+        margin-bottom: 4px;
+      }
+      #party-wugu-preview > div {
+        position: relative;
+        box-sizing: border-box;
+        width: 100%;
+        min-width: 0;
+        display: flex;
+        gap: 5px;
+        overflow-x: auto;
+        overflow-y: hidden;
+        touch-action: pan-x;
+        overscroll-behavior: contain;
+      }
+      #party-wugu-preview span {
+        flex-shrink: 0;
+        padding: 8px 6px;
+        border-radius: 3px;
+        background: #f3ead4;
+        color: #273529;
+        white-space: nowrap;
+      }
+      #party-wugu-preview .is-red {
+        color: #9b332d;
+      }
+      #arena .party-seat-number {
+        position: absolute;
+        top: 3px;
+        left: 3px;
+        z-index: 6;
+        width: auto;
+        height: auto;
+        padding: 2px 5px;
+        border-radius: 3px;
+        background: #172b23e8;
+        color: #f5e1ac;
+        font: 14px/1.4 system-ui;
+        pointer-events: none;
+      }
       #arena .player.glow_phase {
         /* Native phase glow remains separate from selection/target highlights. */
         outline: 3px solid #f3c55b;

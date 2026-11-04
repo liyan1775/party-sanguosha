@@ -19,6 +19,7 @@ import {
   type RoomView,
   type DoudizhuPrivateState,
   type CollegeSeriesView,
+  type ResolvedCustomRoster,
 } from '../../../packages/shared/src/contracts.js';
 import { AppError } from './errors.js';
 
@@ -63,11 +64,13 @@ export class RoomStore {
   private unsubscribeEngine: (() => void) | undefined;
   private preparation: DoudizhuPreparation | undefined;
   private series: CollegeSeriesView | undefined;
+  private customRoster: ResolvedCustomRoster | undefined;
   private readonly scoredMatches = new Set<string>();
 
   constructor(
     private readonly engine: EngineAdapter,
     private readonly catalog: ExtensionInfo[] = [],
+    private readonly resolveRoster?: (id: string, revision: number) => ResolvedCustomRoster,
   ) {}
 
   private subscribeEngine(): void {
@@ -108,7 +111,8 @@ export class RoomStore {
       revision: this.revision,
       phase: this.phase,
       matchId: this.engine.matchId?.(this.code) ?? null,
-      settings: { ...this.settings, extensions: [...this.settings.extensions] },
+      settings: structuredClone(this.settings),
+      ...(this.customRoster ? { roster: structuredClone(this.customRoster.summary) } : {}),
       players: [...this.players.values()].map((player) => this.publicPlayer(player)),
       ownerId: this.ownerId,
       ownerClaimAt: this.ownerClaimAt(),
@@ -273,20 +277,14 @@ export class RoomStore {
     );
     return {
       selected: player.general,
-      available: generalCatalog.characters
-        .filter(
-          (general) => general.preset === this.settings.generalPreset && !taken.has(general.id),
-        )
-        .map((general) => general.id),
+      available: this.effectiveCharacters().filter((id) => !taken.has(id)),
     };
   }
 
   setGeneralChoice(token: string | undefined, general: unknown): GeneralChoiceView {
     const choice = this.generalChoice(token);
     if (general !== null && (typeof general !== 'string' || !choice.available.includes(general))) {
-      const inPreset = generalCatalog.characters.some(
-        (entry) => entry.preset === this.settings.generalPreset && entry.id === general,
-      );
+      const inPreset = typeof general === 'string' && this.effectiveCharacters().includes(general);
       throw new AppError(
         inPreset ? 409 : 400,
         inPreset ? 'GENERAL_TAKEN' : 'INVALID_GENERAL',
@@ -351,6 +349,38 @@ export class RoomStore {
           }
         : {}),
     };
+    let roster = this.customRoster;
+    if (body.customRoster === null) roster = undefined;
+    else if (body.customRoster !== undefined) {
+      const ref = body.customRoster as Record<string, unknown>;
+      if (
+        !ref ||
+        typeof ref !== 'object' ||
+        Array.isArray(ref) ||
+        typeof ref.id !== 'string' ||
+        !Number.isSafeInteger(ref.revision) ||
+        (ref.revision as number) < 1 ||
+        !this.resolveRoster
+      )
+        throw new AppError(400, 'INVALID_ROSTER', '请选择有效的自定义将池版本。');
+      if (
+        ref.id !== this.settings.customRoster?.id ||
+        ref.revision !== this.settings.customRoster?.revision
+      )
+        roster = structuredClone(this.resolveRoster(ref.id, ref.revision as number));
+    }
+    if (roster) {
+      if (mode.id === 'college')
+        throw new AppError(400, 'CUSTOM_ROSTER_UNSUPPORTED', '高校联赛练习使用固定高校将池。');
+      if (roster.summary.basePreset !== next.generalPreset)
+        throw new AppError(
+          400,
+          'ROSTER_BASE_MISMATCH',
+          '自定义将池的基础规则档不一致，请先切回内置将池。',
+        );
+      next.customRoster = { id: roster.summary.id, revision: roster.summary.revision };
+      this.validateRosterCapacity(roster, next);
+    }
     if (mode.id === 'college') {
       if (!['standard', 'quick'].includes(next.collegeFormat!))
         throw new AppError(400, 'INVALID_FORMAT', '请选择标准或快速赛制。');
@@ -361,6 +391,15 @@ export class RoomStore {
     if (!next.allowGeneralSelection || next.generalPreset !== this.settings.generalPreset)
       for (const player of this.players.values())
         if (player.kind === 'human') player.general = null;
+    const effective =
+      roster?.characters ??
+      generalCatalog.characters
+        .filter((item) => item.preset === next.generalPreset)
+        .map((item) => item.id);
+    for (const player of this.players.values())
+      if (player.kind === 'human' && player.general && !effective.includes(player.general))
+        player.general = null;
+    this.customRoster = roster;
     this.settings = next;
     // 缩小房间只裁掉多余 AI，绝不自动移出真人。
     for (const bot of [...this.players.values()].reverse()) {
@@ -374,6 +413,23 @@ export class RoomStore {
   async start(ownerToken?: string): Promise<void> {
     this.requireOwner(ownerToken);
     this.assertWaiting();
+    if (this.customRoster) {
+      this.validateRosterCapacity(this.customRoster, this.settings);
+      if (this.settings.mode === 'identity') {
+        const reserved = [...this.players.values()].filter(
+          (player) => player.kind === 'human' && player.general !== null,
+        ).length;
+        const allReserved = reserved === this.settings.playerCount;
+        const minimum =
+          (this.settings.generalPreset === 'beginner' ? 5 : 10) + reserved - (allReserved ? 1 : 0);
+        if (this.customRoster.characters.length < minimum)
+          throw new AppError(
+            400,
+            'ROSTER_TOO_SMALL',
+            `为保证随机主公分配后仍保留当前点将偏好，需要至少${minimum}名武将；请扩大将池或取消部分点将。`,
+          );
+      }
+    }
     this.expirePolls();
     if (!this.engine.status().ready)
       throw new AppError(503, 'ENGINE_NOT_READY', this.engine.status().message);
@@ -399,6 +455,7 @@ export class RoomStore {
           .filter((player): player is Human => player.kind === 'human' && player.general !== null)
           .map((player) => [player.id, player.general!]),
       ),
+      ...(this.customRoster ? { customRoster: structuredClone(this.customRoster) } : {}),
     };
     if (
       this.engine.status().doudizhuPractice &&
@@ -680,6 +737,39 @@ export class RoomStore {
   private requireOwner(token?: string): void {
     if (!this.ownerId || this.human(token)?.id !== this.ownerId)
       throw new AppError(403, 'OWNER_REQUIRED', '只有本房间的玩家房主可以进行这项操作。');
+  }
+
+  requireRosterOwner(token?: string): void {
+    this.requireOwner(token);
+    this.assertWaiting();
+    this.assertSeriesEditable();
+    if (this.settings.mode === 'college')
+      throw new AppError(400, 'CUSTOM_ROSTER_UNSUPPORTED', '高校联赛练习使用固定高校将池。');
+  }
+
+  private effectiveCharacters(): string[] {
+    return this.customRoster
+      ? [...this.customRoster.characters]
+      : generalCatalog.characters
+          .filter((item) => item.preset === this.settings.generalPreset)
+          .map((item) => item.id);
+  }
+
+  private validateRosterCapacity(roster: ResolvedCustomRoster, settings: RoomSettings): void {
+    const minimum =
+      settings.mode === 'versus'
+        ? 20
+        : settings.mode === 'doudizhu'
+          ? 22
+          : settings.mode === 'duel'
+            ? 2
+            : Math.max(settings.playerCount, settings.generalPreset === 'beginner' ? 5 : 10);
+    if (roster.characters.length < minimum)
+      throw new AppError(
+        400,
+        'ROSTER_TOO_SMALL',
+        `当前玩法和点将设置至少需要${minimum}名武将；这个将池只有${roster.characters.length}名。`,
+      );
   }
 
   private resetReady(): void {

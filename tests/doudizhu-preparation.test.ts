@@ -159,6 +159,44 @@ test('真人托管或断线不等于大厅AI，不允许替另一个真人选择
   prep.cancel();
 });
 
+test('高校同队真人只读互看候选、换将与锁定；不能代操作，对手及普通斗地主不可见', () => {
+  const prep = new DoudizhuPreparation(setup(), 1, () => {});
+  void prep.result.catch(() => {});
+  assert.deepEqual(
+    prep.privateState('p0').teammates?.map((s) => s.id),
+    ['p2'],
+  );
+  assert.deepEqual(
+    prep.privateState('p1').teammates?.map((s) => s.id),
+    ['p3'],
+  );
+  assert.deepEqual(prep.privateState('outsider').teammates, []);
+  const before = prep.privateState('p0').teammates![0]!;
+  const attempted = operation(prep, 'p2', 'p2', 'bid', 4);
+  assert.throws(() => prep.action('p0', attempted), /无权/);
+  assert(!JSON.stringify(prep.publicState()).includes(before.candidates[0]!));
+  prep.action('p1', operation(prep, 'p1', 'p1', 'bid', 4));
+  const originalDeadline = prep.privateState('p0').preparation.deadline;
+  prep.action('p2', operation(prep, 'p2', 'p2', 'replace', before.candidates[0]));
+  const updated = prep.privateState('p0').teammates![0]!;
+  assert.equal(updated.replacementsLeft, 1);
+  assert(!updated.candidates.includes(before.candidates[0]!));
+  assert.throws(
+    () => prep.action('p0', operation(prep, 'p2', 'p2', 'choose', updated.candidates[0])),
+    /无权/,
+  );
+  prep.action('p2', operation(prep, 'p2', 'p2', 'choose', updated.candidates[0]));
+  assert.equal(prep.privateState('p0').teammates![0]!.selected, updated.candidates[0]);
+  assert.equal(prep.privateState('p0').preparation.deadline, originalDeadline);
+  assert.deepEqual(prep.privateState('p3').seats, []);
+  assert.equal(prep.privateState('p3').teammates![0]!.id, 'p1', '待命真人仅查看本队地主候选');
+  prep.cancel();
+  const ordinary = new DoudizhuPreparation(setup(false), 0, () => {});
+  void ordinary.result.catch(() => {});
+  assert.deepEqual(ordinary.privateState('p0').teammates, []);
+  ordinary.cancel();
+});
+
 test('高校整场自然结果幂等计分、轮换先叫位，回房保留规则并锁定队伍', async () => {
   const callbacks = new Set<(event: EngineEvent) => void>();
   let id = 0;

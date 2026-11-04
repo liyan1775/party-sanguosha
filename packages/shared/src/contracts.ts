@@ -1,9 +1,16 @@
 export { GENERAL_PRESETS } from './general-presets.js';
 import type { GeneralPresetId } from './general-presets.js';
 export type { GeneralPresetId } from './general-presets.js';
+export type {
+  CustomRosterRef,
+  CustomRosterSummary,
+  ResolvedCustomRoster,
+  CustomRosterGeneral,
+} from './rosters.js';
+import type { CustomRosterRef, CustomRosterSummary } from './rosters.js';
 
 export const APP_ID = 'party-sanguosha';
-export const APP_VERSION = '0.8.0';
+export const APP_VERSION = '0.9.0';
 export const OWNER_OFFLINE_GRACE_MS = 60000;
 export const ROOM_IDLE_GRACE_MS = 10 * 60000;
 
@@ -61,6 +68,7 @@ export interface RoomSettings {
   allowGeneralSelection: boolean;
   extensions: string[];
   collegeFormat?: 'standard' | 'quick';
+  customRoster?: CustomRosterRef;
 }
 
 export interface DoudizhuPublicState {
@@ -89,6 +97,8 @@ export interface DoudizhuPrivateState {
     selected: string | null;
     locked: boolean;
   }[];
+  /** Same-team candidates for viewing only; never grants control of another human. */
+  teammates?: DoudizhuPrivateState['seats'];
 }
 
 export interface CollegeSeriesView {
@@ -167,6 +177,7 @@ export interface RoomView {
   phase: 'waiting' | 'starting' | 'playing' | 'finished' | 'closed';
   matchId: string | null;
   settings: RoomSettings;
+  roster?: CustomRosterSummary;
   players: PlayerView[];
   ownerId: string | null;
   /** Offline owner's seat is retained; an online member can explicitly claim after this time.

@@ -1,6 +1,6 @@
 {
   "name": "party-sanguosha",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "license": "GPL-3.0-only",
   "private": true,
   "type": "module",
@@ -25,6 +25,7 @@
     "engine:update-card-inventory": "node scripts/update-native-card-inventory.mjs",
     "engine:update-audio": "node scripts/update-native-audio.mjs",
     "engine:verify:rooms": "npm run build && npm run engine:check-definitions && node --import tsx scripts/verify-native-runtime.mjs",
+    "engine:verify:custom-rosters": "npm run build && node --import tsx scripts/verify-custom-rosters.mjs",
     "engine:verify:military": "npm run build && node --import tsx scripts/verify-native-military.mjs",
     "engine:verify:skills": "npm run build && npm run engine:check-definitions && node --import tsx scripts/verify-native-skills.mjs",
     "engine:verify:records": "npm run build && node --import tsx scripts/verify-native-records.mjs",

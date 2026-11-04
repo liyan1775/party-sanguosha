@@ -95,7 +95,7 @@ try {
   });
   for (const [i, user] of users.slice(1).entries())
     user.id = (
-      await api(user, path + '/players', 'POST', { nickname: `练习朋友${i + 1}` })
+      await api(user, path + '/players', 'POST', { nickname: `会认真阅读技能的练习队友${i + 1}` })
     ).playerId;
   await api(owner, path + '/bots', 'POST', { count: 1 });
   const bot = (await room()).players.find((p) => p.kind === 'bot');
@@ -139,6 +139,36 @@ try {
     }
   }
   await owner.page.locator('#doudizhu-confirm').waitFor();
+  const reader = users[2],
+    mate = users[1];
+  await reader.page.locator(`.draft-task[data-seat="${mate.id}"]`).tap();
+  await reader.page.locator('.doudizhu-seat:not([hidden]) [data-general]').last().tap();
+  const readTitle = await reader.page.locator('#doudizhu-detail-name').textContent();
+  assert.equal(await reader.page.locator('#doudizhu-confirm').isVisible(), false);
+  assert.equal(await reader.page.locator('#doudizhu-replace').isVisible(), false);
+  await capture(reader, '18-human-teammate-readonly-landscape');
+  await capture(reader, '19-human-teammate-readonly-rotated', 390, 844);
+  await reader.page.locator('#match-orientation').tap();
+  await capture(reader, '20-human-teammate-readonly-upright', 390, 844);
+  await mate.page.locator('.doudizhu-seat:not([hidden]) [data-general]').first().tap();
+  await mate.page.locator('#doudizhu-replace').tap();
+  await mate.page.locator('.doudizhu-seat:not([hidden]) [data-general]').first().tap();
+  await mate.page.locator('#doudizhu-confirm').tap();
+  await reader.page.waitForFunction(
+    (id) =>
+      document.querySelector(`.draft-task[data-seat="${id}"]`)?.textContent.includes('已锁定'),
+    mate.id,
+  );
+  assert.equal(
+    await reader.page.locator('.draft-task[aria-pressed=true]').getAttribute('data-seat'),
+    mate.id,
+  );
+  assert.equal(
+    await reader.page.locator('#doudizhu-detail-name').textContent(),
+    readTitle,
+    '队友更新不能打断已打开的技能',
+  );
+  await bounded(reader, '#doudizhu-panel');
   await owner.page.locator('.doudizhu-seat:not([hidden]) [data-general]').first().tap();
   await bounded(owner, '#doudizhu-confirm');
   await capture(owner, '04-choosing-portrait-upright', 390, 844);

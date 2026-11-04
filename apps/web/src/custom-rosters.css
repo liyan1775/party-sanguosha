@@ -1,0 +1,177 @@
+.custom-rosters {
+  width: min(1060px, calc(100% - 24px));
+  max-height: calc(100dvh - 24px);
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--paper);
+  color: var(--ink);
+  overflow-y: auto;
+}
+.custom-rosters-heading,
+.custom-rosters-actions,
+.custom-rosters-footer {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.custom-rosters-heading {
+  justify-content: space-between;
+  align-items: flex-start;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 12px;
+}
+.custom-rosters h2 {
+  margin-top: 0;
+}
+.custom-rosters label {
+  display: block;
+}
+.custom-rosters input,
+.custom-rosters select {
+  margin-top: 6px;
+}
+.custom-rosters .custom-rosters-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+}
+.custom-rosters input[type='checkbox'] {
+  width: 22px;
+  height: 22px;
+  margin: 0;
+  flex: 0 0 22px;
+  accent-color: var(--green);
+}
+.custom-rosters-actions {
+  margin: 12px 0;
+}
+.custom-rosters-list,
+.custom-rosters-generals {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 16px 0;
+}
+.custom-roster-card,
+.custom-roster-general {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 12px;
+  background: #fffef8;
+  overflow-wrap: anywhere;
+}
+.custom-roster-card .custom-rosters-actions {
+  margin-bottom: 0;
+}
+.custom-roster-choice {
+  display: flex !important;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  min-height: 82px;
+}
+.custom-roster-choice img {
+  width: 44px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 3px;
+}
+.custom-roster-choice > span {
+  min-width: 0;
+}
+.custom-roster-choice strong,
+.custom-roster-choice small {
+  display: block;
+}
+.custom-roster-choice small {
+  color: var(--muted);
+  font-size: 12px;
+  margin-top: 5px;
+}
+.custom-roster-general summary {
+  font-size: 13px;
+  padding: 10px 0;
+  cursor: pointer;
+}
+.custom-roster-general dt {
+  font-weight: 700;
+  margin-top: 10px;
+}
+.custom-roster-general dd {
+  margin: 5px 0 0;
+  line-height: 1.7;
+  font-size: 13px;
+}
+.custom-rosters-filters {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(120px, 1fr) auto;
+  gap: 12px;
+  align-items: end;
+}
+.custom-rosters-batch {
+  border-bottom: 1px solid var(--line);
+  padding: 12px 0;
+}
+.custom-rosters-batch > summary {
+  cursor: pointer;
+  padding: 10px 0;
+}
+.custom-rosters-footer {
+  position: sticky;
+  bottom: -24px;
+  background: var(--paper);
+  border-top: 1px solid var(--line);
+  margin: 0 -8px -8px;
+  padding: 12px 8px;
+  z-index: 2;
+}
+.custom-rosters-footer p {
+  flex: 1 0 100%;
+  margin: 0;
+}
+.custom-rosters-footer .button {
+  flex: 1;
+}
+#custom-rosters-status {
+  min-height: 1.6em;
+  overflow-wrap: anywhere;
+}
+#custom-rosters-open {
+  margin: 12px 0;
+}
+@media (max-width: 720px) {
+  .custom-rosters {
+    padding: 16px;
+  }
+  .custom-rosters-list,
+  .custom-rosters-generals {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .custom-rosters-filters {
+    grid-template-columns: minmax(0, 1fr) 120px;
+  }
+  .custom-rosters-filters .custom-rosters-check {
+    grid-column: 1 / -1;
+  }
+  .custom-roster-choice {
+    gap: 7px;
+  }
+  .custom-roster-choice img {
+    display: none;
+  }
+  .custom-rosters-footer {
+    bottom: -16px;
+  }
+}
+@media (max-width: 400px) {
+  .custom-rosters-generals {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .custom-rosters-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

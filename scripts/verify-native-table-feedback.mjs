@@ -161,6 +161,37 @@ async function start(computer, mode, preset, generals) {
     { timeout: 120000 },
   );
   await phones[0].locator('#start-button')[gesture]();
+  if (mode === 'doudizhu') {
+    const path = `/api/rooms/${code}`;
+    let room = (await request(phones[0], path)).room;
+    while (room.doudizhu.phase === 'bidding') {
+      const index = room.players.findIndex((p) => p.id === room.doudizhu.bidSeatId);
+      const view = await request(phones[index], path + '/me/doudizhu');
+      const seat = view.seats[0];
+      await request(phones[index], path + '/me/doudizhu', 'POST', {
+        id: view.preparation.id,
+        phaseId: view.preparation.phaseId,
+        seatId: seat.id,
+        revision: seat.revision,
+        action: 'bid',
+        bid: index ? 0 : 3,
+      });
+      room = (await request(phones[0], path)).room;
+    }
+    for (const [i, phone] of phones.entries()) {
+      const view = await request(phone, path + '/me/doudizhu');
+      const seat = view.seats[0];
+      assert(seat.candidates.includes(generals[i]));
+      await request(phone, path + '/me/doudizhu', 'POST', {
+        id: view.preparation.id,
+        phaseId: view.preparation.phaseId,
+        seatId: seat.id,
+        revision: seat.revision,
+        action: 'choose',
+        general: generals[i],
+      });
+    }
+  }
   for (const phone of phones) frames.push(await table(phone));
   await progress(`${mode}-phones-booted`);
   const matchId = party.lobby.get(code).snapshot().matchId;
@@ -777,7 +808,10 @@ async function auditAdapter(matchId) {
             player
               .getCards('h')
               .every((card) =>
-                player === game.me
+                player === game.me ||
+                (partyEngine.setup.farmerHandSharing &&
+                  player.identity === 'fan' &&
+                  game.me.identity === 'fan')
                   ? card.name !== 'party_unknown'
                   : publicHands.includes(card.cardid) || card.name === 'party_unknown',
               ),
@@ -965,6 +999,7 @@ async function auditAdapter(matchId) {
   await assertClosed(poolId);
   await stage('audit-wugu');
   let wuguId;
+  let previewChecks = 0;
   for (const picker of [0, 1]) {
     const until = Date.now() + 20000;
     let choosing = false;
@@ -973,13 +1008,69 @@ async function auditAdapter(matchId) {
         () => partyEngine._status.event.name === 'chooseButton' && partyEngine._status.paused,
       );
       if (choosing) break;
-      for (const frame of frames)
+      for (const [index, frame] of frames.entries())
         if (
           await frame.evaluate(
             () => partyEngine._status.event.name === 'chooseToUse' && partyEngine._status.paused,
           )
-        )
-          await control(frame, '取消')[gesture]();
+        ) {
+          await frame.locator('#party-wugu-preview').waitFor();
+          const display = await frame.locator('#party-wugu-preview').evaluate((node) => {
+            const r = node.getBoundingClientRect();
+            const visible = [...document.querySelectorAll('.dialog .content, #control')].filter(
+              (n) => {
+                const s = getComputedStyle(n);
+                return s.visibility !== 'hidden' && s.display !== 'none';
+              },
+            );
+            return {
+              count: node.querySelectorAll('span').length,
+              text: node.textContent,
+              interactiveCards: node.querySelectorAll('.card, .selectable').length,
+              overlaps: visible.some((n) => {
+                const p = n.getBoundingClientRect();
+                return (
+                  p.width &&
+                  p.height &&
+                  r.left < p.right &&
+                  r.right > p.left &&
+                  r.top < p.bottom &&
+                  r.bottom > p.top
+                );
+              }),
+            };
+          });
+          assert.equal(display.count, 3 - picker);
+          assert.equal(display.interactiveCards, 0);
+          assert.equal(
+            display.overlaps,
+            false,
+            `五谷只读牌条不能遮挡无懈询问或确认：${JSON.stringify(display)}`,
+          );
+          assert(!display.text.includes('未知牌'));
+          await phones[index].screenshot({
+            path: `${output}/wugu-counterspell-${picker}-${index}.png`,
+          });
+          previewChecks++;
+          if (previewChecks === 1) {
+            await phones[index].reload();
+            frames[index] = await table(phones[index]);
+            await frames[index].locator('#party-wugu-preview').waitFor();
+            assert.equal(
+              await frames[index].locator('#party-wugu-preview span').count(),
+              3 - picker,
+            );
+            await phones[index].screenshot({ path: `${output}/wugu-counterspell-recovered.png` });
+          }
+          const clip = await frames[index].locator('#party-wugu-preview > div').evaluate((n) => ({
+            position: getComputedStyle(n).position,
+            width: n.getBoundingClientRect().width,
+            parent: n.parentElement.getBoundingClientRect().width,
+          }));
+          assert.equal(clip.position, 'relative');
+          assert(clip.width < clip.parent);
+          await control(frames[index], '取消')[gesture]();
+        }
       await wait(100);
     }
     assert.equal(choosing, true, 'native counterspell choices finish before the public pool pick');
@@ -1010,6 +1101,8 @@ async function auditAdapter(matchId) {
     await wait(100);
   }
   await finish();
+  assert(previewChecks > 0, '真实五谷必须出现可见的无懈展示牌');
+  for (const frame of frames) assert.equal(await frame.locator('#party-wugu-preview').count(), 0);
   await assertClosed(wuguId);
   await assertPrivateHands();
   results.push({

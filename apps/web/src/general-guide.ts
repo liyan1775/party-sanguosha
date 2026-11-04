@@ -1,7 +1,17 @@
 import { api, app, element, action, message } from './ui.js';
-import type { GeneralChoiceView } from '../../../packages/shared/src/contracts.js';
+import type {
+  CustomRosterRef,
+  CustomRosterSummary,
+  GeneralChoiceView,
+} from '../../../packages/shared/src/contracts.js';
 import { GENERAL_PRESETS } from '../../../packages/shared/src/contracts.js';
 import { renderRosterSource } from './roster-source.js';
+import {
+  loadCustomRoster,
+  loadRosterCatalog,
+  rosterKey,
+  rosterPackName,
+} from './custom-rosters.js';
 
 type General = {
   id: string;
@@ -9,6 +19,7 @@ type General = {
   name: string;
   officialName?: string;
   versionNote?: string;
+  pack?: string;
   faction: string;
   hp: string;
   armor?: number;
@@ -23,6 +34,7 @@ const factions: Record<string, string> = {
   qun: '群',
   shen: '神',
   jin: '晋',
+  devil: '魔',
 };
 type Selection = {
   enabled(): boolean;
@@ -34,7 +46,11 @@ export const guideButton =
   '<button id="general-guide" class="button secondary full-width" type="button">武将图鉴 · 查看技能</button>';
 
 /** A lobby dialog keeps the member's SSE/session alive while browsing skills. */
-export function bindGeneralGuide(preset: () => string = () => 'beginner', selection?: Selection) {
+export function bindGeneralGuide(
+  preset: () => string = () => 'beginner',
+  selection?: Selection,
+  custom?: () => { ref: CustomRosterRef; summary?: CustomRosterSummary } | undefined,
+) {
   const dialog = document.createElement('dialog');
   dialog.id = 'general-guide-dialog';
   dialog.className = 'general-guide';
@@ -45,6 +61,7 @@ export function bindGeneralGuide(preset: () => string = () => 'beginner', select
   source.id = 'guide-source';
   element('#guide-count').before(source);
   element<HTMLSelectElement>('#guide-faction').add(new Option('晋', 'jin'));
+  element<HTMLSelectElement>('#guide-faction').add(new Option('魔', 'devil'));
   const selectionStatus = document.createElement('p');
   selectionStatus.className = 'hint';
   selectionStatus.id = 'guide-selection-status';
@@ -60,6 +77,22 @@ export function bindGeneralGuide(preset: () => string = () => 'beginner', select
   element('#guide-count').before(toolbar);
   const catalogs = new Map<string, Catalog>();
   const pendingCatalogs = new Map<string, Promise<Catalog>>();
+  const customVersions = new Map<string, { ref: CustomRosterRef; summary?: CustomRosterSummary }>();
+  const activeKey = () => {
+    const value = custom?.();
+    if (!value) return preset();
+    const key = rosterKey(value.ref);
+    customVersions.set(key, value);
+    const select = element<HTMLSelectElement>('#guide-preset');
+    if (![...select.options].some((option) => option.value === key))
+      select.add(
+        new Option(
+          `自定义 · ${value.summary?.name ?? '本房间名单'} · 第${value.ref.revision}版`,
+          key,
+        ),
+      );
+    return key;
+  };
   const currentCatalog = () => catalogs.get(element<HTMLSelectElement>('#guide-preset').value);
   let picking = false;
   let choice: GeneralChoiceView | undefined;
@@ -71,7 +104,7 @@ export function bindGeneralGuide(preset: () => string = () => 'beginner', select
   function renderChoice(): void {
     if (!selection) return;
     const name = catalogs
-      .get(preset())
+      .get(activeKey())
       ?.characters.find((general) => general.id === choice?.selected)?.name;
     const text = choice?.selected
       ? `已点将：${name ?? choice.selected} · 第1个候选`
@@ -85,14 +118,14 @@ export function bindGeneralGuide(preset: () => string = () => 'beginner', select
     const catalog = currentCatalog();
     if (!catalog) return;
     const selected = element<HTMLSelectElement>('#guide-preset').value;
-    renderRosterSource(element('#guide-source'), selected);
+    renderRosterSource(element('#guide-source'), selected, customVersions.get(selected)?.summary);
     const faction = element<HTMLSelectElement>('#guide-faction').value;
     const query = element<HTMLInputElement>('#guide-search').value.trim().toLowerCase();
     const roster = catalog.characters.filter((general) => general.preset === selected);
     const results = roster.filter(
       (general) =>
         (!faction || general.faction === faction) &&
-        `${general.name} ${general.officialName ?? ''} ${general.skills.map((skill) => skill.name).join(' ')}`
+        `${general.name} ${general.officialName ?? ''} ${general.id} ${general.pack ?? ''} ${general.skills.map((skill) => skill.name).join(' ')}`
           .toLowerCase()
           .includes(query),
     );
@@ -132,6 +165,12 @@ export function bindGeneralGuide(preset: () => string = () => 'beginner', select
         descriptions.append(title, description);
       }
       entry.append(summary);
+      if (general.pack) {
+        const version = document.createElement('p');
+        version.className = 'hint guide-version-note';
+        version.textContent = `原生版本：${rosterPackName(general.pack)} · ${general.id}`;
+        entry.append(version);
+      }
       if (general.versionNote) {
         const note = document.createElement('p');
         note.className = 'hint guide-version-note';
@@ -166,7 +205,7 @@ export function bindGeneralGuide(preset: () => string = () => 'beginner', select
       return;
     }
     if (element<HTMLSelectElement>('#guide-preset').value === selected) {
-      renderRosterSource(element('#guide-source'), selected);
+      renderRosterSource(element('#guide-source'), selected, customVersions.get(selected)?.summary);
       element('#guide-list').replaceChildren();
       element('#guide-count').textContent = '正在载入武将和技能…';
       element('#guide-retry').hidden = true;
@@ -174,7 +213,19 @@ export function bindGeneralGuide(preset: () => string = () => 'beginner', select
     try {
       let pending = pendingCatalogs.get(selected);
       if (!pending) {
-        pending = api<Catalog>(`/assets/generals-${selected}.json`);
+        const version = customVersions.get(selected);
+        pending = version
+          ? Promise.all([loadCustomRoster(version.ref), loadRosterCatalog()]).then(
+              ([roster, catalog]) => {
+                const ids = new Set(roster.characters);
+                return {
+                  characters: catalog
+                    .filter((general) => ids.has(general.id))
+                    .map((general) => ({ ...general, preset: selected })),
+                };
+              },
+            )
+          : api<Catalog>(`/assets/generals-${selected}.json`);
         pendingCatalogs.set(selected, pending);
       }
       catalogs.set(selected, await pending);
@@ -192,16 +243,16 @@ export function bindGeneralGuide(preset: () => string = () => 'beginner', select
     choiceLoading = true;
     const revision = requestedRevision;
     const currentGeneration = generation;
-    const currentPreset = preset();
+    const currentPreset = activeKey();
     try {
       const [result] = await Promise.all([selection.read(), load(currentPreset)]);
-      if (!selection.enabled() || generation !== currentGeneration || preset() !== currentPreset)
+      if (!selection.enabled() || generation !== currentGeneration || activeKey() !== currentPreset)
         return;
       choice = result;
       completedRevision = revision;
       renderChoice();
       if (picking) {
-        element<HTMLSelectElement>('#guide-preset').value = preset();
+        element<HTMLSelectElement>('#guide-preset').value = activeKey();
         render();
       }
     } catch (error) {
@@ -243,7 +294,7 @@ export function bindGeneralGuide(preset: () => string = () => 'beginner', select
         : '点的武将放在第1个候选，其余仍随机；开局后可选择任一候选。身份局主公先选并展示。'
       : '上桌前看看，点开武将了解技能。';
     const presetSelect = element<HTMLSelectElement>('#guide-preset');
-    presetSelect.value = preset();
+    presetSelect.value = activeKey();
     presetSelect.disabled = pick;
     dialog.showModal();
     void load();

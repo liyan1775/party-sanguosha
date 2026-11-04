@@ -116,6 +116,7 @@
   position: absolute;
   inset: 0;
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: auto auto auto minmax(0, 1fr) auto;
   gap: 8px;
   padding: 12px 18px;
@@ -155,6 +156,7 @@
   color: #ffd094;
 }
 .practice-stage .draft-progress {
+  min-width: 0;
   display: flex;
   gap: 8px;
 }
@@ -196,12 +198,20 @@
   color: #f4dfac;
 }
 .practice-stage .draft-tasks {
+  min-width: 0;
   display: flex;
   align-items: center;
   gap: 8px;
   min-height: 30px;
+  overflow-x: auto;
+  scrollbar-width: thin;
 }
 .practice-stage .draft-task {
+  flex-shrink: 0;
+  max-width: min(350px, 70vw);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   padding: 5px 12px;
   border: 1px solid #748373;
   border-radius: 5px;
@@ -237,6 +247,10 @@
   padding: 0 2px 8px;
 }
 .practice-stage .draft-pool-heading h3 {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   margin: 0;
   font-size: 14px;
   color: #e5e8d2;
@@ -630,6 +644,9 @@
 .practice-stage.stage-portrait .draft-seat-progress span {
   display: block;
   font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .practice-stage.stage-portrait .draft-workspace {
   display: block;

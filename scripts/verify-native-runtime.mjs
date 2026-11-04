@@ -159,8 +159,9 @@ async function privateHandIds(worker, viewerId) {
         (player) =>
           !(
             partyEngine.setup.farmerHandSharing &&
-            viewer.identity === 'fan' &&
-            player.identity === 'fan'
+            (partyEngine.setup.settings.mode === 'versus'
+              ? typeof viewer.side === 'boolean' && viewer.side === player.side
+              : viewer.identity === 'fan' && player.identity === 'fan')
           ),
       )
       .flatMap((player) => player.getCards('h'))
@@ -1205,8 +1206,9 @@ try {
           (player) =>
             !(
               partyEngine.setup.farmerHandSharing &&
-              viewer.identity === 'fan' &&
-              player.identity === 'fan'
+              (partyEngine.setup.settings.mode === 'versus'
+                ? typeof viewer.side === 'boolean' && viewer.side === player.side
+                : viewer.identity === 'fan' && player.identity === 'fan')
             ),
         )
         .flatMap((player) => player.getCards('h'))

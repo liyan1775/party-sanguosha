@@ -1,0 +1,49 @@
+{
+  "engine": {
+    "tag": "v1.11.6",
+    "commit": "2367607e246d21aae168dba15c01151ee0651f30"
+  },
+  "presets": [
+    {
+      "id": "sxrm",
+      "name": "蚀心入魔27将",
+      "description": "固定无名杀内置嗔、慢、疑各9将，保留完整原生技能与AI；独立将池，不混入海外服同名版本。",
+      "reviewedAt": "2026-10-19",
+      "source": "https://github.com/libnoname/noname/blob/2367607e246d21aae168dba15c01151ee0651f30/apps/core/character/sxrm.js",
+      "enabledPacks": ["sxrm"],
+      "definitionPacks": {
+        "characters": ["standard", "refresh", "sp", "shenhua", "extra", "yijiang", "sxrm"],
+        "cards": ["standard", "extra", "zhulu"]
+      },
+      "characters": [
+        "sxrm_zhouyu",
+        "sxrm_sunshangxiang",
+        "sxrm_zhangzhao",
+        "sxrm_lusu",
+        "sxrm_chen_caocao",
+        "sxrm_zhugeliang",
+        "sxrm_jiahua",
+        "sxrm_zhaoyun",
+        "sxrm_caoren",
+        "sxrm_guanyu",
+        "sxrm_guanyinping",
+        "sxrm_yujin",
+        "sxrm_mifang",
+        "sxrm_liufeng",
+        "sxrm_luxun",
+        "sxrm_lvmeng",
+        "sxrm_pangde",
+        "sxrm_yanwen",
+        "sxrm_caocao",
+        "sxrm_caopi",
+        "sxrm_wanghou",
+        "sxrm_liubei",
+        "sxrm_jianggan",
+        "sxrm_huatuo",
+        "sxrm_lvboshe",
+        "sxrm_fuhuanghou",
+        "sxrm_xunyu"
+      ]
+    }
+  ]
+}

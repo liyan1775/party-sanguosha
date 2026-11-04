@@ -47,11 +47,16 @@ export class DoudizhuPreparation {
     private readonly durationMs = 60000,
   ) {
     this.college = setup.settings.mode === 'college';
+    if (this.college && setup.customRoster) throw new PreparationError('高校练习使用固定高校将池');
     this.maxBid = this.college ? 4 : 3;
     if (setup.seats.length !== (this.college ? 4 : 3)) throw new PreparationError('报名人数不符');
     const preset = rosters.presets.find((p) => p.id === setup.settings.generalPreset);
     if (!preset) throw new PreparationError('缺少本局武将名单');
-    this.pool = [...preset.characters];
+    this.pool = [...(setup.customRoster?.characters ?? preset.characters)];
+    // Ordinary bidding needs 18 disjoint initial choices plus four landlord additions.
+    // College also consumes up to two fresh replacements for each active seat.
+    if (new Set(this.pool).size !== this.pool.length || this.pool.length < 22)
+      throw new PreparationError('本局武将不足以保留既有候选和换将额度');
     this.firstBidIndex = firstBidIndex ?? randomInt(setup.seats.length);
     if (
       !Number.isInteger(this.firstBidIndex) ||
@@ -122,26 +127,28 @@ export class DoudizhuPreparation {
     };
   }
   privateState(playerId: string): DoudizhuPrivateState {
+    const visible = this.phase === 'bidding' ? this.seats : this.active;
+    const viewer = this.seats.find((s) => s.id === playerId && s.kind === 'human');
+    const mate = viewer && this.teammate(viewer);
+    const describe = (s: Seat): DoudizhuPrivateState['seats'][number] => ({
+      id: s.id,
+      nickname: s.nickname,
+      revision: s.revision,
+      candidates: [...s.candidates],
+      replacementsLeft: s.replacementsLeft,
+      selected: s.selected,
+      locked: s.locked,
+      role:
+        this.phase === 'bidding' ? 'candidate' : s.id === this.landlordId ? 'landlord' : 'farmer',
+    });
     return {
       preparation: this.publicState(),
       maxBid: this.maxBid,
-      seats: (this.phase === 'bidding' ? this.seats : this.active)
-        .filter((s) => this.controller(s) === playerId)
-        .map((s) => ({
-          id: s.id,
-          nickname: s.nickname,
-          revision: s.revision,
-          candidates: [...s.candidates],
-          replacementsLeft: s.replacementsLeft,
-          selected: s.selected,
-          locked: s.locked,
-          role:
-            this.phase === 'bidding'
-              ? 'candidate'
-              : s.id === this.landlordId
-                ? 'landlord'
-                : 'farmer',
-        })),
+      seats: visible.filter((s) => this.controller(s) === playerId).map(describe),
+      teammates:
+        mate && visible.includes(mate) && this.controller(mate) !== playerId
+          ? [describe(mate)]
+          : [],
     };
   }
   action(playerId: string, input: unknown): void {

@@ -8,6 +8,7 @@ const military = {
 const profiles = {
   beginner: { id: 'standard108', packs: ['standard'], excludedCards: [], cardCount: 108 },
   advanced: military,
+  sxrm: military,
   'ol-doudizhu-s15': military,
   'mobile-college-2026': military,
   'mobile-qunxiong-2026-09': military,

@@ -25,7 +25,7 @@ export function bindDoudizhuPanel(roomPath: string, request: Request) {
   panel.hidden = true;
   panel.innerHTML = `<header class="draft-heading"><div><h2 id="doudizhu-heading">叫分</h2><p id="doudizhu-task"></p></div><span id="doudizhu-deadline" class="draft-clock"></span></header>
     <div id="doudizhu-progress" class="draft-progress" aria-label="报名席位与公开叫分"></div>
-    <nav id="doudizhu-tasks" class="draft-tasks" aria-label="查看自己的席位与AI代理任务"></nav>
+    <nav id="doudizhu-tasks" class="draft-tasks" aria-label="本人、AI代理与队友候选"></nav>
     <div class="draft-workspace"><section class="draft-pool"><div class="draft-pool-heading"><h3 id="doudizhu-seat-title"></h3><span id="doudizhu-quota"></span></div><div id="doudizhu-seats"></div><p id="doudizhu-wait" hidden></p></section>
     <aside id="doudizhu-detail" class="draft-detail" aria-label="武将技能"><div class="draft-detail-heading"><h3 id="doudizhu-detail-name">查看武将</h3><button id="doudizhu-close-detail" type="button" class="button secondary">返回候选</button></div><div id="doudizhu-detail-skills"></div></aside></div>
     <footer class="draft-actions"><div class="draft-feedback"><p id="doudizhu-status" role="status"></p><p id="doudizhu-error" role="alert" hidden></p></div><div id="doudizhu-bids" class="doudizhu-bids"></div><div id="doudizhu-choose-actions"><button id="doudizhu-show-detail" class="button secondary" type="button">技能</button><button id="doudizhu-replace" class="button secondary" type="button">换此将</button><button id="doudizhu-confirm" class="button primary" type="button">确认出战</button></div></footer>`;
@@ -68,10 +68,23 @@ export function bindDoudizhuPanel(roomPath: string, request: Request) {
   let generals = new Map<string, General>();
   let timer: ReturnType<typeof setTimeout> | undefined;
   const name = (id?: string | null) => (id ? (generals.get(id)?.name ?? id) : '未选择');
-  const who = (seat: Seat) => (seat.id === playerId ? '你' : `AI队友 ${seat.nickname}`);
+  const controllable = (seat?: Seat) => !!seat && !!state?.seats.some((s) => s.id === seat.id);
+  const who = (seat: Seat) =>
+    seat.id === playerId ? '你' : `${controllable(seat) ? 'AI队友' : '真人队友'} ${seat.nickname}`;
+  const allSeats = () => [...(state?.seats ?? []), ...(state?.teammates ?? [])];
+  const position = (id: string) => {
+    const index = state?.preparation.activeSeatIds.indexOf(id) ?? -1;
+    return index < 0
+      ? `报名${room.players.findIndex((s) => s.id === id) + 1}位`
+      : `本局${index + 1}号位`;
+  };
   const ordered = () =>
-    [...(state?.seats ?? [])].sort((a, b) => Number(b.id === playerId) - Number(a.id === playerId));
-  const current = () => state?.seats.find((s) => s.id === activeSeat);
+    allSeats().sort(
+      (a, b) =>
+        Number(b.id === playerId) - Number(a.id === playerId) ||
+        Number(controllable(b)) - Number(controllable(a)),
+    );
+  const current = () => allSeats().find((s) => s.id === activeSeat);
   const expired = () =>
     !!state && state.preparation.phase !== 'ready' && performance.now() >= expiresAt;
 
@@ -125,7 +138,7 @@ export function bindDoudizhuPanel(roomPath: string, request: Request) {
         seats.append(section);
       }
       view.seat = seat;
-      view.tab.textContent = `${who(seat)} · ${seat.locked ? '已锁定' : state?.preparation.phase === 'bidding' ? '候选' : '待确认'}`;
+      view.tab.textContent = `${who(seat)} · ${controllable(seat) ? '' : '只读 · '}${seat.locked ? '已锁定' : state?.preparation.phase === 'bidding' ? '候选' : '待确认'}`;
       view.tab.setAttribute('aria-pressed', String(seat.id === activeSeat));
       view.tab.disabled = busy;
       view.section.hidden = seat.id !== activeSeat;
@@ -133,7 +146,7 @@ export function bindDoudizhuPanel(roomPath: string, request: Request) {
         '--draft-columns',
         String(seat.candidates.length > 6 ? 5 : seat.candidates.length),
       );
-      if (seat.selected) selected.set(seat.id, seat.selected);
+      if (seat.selected && !selected.has(seat.id)) selected.set(seat.id, seat.selected);
       if (!seat.candidates.includes(selected.get(seat.id) ?? '')) selected.delete(seat.id);
       for (let index = 0; index < seat.candidates.length; index++) {
         const id = seat.candidates[index]!;
@@ -160,9 +173,9 @@ export function bindDoudizhuPanel(roomPath: string, request: Request) {
         card.button.setAttribute('aria-pressed', String(selected.get(seat.id) === id));
         card.button.setAttribute(
           'aria-label',
-          `${name(id)}${seat.locked ? '，已锁定' : '，查看技能并选择'}`,
+          `${name(id)}${seat.selected === id ? '，已锁定出战' : ''}，${!controllable(seat) || seat.locked ? '只读查看技能' : '查看技能并选择'}`,
         );
-        card.name.textContent = name(id);
+        card.name.textContent = `${name(id)}${seat.selected === id ? ' · 已锁定' : ''}`;
         card.image.hidden = !general?.portrait;
         if (general?.portrait && card.image.getAttribute('src') !== general.portrait)
           card.image.src = general.portrait;
@@ -185,8 +198,8 @@ export function bindDoudizhuPanel(roomPath: string, request: Request) {
       chip.classList.toggle('is-current', p.bidSeatId === seat.id);
       const label =
         room.settings.mode === 'college'
-          ? `${index % 2 ? 'B' : 'A'}${index + 1}`
-          : `${index + 1}号`;
+          ? `${index % 2 ? 'B' : 'A'}队·报名${index + 1}位`
+          : `报名${index + 1}位`;
       chip.querySelector('strong')!.textContent =
         `${label} ${seat.nickname}${seat.id === playerId ? '（你）' : ''}`;
       const bid = p.bids.find((b) => b.seatId === seat.id);
@@ -200,9 +213,9 @@ export function bindDoudizhuPanel(roomPath: string, request: Request) {
                 : '不叫'
               : '等待叫分'
           : p.landlordId === seat.id
-            ? '地主'
+            ? '1号位·地主'
             : p.activeSeatIds.includes(seat.id)
-              ? '农民'
+              ? `${p.activeSeatIds.indexOf(seat.id) + 1}号位·农民`
               : '本局待命';
     }
   }
@@ -243,18 +256,22 @@ export function bindDoudizhuPanel(roomPath: string, request: Request) {
           ? '选将完成'
           : '选择出战武将';
     task.textContent =
-      seat?.role === 'landlord' && seat.id !== playerId
+      seat?.role === 'landlord' && seat.id !== playerId && controllable(seat)
         ? `替 ${seat.nickname} 选将 · 本局由你操作地主`
         : p.phase === 'bidding'
           ? `当前 ${p.highestBid} 倍 · ${room.players.find((s) => s.id === p.bidSeatId)?.nickname ?? '下一位'}叫分`
           : `本局 ${p.highestBid} 倍 · ${p.phase === 'ready' ? '正在准备原生牌桌' : '确认后锁定出战武将'}`;
     find('#doudizhu-seat-title').textContent = seat
-      ? `${who(seat)} · ${seat.role === 'landlord' ? '地主' : seat.role === 'farmer' ? '农民' : '叫分候选'} · ${seat.candidates.length}选1`
+      ? `${position(seat.id)} · ${seat.role === 'landlord' ? '地主' : seat.role === 'farmer' ? '农民' : '叫分候选'} · ${who(seat)} · ${seat.candidates.length}${controllable(seat) ? '选1' : '将'}`
       : '本局待命';
     find('#doudizhu-quota').textContent =
-      seat && p.phase !== 'bidding'
-        ? `剩余换将 ${seat.replacementsLeft} 次`
-        : '候选仅本人及合法代理可见';
+      seat && !controllable(seat)
+        ? '只读 · 队友自行确认'
+        : seat && p.phase !== 'bidding'
+          ? `剩余换将 ${seat.replacementsLeft} 次`
+          : room.settings.mode === 'college'
+            ? '本队候选可互看'
+            : '候选仅本人可见';
     const waiting = find('#doudizhu-wait');
     waiting.hidden = !!seat;
     waiting.textContent =
@@ -282,29 +299,31 @@ export function bindDoudizhuPanel(roomPath: string, request: Request) {
     }
     for (const button of bids.querySelectorAll<HTMLButtonElement>('button'))
       button.disabled = busy || expired();
-    const choosing = p.phase === 'choosing' && !!seat;
+    const choosing = p.phase === 'choosing' && controllable(seat);
     find('#doudizhu-choose-actions').hidden = p.phase === 'bidding' && !!actor;
-    replace.hidden = !choosing || seat.locked || seat.replacementsLeft === 0;
+    replace.hidden = !choosing || !!seat?.locked || seat?.replacementsLeft === 0;
     replace.textContent = `换此将（余${seat?.replacementsLeft ?? 0}）`;
     replace.disabled = busy || expired() || !seat || !selected.has(seat.id);
-    confirm.hidden = !choosing || seat.locked;
+    confirm.hidden = !choosing || !!seat?.locked;
     confirm.disabled = busy || expired() || !seat || !selected.has(seat.id);
     confirm.textContent = seat
       ? `确认${seat.id === playerId ? '' : 'AI'}出战：${name(selected.get(seat.id))}`
       : '确认出战';
     status.textContent = busy
       ? '正在同步，请稍候…'
-      : p.phase === 'bidding'
-        ? actor
-          ? `${actor.id === playerId ? '轮到你' : '替AI队友'}叫分；超时按不叫处理。`
-          : '等待其他席位叫分，可先查看自己的候选。'
-        : seat?.locked
-          ? seat.selected
-            ? `已锁定 ${name(seat.selected)}，等待其他出场席位。`
-            : '此席位已交由原生AI完成，等待进入牌桌。'
-          : choosing
-            ? '先点选武将；未确认的席位超时由原生AI在合法候选中完成。'
-            : '等待本局出场席位完成选择。';
+      : seat && !controllable(seat)
+        ? `正在查看真人队友候选（只读）。${seat.selected ? `队友已锁定 ${name(seat.selected)}。` : '由队友自己叫分、换将和确认出战。'}`
+        : p.phase === 'bidding'
+          ? actor
+            ? `${actor.id === playerId ? '轮到你' : '替AI队友'}叫分；超时按不叫处理。`
+            : '等待其他席位叫分，可先查看自己的候选。'
+          : seat?.locked
+            ? seat.selected
+              ? `已锁定 ${name(seat.selected)}，等待其他出场席位。`
+              : '此席位已交由原生AI完成，等待进入牌桌。'
+            : choosing
+              ? '先点选武将；未确认的席位超时由原生AI在合法候选中完成。'
+              : '等待本局出场席位完成选择。';
     updateClock();
   }
   function accept(updated: DoudizhuPrivateState) {
@@ -318,19 +337,22 @@ export function bindDoudizhuPanel(roomPath: string, request: Request) {
         : undefined;
     if (
       phaseChanged ||
-      !updated.seats.some((s) => s.id === activeSeat) ||
+      !allSeats().some((s) => s.id === activeSeat) ||
       (updated.preparation.phase === 'choosing' &&
+        controllable(current()) &&
+        !previous?.seats.find((s) => s.id === activeSeat)?.locked &&
         current()?.locked &&
-        orderedSeats.some((s) => !s.locked))
+        orderedSeats.some((s) => controllable(s) && !s.locked))
     )
-      activeSeat = (orderedSeats.find((s) => !s.locked) ?? orderedSeats[0])?.id ?? null;
+      activeSeat =
+        (orderedSeats.find((s) => controllable(s) && !s.locked) ?? orderedSeats[0])?.id ?? null;
     if (bidActor && previous?.preparation.bidSeatId !== bidActor.id) activeSeat = bidActor.id;
     const remaining = updated.preparation.deadline - (serverTime + performance.now() - serverAt);
     expiresAt = performance.now() + Math.max(0, remaining);
     paint();
   }
   async function submit(seat: Seat, action: string, value?: string | number) {
-    if (!state || busy || expired()) return;
+    if (!state || busy || expired() || !controllable(seat)) return;
     const id = currentId;
     mutation++;
     busy = true;

@@ -168,6 +168,54 @@
       "enabledPacks": ["refresh", "shenhua", "sp", "yijiang"]
     },
     {
+      "id": "sxrm",
+      "name": "蚀心入魔27将",
+      "cardPile": {
+        "id": "military160",
+        "name": "军争160张（去木牛流马）",
+        "packs": ["standard", "extra"],
+        "excludedCards": ["muniu"],
+        "cardCount": 160
+      },
+      "completePacks": [],
+      "packGroups": {},
+      "additionalCharacters": [],
+      "enabledPacks": ["sxrm"],
+      "definitionPacks": {
+        "characters": ["standard", "refresh", "sp", "shenhua", "extra", "yijiang", "sxrm"],
+        "cards": ["standard", "extra", "zhulu"]
+      },
+      "characters": [
+        "sxrm_zhouyu",
+        "sxrm_sunshangxiang",
+        "sxrm_zhangzhao",
+        "sxrm_lusu",
+        "sxrm_chen_caocao",
+        "sxrm_zhugeliang",
+        "sxrm_jiahua",
+        "sxrm_zhaoyun",
+        "sxrm_caoren",
+        "sxrm_guanyu",
+        "sxrm_guanyinping",
+        "sxrm_yujin",
+        "sxrm_mifang",
+        "sxrm_liufeng",
+        "sxrm_luxun",
+        "sxrm_lvmeng",
+        "sxrm_pangde",
+        "sxrm_yanwen",
+        "sxrm_caocao",
+        "sxrm_caopi",
+        "sxrm_wanghou",
+        "sxrm_liubei",
+        "sxrm_jianggan",
+        "sxrm_huatuo",
+        "sxrm_lvboshe",
+        "sxrm_fuhuanghou",
+        "sxrm_xunyu"
+      ]
+    },
+    {
       "id": "ol-doudizhu-s15",
       "name": "OL全民斗地主S15（2026）",
       "officialRoster": "ol-doudizhu-s15",
