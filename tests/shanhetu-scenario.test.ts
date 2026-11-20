@@ -109,7 +109,7 @@ test('普通2在相同城市使用原表常规配方，难度只增量应用至�
   assert.equal(ticket.difficulty, 2);
   assert.deepEqual(ticket.hero, { general: 'caocao', group: 'wei', hp: 4, maxHp: 4 });
   assert.throws(() => campaign.bindMatch({ ...ticket, difficulty: 1 }, 'wrong-rules'));
-  assert.throws(() => createShanhetuScenario(['caocao'], undefined, 16));
+  assert.throws(() => createShanhetuScenario(['caocao'], undefined, 21));
 });
 
 test('困难档开启四座原版城池，全场地形与月份按战斗票据冻结', () => {
@@ -513,4 +513,54 @@ test('奇遇展示的战法、技能和牌来自指定品质池，只有领钱�
     }
   }
   assert(checked > 0);
+});
+
+test('噩梦五档延续旧路线并按原门槛增加函谷关和崤函道', () => {
+  const difficultyIds = [16, 17, 18, 19, 20];
+  assert.deepEqual(
+    source.difficulties.slice(15).map((d) => [d.prerequisite, d.albums, d.preserveHp]),
+    [11, 16, 17, 18, 19].map((p) => [p, 20, true]),
+  );
+  for (const difficulty of difficultyIds) {
+    const catalog = createShanhetuScenario(['caocao'], undefined, difficulty);
+    assert.equal(catalog.regions!.length, 14);
+    const region = (id: number) => catalog.regions!.find((r) => r.id === `region-${id}`)!;
+    assert.deepEqual(region(2).next, ['region-1', 'region-6', 'region-3', 'region-7']);
+    assert.deepEqual(region(3).next, ['region-14']);
+    assert.deepEqual(region(14).next, []);
+    assert.equal(region(3).terrain?.id, 13278);
+    assert.equal(region(14).terrain, undefined);
+    assert.equal(region(3).bossAt, 6);
+    assert.equal(region(14).bossAt, 7);
+    for (const [id, bossIds] of [
+      [3, [2640, 2641, 2642, 2643]],
+      [14, [2684, 2685, 2686, 2687]],
+    ] as const) {
+      const original = source.regions.find((r) => r.id === id)!;
+      assert.deepEqual(original.hardBossIds, bossIds);
+      const selected = catalog.nodes.find((n) => n.id === region(id).boss)!;
+      assert(original.hardBossIds.includes(selected.battleId!));
+    }
+  }
+  assert.throws(() => shanhetuRecipe(2687, 15));
+  assert.throws(() => shanhetuRecipe(2640, 21));
+});
+
+test('噩梦对既有敌人及同席第二形态叠加第四档配方', () => {
+  const opening = shanhetuRecipe(2498, 16, 0, 1).enemies[0]!;
+  assert.deepEqual(opening.sourceSkills, [370, 993, 3121]);
+  assert.equal(opening.startingCards - shanhetuRecipe(2498, 11, 0, 1).enemies[0]!.startingCards, 3);
+  const general = shanhetuRecipe(2639, 16, 0, 1).enemies[0]!;
+  assert(general.sourceSkills.includes(375));
+  const fight = shanhetuRecipe(12225, 16, 0, 2).enemies[0]!;
+  assert(fight.sourceSkills.includes(711));
+  assert(fight.fixedEquipment?.some((card) => card.id === 20571));
+  for (const difficulty of [16, 17, 18, 19, 20]) {
+    const form = shanhetuRecipe(2687, difficulty, 16, 3).enemies[0]!;
+    assert.equal(form.name, '改朝罪魁');
+    assert(form.skills.length > 0);
+    assert.equal(form.nextForm?.name, '篡天恶魂');
+    assert.deepEqual(form.nextForm?.sourceSkills, [14214, 111]);
+    assert(form.nextForm?.fixedEquipment?.some((c) => c.id === 20626));
+  }
 });

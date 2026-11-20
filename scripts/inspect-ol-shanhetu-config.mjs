@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Inspect frozen public client configuration without running client JavaScript.
+import { enemySource, sourceNumbers } from './shanhetu-enemy-source.mjs';
 import assert from 'node:assert/strict';
 import { createDecipheriv, createHash } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
@@ -255,10 +256,18 @@ const scenario = JSON.parse(await readFile(resolve(root, 'config/shanhetu-scenar
 const difficultyIds = scenario.difficulties.map((rule) => rule.id);
 assert.deepEqual(
   difficultyIds,
-  Array.from({ length: 15 }, (_, index) => index + 1),
+  Array.from({ length: 20 }, (_, index) => index + 1),
 );
 const hardProgression = research.implementation.hardProgression;
-assert.deepEqual(difficultyIds.slice(10), hardProgression.difficultyIds);
+assert.deepEqual(difficultyIds.slice(10, 15), hardProgression.difficultyIds);
+assert.deepEqual(
+  difficultyIds.slice(15),
+  research.implementation.nightmareProgression.difficultyIds,
+);
+assert.deepEqual(
+  scenario.regions.filter((region) => region.openDifficulty === 16).map((region) => region.id),
+  research.implementation.nightmareProgression.addedRegions,
+);
 assert.deepEqual(
   integrated.battles.filter((battle) => battle.maximumDifficulty === 10).map((battle) => battle.id),
   hardProgression.withheldBattleIds,
@@ -271,6 +280,7 @@ assert.deepEqual(
   [
     ...research.implementation.normalStages.groupIds,
     ...research.implementation.mediumProgression.addedStageGroupIds,
+    ...research.implementation.nightmareProgression.addedStageGroupIds,
   ].sort((left, right) => left - right),
 );
 const npcSkills = JSON.parse(
@@ -302,131 +312,7 @@ for (const skill of npcSkills.skills) {
     `NPC skill ${skill.id} wording differs`,
   );
 }
-const sourceNumbers = (value) =>
-  String(value ?? '')
-    .split(';')
-    .map(Number)
-    .filter(Boolean);
-const knownEquipment = {
-  20546: 'fangtian',
-  20666: 'chixueqingfeng',
-  20611: 'wushuangfangtianji',
-  20656: 'party_shanhetu_inferno_halberd',
-  20871: 'party_shanhetu_soul_cutter',
-  20766: 'party_shanhetu_xingtian_axe',
-  20856: 'party_shanhetu_thunder_blade',
-  20616: 'shufazijinguan',
-  20636: 'guofengyupao',
-  20836: 'party_shanhetu_duanhun',
-  20501: 'zhuge',
-  20571: 'baiyin',
-  20618: 'shufazijinguan',
-  20621: 'hongmianbaihuapao',
-  20626: 'linglongshimandai',
-  20631: 'guilongzhanyuedao',
-  20641: 'party_shanhetu_fire_lute',
-  20661: 'xuwangzhimian',
-  20721: 'heiguangkai',
-  20722: 'heiguangkai',
-  20723: 'heiguangkai',
-  20741: 'sanlve',
-  20841: 'party_shanhetu_kunlun_mirror',
-  20866: 'party_shanhetu_iron_guard',
-};
-function enemyEquipment(value) {
-  const slots = { 1: 'equip1', 2: 'equip2', 9: 'equip5' };
-  return sourceNumbers(value).map((id) => {
-    const card = cardDefinitions.find((card) => card.a === id);
-    const nativeId = knownEquipment[id];
-    assert(
-      card && nativeId && card.c === 3 && slots[card.d],
-      `Starting NPC equipment ${id} needs review`,
-    );
-    return {
-      id,
-      name: card.b,
-      nativeId,
-      suit: carry.cardDefinitions.suits[card.g],
-      number: card.f,
-      range: card.h,
-      spellId: card.m,
-      ...(card.d === 1 ? {} : { subtype: slots[card.d] }),
-    };
-  });
-}
-function enemySkillIds(ids) {
-  return ids.map((id) => {
-    const skill = npcSkills.skills.find((skill) => skill.id === id);
-    assert.ok(skill, `NPC skill ${id} requires review`);
-    return skill.nativeId;
-  });
-}
-function enemyBonus(row, suffix) {
-  const outcome = {};
-  const fields = { hp: 'hp', maxhp: 'maxHp', cardnum: 'startingCards' };
-  for (const entry of String(row[`att_${suffix}`] ?? '')
-    .split(';')
-    .filter(Boolean)) {
-    const [key, value] = entry.split(',');
-    assert(fields[key] && Number.isSafeInteger(Number(value)));
-    outcome[fields[key]] = Number(value);
-  }
-  const skillString = row[`getspell_${suffix}`];
-  const added = sourceNumbers(skillString);
-  if (added.length) {
-    outcome.skills = enemySkillIds(added);
-    outcome.sourceSkills = added;
-  }
-  const removed = String(skillString ?? '')
-    .split(';')
-    .filter((id) => id.startsWith('_'))
-    .map((id) => Number(id.slice(1)));
-  if (removed.length) outcome.removeSourceSkills = removed;
-  const equipment = enemyEquipment(row[`equip_${suffix}`]);
-  if (equipment.length) outcome.equipment = equipment;
-  const hand = sourceNumbers(row[`carddesc_${suffix}`]).map((id) => {
-    const card = cardDefinitions.find((card) => card.a === id);
-    assert([20811, 20812].includes(id) && card?.c === 1 && card.m === 1);
-    return {
-      id,
-      name: card.b,
-      nativeId: 'sha',
-      suit: carry.cardDefinitions.suits[card.g],
-      number: card.f,
-    };
-  });
-  if (hand.length) outcome.hand = hand;
-  assert(!row[`getzhanfa_${suffix}`]);
-  return outcome;
-}
-function enemyFacts(row, includeMedium, includeHard) {
-  assert.ok(!row.s || row.s === '0', 'Starting enemy hand needs explicit review');
-  assert.equal(row.n, 0, 'Native NPC base armor recovery needs review');
-  assert.equal(row.o, 5, 'Native NPC armor recovery cap differs');
-  const equipment = enemyEquipment(row.t);
-  const sourceSkills = sourceNumbers(row.v);
-  assert.deepEqual(enemyBonus(row, 'PT'), {});
-  for (const chapter of [2, 3]) {
-    for (const field of ['getcard', 'getspell', 'getequip']) assert(!row[field + '_' + chapter]);
-  }
-  const medium = includeMedium ? enemyBonus(row, 'ZD') : {};
-  const hard = includeHard ? enemyBonus(row, 'KN') : {};
-  return {
-    generalId: row.b,
-    name: row.c,
-    hp: row.k,
-    maxHp: row.l,
-    armor: row.m,
-    draw: row.p,
-    startingCards: row.q,
-    extraSha: row.r,
-    skills: enemySkillIds(sourceSkills),
-    sourceSkills,
-    ...(equipment.length ? { fixedEquipment: equipment } : {}),
-    ...(Object.keys(medium).length ? { medium } : {}),
-    ...(Object.keys(hard).length ? { hard } : {}),
-  };
-}
+const { enemyFacts } = enemySource(npcSkills, cardDefinitions, carry.cardDefinitions.suits);
 for (const battle of integrated.battles) {
   const fight = data.Root.Fight.find((row) => row.fightID === battle.id);
   assert.equal(fight?.Ggroup, battle.groupId, 'Integrated battle group changed');
@@ -439,6 +325,7 @@ for (const battle of integrated.battles) {
       ...form.sourceSkills,
       ...(form.medium?.sourceSkills ?? []),
       ...(form.hard?.sourceSkills ?? []),
+      ...(form.nightmare?.sourceSkills ?? []),
     ];
     for (const id of ids) {
       const skill = npcSkills.skills.find((skill) => skill.id === id);
@@ -454,6 +341,7 @@ for (const battle of integrated.battles) {
   const minimum = regions.length ? Math.min(...regions.map((region) => region.openDifficulty)) : 2;
   const maximum = battle.maximumDifficulty ?? difficultyIds.at(-1);
   const includeHard = battle.id < 20000 && maximum >= 15;
+  const includeNightmare = battle.id < 20000 && maximum >= 16;
   const profileDifficulties =
     battle.id > 20000
       ? [1]
@@ -462,7 +350,7 @@ for (const battle of integrated.battles) {
   for (const [index, row] of generals.entries()) {
     const { group, sex, nextForm, ...facts } = battle.enemies[index];
     assert.deepEqual(
-      enemyFacts(row, battle.id < 20000, includeHard),
+      enemyFacts(row, battle.id < 20000, includeHard, includeNightmare),
       facts,
       `Integrated source recipe ${battle.id} differs`,
     );
@@ -487,7 +375,7 @@ for (const battle of integrated.battles) {
     assert.deepEqual(nextFacts, {
       sourceGroupId: stageId,
       difficulties: stageDifficulties,
-      ...enemyFacts(stage[0], true, includeHard),
+      ...enemyFacts(stage[0], true, includeHard, includeNightmare),
     });
   }
 }
@@ -579,7 +467,7 @@ for (const row of data.Root.EnemyNumGrowth) {
   ]);
 }
 assert(!data.Root.EnemyShow?.length, 'Location wait growth requires review');
-for (const row of data.Root.EnemyDiffGrowth.filter((row) => row.diffnum <= 3)) {
+for (const row of data.Root.EnemyDiffGrowth.filter((row) => row.diffnum <= 4)) {
   assert(!row.otherad);
   assert.deepEqual(scenario.chapterGrowth[row.diffnum][row.chap - 1], [
     row.hp,
@@ -615,7 +503,7 @@ assert.deepEqual(
   availableRegions.map((region) => region.uniqueID),
 );
 assert.deepEqual(
-  scenario.regions.filter((region) => region.openDifficulty >= 11).map((region) => region.id),
+  scenario.regions.filter((region) => region.openDifficulty === 11).map((region) => region.id),
   hardProgression.addedRegions,
 );
 assert(

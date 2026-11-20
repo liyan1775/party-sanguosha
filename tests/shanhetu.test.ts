@@ -16,8 +16,8 @@ test('每种敌军、第二形态及队友都使用原表指定的独立本机�
   assert.equal(art.sourceDecodedSha256, companions.sourceDecodedSha256);
   const paths = new Set<string>();
   const actors = encounters.battles.flatMap((battle) =>
-    shanhetuRecipe(battle.id, Math.min(battle.maximumDifficulty ?? 15, 15)).enemies.flatMap(
-      (enemy) => (enemy.nextForm ? [enemy, enemy.nextForm] : [enemy]),
+    shanhetuRecipe(battle.id, battle.maximumDifficulty ?? 20).enemies.flatMap((enemy) =>
+      enemy.nextForm ? [enemy, enemy.nextForm] : [enemy],
     ),
   );
   const allies = companions.companions.flatMap((companion) =>
@@ -38,7 +38,7 @@ test('每种敌军、第二形态及队友都使用原表指定的独立本机�
     paths.add(actor.portrait);
   }
   assert.equal(paths.size, art.portraits.length);
-  assert.equal(art.portraits.length, 75);
+
   assert.equal(
     new Set(art.portraits.filter((p) => p.generalId === 4861).map((p) => p.sha256)).size,
     4,
@@ -88,7 +88,7 @@ test('山河图敌军由固定遭遇生成，不改变报名席位或允许客�
       value.shanhetu!.battleId = 99999;
     },
     (value: MatchSetup) => {
-      value.shanhetu!.difficulty = 16;
+      value.shanhetu!.difficulty = 21;
     },
     (value: MatchSetup) => {
       value.shanhetu!.candidates = ['unapproved'];

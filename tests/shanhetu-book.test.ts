@@ -17,7 +17,7 @@ test('胜场自动解锁，败北和撤军记录已赢的战斗，重复结算�
   assert.equal(book.view(key).victories, 0);
   assert.deepEqual(
     book.view(key).difficulties.map((rule) => rule.unlocked),
-    [true, ...Array<boolean>(14).fill(false)],
+    [true, ...Array<boolean>(19).fill(false)],
   );
   const oldPool = createShanhetuScenario(['caocao'], book.unlockedForRun(key, 1));
   assert.equal(oldPool.rewards.filter((reward) => reward.id.startsWith('skill-')).length, 11);
@@ -71,12 +71,15 @@ test('胜场自动解锁，败北和撤军记录已赢的战斗，重复结算�
       () => reopened.unlockedForRun(key, difficulty + 1),
       new RegExp(`普通${difficulty}`),
     );
+    if (difficulty >= 16) assert(reopened.unlockedForRun(key, difficulty));
     reopened.record(key, { ...result, runId: `won-${difficulty}`, outcome: 'victory', difficulty });
     assert.equal(reopened.view(key).difficulties[difficulty]?.unlocked, true);
   }
   assert.throws(() => reopened.unlockedForRun(key, 11), /中等1/);
-  for (const difficulty of [6, 7, 8, 9, 11, 12, 13, 14]) {
+  assert.throws(() => reopened.unlockedForRun(key, 16), /困难1/);
+  for (const difficulty of [6, 7, 8, 9, 11, 12, 13, 14, 16, 17, 18, 19]) {
     assert.throws(() => reopened.unlockedForRun(key, difficulty + 1));
+    if (difficulty >= 16) assert(reopened.unlockedForRun(key, difficulty));
     reopened.record(key, { ...result, runId: `won-${difficulty}`, outcome: 'victory', difficulty });
     assert.equal(reopened.view(key).difficulties[difficulty]?.unlocked, true);
   }

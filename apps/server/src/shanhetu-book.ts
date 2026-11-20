@@ -142,6 +142,7 @@ export class ShanhetuBook {
           description: [
             rule.preserveHp ? '战后保留当前体力。' : '',
             rule.tier === 2 ? '开放伊阙关、小平津。' : '',
+            rule.tier === 4 ? '可从广成关分路至函谷关、崤函道。' : '',
             rule.tier >= 3
               ? '开放通往河内与酸枣的新路线。地形影响全场，第三章敌军获得护甲回复。'
               : '',

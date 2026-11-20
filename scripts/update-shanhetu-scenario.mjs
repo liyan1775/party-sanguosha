@@ -29,7 +29,13 @@ const text = (value) =>
     .replace(/<[^>]*>/g, '')
     .trim();
 const difficulties = data.DifficultySelection.filter(
-  (row) => Number(row.seasonID) === 5 && row.isopen === 1 && row.bdif <= 3,
+  (row) =>
+    Number(row.seasonID) === 5 &&
+    ((row.isopen === 1 && row.bdif <= 3) ||
+      (row.bdif === 4 &&
+        row.difID >= 16 &&
+        row.difID <= 20 &&
+        row.isopentime === '20261015T040000')),
 ).map((row) => ({
   id: row.difID,
   name: row.sdifname,
@@ -61,7 +67,7 @@ const monthlyGrowth = Object.fromEntries(
   ]),
 );
 const chapterGrowth = Object.fromEntries(
-  [1, 2, 3].map((tier) => [
+  [1, 2, 3, 4].map((tier) => [
     tier,
     data.EnemyDiffGrowth.filter((row) => row.diffnum === tier).map((row, index) => {
       assert.equal(row.chap, index + 1);
@@ -255,7 +261,7 @@ const rewardGroups = [...rewardIds].map((id) => {
 });
 const output = {
   schemaVersion: 1,
-  status: 'internal-normal-medium-hard-map-integration',
+  status: 'internal-normal-through-nightmare-map-integration',
   sourceDecodedSha256: sha,
   scenarioId: 5,
   name: '诸侯伐董',

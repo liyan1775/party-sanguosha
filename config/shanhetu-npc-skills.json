@@ -1014,6 +1014,321 @@
       "description": "",
       "sourceTextSha256": "5d03f199d7504966c299a71f6ab5085aad9c1288ec80891ea73a1671af3a1746",
       "implementation": "native-shenhua"
+    },
+    {
+      "id": 3229,
+      "nativeId": "rekenshang",
+      "name": "垦伤",
+      "description": "你可以将至少两张牌当【杀】使用，然后可以将目标改为等量名角色。若这些牌数大于此牌造成的伤害，你摸一张牌。",
+      "implementation": "native-sp"
+    },
+    {
+      "id": 852,
+      "nativeId": "party_shanhetu_nm_852",
+      "name": "凶镬",
+      "description": "游戏开始时，你获得3枚“暴戾”标记(标记上限为3)。出牌阶段，你可以交给一名其他角色1枚“暴戾”标记，你对其造成的伤害+1，且其出牌阶段开始时移除“暴戾”标记并随机执行一项：\n 1.受到1点火焰伤害且本回合不能使用【杀】指定你为目标；\n 2.失去1点体力且本回合手牌上限-1；\n 3.你随机获得其一张手牌和一张装备区里的牌。",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 853,
+      "nativeId": "party_shanhetu_nm_853",
+      "name": "杀绝",
+      "description": "锁定技，当其他角色进入濒死状态时，若其需要超过一张【桃】或【酒】救回，你获得1枚“暴戾”标记，然后获得造成伤害使其进入此濒死状态的牌。",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 939,
+      "nativeId": "party_shanhetu_paoxiao939",
+      "name": "咆哮",
+      "description": "锁定技，你使用【杀】无次数限制。当你使用的【杀】被抵消后，你本回合下一次【杀】造成的伤害+1。",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 875,
+      "nativeId": "reluoshen",
+      "name": "洛神",
+      "description": "准备阶段，你可以判定，若结果为黑色，你获得此牌，然后你可以重复此流程。以此法获得的牌本回合不计入手牌上限。",
+      "implementation": "native-refresh"
+    },
+    {
+      "id": 14122,
+      "nativeId": "party_shanhetu_nm_14122",
+      "name": "铁骑",
+      "description": "当你使用【杀】指定目标后，你可以令其本回合非锁定技失效，然后你判定，除非其弃置全部与判定结果颜色相同的牌，否则其不能抵消此【杀】.",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 266,
+      "nativeId": "party_shanhetu_nm_266",
+      "name": "凤魄",
+      "description": "当你在回合内首次使用【杀】或【决斗】指定一个目标后，你可以选择一项：\n 1.摸X张牌；2.令此牌伤害+X。\n（X为目标角色方片手牌数）",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 604,
+      "nativeId": "tianming",
+      "name": "天命",
+      "description": "当你成为【杀】的目标后，你可以：弃置两张牌（不足则全弃），摸两张牌。若全场体力值唯一最大的角色不为你，其可以如此做。",
+      "implementation": "native-sp"
+    },
+    {
+      "id": 605,
+      "nativeId": "mizhao",
+      "name": "密诏",
+      "description": "出牌阶段限一次，你可以交给一名其他角色所有手牌，然后令其与另一名其他角色拼点：拼点赢的角色视为对没赢的角色使用一张【杀】。",
+      "implementation": "native-sp"
+    },
+    {
+      "id": 3386,
+      "nativeId": "party_shanhetu_nm_3386",
+      "name": "先机",
+      "description": "锁定技，当你体力低于8，你成为牌的目标时，你摸2张牌",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 3050,
+      "nativeId": "party_shanhetu_nm_3050",
+      "name": "诗怨",
+      "description": "每回合每项限一次，当你成为其他角色使用牌的目标后：\n 1.若其体力值比你多，你摸三张牌；\n 2.若其体力值与你相同，你摸两张牌；\n 3.若其体力值比你少，你摸一张牌。",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 3051,
+      "nativeId": "dushi",
+      "name": "毒逝",
+      "description": "锁定技，当你处于濒死状态时，其他角色不能对你使用【桃】。当你死亡时，你令一名其他角色获得“毒逝”。",
+      "implementation": "native-xianding"
+    },
+    {
+      "id": 3052,
+      "nativeId": "party_shanhetu_nm_3052",
+      "name": "余威",
+      "description": "主公技，锁定技，其他群雄角色的回合内，你的“诗怨”改为每回合每项限两次。",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 3385,
+      "nativeId": "party_shanhetu_nm_3385",
+      "name": "驻防",
+      "description": "锁定技，当受到伤害后，若你体力低于5，每次受到伤害时回复1点体力",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 3513,
+      "nativeId": "party_shanhetu_nm_3513",
+      "name": "观变",
+      "description": "锁定技，游戏开始时，你的手牌上限、其他角色与你的距离、你与其他角色的距离+X。首轮结束后或你发动“凶逆”或“封赏”后，你失去此技能（X为游戏人数）。",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 14206,
+      "nativeId": "party_shanhetu_nm_14206",
+      "name": "凶逆",
+      "description": "出牌阶段开始时，你可以弃置一张牌，其他每名角色需弃置五张与此牌花色相同的牌，否则你令其降低1点体力上限。",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 14207,
+      "nativeId": "party_shanhetu_nm_14207",
+      "name": "封赏",
+      "description": "出牌阶段限一次或当一名角色进入濒死时，你可以将本回合弃牌堆中任意张花色相同的牌分配给一名角色。若你未以此法获得牌，你视为使用一张不计入次数的【酒】",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 14208,
+      "nativeId": "party_shanhetu_nm_14208",
+      "name": "执柄",
+      "description": "锁定技，每个回合，若其他角色使用黑色牌达到：\n•3张，其失去1点体力；\n•6张，你将手牌摸至或弃至9张；\n•9张，直至本回合结束你使其获得\"止息\"。",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 14210,
+      "nativeId": "party_shanhetu_nm_14210",
+      "name": "酒池",
+      "description": "你可以将一张黑色手牌当【酒】使用。你使用【酒】无次数限制。\n当你使用【酒】【杀】造成伤害后，你失去“崩坏”，并获得”再起“。",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 14211,
+      "nativeId": "party_shanhetu_nm_14211",
+      "name": "肉林",
+      "description": "锁定技，你对其他角色使用的【杀】和其他角色对你使用的【杀】均需使用两张【闪】才能抵消。",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 952,
+      "nativeId": "daoshu",
+      "name": "盗书",
+      "description": "出牌阶段限一次，你可以选择一种花色并获得一名角色一张手牌，若此牌花色与你选择的花色：\n•相同，你对其造成1点伤害且本技能视为未发动；\n•不同，你交给其一张与此牌花色不同的手牌（若没有，你展示所有手牌）。",
+      "implementation": "native-sp"
+    },
+    {
+      "id": 14212,
+      "nativeId": "party_shanhetu_nm_14212",
+      "name": "连诛",
+      "description": "出牌阶段限一次，你可以展示并交给一名其他角色一张牌，若此牌为黑色，其选择一项：\n 1.你摸X张牌；2.弃置X张牌。（X为其当前体力值）",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 14128,
+      "nativeId": "party_shanhetu_nm_14128",
+      "name": "利驭",
+      "description": "当你使用【杀】对其他角色造成伤害后，你可以获得其任一区域里的所有牌，若获得的牌：\n•不包含装备牌，其摸一张牌；\n•为装备牌，你视为对由其指定的另一名角色使用一张伤害为X的【决斗】（X为你本次获得的牌数）。",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 68,
+      "nativeId": "lijian",
+      "name": "离间",
+      "description": "出牌阶段限一次，你可以弃置一张牌令一名男性角色视为对另一名男性角色使用一张【决斗】（不能被【无懈可击】抵消）。",
+      "implementation": "native-standard"
+    },
+    {
+      "id": 14213,
+      "nativeId": "party_shanhetu_nm_14213",
+      "name": "闭月",
+      "description": "锁定技，结束阶段，若你没有手牌，你将手牌摸至上限，否则直至你的下个回合，你获得\"流离\"。",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 14214,
+      "nativeId": "party_shanhetu_nm_14214",
+      "name": "神怒",
+      "description": "锁定技，你每次受到伤害时，你将累计1枚“怒”并摸X张牌；当你造成伤害时，每有1枚“怒”，此伤害+1，造成伤害后你丢弃所有“怒”标记。（X为伤害来源当前体力值）",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 282,
+      "nativeId": "juesi",
+      "name": "决死",
+      "description": "出牌阶段，你可以弃置一张【杀】并令攻击范围内一名其他角色弃置一张牌，若弃置牌不为【杀】且其体力值大于等于你，你视为对其使用【决斗】。",
+      "implementation": "native-sp"
+    },
+    {
+      "id": 411,
+      "nativeId": "huilei",
+      "name": "挥泪",
+      "description": "锁定技，当你死亡时，你令杀死你的角色弃置所有牌。",
+      "implementation": "native-yijiang"
+    },
+    {
+      "id": 3121,
+      "nativeId": "qiongshou",
+      "name": "穷守",
+      "description": "锁定技，游戏开始时，你废除所有装备栏并摸四张牌。你的手牌上限+4。",
+      "implementation": "native-sp"
+    },
+    {
+      "id": 14069,
+      "nativeId": "party_shanhetu_nm_14069",
+      "name": "篡朝",
+      "description": "转换技，阳：当你成为基本牌的目标时，你可令其无效；阴：当你成为锦囊牌的目标时，你可令其无效。###转换技，阳：当你成为基本牌的目标时，你可令其无效。阴：当你成为锦囊牌的目标时，你可令其无效。###转换技，阳：当你成为基本牌的目标时，你可令其无效。阴：当你成为锦囊牌的目标时，你可令其无效。",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 375,
+      "nativeId": "jiaozi",
+      "name": "骄恣",
+      "description": "锁定技，若你的手牌数为全场唯一最多，你造成或受到的伤害值+1。",
+      "implementation": "native-sp"
+    },
+    {
+      "id": 3314,
+      "nativeId": "party_shanhetu_nm_3314",
+      "name": "藏心",
+      "description": "锁定技，摸牌阶段开始时，你展示牌堆底三张牌并摸与其中红桃牌数量等量张牌。\n当你每回合首次受到伤害时，你展示牌堆底三张牌并弃置其中任意张牌，此伤害-X（X为以此法弃置的红桃牌数）。",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 14046,
+      "nativeId": "party_shanhetu_nm_14046",
+      "name": "双魂",
+      "description": "锁定技，每局限一次，濒死时你复原武将牌回复所有体力并将手牌摸至体力上限，然后若有其他友方角色存活，此技能视为未发动过；",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 826,
+      "nativeId": "drlt_zhengu",
+      "name": "镇骨",
+      "description": "结束阶段，你可以选择一名其他角色，本回合结束时和其下回合结束时，其将手牌调整至与你手牌数相同（至多摸至五张）。",
+      "implementation": "native-shenhua"
+    },
+    {
+      "id": 374,
+      "nativeId": "fuqi",
+      "name": "伏骑",
+      "description": "锁定技，与你距离为1的其他角色不能使用或打出牌响应你使用的牌。",
+      "implementation": "native-sp"
+    },
+    {
+      "id": 3123,
+      "nativeId": "olzhuiji",
+      "name": "追击",
+      "description": "锁定技，你计算与体力值小于等于你的角色的距离视为1。当你使用【杀】指定距离为1的角色为目标后，其弃置一张牌或重铸其装备区里的所有牌。",
+      "implementation": "native-sp"
+    },
+    {
+      "id": 665,
+      "nativeId": "party_shanhetu_nm_665",
+      "name": "穿云",
+      "description": "结束阶段，你可以对一名体力值大于你的敌方角色造成1点伤害。",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 466,
+      "nativeId": "buqu",
+      "name": "不屈",
+      "description": "锁定技，当你处于濒死状态时，你将牌堆顶的一张牌置于你的武将牌上，称为“创”，若此牌点数与其他“创”均不同，你回复至1点体力，否则移去此牌。若你的武将牌上有“创”，你的手牌上限为“创”的数量。",
+      "implementation": "native-shenhua"
+    },
+    {
+      "id": 14060,
+      "nativeId": "party_shanhetu_nm_14060",
+      "name": "咒雪",
+      "description": "锁定技，受到你伤害的其他角色直到你的下一回合开始时，手牌上限为0且无法获得护甲；",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 14075,
+      "nativeId": "party_shanhetu_nm_14075",
+      "name": "铁炮",
+      "description": "当你受到其他角色的伤害后，你可以将任意牌视为【杀】对伤害来源使用，若此【杀】造成伤害，其与你的距离+1直到你的回合开始；",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 3296,
+      "nativeId": "party_shanhetu_nm_3296",
+      "name": "恶意",
+      "description": "锁定技，回合开始时，若当前体力值等于体力上限，则目标无法响应你本回合使用的首张【杀】",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 301,
+      "nativeId": "wushen",
+      "name": "武神",
+      "description": "锁定技，你的红桃手牌视为【杀】。你的红桃【杀】无距离和次数限制且不能被抵消。",
+      "implementation": "native-extra"
+    },
+    {
+      "id": 14055,
+      "nativeId": "party_shanhetu_nm_14055",
+      "name": "逞凶",
+      "description": "锁定技，游戏轮数为单数时，你造成的伤害+1；游戏轮数为双数时，你造成的伤害-1；",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 1324,
+      "nativeId": "party_shanhetu_nm_1324",
+      "name": "恶臭",
+      "description": "锁定技，当其他角色使用【桃】或【酒】时，其获得1枚“蛇毒”标记。",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 76,
+      "nativeId": "hongyan",
+      "name": "红颜",
+      "description": "锁定技，你的黑桃牌视为红桃牌。",
+      "implementation": "native-shenhua"
     }
   ]
 }

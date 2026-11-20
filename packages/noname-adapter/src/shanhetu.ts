@@ -46,6 +46,7 @@ interface ShanhetuNpcEquipment extends ShanhetuNpcCard {
 
 interface ShanhetuNpcBonus {
   hp?: number;
+  draw?: number;
   maxHp?: number;
   startingCards?: number;
   skills?: string[];
@@ -73,11 +74,13 @@ interface ShanhetuNpcForm {
   fixedHand?: ShanhetuNpcCard[];
   medium?: ShanhetuNpcBonus;
   hard?: ShanhetuNpcBonus;
+  nightmare?: ShanhetuNpcBonus;
 }
 interface ShanhetuEncounterRecipe {
   id: number;
   name: string;
   groupId: number;
+  minimumDifficulty?: number;
   maximumDifficulty?: number;
   definitionPacks: string[];
   enemies: (ShanhetuNpcForm & {
@@ -151,6 +154,7 @@ export function prepareShanhetuBattle(setup: MatchSetup, characters: string[]): 
     !validId(battle.nodeId) ||
     !recipe ||
     !rules ||
+    rules.id < (recipe.minimumDifficulty ?? 1) ||
     (recipe.maximumDifficulty !== undefined && rules.id > recipe.maximumDifficulty) ||
     (battle.elapsedMonths !== undefined && !integer(battle.elapsedMonths, 0, 1000)) ||
     (battle.chapter !== undefined && !integer(battle.chapter, 1, 3)) ||
@@ -209,7 +213,12 @@ export function prepareShanhetuBattle(setup: MatchSetup, characters: string[]): 
 export function shanhetuRecipe(battleId: number, difficulty = 1, elapsedMonths = 0, chapter = 1) {
   const recipe = recipes.find((item) => item.id === battleId);
   const rules = shanhetuDifficulty(difficulty);
-  if (!recipe || !rules || difficulty > (recipe.maximumDifficulty ?? Infinity))
+  if (
+    !recipe ||
+    !rules ||
+    difficulty < (recipe.minimumDifficulty ?? 1) ||
+    difficulty > (recipe.maximumDifficulty ?? Infinity)
+  )
     throw new Error('尚未接入的山河图遭遇或难度');
   const result = structuredClone(recipe);
   const growth = scenario.monthlyGrowth as Record<number, number[][]>;
@@ -245,6 +254,8 @@ export function shanhetuRecipe(battleId: number, difficulty = 1, elapsedMonths =
       if (enemyArmorRecovery) form.armorRecovery = enemyArmorRecovery;
       if (rules.tier >= 2 && form.medium) applyNpcBonus(form, form.medium);
       if (rules.tier >= 3 && form.hard) applyNpcBonus(form, form.hard);
+      if (rules.tier >= 4 && form.nightmare) applyNpcBonus(form, form.nightmare);
+      delete form.nightmare;
       delete form.medium;
       delete form.hard;
     }
@@ -260,6 +271,7 @@ export function shanhetuRecipe(battleId: number, difficulty = 1, elapsedMonths =
 
 function applyNpcBonus(form: ShanhetuNpcForm, bonus: ShanhetuNpcBonus) {
   form.hp += bonus.hp ?? 0;
+  form.draw += bonus.draw ?? 0;
   form.maxHp += bonus.maxHp ?? 0;
   form.startingCards += bonus.startingCards ?? 0;
   if (bonus.skills) form.skills.push(...bonus.skills);
@@ -295,6 +307,7 @@ export function shanhetuEquipmentPacks(recipe?: ShanhetuEncounterRecipe): string
           ...(form?.fixedEquipment ?? []),
           ...(form?.medium?.equipment ?? []),
           ...(form?.hard?.equipment ?? []),
+          ...(form?.nightmare?.equipment ?? []),
         ].some((card) => card.nativeId === 'heiguangkai'),
       ),
     ),
