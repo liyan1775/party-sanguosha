@@ -1,14 +1,16 @@
 import { build } from 'esbuild';
-import { readFile, mkdir, writeFile } from 'node:fs/promises';
+import { readFile, realpath, mkdir, writeFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { resolve, relative } from 'node:path';
 
 /** Bundle the pinned browser singleton; dynamic packs still use the import map. */
 export async function buildNativeEngine(root) {
   const candidate = JSON.parse(await readFile(resolve(root, 'config/noname-candidate.json')));
-  const engine = resolve(root, `.local/noname/${candidate.tag}`);
-  const info = await readFile(resolve(engine, 'game/build-info.json')).catch(() => null);
+  const enginePath = resolve(root, `.local/noname/${candidate.tag}`);
+  const info = await readFile(resolve(enginePath, 'game/build-info.json')).catch(() => null);
   if (!info) return; // Lobby-only checkouts still build with an unconfigured engine.
+  // esbuild resolves source paths through junctions before calling onLoad.
+  const engine = await realpath(enginePath);
   if (JSON.parse(info).commit !== candidate.commit) throw new Error('Pinned engine mismatch');
   const output = resolve(root, 'dist/engine');
   const coreBase = '(globalThis.partyAssetBase ?? "/engine/core/")';
