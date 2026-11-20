@@ -12,6 +12,7 @@ import { NativeNonameService } from '../packages/noname-adapter/src/service.ts';
 import { shanhetuRecipe } from '../packages/noname-adapter/src/shanhetu.ts';
 import { chooseGeneral } from './native-ui-actions.mjs';
 import source from '../config/shanhetu-scenario.json' with { type: 'json' };
+import rosters from '../config/roster-presets.json' with { type: 'json' };
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const nightmareBook = process.env.SHANHETU_VERIFY_NIGHTMARE_BOOK;
@@ -104,14 +105,10 @@ const wait = async (condition, message, timeout = 120000) => {
 };
 const shot = async (name) => phone.screenshot({ path: `${output}/${name}.png` });
 const journey = () => room.snapshot().shanhetu;
-const nightmareHeroes = [
-  'mb_shen_machao',
-  'shen_taishici',
-  're_xusheng',
-  'mb_caomao',
-  'shen_ganning',
-  'shen_guojia',
-];
+const preferredNightmareHero = process.env.SHANHETU_VERIFY_NIGHTMARE_HERO;
+const nightmareHeroes = preferredNightmareHero
+  ? [preferredNightmareHero]
+  : ['mb_shen_machao', 'shen_taishici', 're_xusheng'];
 const preferredHero = (picks) =>
   [
     ...(nightmareBook ? nightmareHeroes : []),
@@ -653,6 +650,7 @@ async function playRemainingRoute(general, allowDefeat = false, stopAfterSecondC
           recruitmentAction() ??
           locationAction('camp') ??
           shop ??
+          (difficulty > 16 ? locationAction('event') : undefined) ??
           locationAction('battle') ??
           locationAction('event');
         await select(action);
@@ -702,6 +700,11 @@ async function chooseNextHero() {
 
 async function playNightmareJourneys(difficultyInput, chooseOpening, startJourney) {
   const preset = process.env.SHANHETU_VERIFY_NIGHTMARE_PRESET ?? 'mobile-college-2026';
+  const roster = rosters.presets.find((item) => item.id === preset);
+  assert(
+    roster && nightmareHeroes.some((id) => roster.characters.includes(id)),
+    'No preferred hero in selected built-in roster',
+  );
   await phone.getByRole('button', { name: '房间设置', exact: true }).tap();
   await phone.locator('#general-preset').selectOption(preset);
   await wait(
@@ -714,7 +717,14 @@ async function playNightmareJourneys(difficultyInput, chooseOpening, startJourne
   assert(
     Number.isInteger(first) && Number.isInteger(last) && first >= 16 && last <= 20 && first <= last,
   );
-  checks.nightmare = { first, last, preset, attempts: [], clears: [] };
+  checks.nightmare = {
+    first,
+    last,
+    preset,
+    heroPreferences: nightmareHeroes,
+    attempts: [],
+    clears: [],
+  };
   const snapshot = () => writeFile(`${output}/progress.json`, JSON.stringify(checks, null, 2));
   const profile = async () =>
     (await context.request.get(`${origin}/api/rooms/${room.code}/shanhetu/book`)).json();
@@ -723,7 +733,7 @@ async function playNightmareJourneys(difficultyInput, chooseOpening, startJourne
     if (difficulty < 20)
       await expect(difficultyInput.locator(`option[value="${difficulty + 1}"]`)).toBeDisabled();
     let cleared = false;
-    for (let attempt = 0; attempt < 80 && !cleared; attempt++) {
+    for (let attempt = 0; attempt < 160 && !cleared; attempt++) {
       await difficultyInput.selectOption(String(difficulty));
       await expect(phone.locator('#shanhetu-difficulty-hint')).toContainText('函谷关');
       await chooseOpening(2219);
@@ -734,10 +744,7 @@ async function playNightmareJourneys(difficultyInput, chooseOpening, startJourne
       const start = journey();
       console.log(`${difficulty}, draft ${attempt + 1}: ${hero}, ${start.map.name}`);
       assert.equal(start.difficulty, difficulty);
-      if (
-        (difficulty === 16 && start.map.regionId !== 'region-2') ||
-        !nightmareHeroes.includes(hero)
-      ) {
+      if (start.map.regionId !== 'region-2' || !nightmareHeroes.includes(hero)) {
         await phone.locator('#shanhetu-end').tap();
         await phone
           .locator('#shanhetu-end-dialog')
