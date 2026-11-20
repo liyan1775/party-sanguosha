@@ -116,7 +116,12 @@ async function fixture(t: TestContext, engineRoot?: string) {
 }
 
 test('AI地主的真人操作者在HTTP、原生WebSocket及持续推送中均绑定同一AI角色；其他会话不能继承', async (t) => {
-  const f = await fixture(t);
+  const f = await fixture(
+    t,
+    process.env.PARTY_REQUIRE_ENGINE === '1' || process.env.PARTY_ENGINE_TEST_ROOT
+      ? undefined
+      : await minimalEngineRoot(t),
+  );
   const setup: MatchSetup = {
     ...f.setup,
     settings: {
@@ -159,6 +164,7 @@ test('AI地主的真人操作者在HTTP、原生WebSocket及持续推送中均�
   const response = await fetch(`${f.base}/engine/setup/${id}?role=player`, {
     headers: { Cookie: f.ownerCookie },
   });
+  assert.equal(response.status, 200);
   const view = await response.json();
   assert.equal(view.playerId, 'registered-ai');
   assert.equal(view.doudizhu, undefined);
