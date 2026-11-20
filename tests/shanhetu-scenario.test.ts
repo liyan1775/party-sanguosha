@@ -198,7 +198,14 @@ test('困难额外起始牌、源技能替换、二阶段装备及第三章护�
     [6, 9, 6, 2, 3, 1],
   );
   assert.equal(shanhetuRecipe(2676, 15, 0, 2).enemies[0]!.armorRecovery, undefined);
-  assert.throws(() => shanhetuRecipe(2655, 11));
+  assert(
+    shanhetuRecipe(2655, 11).enemies.some((enemy) =>
+      enemy.fixedEquipment?.some((card) => card.id === 20876),
+    ),
+  );
+  const zhangYan = shanhetuRecipe(2653, 16).enemies[0]!.nextForm!;
+  assert(zhangYan.skills.includes('party_shanhetu_nm_3382'));
+  assert(zhangYan.fixedEquipment?.some((card) => card.id === 20777));
 });
 
 test('中等档开启两条原表分路，敌军应用月份、人数及武将的中等配置', () => {

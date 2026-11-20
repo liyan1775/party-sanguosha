@@ -610,6 +610,7 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
         element('#match-volume-value').textContent = event.data.volume + '%';
       }
     }
+    if (event.data.type === 'party-settlement-ready' && frame) notifyFinished(frame);
     if (event.data.type === 'party-connected') {
       element('#match-loading').hidden = true;
       if (!room.engine.connectionRecovery) confirmConnection();

@@ -17,6 +17,7 @@ async function frozen(name, digest) {
   return JSON.parse(bytes);
 }
 const battles = await read(config('shanhetu-battles.json'));
+const scenario = await read(config('shanhetu-scenario.json'));
 const npc = await read(config('shanhetu-npc-skills.json'));
 const cards = await read(config('shanhetu-cards.json'));
 const research = await read(config('research/ol-shanhetu-2026-11.json'));
@@ -26,12 +27,16 @@ const cardDefinitions = (await frozen('sys_playcard', cards.cardDefinitions.deco
   .GamePlayCards.card;
 const bossIds = [2640, 2641, 2642, 2643, 2684, 2685, 2686, 2687];
 const tiers = [16, 17, 18, 19, 20];
+const restoredBosses = [2651, 2653, 2655];
 const admittedSkills = new Set([
-  68, 76, 266, 282, 301, 374, 375, 411, 466, 604, 605, 665, 826, 852, 853, 875, 939, 952, 1324,
-  3050, 3051, 3052, 3121, 3123, 3229, 3296, 3314, 3385, 3386, 3513, 14046, 14055, 14060, 14069,
-  14075, 14122, 14128, 14206, 14207, 14208, 14210, 14211, 14212, 14213, 14214,
+  51, 719, 3084, 3382, 68, 76, 266, 282, 301, 374, 375, 411, 466, 604, 605, 665, 826, 852, 853, 875,
+  939, 952, 1324, 3050, 3051, 3052, 3121, 3123, 3229, 3296, 3314, 3385, 3386, 3513, 14046, 14055,
+  14060, 14069, 14075, 14122, 14128, 14206, 14207, 14208, 14210, 14211, 14212, 14213, 14214,
 ]);
 const nativeSkills = {
+  51: ['standard', 'tiandu'],
+  719: ['refresh', 'reguicai'],
+  3084: ['yingbian', 'weishu'],
   68: ['standard', 'lijian'],
   76: ['shenhua', 'hongyan'],
   282: ['sp', 'juesi'],
@@ -124,6 +129,8 @@ for (const id of bossIds) {
 }
 
 for (const battle of battles.battles) {
+  const restoreHard = restoredBosses.includes(battle.id);
+  if (restoreHard) delete battle.maximumDifficulty;
   if (battle.id > 20000 || (battle.maximumDifficulty ?? 20) < 16) continue;
   const group = data.General.filter((row) => row.a === battle.groupId);
   assert.equal(battle.enemies.length, group.length);
@@ -134,16 +141,32 @@ for (const battle of battles.battles) {
       const form = actor.nextForm;
       const all = new Set([
         ...form.difficulties,
-        ...tiers.filter((d) => sourceNumbers(row.CanStage).includes(d)),
+        ...sourceNumbers(row.CanStage).filter((d) => d <= 20 && (restoreHard || tiers.includes(d))),
       ]);
-      form.difficulties = [...all].sort((a, b) => a - b);
+      const regions = scenario.regions.filter((region) =>
+        region.regularBossIds.includes(battle.id),
+      );
+      const first = regions.length
+        ? Math.min(...regions.map((region) => region.openDifficulty))
+        : 2;
+      form.difficulties = [...all]
+        .filter((difficulty) => difficulty >= first)
+        .sort((a, b) => a - b);
       forms.push([form, data.General.find((r) => r.a === form.sourceGroupId)]);
     }
     for (const [body, source] of forms) {
       assert.equal(source.b, body.generalId);
+      if (restoreHard) {
+        addSkills(source, ['getspell_KN']);
+        const hard = enemyBonus(source, 'KN');
+        if (Object.keys(hard).length) body.hard = hard;
+      }
       addSkills(source, ['getspell_EM']);
       const bonus = enemyBonus(source, 'EM');
       if (Object.keys(bonus).length) body.nightmare = bonus;
+      if (battle.id === 2653 && !battle.definitionPacks.includes('xianding')) {
+        battle.definitionPacks.push('xianding');
+      }
       const ids = [
         ...body.sourceSkills,
         ...[body.medium, body.hard, body.nightmare].flatMap((bonus) => bonus?.sourceSkills ?? []),
@@ -166,8 +189,10 @@ research.implementation.nightmareProgression = {
   addedRegions: [3, 14],
   addedBossIds: bossIds,
   addedStageGroupIds: [268701],
+  restoredUpperTierBossIds: restoredBosses,
   openingAnnouncement: 'https://www.sanguosha.com/news/20261014_1695_1010',
 };
+research.implementation.hardProgression.withheldBattleIds = [];
 research.implementation.battleIds = battles.battles.map((battle) => battle.id);
 research.implementation.npcSkillIds = npc.skills.map((skill) => skill.id);
 await write(config('shanhetu-battles.json'), battles);

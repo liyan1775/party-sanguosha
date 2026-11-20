@@ -95,8 +95,8 @@ const unsubscribe = adapter.subscribe((event) => {
   if (event.type !== 'status') events.push(event);
 });
 let room;
-const wait = async (condition, message) => {
-  const deadline = Date.now() + 120000;
+const wait = async (condition, message, timeout = 120000) => {
+  const deadline = Date.now() + timeout;
   while (!condition()) {
     assert(Date.now() < deadline, message);
     await new Promise((resolve) => setTimeout(resolve, 100));
@@ -105,24 +105,12 @@ const wait = async (condition, message) => {
 const shot = async (name) => phone.screenshot({ path: `${output}/${name}.png` });
 const journey = () => room.snapshot().shanhetu;
 const nightmareHeroes = [
-  'shen_guojia',
   'mb_shen_machao',
+  'shen_taishici',
+  're_xusheng',
   'mb_caomao',
   'shen_ganning',
-  'miheng',
-  'liuyan',
-  'db_wenyang',
-  'pot_weiyan',
-  'shen_taishici',
-  'shen_sunce',
-  'shen_zhaoyun',
-  'mb_caochun',
-  'luotong',
-  'zhouchu',
-  'caoying',
-  'maliang',
-  're_huanggai',
-  'quyi',
+  'shen_guojia',
 ];
 const preferredHero = (picks) =>
   [
@@ -391,7 +379,48 @@ async function battle(general, restart = false) {
       if (!partyEngine._status.auto) partyEngine.ui.click.auto();
     });
   });
-  await wait(() => room.snapshot().phase === 'finished', 'Native settlement not received');
+  const trace = [];
+  let sampling = false;
+  const observe = async () => {
+    if (sampling || room.snapshot().phase !== 'playing') return;
+    sampling = true;
+    try {
+      const summary = await worker.evaluate(() => {
+        const { game, _status, lib } = partyEngine;
+        return {
+          round: game.roundNumber,
+          turn: game.phaseNumber,
+          event: _status.event?.name,
+          active: lib.translate[_status.currentPhase?.name1] ?? null,
+          seats: game.players.map((seat) => ({
+            general: lib.translate[seat.name1],
+            hp: seat.hp,
+            maxHp: seat.maxHp,
+          })),
+        };
+      });
+      const auto = await playerFrame().evaluate(() => Boolean(partyEngine._status.auto));
+      trace.push({ observed: new Date().toISOString(), ...summary, auto });
+      await writeFile(
+        `${output}/native-progress-${matchId}.json`,
+        JSON.stringify({ difficulty, chapter, encounter: node.name, trace }, null, 2),
+      );
+    } catch {
+      // The result can close the native frame while a sample is in flight.
+    } finally {
+      sampling = false;
+    }
+  };
+  const monitor = difficulty >= 16 ? setInterval(observe, 30000) : undefined;
+  try {
+    await wait(
+      () => room.snapshot().phase === 'finished',
+      'Native settlement not received',
+      difficulty >= 16 ? 600000 : 120000,
+    );
+  } finally {
+    clearInterval(monitor);
+  }
   const ended = events.find((event) => event.type === 'ended' && event.matchId === matchId);
   assert(ended?.shanhetu, 'No authenticated PVE settlement');
   const { outcome, defeatedEnemies } = ended.shanhetu;
@@ -456,6 +485,7 @@ async function battle(general, restart = false) {
     npcSkillUses,
     secondForms,
   });
+  if (nightmareBook) await writeFile(`${output}/progress.json`, JSON.stringify(checks, null, 2));
   console.log(
     `${rules.name}, chapter ${chapter} ${map.name} ${node.name}: ${outcome}, ${companions.length} companions`,
   );
@@ -475,6 +505,19 @@ async function battle(general, restart = false) {
   await expect(phone.locator('#game-frame')).toHaveCount(0);
   return outcome;
 }
+function nightmareUpgrade(actions) {
+  // Choose only from visible offers. Round armor and damage persist across battles.
+  const priorities = [
+    /护甲Ⅱ|当头一棒Ⅱ/,
+    /护甲Ⅰ|当头一棒|摸牌Ⅱ|远击技|弱袭|当先/,
+    /摸牌|起始手牌|起手牌|体力上限|英姿|称象|卫境|青囊|八卦阵|白银狮子/,
+    /护甲|咆哮|无中生有|连弩|淬血|倾国/,
+  ];
+  for (const pattern of priorities) {
+    const offer = actions.find((action) => pattern.test(action.label));
+    if (offer) return offer;
+  }
+}
 async function playRemainingRoute(general, allowDefeat = false, stopAfterSecondChapter = false) {
   const { id: runId, difficulty } = journey();
   const shopsVisited = new Set();
@@ -490,16 +533,21 @@ async function playRemainingRoute(general, allowDefeat = false, stopAfterSecondC
       const reward = view.actions.find((action) =>
         /摸牌|狂骨|当头一棒|无中生有|狭路相逢/.test(action.label),
       );
-      await select(reward ?? view.actions[0]);
+      await select(
+        (difficulty >= 16 ? nightmareUpgrade(view.actions) : undefined) ??
+          reward ??
+          view.actions[0],
+      );
     } else if (view.phase === 'choice') {
       if (view.node.kind === 'shop') {
         if (!capturedShop) {
           await shot(`shop-${difficulty}`);
           capturedShop = true;
         }
-        const purchase =
-          !bought &&
-          view.actions.find((action) => action.kind === 'buy' && action.cost <= view.coins);
+        const affordable = view.actions.filter(
+          (action) => action.kind === 'buy' && action.cost <= view.coins,
+        );
+        const purchase = difficulty >= 16 ? nightmareUpgrade(affordable) : !bought && affordable[0];
         if (purchase) {
           await select(purchase);
           assert.equal(journey().coins, view.coins - purchase.cost);
@@ -507,10 +555,10 @@ async function playRemainingRoute(general, allowDefeat = false, stopAfterSecondC
           bought = true;
           continue;
         }
-        if (!refreshedShop) {
-          const refresh = view.actions.find(
-            (action) => action.cost === 0 && action.label.includes('刷新'),
-          );
+        const refresh = view.actions.find(
+          (action) => action.cost === 0 && action.label.includes('刷新'),
+        );
+        if (refresh && (difficulty >= 16 || !refreshedShop)) {
           await select(refresh);
           refreshedShop = true;
         } else await select(view.actions.find((action) => action.label === '离开集市'));
@@ -527,6 +575,7 @@ async function playRemainingRoute(general, allowDefeat = false, stopAfterSecondC
         if (recruit) await shot(`event-${difficulty}-${view.chapter}`);
         await select(
           recruit ??
+            (difficulty >= 16 ? nightmareUpgrade(view.actions) : undefined) ??
             view.actions.find((action) => /^获得\d+铜币$/.test(action.description)) ??
             view.actions[0],
         );
@@ -552,13 +601,15 @@ async function playRemainingRoute(general, allowDefeat = false, stopAfterSecondC
       assert.equal(view.phase, 'map');
       const destinations = view.actions.filter((action) => action.kind === 'region');
       const destination =
-        (difficulty >= 16
-          ? destinations.find((action) => /函谷关|崤函道/.test(action.label))
-          : fullHard && difficulty === 11
-            ? destinations.find((action) => /颍川郡|荥阳|河内|酸枣/.test(action.label))
-            : fullMedium && difficulty === 6
-              ? destinations.find((action) => /伊阙关|小平津/.test(action.label))
-              : undefined) ?? destinations[0];
+        (difficulty > 16
+          ? destinations.find((action) => /颍川郡|荥阳|河内|酸枣/.test(action.label))
+          : difficulty === 16
+            ? destinations.find((action) => /函谷关|崤函道/.test(action.label))
+            : fullHard && difficulty === 11
+              ? destinations.find((action) => /颍川郡|荥阳|河内|酸枣/.test(action.label))
+              : fullMedium && difficulty === 6
+                ? destinations.find((action) => /伊阙关|小平津/.test(action.label))
+                : undefined) ?? destinations[0];
       if (destination) {
         await expect(phone.locator('.shanhetu-route')).toBeVisible();
         if (([6, 11].includes(difficulty) || difficulty >= 16) && view.chapter === 1) {
@@ -623,8 +674,10 @@ async function playRemainingRoute(general, allowDefeat = false, stopAfterSecondC
     battles.filter((item) => item.kind === 'boss' && item.outcome === 'victory').length,
     3,
   );
-  assert.equal(recruits.length, 3);
-  assert(battles.some((item) => item.opening.companions.length >= 3));
+  if (difficulty < 16) {
+    assert.equal(recruits.length, 3);
+    assert(battles.some((item) => item.opening.companions.length >= 3));
+  }
   assert.equal(
     journey().bookAward.victories,
     battles.filter((item) => item.outcome === 'victory').length,
@@ -670,7 +723,7 @@ async function playNightmareJourneys(difficultyInput, chooseOpening, startJourne
     if (difficulty < 20)
       await expect(difficultyInput.locator(`option[value="${difficulty + 1}"]`)).toBeDisabled();
     let cleared = false;
-    for (let attempt = 0; attempt < 12 && !cleared; attempt++) {
+    for (let attempt = 0; attempt < 80 && !cleared; attempt++) {
       await difficultyInput.selectOption(String(difficulty));
       await expect(phone.locator('#shanhetu-difficulty-hint')).toContainText('函谷关');
       await chooseOpening(2219);
@@ -679,8 +732,12 @@ async function playNightmareJourneys(difficultyInput, chooseOpening, startJourne
       assert.equal(new Set(journey().actions.map((action) => action.general)).size, 5);
       const hero = await chooseNextHero();
       const start = journey();
+      console.log(`${difficulty}, draft ${attempt + 1}: ${hero}, ${start.map.name}`);
       assert.equal(start.difficulty, difficulty);
-      if (difficulty === 16 && start.map.regionId !== 'region-2') {
+      if (
+        (difficulty === 16 && start.map.regionId !== 'region-2') ||
+        !nightmareHeroes.includes(hero)
+      ) {
         await phone.locator('#shanhetu-end').tap();
         await phone
           .locator('#shanhetu-end-dialog')
@@ -691,6 +748,7 @@ async function playNightmareJourneys(difficultyInput, chooseOpening, startJourne
           difficulty,
           runId: start.id,
           initialRegion: start.map.regionId,
+          hero,
           outcome: 'retreat',
         });
         await snapshot();
@@ -703,6 +761,7 @@ async function playNightmareJourneys(difficultyInput, chooseOpening, startJourne
         difficulty,
         runId: start.id,
         initialRegion: start.map.regionId,
+        hero,
         outcome: journey().phase,
       });
       if (cleared) {

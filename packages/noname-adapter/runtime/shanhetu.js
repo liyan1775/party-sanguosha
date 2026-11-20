@@ -191,6 +191,8 @@ export async function installShanhetu(setup) {
         next.armor,
       );
       await equipFixedEquipment(player, next);
+      if (next.skills.includes('party_shanhetu_nm_3382'))
+        await event.trigger('partyShanhetuEnterForm');
     },
   };
   for (const tactic of setup.shanhetuGrowth.tactics) {

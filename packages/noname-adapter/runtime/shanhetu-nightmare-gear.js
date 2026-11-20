@@ -139,6 +139,19 @@ export function installNightmareGear(ids, recordUse = () => {}) {
         },
       },
     },
+    party_shanhetu_nm_card_20776: {
+      name: '三首',
+      info: '受到伤害时，你可亮出牌堆顶三张牌。若其中有本回合未使用过的牌类别，防止此伤害。',
+      subtype: 'equip2',
+      skill: {
+        inherit: 'sanshou',
+        audio: false,
+        async content(event, trigger, player) {
+          recordUse(event.name);
+          await lib.skill.sanshou.content(event, trigger, player);
+        },
+      },
+    },
     party_shanhetu_nm_card_20846: jade,
     party_shanhetu_nm_card_20847: jade,
     [flyingBlade]: {
@@ -261,6 +274,10 @@ export function installNightmareGear(ids, recordUse = () => {}) {
     lib.skill[id] = { ...skill, equipSkill: true };
     lib.translate[id] = name;
     lib.translate[`${id}_info`] = info;
+    if (skill.inherit) {
+      if (!lib.skill[skill.inherit]) throw new Error(`缺少${name}所需的原生技能`);
+      game.finishSkill(id);
+    }
     game.finishCard(id);
   }
 }

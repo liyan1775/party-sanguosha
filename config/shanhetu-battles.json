@@ -2056,6 +2056,23 @@
           "medium": {
             "sourceSkills": [721],
             "skills": ["party_shanhetu_qingjian"]
+          },
+          "hard": {
+            "startingCards": 5,
+            "equipment": [
+              {
+                "id": 20761,
+                "name": "金乌落日弓",
+                "nativeId": "party_shanhetu_nm_card_20761",
+                "suit": "heart",
+                "number": 5,
+                "range": 9,
+                "spellId": 1512
+              }
+            ]
+          },
+          "nightmare": {
+            "draw": 2
           }
         },
         {
@@ -2074,10 +2091,26 @@
           "medium": {
             "sourceSkills": [905],
             "skills": ["shebian"]
+          },
+          "hard": {
+            "startingCards": 5,
+            "equipment": [
+              {
+                "id": 20766,
+                "name": "刑天破军斧",
+                "nativeId": "party_shanhetu_xingtian_axe",
+                "suit": "diamond",
+                "number": 5,
+                "range": 4,
+                "spellId": 1513
+              }
+            ]
+          },
+          "nightmare": {
+            "draw": 2
           }
         }
-      ],
-      "maximumDifficulty": 10
+      ]
     },
     {
       "id": 22651,
@@ -2169,7 +2202,7 @@
       "id": 2653,
       "name": "黄巾余匪",
       "groupId": 2653,
-      "definitionPacks": [],
+      "definitionPacks": ["xianding", "standard", "refresh"],
       "enemies": [
         {
           "generalId": 4871,
@@ -2186,7 +2219,7 @@
           "sourceSkills": [],
           "nextForm": {
             "sourceGroupId": 265301,
-            "difficulties": [6, 7, 8, 9, 10],
+            "difficulties": [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
             "generalId": 4872,
             "name": "张燕",
             "group": "qun",
@@ -2202,15 +2235,55 @@
             "medium": {
               "sourceSkills": [14039],
               "skills": ["party_shanhetu_biri"]
+            },
+            "hard": {
+              "startingCards": 5,
+              "skills": ["party_shanhetu_nm_3382"],
+              "sourceSkills": [3382],
+              "equipment": [
+                {
+                  "id": 20777,
+                  "name": "三首",
+                  "nativeId": "party_shanhetu_nm_card_20776",
+                  "suit": "diamond",
+                  "number": 12,
+                  "range": 0,
+                  "spellId": 3278,
+                  "subtype": "equip2"
+                }
+              ]
+            },
+            "nightmare": {
+              "draw": 2
             }
           },
           "medium": {
             "sourceSkills": [3231],
             "skills": ["party_shanhetu_leijie"]
+          },
+          "hard": {
+            "skills": ["tiandu"],
+            "sourceSkills": [51],
+            "equipment": [
+              {
+                "id": 20776,
+                "name": "三首",
+                "nativeId": "party_shanhetu_nm_card_20776",
+                "suit": "diamond",
+                "number": 12,
+                "range": 0,
+                "spellId": 3278,
+                "subtype": "equip2"
+              }
+            ]
+          },
+          "nightmare": {
+            "draw": 2,
+            "skills": ["reguicai"],
+            "sourceSkills": [719]
           }
         }
-      ],
-      "maximumDifficulty": 10
+      ]
     },
     {
       "id": 2654,
@@ -2280,7 +2353,7 @@
       "id": 2655,
       "name": "江东猛虎",
       "groupId": 2655,
-      "definitionPacks": ["refresh", "onlyOL", "shenhua"],
+      "definitionPacks": ["refresh", "onlyOL", "shenhua", "yingbian"],
       "enemies": [
         {
           "generalId": 442,
@@ -2294,7 +2367,23 @@
           "startingCards": 4,
           "extraSha": 0,
           "skills": ["rezhiheng"],
-          "sourceSkills": [872]
+          "sourceSkills": [872],
+          "nightmare": {
+            "skills": ["weishu"],
+            "sourceSkills": [3084],
+            "equipment": [
+              {
+                "id": 20721,
+                "name": "黑光铠",
+                "nativeId": "heiguangkai",
+                "suit": "club",
+                "number": 2,
+                "range": 0,
+                "spellId": 6011,
+                "subtype": "equip2"
+              }
+            ]
+          }
         },
         {
           "generalId": 609,
@@ -2308,7 +2397,24 @@
           "startingCards": 4,
           "extraSha": 0,
           "skills": ["party_shanhetu_hulie", "olsbyipo"],
-          "sourceSkills": [14150, 3435]
+          "sourceSkills": [14150, 3435],
+          "hard": {
+            "startingCards": 5,
+            "equipment": [
+              {
+                "id": 20876,
+                "name": "妖刀赤瞳",
+                "nativeId": "party_shanhetu_nm_card_20876",
+                "suit": "heart",
+                "number": 6,
+                "range": 3,
+                "spellId": 14087
+              }
+            ]
+          },
+          "nightmare": {
+            "draw": 2
+          }
         },
         {
           "generalId": 452,
@@ -2322,10 +2428,26 @@
           "startingCards": 4,
           "extraSha": 0,
           "skills": ["oljiang", "party_shanhetu_hunzi"],
-          "sourceSkills": [3201, 14153]
+          "sourceSkills": [3201, 14153],
+          "hard": {
+            "startingCards": 5
+          },
+          "nightmare": {
+            "equipment": [
+              {
+                "id": 20722,
+                "name": "黑光铠",
+                "nativeId": "heiguangkai",
+                "suit": "club",
+                "number": 2,
+                "range": 0,
+                "spellId": 6011,
+                "subtype": "equip2"
+              }
+            ]
+          }
         }
-      ],
-      "maximumDifficulty": 10
+      ]
     },
     {
       "id": 2664,

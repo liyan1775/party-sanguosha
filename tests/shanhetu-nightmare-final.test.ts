@@ -26,33 +26,58 @@ async function fixture() {
       '\ninstallNightmareFinalSkills(record); ({collect:collectNightmareFinalState,restore:restoreNightmareFinalState});',
     { lib, game, ui, get, record: (use: string) => uses.push(use) },
   );
-  return { lib, game, ui, get, uses, projection, skill: (id: number) => lib.skill['party_shanhetu_nm_' + id] };
+  return {
+    lib,
+    game,
+    ui,
+    get,
+    uses,
+    projection,
+    skill: (id: number) => lib.skill['party_shanhetu_nm_' + id],
+  };
 }
 
-test('终章恢复只处理当前演员受规则改变的公开技能，不改同名普通武将',async()=>{
-  const {projection}=await fixture();
-  function actor(ids:string[]) {
-    const skills=new Set(ids);
-    const storage:Record<string,number>={};
-    return {skills,storage,hasSkill:(id:string)=>skills.has(id),addSkill:(id:string)=>skills.add(id),
-      addTempSkill:(id:string)=>skills.add(id),removeSkill:(id:string)=>skills.delete(id),
-      countMark:(id:string)=>storage[id]??0,markSkill(){},unmarkSkill(){}};
+test('终章恢复只处理当前演员受规则改变的公开技能，不改同名普通武将', async () => {
+  const { projection } = await fixture();
+  function actor(ids: string[]) {
+    const skills = new Set(ids);
+    const storage: Record<string, number> = {};
+    return {
+      skills,
+      storage,
+      hasSkill: (id: string) => skills.has(id),
+      addSkill: (id: string) => skills.add(id),
+      addTempSkill: (id: string) => skills.add(id),
+      removeSkill: (id: string) => skills.delete(id),
+      countMark: (id: string) => storage[id] ?? 0,
+      markSkill() {},
+      unmarkSkill() {},
+    };
   }
-  const prefix='party_shanhetu_nm_';
-  const drunk={skills:[prefix+14210,'benghuai']};
-  const changed=actor([prefix+14210,'zaiqi',prefix+14209]);
-  const summary=projection.collect(changed,drunk);
-  assert.deepEqual(JSON.parse(JSON.stringify(summary)),{silenced:true,lostBenghuai:true,zaiqi:true});
-  const mirror=actor(drunk.skills);projection.restore(mirror,summary,drunk);
-  assert.deepEqual([...mirror.skills].sort(),[...changed.skills].sort());
-  const soul={skills:[prefix+14214,'benghuai']};
-  const transformed=actor(soul.skills);transformed.storage[prefix+14214]=3;
-  const angry=projection.collect(transformed,soul);
-  assert.deepEqual(JSON.parse(JSON.stringify(angry)),{rage:3});
-  projection.restore(mirror,angry,soul);assert.equal(mirror.storage[prefix+14214],3);
-  const hero=actor(['benghuai','liuli']);
-  projection.restore(hero,summary,undefined);
-  assert(hero.skills.has('benghuai'));assert(hero.skills.has('liuli'));assert(!hero.skills.has('zaiqi'));
+  const prefix = 'party_shanhetu_nm_';
+  const drunk = { skills: [prefix + 14210, 'benghuai'] };
+  const changed = actor([prefix + 14210, 'zaiqi', prefix + 14209]);
+  const summary = projection.collect(changed, drunk);
+  assert.deepEqual(JSON.parse(JSON.stringify(summary)), {
+    silenced: true,
+    lostBenghuai: true,
+    zaiqi: true,
+  });
+  const mirror = actor(drunk.skills);
+  projection.restore(mirror, summary, drunk);
+  assert.deepEqual([...mirror.skills].sort(), [...changed.skills].sort());
+  const soul = { skills: [prefix + 14214, 'benghuai'] };
+  const transformed = actor(soul.skills);
+  transformed.storage[prefix + 14214] = 3;
+  const angry = projection.collect(transformed, soul);
+  assert.deepEqual(JSON.parse(JSON.stringify(angry)), { rage: 3 });
+  projection.restore(mirror, angry, soul);
+  assert.equal(mirror.storage[prefix + 14214], 3);
+  const hero = actor(['benghuai', 'liuli']);
+  projection.restore(hero, summary, undefined);
+  assert(hero.skills.has('benghuai'));
+  assert(hero.skills.has('liuli'));
+  assert(!hero.skills.has('zaiqi'));
 });
 
 function selection(result: any) {
@@ -132,9 +157,14 @@ test('封赏只取本回合仍在弃牌堆的同花色牌，出牌次数和濒�
   };
   let beneficiary: any = owner;
   const calls: string[] = [];
-  owner.gain = async (gained: any[]) => {
+  let transfer: object | undefined;
+  let preventGain = false;
+  owner.hasHistory = (type: string, filter: Function) =>
+    type === 'gain' && !preventGain && beneficiary === owner && filter(transfer);
+  owner.gain = (gained: any[]) => {
     assert.equal(gained.length, 2);
     calls.push('gain');
+    return (transfer = {});
   };
   assert(!skill(14207).filter({ name: 'chooseToUse' }, owner));
   assert(skill(14207).filter({ name: 'dying' }, owner));
@@ -142,6 +172,11 @@ test('封赏只取本回合仍在弃牌堆的同花色牌，出牌次数和濒�
   assert.deepEqual(calls, ['party_shanhetu_nm_14207_used', 'gain']);
   calls.length = 0;
   beneficiary = { gain: owner.gain };
+  await skill(14207).content({}, { name: 'dying' }, owner);
+  assert.deepEqual(calls, ['gain', 'jiu']);
+  calls.length = 0;
+  preventGain = true;
+  beneficiary = owner;
   await skill(14207).content({}, { name: 'dying' }, owner);
   assert.deepEqual(calls, ['gain', 'jiu']);
   assert.equal(get.position(cards[3]), 'h');

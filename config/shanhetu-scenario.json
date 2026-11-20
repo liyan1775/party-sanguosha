@@ -1421,7 +1421,7 @@
       "battleIds": [22481, 22489, 22445, 22444],
       "regularBossIds": [2648, 2649, 2650, 2651],
       "regularBattleIds": [2481, 2489, 2445, 2444],
-      "hardBossIds": [2648, 2649, 2650],
+      "hardBossIds": [2648, 2649, 2650, 2651],
       "hardBattleIds": [2481, 2489, 2445, 2444],
       "locations": [
         {
@@ -1486,7 +1486,7 @@
       "battleIds": [22481, 22489, 22445, 22444],
       "regularBossIds": [2652, 2653, 2654, 2655],
       "regularBattleIds": [2481, 2489, 2445, 2444],
-      "hardBossIds": [2652, 2654],
+      "hardBossIds": [2652, 2653, 2654, 2655],
       "hardBattleIds": [2481, 2489, 2445, 2444],
       "locations": [
         {

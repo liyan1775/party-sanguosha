@@ -27,6 +27,9 @@ function fixture(ids: number[]) {
   const players: any[] = [];
   const game = {
     finishCard: (name: string) => registered.push(name),
+    finishSkill(name: string) {
+      lib.skill[name] = { ...lib.skill[lib.skill[name].inherit], ...lib.skill[name] };
+    },
     log: () => {},
     hasNature: (card: { nature: string }, nature: string) => card.nature === nature,
     hasPlayer: (predicate: (actor: unknown) => boolean) => players.some(predicate),
@@ -35,6 +38,10 @@ function fixture(ids: number[]) {
       return Object.assign(found, { randomGet: () => found[0] });
     },
     broadcastAll: (callback: (...args: any[]) => void, ...args: any[]) => callback(...args),
+  };
+  lib.skill.sanshou = {
+    trigger: { player: 'damageBegin4' },
+    content: (event: { invoked: boolean }) => (event.invoked = true),
   };
   const context = vm.createContext({
     lib,
@@ -80,6 +87,20 @@ test('螭纹玉佩两种花色共用效果，满血且可改摸牌才加二，�
     await skill.content({ name: id }, { name: 'phaseUse' }, hurt);
   }
   assert.equal(recovered, 2);
+});
+
+test('三首作为独立防具复用同名原生技能的受伤时机和规则', async () => {
+  const { lib, registered, records } = fixture([20776]);
+  const id = native(20776);
+  assert.deepEqual(registered, [id]);
+  assert.equal(lib.card[id].subtype, 'equip2');
+  assert.equal(lib.card[id].skills[0], id);
+  assert.equal(lib.skill[id].equipSkill, true);
+  assert.equal(lib.skill[id].trigger.player, 'damageBegin4');
+  const event = { name: id, invoked: false };
+  await lib.skill[id].content(event, {}, {});
+  assert.equal(event.invoked, true);
+  assert.deepEqual(records, [id]);
 });
 
 test('鸾凤和鸣剑只响应雷火杀，目标放弃弃牌才令装备者摸牌', async () => {

@@ -736,6 +736,7 @@ export function installControls() {
     if (!globalThis.partyEngine.setup.tableView) {
       const setup = globalThis.partyEngine.setup;
       let returnLabel = setup.shanhetu ? '继续征程' : '回到房间';
+      let journeySettled = false;
       const returnFromTable = () => {
         parent.postMessage({ type: 'party-return-room', matchId: setup.id }, location.origin);
       };
@@ -743,27 +744,38 @@ export function installControls() {
       // may set over directly. Observe its real dialog instead of only wrapping
       // game.over/lib.onover; neither intercepts all native ending paths.
       updateSettlement = () => {
-        if (_status.over && ui.dialog?.isConnected && !ui.partyReturnRoom?.isConnected) {
+        const nativeSettlement = _status.over && ui.dialog?.isConnected;
+        if (
+          (nativeSettlement || journeySettled) &&
+          ui.control?.isConnected &&
+          !ui.partyReturnRoom?.isConnected
+        ) {
           globalThis.partyEngine.proof.ended = true;
           ui.partyReturnRoom = ui.create.control(returnLabel, returnFromTable);
           ui.partyReturnRoom.id = 'party-return-room';
         }
       };
-      if (setup.shanhetu)
+      if (setup.shanhetu) {
         window.addEventListener('message', (event) => {
           if (
             event.source !== parent ||
             event.origin !== location.origin ||
             event.data?.type !== 'party-finished' ||
             event.data.matchId !== setup.id ||
-            event.data.shanhetuReturn !== 'ending' ||
-            returnLabel === '查看结局'
+            !['ending', 'continue'].includes(event.data.shanhetuReturn)
           )
             return;
-          returnLabel = '查看结局';
-          if (ui.partyReturnRoom?.isConnected)
-            ui.partyReturnRoom.replace(returnLabel, returnFromTable);
+          // An ended native reinit may rebuild the seats without replaying the result dialog.
+          journeySettled = true;
+          const label = event.data.shanhetuReturn === 'ending' ? '查看结局' : '继续征程';
+          if (label !== returnLabel) {
+            returnLabel = label;
+            if (ui.partyReturnRoom?.isConnected) ui.partyReturnRoom.replace(label, returnFromTable);
+          }
+          updateSettlement();
         });
+        parent.postMessage({ type: 'party-settlement-ready', matchId: setup.id }, location.origin);
+      }
     }
     const feedback = document.createElement('div');
     feedback.id = 'party-action-status';

@@ -199,6 +199,11 @@ test('三章结局按难度、声望、属性和累计铜币判定', () => {
   assert.equal(finalJourneyReport(11, true, stats).title, '居功至伟');
   assert.equal(finalJourneyReport(11, true, { ...stats, earnedCoins: 3999 }).title, '大获全胜');
   assert.equal(finalJourneyReport(2, true, stats).title, '大获全胜');
+  for (const difficulty of [16, 17, 18, 19, 20])
+    assert.equal(
+      finalJourneyReport(difficulty, true, { ...stats, strategy: 100 }).title,
+      '大获全胜',
+    );
   recordJourneyDecision(stats, 148401);
   assert.equal(finalJourneyReport(1, true, stats).title, '大获全胜');
   assert.equal(finalJourneyReport(6, false, stats).title, '折戟沉沙');

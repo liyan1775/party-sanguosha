@@ -178,9 +178,13 @@ export function installNightmareFinalSkills(recordUse) {
       if (!trigger) player.addTempSkill(fengshang + '_used', 'phaseUseAfter');
       recordUse(fengshang);
       const target = choice.targets[0];
-      await target.gain(choice.links, 'gain2');
+      const distribution = target.gain(choice.links, 'gain2');
+      await distribution;
       const wine = { name: 'jiu', isCard: true };
-      if (target !== player && player.hasUseTarget(wine, true, false))
+      if (
+        !player.hasHistory('gain', (gain) => gain === distribution) &&
+        player.hasUseTarget(wine, true, false)
+      )
         await player.chooseUseTarget(wine, true, false);
     },
     subSkill: { used: { charlotte: true } },

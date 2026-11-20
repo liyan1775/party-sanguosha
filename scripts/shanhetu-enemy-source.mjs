@@ -21,6 +21,8 @@ const knownEquipment = {
   20656: 'party_shanhetu_inferno_halberd',
   20871: 'party_shanhetu_soul_cutter',
   20766: 'party_shanhetu_xingtian_axe',
+  20776: 'party_shanhetu_nm_card_20776',
+  20777: 'party_shanhetu_nm_card_20776',
   20856: 'party_shanhetu_thunder_blade',
   20616: 'shufazijinguan',
   20636: 'guofengyupao',

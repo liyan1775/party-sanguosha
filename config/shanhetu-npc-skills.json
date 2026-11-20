@@ -1329,6 +1329,34 @@
       "name": "红颜",
       "description": "锁定技，你的黑桃牌视为红桃牌。",
       "implementation": "native-shenhua"
+    },
+    {
+      "id": 51,
+      "nativeId": "tiandu",
+      "name": "天妒",
+      "description": "当你的判定牌生效后，你可以获得此牌。",
+      "implementation": "native-standard"
+    },
+    {
+      "id": 719,
+      "nativeId": "reguicai",
+      "name": "鬼才",
+      "description": "当一张判定牌生效前，你可以用一张牌代替之。",
+      "implementation": "native-refresh"
+    },
+    {
+      "id": 3382,
+      "nativeId": "party_shanhetu_nm_3382",
+      "name": "动荡",
+      "description": "锁定技，当你进入战场时，立即结束当前结算，结束当前角色行动阶段，然后开始你的回合。",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 3084,
+      "nativeId": "weishu",
+      "name": "卫戍",
+      "description": "锁定技，你于摸牌阶段外非因本技能摸牌后，你令一名角色摸一张牌；你的牌于弃牌阶段外因弃置置入弃牌堆后，你弃置一名其他角色一张牌。",
+      "implementation": "native-yingbian"
     }
   ]
 }

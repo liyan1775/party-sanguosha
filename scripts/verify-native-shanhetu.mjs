@@ -104,6 +104,9 @@ assert([2, 3].includes(finalChapter));
 const withGrowth = process.env.SHANHETU_BOSS_GROWTH !== '0';
 const withCarry = process.env.SHANHETU_VERIFY_CARRY === '1';
 const withAlly = stages || process.env.SHANHETU_VERIFY_COMPANION === '1';
+const fullParty = process.env.SHANHETU_VERIFY_STAGE_PARTY === '1';
+if (fullParty) assert.equal(boss, 'dongzhuo-nightmare-stage');
+const stageRecruits = fullParty ? [997105, 997110, 997116] : [];
 const statusProbe = process.env.SHANHETU_VERIFY_STATUS;
 assert(
   !statusProbe ||
@@ -122,8 +125,11 @@ const campaign = new ShanhetuCampaign({
   initialCoins: 0,
   initialSkillSlots: 2,
   ...(withAlly ? { openingCompanions: [997103] } : {}),
-  candidates:
-    boss === 'dongzhuo' ? ['huaxiong'] : ['caocao', 'guanyu', 'zhangfei', 'zhaoyun', 'machao'],
+  candidates: fullParty
+    ? ['re_xusheng']
+    : boss === 'dongzhuo'
+      ? ['huaxiong']
+      : ['caocao', 'guanyu', 'zhangfei', 'zhaoyun', 'machao'],
   rewards: [
     {
       id: 'initial',
@@ -180,6 +186,7 @@ const campaign = new ShanhetuCampaign({
                   { kind: 'card', amount: 4014 },
                 ]
               : []),
+            ...stageRecruits.map((amount) => ({ kind: 'companion', amount })),
           ],
         },
       ],
@@ -207,6 +214,19 @@ function campaignAction(label) {
 async function observeBossStage(worker) {
   await worker.evaluate(() => {
     const { game, lib, proof, shanhetuOutcome, ui } = partyEngine;
+    proof.transferredPhases = [];
+    lib.skill.probe_shanhetu_transferred_phase = {
+      trigger: { global: 'phaseBeforeStart' },
+      forced: true,
+      firstDo: true,
+      popup: false,
+      charlotte: true,
+      filter: (event, player) => player === game.zhu && event.skill === 'party_shanhetu_nm_3382',
+      async content(event, trigger) {
+        proof.transferredPhases.push(trigger.player.playerid);
+      },
+    };
+    game.addGlobalSkill('probe_shanhetu_transferred_phase');
     const skill = lib.skill.party_shanhetu_stage;
     const transform = skill.content;
     const shaUses = (player) =>
@@ -217,7 +237,13 @@ async function observeBossStage(worker) {
       const judgments = player.getCards('j');
       const previousWeapon = player.getEquip(1);
       const uses = shaUses(player);
+      const previousPhase = trigger.getParent('phase', true);
+      const previousAction = trigger.getParent('phaseUse', true);
+      const previousCardUse = trigger.getParent('useCard', true);
       await transform(event, trigger, player);
+      const phaseQueue = previousPhase?.parent?.next;
+      const activeIndex = phaseQueue?.indexOf(previousPhase) ?? -1;
+      const followingPhase = activeIndex >= 0 ? phaseQueue[activeIndex + 1] : undefined;
       const preserved = (before, after) =>
         before.length === after.length && before.every((card) => after.includes(card));
       proof.bossStage = {
@@ -242,6 +268,18 @@ async function observeBossStage(worker) {
         replacesWeapon: !!previousWeapon && previousWeapon !== player.getEquip(1),
         oldWeaponInPile:
           !!previousWeapon && [ui.cardPile, ui.discardPile].includes(previousWeapon.parentNode),
+        ...(player.hasSkill('party_shanhetu_nm_3382') && previousPhase
+          ? {
+              turnTransfer: {
+                previousTurnEnds: previousPhase.num >= previousPhase.phaseList.length,
+                remainingActionsSkipped: !previousAction || previousAction.skipped === true,
+                remainingTargetsExcluded: !previousCardUse || previousCardUse.all_excluded === true,
+                nextPhaseIsBoss:
+                  followingPhase?.skill === 'party_shanhetu_nm_3382' &&
+                  followingPhase.player === player,
+              },
+            }
+          : {}),
       };
       // Hold the test just after the natural transition so a real reload can
       // inspect the same public form before later combat changes its cards.
@@ -289,6 +327,14 @@ async function reloadBossStage(worker, matchId, stage, before, next) {
   assert.deepEqual([stage.hp, stage.maxHp, stage.armor], [next.hp, next.maxHp, next.armor]);
   assert.equal(stage.shaLimit, 1 + next.extraSha);
   assert(next.skills.every((skill) => stage.skills.includes(skill)));
+  if (next.skills.includes('party_shanhetu_nm_3382')) {
+    assert.deepEqual(stage.turnTransfer, {
+      previousTurnEnds: true,
+      remainingActionsSkipped: true,
+      remainingTargetsExcluded: true,
+      nextPhaseIsBoss: true,
+    });
+  }
   assert(
     before.skills.every((skill) => next.skills.includes(skill) || !stage.skills.includes(skill)),
   );
@@ -527,7 +573,7 @@ try {
     settings: {
       mode: 'identity',
       playerCount: 1,
-      generalPreset: 'beginner',
+      generalPreset: fullParty ? 'mobile-college-2026' : 'beginner',
       allowGeneralSelection: false,
       extensions: [],
     },
@@ -636,17 +682,27 @@ try {
     }
     await worker.evaluate(() => {
       partyEngine.proof.drawCounts = [];
+      const withJade = new WeakSet();
       partyEngine.lib.skill.probe_shanhetu_draws = {
-        trigger: { global: 'phaseDrawEnd' },
+        trigger: { global: ['phaseDrawBegin2', 'phaseDrawEnd'] },
         forced: true,
         popup: false,
         charlotte: true,
+        firstDo: true,
         filter(event, player) {
           return player === partyEngine.game.zhu;
         },
         async content(event, trigger) {
+          const actor = trigger.player;
+          if (event.triggername === 'phaseDrawBegin2') {
+            if (
+              actor.isHealthy() &&
+              [20846, 20847].some((id) => actor.getEquip(`party_shanhetu_nm_card_${id}`))
+            )
+              withJade.add(trigger);
+            return;
+          }
           if (partyEngine.proof.drawCounts.length < 32) {
-            const actor = trigger.player;
             partyEngine.proof.drawCounts.push({
               id: actor.playerid,
               general: actor.name1,
@@ -655,6 +711,7 @@ try {
               hp: actor.hp,
               skills: [...actor.skills],
               crown: !!actor.getEquip('xuwangzhimian'),
+              fullHealthWithJade: withJade.has(trigger),
               opponents: partyEngine.game.countPlayer((target) => target.side !== actor.side),
             });
           }
@@ -1016,9 +1073,11 @@ try {
                   event.name === 'recover' && event.getParent()?.name === 'shanhetuHalberdRecovery',
               )
               .map((event) => event.num),
+            ...(proof.bossStage.turnTransfer ? { transferredPhases: proof.transferredPhases } : {}),
           };
         })
       : undefined;
+    if (stage?.turnTransfer) assert.deepEqual(stageEffects?.transferredPhases, [stage.id]);
     const weaponUses = await worker.evaluate(() =>
       partyEngine.setup.shanhetuRecipe.enemies.map((enemy, i) => {
         const player = partyEngine.lib.playerOL[`shanhetu-enemy-${i}`];
@@ -1029,7 +1088,8 @@ try {
             (skill) =>
               ['chixueqingfeng', 'fangtian_skill', 'wushuangfangtianji_skill'].includes(skill) ||
               [...(enemy.fixedEquipment ?? []), ...(enemy.nextForm?.fixedEquipment ?? [])].some(
-                ({ nativeId }) => skill === `${nativeId}_skill`,
+                ({ nativeId }) =>
+                  [nativeId, `${nativeId}_skill`, `${nativeId}_damage`].includes(skill),
               ),
           );
       }),
@@ -1092,6 +1152,7 @@ try {
             form.draw +
             (draw.skills.includes('reyingzi') ? 1 : 0) +
             (draw.crown ? 2 : 0) +
+            (draw.fullHealthWithJade && !draw.fixed ? 2 : 0) +
             (draw.skills.includes('party_shanhetu_might') ? draw.opponents : 0) +
             (terrainId === 13278 && !draw.fixed ? 2 : 0);
           return (
@@ -1150,6 +1211,7 @@ try {
         scope: 'Internal native PVE integration, not complete Shanhetu or phone/WeChat acceptance',
         physicalPhone: false,
         boss: boss ?? null,
+        ...(fullParty ? { campRecruitIds: stageRecruits } : {}),
         defeatFixture: testDefeat
           ? 'Separate one-HP/one-max-HP campaign summaries, no in-battle HP or deck changes'
           : null,

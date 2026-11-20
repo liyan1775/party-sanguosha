@@ -70,6 +70,47 @@ const choice = (result: any) => ({
 });
 const plain = (value: any) => JSON.parse(JSON.stringify(value));
 
+test('动荡让张燕紧接正在执行的回合，调度器收尾后先于已有额外回合', async () => {
+  const { actor, skill } = await fixture();
+  const zhang = actor('zhang');
+  const previousExtra = { name: 'phase', skill: 'pending-extra' };
+  const next: object[] = [];
+  let jumped = -1;
+  const activePhase = {
+    parent: { next },
+    phaseList: ['phaseDraw', 'phaseUse', 'phaseDiscard'],
+    num: 1,
+    goto: (step: number) => (jumped = step),
+  };
+  next.push(activePhase, previousExtra);
+  const activeUse = { all_excluded: false };
+  const activeAction = { skipped: false };
+  const parents: Record<string, unknown> = {
+    phase: activePhase,
+    useCard: activeUse,
+    phaseUse: activeAction,
+  };
+  const stage = { getParent: (name: string) => parents[name] };
+  zhang.insertPhase = (skill: string, first: boolean) => {
+    const inserted = { name: 'phase', player: zhang, skill };
+    if (first) next.unshift(inserted);
+    else next.push(inserted);
+    return inserted;
+  };
+  const runningTurn = next[0];
+  await skill(3382).content({}, stage, zhang);
+  assert.equal(activeUse.all_excluded, true);
+  assert.equal(activeAction.skipped, true);
+  assert.equal(activePhase.num, activePhase.phaseList.length);
+  assert.equal(jumped, 11);
+  // The pinned scheduler consumes its initial next[0] only after awaiting it.
+  assert.equal(next.shift(), runningTurn);
+  assert.deepEqual(next, [
+    { name: 'phase', player: zhang, skill: 'party_shanhetu_nm_3382' },
+    previousExtra,
+  ]);
+});
+
 test('独立来源的咒雪与铁炮分别按座位和使用者回合消退，公开恢复不带牌', async () => {
   const { actor, skill, api } = await fixture();
   const one = actor('one'),

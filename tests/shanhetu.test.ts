@@ -15,7 +15,7 @@ import {
 test('每种敌军、第二形态及队友都使用原表指定的独立本机立绘', () => {
   assert.equal(art.sourceDecodedSha256, companions.sourceDecodedSha256);
   const paths = new Set<string>();
-  const actors = encounters.battles.flatMap((battle) =>
+  const actors = encounters.battles.flatMap((battle: { id: number; maximumDifficulty?: number }) =>
     shanhetuRecipe(battle.id, battle.maximumDifficulty ?? 20).enemies.flatMap((enemy) =>
       enemy.nextForm ? [enemy, enemy.nextForm] : [enemy],
     ),
