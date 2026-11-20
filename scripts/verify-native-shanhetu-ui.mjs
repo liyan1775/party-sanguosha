@@ -101,10 +101,37 @@ const wait = async (condition, message) => {
 };
 const shot = async (name) => phone.screenshot({ path: `${output}/${name}.png` });
 const journey = () => room.snapshot().shanhetu;
+const nightmareHeroes = [
+  'shen_guojia',
+  'mb_shen_machao',
+  'mb_caomao',
+  'shen_ganning',
+  'miheng',
+  'liuyan',
+  'db_wenyang',
+  'pot_weiyan',
+  'shen_taishici',
+  'shen_sunce',
+  'shen_zhaoyun',
+  'mb_caochun',
+  'luotong',
+  'zhouchu',
+  'caoying',
+  'maliang',
+  're_huanggai',
+  'quyi',
+];
 const preferredHero = (picks) =>
-  ['machao', 'zhaoyun', 'caocao', 'zhangfei', 'huaxiong', 'guanyu', 'sunquan'].find((id) =>
-    picks.includes(id),
-  ) ?? picks[0];
+  [
+    ...(nightmareBook ? nightmareHeroes : []),
+    'machao',
+    'zhaoyun',
+    'caocao',
+    'zhangfei',
+    'huaxiong',
+    'guanyu',
+    'sunquan',
+  ].find((id) => picks.includes(id)) ?? picks[0];
 async function select(action) {
   assert(action, 'No usable journey action');
   const { revision } = journey();
@@ -251,19 +278,25 @@ async function battle(general, restart = false) {
           : region.battleIds;
   assert(ids.includes(opening.battleId));
   const rules = source.difficulties.find((rule) => rule.id === difficulty);
+  const byEquipmentName = (left, right) => left.name.localeCompare(right.name);
   assert.deepEqual(
-    opening.enemyOpening,
+    opening.enemyOpening.map((actor) => ({
+      ...actor,
+      equipment: actor.equipment.toSorted(byEquipmentName),
+    })),
     shanhetuRecipe(opening.battleId, difficulty, opening.elapsedMonths, chapter).enemies.map(
       (enemy) => ({
         hp: enemy.hp,
         maxHp: enemy.maxHp,
         armor: enemy.armor,
         cards: enemy.startingCards + (enemy.fixedHand?.length ?? 0),
-        equipment: (enemy.fixedEquipment ?? []).map(({ nativeId: name, suit, number }) => ({
-          name,
-          suit,
-          number,
-        })),
+        equipment: (enemy.fixedEquipment ?? [])
+          .map(({ nativeId: name, suit, number }) => ({
+            name,
+            suit,
+            number,
+          }))
+          .toSorted(byEquipmentName),
         skills: enemy.skills,
       }),
     ),
@@ -569,12 +602,20 @@ async function chooseNextHero() {
 }
 
 async function playNightmareJourneys(difficultyInput, chooseOpening, startJourney) {
+  const preset = process.env.SHANHETU_VERIFY_NIGHTMARE_PRESET ?? 'mobile-college-2026';
+  await phone.getByRole('button', { name: '房间设置', exact: true }).tap();
+  await phone.locator('#general-preset').selectOption(preset);
+  await wait(
+    () => room.snapshot().settings.generalPreset === preset,
+    'Nightmare preset was not applied',
+  );
+  await phone.getByRole('button', { name: '返回出征', exact: true }).tap();
   const first = Number(process.env.SHANHETU_VERIFY_NIGHTMARE_FIRST ?? 16);
   const last = Number(process.env.SHANHETU_VERIFY_NIGHTMARE_LAST ?? 20);
   assert(
     Number.isInteger(first) && Number.isInteger(last) && first >= 16 && last <= 20 && first <= last,
   );
-  checks.nightmare = { first, last, attempts: [], clears: [] };
+  checks.nightmare = { first, last, preset, attempts: [], clears: [] };
   const snapshot = () => writeFile(`${output}/progress.json`, JSON.stringify(checks, null, 2));
   const profile = async () =>
     (await context.request.get(`${origin}/api/rooms/${room.code}/shanhetu/book`)).json();
@@ -588,7 +629,8 @@ async function playNightmareJourneys(difficultyInput, chooseOpening, startJourne
       await expect(phone.locator('#shanhetu-difficulty-hint')).toContainText('函谷关');
       await chooseOpening(2219);
       await startJourney();
-      await expect(phone.locator('#shanhetu-options [data-general]')).toHaveCount(5);
+      await expect(phone.locator('#shanhetu-options [data-general]').first()).toBeVisible();
+      assert.equal(new Set(journey().actions.map((action) => action.general)).size, 5);
       const hero = await chooseNextHero();
       const start = journey();
       assert.equal(start.difficulty, difficulty);

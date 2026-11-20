@@ -759,6 +759,7 @@ try {
       });
     });
     assert(fixedHands.every(Boolean), 'Opening bonus cards match their original card instances');
+    const byEquipmentName = (left, right) => left.name.localeCompare(right.name);
     const openingGear = recipe.enemies.map((enemy) =>
       (enemy.fixedEquipment ?? []).map(({ nativeId: name, suit, number }) => ({
         name,
@@ -767,8 +768,8 @@ try {
       })),
     );
     assert.deepEqual(
-      opening.slice(1, enemyCount + 1).map((actor) => actor.equipment),
-      openingGear,
+      opening.slice(1, enemyCount + 1).map((actor) => actor.equipment.toSorted(byEquipmentName)),
+      openingGear.map((cards) => cards.toSorted(byEquipmentName)),
     );
     assert.deepEqual(
       opening.slice(1, enemyCount + 1).map(({ hp, maxHp, armor }) => ({ hp, maxHp, armor })),
