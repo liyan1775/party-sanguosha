@@ -5,6 +5,39 @@ const military = {
   excludedCards: ['muniu'],
   cardCount: 160,
 };
+// Local mapping of the PVE no-equipment rule onto the pinned native packs.
+// This count describes our fixed template, not a claim about OL's exact suits.
+export const shanhetuCardPile = {
+  id: 'shanhetu135',
+  name: '山河图135张（无装备）',
+  packs: ['standard', 'extra'],
+  excludedCards: [
+    'bagua',
+    'chitu',
+    'cixiong',
+    'dawan',
+    'dilu',
+    'fangtian',
+    'guanshi',
+    'hanbing',
+    'jueying',
+    'qilin',
+    'qinggang',
+    'qinglong',
+    'renwang',
+    'zhangba',
+    'zhuahuang',
+    'zhuge',
+    'zixin',
+    'baiyin',
+    'guding',
+    'hualiu',
+    'muniu',
+    'tengjia',
+    'zhuque',
+  ],
+  cardCount: 135,
+};
 const profiles = {
   beginner: { id: 'standard108', packs: ['standard'], excludedCards: [], cardCount: 108 },
   advanced: military,
@@ -21,7 +54,8 @@ const profiles = {
 };
 
 export function validateCardPile(preset) {
-  const expected = profiles[preset?.id];
+  if (preset?.ruleset && preset.ruleset !== 'shanhetu-s5') throw new Error('未经确认的牌堆规则');
+  const expected = preset?.ruleset === 'shanhetu-s5' ? shanhetuCardPile : profiles[preset?.id];
   const pile = preset?.cardPile;
   if (!expected || !pile) throw new Error('缺少已确认的档位牌堆');
   for (const field of ['id', 'packs', 'excludedCards', 'cardCount'])
@@ -40,5 +74,7 @@ export function prepareCardPile(lib, preset) {
   const cards = lib.card.list.filter((card) => !pile.excludedCards.includes(card[2]));
   if (cards.length !== pile.cardCount) throw new Error('原生牌堆张数不符合本局配置');
   if (cards.some((card) => !lib.card[card[2]])) throw new Error('牌堆存在未载入的原生卡牌');
+  if (preset.ruleset === 'shanhetu-s5' && cards.some((card) => lib.card[card[2]].type === 'equip'))
+    throw new Error('山河图牌堆不得包含装备牌');
   lib.card.list = cards;
 }

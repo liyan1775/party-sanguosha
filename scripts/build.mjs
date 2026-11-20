@@ -19,11 +19,18 @@ await build({
   sourcemap: false,
 });
 await copyFile(path.join(root, 'apps/web/index.html'), path.join(output, 'index.html'));
+for (const name of ['pass', 'encounter', 'market', 'camp']) {
+  await copyFile(
+    path.join(root, `apps/web/assets/shanhetu/${name}.webp`),
+    path.join(output, `shanhetu-${name}.webp`),
+  );
+}
 await build({
   entryPoints: [path.join(root, 'apps/web/src/lobby-theme.css')],
   outfile: path.join(output, 'style.css'),
   bundle: true,
   target: ['chrome91', 'safari16.4'],
+  external: ['/assets/shanhetu-*.webp'],
 });
 await build({
   entryPoints: [path.join(root, 'apps/web/src/table-client.ts')],

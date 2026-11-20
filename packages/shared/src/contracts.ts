@@ -8,9 +8,10 @@ export type {
   CustomRosterGeneral,
 } from './rosters.js';
 import type { CustomRosterRef, CustomRosterSummary } from './rosters.js';
+import type { ShanhetuCampaignView } from './shanhetu.js';
 
 export const APP_ID = 'party-sanguosha';
-export const APP_VERSION = '0.9.0';
+export const APP_VERSION = '0.10.0';
 export const OWNER_OFFLINE_GRACE_MS = 60000;
 export const ROOM_IDLE_GRACE_MS = 10 * 60000;
 
@@ -49,6 +50,13 @@ export const MODES = [
     minPlayers: 4,
     maxPlayers: 4,
     description: 'OL战队斗地主，两队各2人、每局3人出场；标准12局／20分或快速6局／10分',
+  },
+  {
+    id: 'shanhetu',
+    name: '山河图',
+    minPlayers: 1,
+    maxPlayers: 1,
+    description: '单人PVE，诸侯伐董，跨战斗选择路线与构筑',
   },
 ] as const;
 
@@ -153,6 +161,7 @@ export interface EngineStatus {
   experience?: boolean;
   publicSpectating?: boolean;
   doudizhuPractice?: boolean;
+  shanhetu?: boolean;
 }
 
 /** Explicit consent only; identity votes do not contain roles or factions. */
@@ -192,6 +201,7 @@ export interface RoomView {
   matchRecovery?: { deadline: number };
   doudizhu?: DoudizhuPublicState;
   series?: CollegeSeriesView;
+  shanhetu?: ShanhetuCampaignView;
 }
 
 export type MatchFailureCode =

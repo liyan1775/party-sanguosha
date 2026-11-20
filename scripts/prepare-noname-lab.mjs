@@ -3,6 +3,7 @@ import { readFile, writeFile, mkdir, rename, rm } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
+import { downloadArchiveAssets } from './download-noname-assets.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const candidate = JSON.parse(await readFile(resolve(root, 'config/noname-candidate.json'), 'utf8'));
@@ -12,18 +13,35 @@ if (candidate.tag !== 'v1.11.6' || manifest.commit !== candidate.commit) {
 }
 const engineRoot = resolve(root, '.local/noname', candidate.tag);
 const archive = resolve(root, '.local/research/noname.core.zip');
+const coreArchive = candidate.coreArchive;
+async function downloadCore(url, headers) {
+  const response = await fetch(url, { headers, signal: AbortSignal.timeout(120000) });
+  if (!response.ok) {
+    await response.body?.cancel();
+    throw new Error(`Core archive download failed (${response.status})`);
+  }
+  const bytes = Buffer.from(await response.arrayBuffer());
+  if (createHash('sha256').update(bytes).digest('hex') !== coreArchive.sha256)
+    throw new Error('Downloaded core archive checksum mismatch');
+  return bytes;
+}
 let archiveBytes = await readFile(archive).catch((error) => {
   if (error.code === 'ENOENT') return null;
   throw error;
 });
 if (!archiveBytes) {
   console.log('首次准备：正在从无名杀上游下载固定核心包（约 38 MiB）……');
-  const response = await fetch(candidate.coreArchive.url, { signal: AbortSignal.timeout(120000) });
-  if (!response.ok) throw new Error(`Core archive download failed (${response.status})`);
-  archiveBytes = Buffer.from(await response.arrayBuffer());
-  if (createHash('sha256').update(archiveBytes).digest('hex') !== candidate.coreArchive.sha256) {
-    throw new Error('Downloaded core archive checksum mismatch');
-  }
+  archiveBytes = await downloadCore(coreArchive.url).catch(async (directError) => {
+    console.log('发布页下载未完成，正在通过 GitHub 官方 API 重试……');
+    try {
+      return await downloadCore(coreArchive.apiUrl, {
+        Accept: 'application/octet-stream',
+        'X-GitHub-Api-Version': '2026-03-10',
+      });
+    } catch (apiError) {
+      throw new AggregateError([directError, apiError], 'Cannot download pinned core archive');
+    }
+  });
   await mkdir(dirname(archive), { recursive: true });
   const temporary = `${archive}.part`;
   try {
@@ -34,29 +52,31 @@ if (!archiveBytes) {
   }
 }
 const digest = createHash('sha256').update(archiveBytes).digest('hex');
-if (digest !== candidate.coreArchive.sha256 || manifest.commit !== candidate.commit) {
+if (digest !== coreArchive.sha256 || manifest.commit !== candidate.commit) {
   throw new Error('Pinned archive or asset manifest mismatch');
 }
-const extracted = await readFile(resolve(engineRoot, 'noname.js')).catch((error) => {
-  if (error.code === 'ENOENT') return null;
-  throw error;
-});
-if (!extracted) {
-  if (process.platform !== 'win32')
-    throw new Error(`Extract the verified archive into ${engineRoot} first.`);
-  // All paths are derived from this workspace and the fixed candidate. No move
-  // or recursive cleanup, and no overwrite of an existing partial extraction.
-  const quote = (value) => `'${value.replaceAll("'", "''")}'`;
+if (process.platform === 'win32') {
   execFileSync(
     'powershell.exe',
     [
       '-NoProfile',
       '-NonInteractive',
-      '-Command',
-      `Expand-Archive -LiteralPath ${quote(archive)} -DestinationPath ${quote(engineRoot)}`,
+      '-ExecutionPolicy',
+      'Bypass',
+      '-File',
+      resolve(root, 'scripts/restore-noname-core.ps1'),
+      '-Archive',
+      archive,
+      '-Destination',
+      engineRoot,
     ],
-    { stdio: 'inherit' },
+    { stdio: 'inherit', windowsHide: true },
   );
+} else {
+  await readFile(resolve(engineRoot, 'noname.js')).catch((error) => {
+    if (error.code !== 'ENOENT') throw error;
+    throw new Error(`Extract the verified archive into ${engineRoot} first.`);
+  });
 }
 
 const build = JSON.parse(await readFile(resolve(engineRoot, 'game/build-info.json'), 'utf8'));
@@ -86,7 +106,6 @@ async function downloadAsset(url, path) {
   }
 }
 
-let next = 0;
 let downloaded = 0;
 let verified = 0;
 let checkedBytes = 0;
@@ -101,47 +120,59 @@ const progress = () => {
       `资源 ${verified}/${manifest.assets.length} · ${Math.floor(checkedBytes / 1048576)}/${Math.ceil(totalBytes / 1048576)} MiB · 本次下载 ${downloaded} 个`,
     );
 };
-await Promise.all(
-  Array.from({ length: 4 }, async () => {
-    while (next < manifest.assets.length) {
-      const entry = manifest.assets[next++];
-      // The committed manifest contains upstream-relative assets only.
-      if (
-        !/^(?:image\/(?:card|character|background)\/[\p{L}\p{N}_.-]+\.(?:png|jpg)|audio\/(?:skill|die|effect|card\/(?:male|female))\/[\p{L}\p{N}_.-]+\.mp3|LICENSE)$/u.test(
-          entry.path,
-        )
-      ) {
-        throw new Error('Invalid asset manifest path');
-      }
-      const target = resolve(engineRoot, entry.path);
-      const present = await readFile(target).catch((error) => {
-        if (error.code === 'ENOENT') return null;
-        throw error;
-      });
-      if (present && present.length === entry.bytes && blobHash(present) === entry.gitBlobSha) {
-        checkedBytes += entry.bytes;
-        progress();
-        continue;
-      }
-      const url = `https://raw.githubusercontent.com/libnoname/noname/${manifest.commit}/apps/core/${entry.path}`;
-      const bytes = await downloadAsset(url, entry.path);
-      if (bytes.length !== entry.bytes || blobHash(bytes) !== entry.gitBlobSha) {
-        throw new Error(`Asset checksum mismatch: ${entry.path}`);
-      }
-      await mkdir(dirname(target), { recursive: true });
-      const temporary = `${target}.part`;
-      try {
-        await writeFile(temporary, bytes);
-        await rename(temporary, target);
-      } finally {
-        await rm(temporary, { force: true });
-      }
-      downloaded++;
-      checkedBytes += entry.bytes;
-      progress();
-    }
-  }),
-);
+const missing = new Map();
+for (const entry of manifest.assets) {
+  if (
+    !/^(?:image\/(?:card|character|background)\/[\p{L}\p{N}_.-]+\.(?:png|jpg)|audio\/(?:skill|die|effect|card\/(?:male|female))\/[\p{L}\p{N}_.-]+\.mp3|LICENSE)$/u.test(
+      entry.path,
+    )
+  )
+    throw new Error('Invalid asset manifest path');
+  const present = await readFile(resolve(engineRoot, entry.path)).catch((error) => {
+    if (error.code === 'ENOENT') return null;
+    throw error;
+  });
+  if (present && present.length === entry.bytes && blobHash(present) === entry.gitBlobSha) {
+    checkedBytes += entry.bytes;
+    progress();
+  } else missing.set(entry.path, entry);
+}
+async function save(entry, bytes) {
+  if (bytes.length !== entry.bytes || blobHash(bytes) !== entry.gitBlobSha)
+    throw new Error(`Asset checksum mismatch: ${entry.path}`);
+  const target = resolve(engineRoot, entry.path);
+  await mkdir(dirname(target), { recursive: true });
+  const temporary = `${target}.part`;
+  try {
+    await writeFile(temporary, bytes);
+    await rename(temporary, target);
+  } finally {
+    await rm(temporary, { force: true });
+  }
+  missing.delete(entry.path);
+  downloaded++;
+  checkedBytes += entry.bytes;
+  progress();
+}
+if (missing.size) {
+  console.log(`正在从无名杀官方发行包分批补齐 ${missing.size} 个资源……`);
+  try {
+    await downloadArchiveAssets(candidate.assetArchive, missing, save);
+  } catch (error) {
+    console.warn(
+      `发行包分段下载未完成（${error.message}），剩余 ${missing.size} 个资源将改从固定上游文件下载。`,
+    );
+    const remaining = [...missing.values()].values();
+    await Promise.all(
+      Array.from({ length: 4 }, async () => {
+        for (const entry of remaining) {
+          const url = `https://raw.githubusercontent.com/libnoname/noname/${manifest.commit}/apps/core/${entry.path}`;
+          await save(entry, await downloadAsset(url, entry.path));
+        }
+      }),
+    );
+  }
+}
 await mkdir(resolve(root, 'packages/noname-adapter/licenses'), { recursive: true });
 await writeFile(
   resolve(root, 'packages/noname-adapter/licenses/noname-GPL-3.0.txt'),

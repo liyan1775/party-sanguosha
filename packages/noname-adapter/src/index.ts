@@ -4,6 +4,8 @@ import type {
   ResolvedCustomRoster,
   RoomSettings,
 } from '../../shared/src/contracts.js';
+import type { ShanhetuBattleSetup } from './shanhetu.js';
+import type { ShanhetuBattleResult } from '../../shared/src/shanhetu.js';
 
 export interface MatchSetup {
   roomCode: string;
@@ -16,6 +18,8 @@ export interface MatchSetup {
   aiPolicy: 'strongest-native';
   /** Private lobby preferences; only the rule worker receives the complete map. */
   generalSelections?: Record<string, string>;
+  /** Internal PVE integration; public mode remains disabled until campaign acceptance. */
+  shanhetu?: ShanhetuBattleSetup;
   doudizhu?: {
     preparationId: string;
     landlordId: string;
@@ -37,7 +41,13 @@ export interface EngineAdapter {
 
 export type EngineEvent =
   | { type: 'status' }
-  | { type: 'ended'; roomCode: string; matchId?: string; winner?: 'landlord' | 'farmers' | null }
+  | {
+      type: 'ended';
+      roomCode: string;
+      matchId?: string;
+      winner?: 'landlord' | 'farmers' | null;
+      shanhetu?: ShanhetuBattleResult;
+    }
   | { type: 'recovered'; roomCode: string }
   | { type: 'failed'; roomCode: string; code?: MatchFailureCode }
   | { type: 'recovering'; roomCode: string; deadline: number };

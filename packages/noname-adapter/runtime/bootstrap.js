@@ -8,6 +8,7 @@ const detail = document.querySelector('#loading-detail');
 const retry = document.querySelector('#loading-retry');
 const beganAt = performance.now();
 let failed = false;
+let workerClock;
 let stageNumber = 0;
 let stageMessage = '正在准备对局…';
 let resourceCount = 0;
@@ -71,7 +72,10 @@ const fail = (error) => {
   clearInterval(progressTimer);
   resourceObserver.disconnect();
   publishProgress();
-  globalThis.partyEngine?.signal?.('failed');
+  const signal = globalThis.partyEngine?.signal;
+  if (signal) signal('failed');
+  else if (workerClock?.readyState === WebSocket.OPEN)
+    workerClock.send(JSON.stringify({ type: 'startup-failed' }));
 };
 retry.addEventListener('click', () => location.reload());
 // LAN startup includes module download, parsing and IndexedDB. Never clear a
@@ -139,6 +143,7 @@ try {
     // stay native, and older running services keep their existing protocol.
     const { connectRuleClock } = await import('./rule-clock.js');
     const clock = await connectRuleClock(id, setup.ruleRecovery === true);
+    workerClock = clock.socket;
     proof.ruleClock = clock.proof;
     clock.socket.addEventListener('close', () => fail(new Error('电脑规则计时连接已中断')));
   }
@@ -162,6 +167,15 @@ try {
         loadBuildInfo: meta.loadBuildInfo,
       }));
   globalThis.partyEngine = { lib, game, get, ui, ai, _status, setup, proof };
+  if (setup.shanhetu) {
+    const { adaptShanhetuMode, shanhetuOutcome, restoreShanhetuGrowth } =
+      await import('./shanhetu.js');
+    Object.assign(globalThis.partyEngine, {
+      adaptShanhetuMode,
+      shanhetuOutcome,
+      restoreShanhetuGrowth,
+    });
+  }
   const [{ installPrivacy }, { installControls }, { installAudio }, { installPrompts }] =
     await Promise.all([
       import('./privacy.js'),
@@ -187,8 +201,9 @@ try {
     ]),
   ];
   const packs = setup.rosterPolicy ? (setup.preset.enabledPacks ?? legacyPacks) : legacyPacks;
-  const mode =
-    setup.settings.mode === 'duel'
+  const mode = setup.shanhetu
+    ? 'identity'
+    : setup.settings.mode === 'duel'
       ? 'single'
       : setup.settings.mode === 'college'
         ? 'doudizhu'
@@ -333,6 +348,7 @@ try {
         : null;
     globalThis.partyEngine.signal?.('ended', {
       winner: result === true ? 'landlord' : result === false ? 'farmers' : null,
+      ...(setup.shanhetu ? { shanhetu: globalThis.partyEngine.shanhetuOutcome() } : {}),
     });
   });
   progress('boot', '正在初始化对局…');

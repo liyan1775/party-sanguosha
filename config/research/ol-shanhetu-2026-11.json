@@ -1,0 +1,750 @@
+{
+  "schemaVersion": 1,
+  "checkedOn": "2026-11-07",
+  "status": "internal-native-battle-and-campaign-kernel",
+  "request": "增加山河图模式",
+  "pendingDecisions": [],
+  "sources": [
+    {
+      "id": "ol-mode-introduction",
+      "url": "https://www.sanguosha.com/mode",
+      "accessedOn": "2026-11-06",
+      "publisher": "三国杀OL官网",
+      "supports": ["single-player-pve", "multiple-scenarios-with-events-and-tactics"]
+    },
+    {
+      "id": "4399-fengqi-hanzhong-2024",
+      "url": "https://my.4399.com/yxsgs/ziliao/62026/",
+      "publishedOn": "2024-05-20",
+      "accessedOn": "2026-11-06",
+      "publisher": "4399三国杀OL运营资料页",
+      "scenario": "风起汉中",
+      "chapters": ["天水", "长安", "洛阳"],
+      "supports": [
+        "battles-events-shops-camps",
+        "additional-skills-and-tactics",
+        "starting-cards-and-equipment",
+        "resume-outside-battles"
+      ],
+      "scope": "该历史剧本的公开说明，不代表所有剧本或2026年最新数值"
+    }
+  ],
+  "fixedEngine": {
+    "repository": "https://github.com/libnoname/noname",
+    "tag": "v1.11.6",
+    "commit": "2367607e246d21aae168dba15c01151ee0651f30",
+    "coreArchiveSha256": "d35538c702f5acc4a18be805a0f15d2639613dbe0805bf62e4d574db5bbb869e",
+    "inspectionScope": "本机已准备的固定核心及源码；未升级上游或安装扩展",
+    "dedicatedShanhetuModeFound": false,
+    "zhanfa": {
+      "file": "noname/library/zhanfa.js",
+      "sha256": "6f2075931c35b44dbaece78775ad5f24a59e9cf988af819b43fc5d18e52ad012",
+      "topLevelDefinitionCount": 169,
+      "topLevelCountPattern": "^  (zf_\\w+): \\{",
+      "explicitShanhetuList": ["zf_qinmian", "zf_tianrenheyi", "zf_quanli"],
+      "manager": "ZhanfaManager",
+      "runtimeVerifiedInThisProject": false
+    },
+    "player": {
+      "file": "noname/library/element/player.js",
+      "sha256": "cd1a7ae31f4442486391aecfc0fa86b89d7ba9f09ba3e659d57c0fc996b1cc87",
+      "tacticMethods": ["hasZhanfa", "addZhanfa", "removeZhanfa"]
+    },
+    "characters": {
+      "file": "character/collab.js",
+      "sha256": "ad425cc584b75cd8f7bc19f8221fd840c68a33999d3755cd70f2df7800005432",
+      "group": "collab_shanhetu",
+      "ids": ["ol_re_nianshou"],
+      "changesPlayableWhitelist": false
+    },
+    "tacticImagesInProjectManifest": {
+      "genericCardBack": "image/card/zhanfa.png",
+      "individualZhanfaDirectoryIncluded": false
+    }
+  },
+  "unverifiedScenarioData": [
+    "full-node-and-enemy-catalog",
+    "route-generation-and-event-probabilities",
+    "shop-prices-and-currency-rewards",
+    "score-and-difficulty-parameters",
+    "cross-battle-state-and-resume-rules"
+  ],
+  "additionalOfficialTables": {
+    "archiveSource": "officialArchiveInspection",
+    "spell": {
+      "zipMember": "cha_spell.sgs",
+      "decodedBytes": 1174557,
+      "decodedSha256": "0286c6c209ae91ecaac29d3f2e31c985a7c8a11c0423066ec0d1c97ab7b5536b",
+      "spellCount": 3125,
+      "retrievedOn": "2026-11-07",
+      "scope": "同一冻结官方归档中的技能名称与说明；用于核对版本，不自动批准效果"
+    }
+  },
+  "implementation": {
+    "modeExposed": false,
+    "nativeBattleVerified": true,
+    "mobileWeChatVerified": false,
+    "scope": "普通与中等各五档、八城原坐标、30组首领、三章征程、五个首领第二形态、招募和单机山河册。源码按开关预览",
+    "previewEntry": "PARTY_SHANHETU_PREVIEW=1",
+    "battleIds": [
+      22498, 22298, 22644, 22668, 22632, 22636, 22648, 22660, 2481, 22481, 2489, 22489, 2495, 22495,
+      22671, 2298, 2498, 2632, 2636, 2644, 2648, 2660, 2668, 2671, 2645, 22645, 2670, 22670, 2633,
+      22633, 2634, 22634, 2637, 22637, 2639, 22639, 2646, 22646, 2647, 22647, 2649, 22649, 2650,
+      22650, 2661, 22661, 2662, 22662, 2663, 22663, 2638, 22638, 2651, 22651, 2652, 2653, 2654,
+      2655, 2664, 2665, 2666, 2667, 2438, 22438, 2445, 22445, 2301, 22301, 2420, 22420, 2656, 2657,
+      2658, 2659, 2673, 2674, 2676, 2678, 2680, 2681, 2215, 12215, 22215, 2225, 12225, 22225
+    ],
+    "difficulty": "普通1使用新手配方，普通2至中等5使用常规配方。保留通关前置，应用按当前月份及敌军人数计算的客户端加成",
+    "difficultyProgression": {
+      "ids": [1, 2],
+      "fixedNpcGear": [20546, 20666],
+      "evidence": ".runtime/shanhetu-ui/2026-11-07T18-34-29-030Z-667c9cd8/result.json",
+      "repeatEvidence": ".runtime/shanhetu-ui/2026-11-08T02-13-32-932Z-c0a7afc0/result.json",
+      "weaponEvidence": [
+        ".runtime/shanhetu-native/2026-11-07T18-32-35-109Z-lijue-normal-83cc6661/result.json",
+        ".runtime/shanhetu-native/2026-11-07T18-34-29-068Z-lvbu-normal-0433c49f/result.json"
+      ],
+      "ambushEvidence": ".runtime/shanhetu-native/2026-11-08T02-16-08-361Z-ambush-normal-8396bab0/result.json"
+    },
+    "normalStages": {
+      "difficultyIds": [3, 4, 5],
+      "groupIds": [264401, 264501, 267001, 267101],
+      "normalThreeJourneyEvidence": ".runtime/shanhetu-ui/2026-11-08T03-02-13-976Z-9a44f578/result.json",
+      "evidence": [
+        ".runtime/shanhetu-native/2026-11-08T03-11-14-441Z-rage-stage-31c33eb3/result.json",
+        ".runtime/shanhetu-native/2026-11-08T03-05-58-638Z-shengui-stage-91444b06/result.json",
+        ".runtime/shanhetu-native/2026-11-08T02-56-12-397Z-niufu-stage-c1545c0c/result.json",
+        ".runtime/shanhetu-native/2026-11-08T02-51-20-226Z-dongmin-stage-6e2873c8/result.json"
+      ]
+    },
+    "npcSkillIds": [
+      66, 728, 3617, 14175, 14176, 3419, 14103, 14113, 855, 238, 14162, 3155, 3252, 611, 962, 949,
+      110, 111, 950, 491, 492, 9000, 370, 14118, 14127, 14129, 3387, 3547, 3548, 57, 95, 204, 495,
+      505, 722, 724, 814, 815, 816, 863, 864, 889, 890, 970, 971, 3187, 3389, 7005, 14104, 14105,
+      14135, 14136, 14138, 14139, 14166, 831, 14116, 14143, 14144, 311, 497, 712, 713, 721, 799,
+      869, 872, 905, 932, 933, 1138, 3056, 3097, 3098, 3156, 3159, 3201, 3231, 3292, 3327, 3435,
+      3567, 7003, 14039, 14150, 14153, 14169, 14170, 14171, 376, 711, 991, 705, 3616, 444, 993, 383,
+      294, 792, 877, 91, 14047, 3388, 3226, 3227, 3228, 883, 108, 931, 419, 3505, 3506, 3470, 433,
+      434, 14183, 1189, 1190, 3476, 3477, 1185, 93, 14191, 290, 372, 373, 37, 208, 34, 3423, 3424,
+      14058, 14130, 14045, 14042, 3383, 893, 3312, 3404, 62, 925, 218, 295
+    ],
+    "npcValidation": {
+      "scope": "七首领均有自然结算，实际触发、机制夹具及未触发项分别记入handoff",
+      "evidenceRoots": [
+        ".runtime/shanhetu-native/2026-11-06T18-46-02-919Z-lvbu-0e01605a",
+        ".runtime/shanhetu-native/2026-11-06T18-46-02-970Z-liru-d88a03fd",
+        ".runtime/shanhetu-native/2026-11-07T01-14-46-791Z-taishici-27ae5829",
+        ".runtime/shanhetu-native/2026-11-07T01-20-49-708Z-lijue-cbc78119",
+        ".runtime/shanhetu-native/2026-11-07T01-16-10-100Z-yujin-87c272e5",
+        ".runtime/shanhetu-native/2026-11-07T01-16-10-091Z-yuanshao-1835fa23",
+        ".runtime/shanhetu-native/2026-11-07T17-42-47-380Z-dongzhuo-d455f860"
+      ]
+    },
+    "growth": {
+      "skillsGranted": [3297],
+      "tacticsGranted": [2030, 2059, 2010],
+      "measuredTacticEffect": 2059,
+      "otherTacticEffectsExhaustivelyVerified": false,
+      "admittedSkills": [
+        3297, 3021, 3049, 3134, 3145, 3264, 3271, 3025, 3225, 3016, 3106, 3091, 3253, 3268, 3177
+      ],
+      "admittedTactics": [
+        2030, 2059, 2010, 2009, 2002, 2003, 2132, 2133, 2135, 2060, 2108, 2109, 2036, 2037, 2129,
+        2069, 2070, 2028, 2007
+      ]
+    },
+    "campaignProgression": "普通1虎牢、孟津、洛阳三章9场自然胜利，选路和成长贯通；手机预览另通过首战、奖励、刷新和新征程",
+    "campaignEvidence": ".runtime/shanhetu-campaign-native/2026-11-07T02-14-14-499Z-machao-4b5d4673/result.json",
+    "phoneLayoutEvidence": ".runtime/shanhetu-ui/2026-11-07T17-13-33-539Z-06f9e8af/result.json",
+    "book": {
+      "nodeIds": [1, 2, 3, 5, 7, 15],
+      "evidence": ".runtime/shanhetu-ui/2026-11-07T17-55-54-616Z-70448add/result.json",
+      "scope": "虎牢、孟津、洛阳11场手机界面自然胜利，击败董卓，领10册、花6册研习装配和光盟后以赤炼随队完成下一征程首战"
+    },
+    "restart": {
+      "limit": 10,
+      "waitSeconds": 30,
+      "evidence": ".runtime/shanhetu-ui/2026-11-07T18-13-51-828Z-e8b007ac/result.json"
+    },
+    "evidence": ".runtime/shanhetu-native/2026-11-06T18-13-39-519Z/result.json",
+    "carryCards": {
+      "admitted": 95,
+      "granted": [4062, 4138, 4004, 4014],
+      "evidence": ".runtime/shanhetu-native/2026-11-07T01-47-59-406Z-jiaoshi-normal-d21e466f/result.json",
+      "completeCardPoolVerified": false
+    },
+    "mediumProgression": {
+      "difficultyIds": [6, 7, 8, 9, 10],
+      "regionIds": [6, 9],
+      "bossIds": [2652, 2653, 2654, 2655, 2664, 2665, 2666, 2667],
+      "addedStageGroupIds": [265301],
+      "enemyGrowthSource": "官方客户端 getEnemyGrowCnt，EnemyGrowth、EnemyNumGrowth、EnemyDiffGrowth 及 General 的中等档字段",
+      "autoRecoverySource": "DifficultySelection.hpsave=1。普通档的战后1点及关底2点取Sanguosha.NET的2026源剧本参考值",
+      "journeyEvidence": ".runtime/shanhetu-ui/2026-11-16T11-00-24-959Z-077345fc/result.json",
+      "zhangYanEvidence": ".runtime/shanhetu-native/2026-11-16T11-00-24-962Z-2653-7329df8e/result.json"
+    },
+    "hardProgression": {
+      "difficultyIds": [11, 12, 13, 14, 15],
+      "addedRegions": [7, 11, 12, 13],
+      "addedBattleIds": [
+        2438, 2445, 2481, 2489, 2495, 2656, 2657, 2658, 2659, 2673, 2674, 2676, 2678, 2680, 2681
+      ],
+      "withheldBattleIds": [2651, 2653, 2655, 2667],
+      "terrainSpellIds": [13273, 13274, 13275, 13276, 13277, 13278]
+    },
+    "decisionObservations": {
+      "url": "https://s.xiaochao.org/data/analytics.json",
+      "generatedAt": "2026-10-20T07:46:43.581Z",
+      "sha256": "21c0b4f38789bd84b56e4f3320d8c4072927b87a9febd40dab6110e06bddf0ad",
+      "season": 5,
+      "uniqueRuns": 15443,
+      "combatEvents": [1269, 1273],
+      "scope": "已接决定的属性增量取一致样本。难度按结局样本分别核对，累计铜币含4000。"
+    }
+  },
+  "decision": {
+    "mode": "single-player-pve",
+    "confirmedOn": "2026-11-07",
+    "priority": "most-complete-available-sources-and-implementation",
+    "scenarioId": 5,
+    "scenario": "诸侯伐董",
+    "edition": "2026返场，社区称S2",
+    "chosenBy": "agent-under-user-delegation",
+    "referenceScope": "本轮取得的七剧本公开配置、社区源码及视频索引；不是全网穷尽或所有效果已可运行",
+    "implementationBaseline": {
+      "provider": "official-public-config",
+      "retrievedOn": "2026-11-07",
+      "decodedSha256": "0e116ac3091748127e104878e01daddaf6cdb847d5b4f2cafa836a4223accca2",
+      "communitySnapshotRole": "lookup and independent cross-check",
+      "gameplayImplemented": false
+    }
+  },
+  "referenceSnapshot": {
+    "publisher": "山河图鉴·小抄（社区资料）",
+    "retrievedOn": "2026-11-07",
+    "generatedAt": "2026-10-21T11:39:31.850Z",
+    "files": [
+      {
+        "dataset": "battles",
+        "url": "https://s.xiaochao.org/data/battles.json",
+        "sha256": "f3bd33c3ea9d427dcf29cee3393a818a96253c9c1772a6c52a619c7d4f88f561",
+        "bytes": 2206211
+      },
+      {
+        "dataset": "cards",
+        "url": "https://s.xiaochao.org/data/cards.json",
+        "sha256": "d699fc9524136ff4129a324187933fcec09cd1690f85481c51f2fa0a1f47e6cf",
+        "bytes": 126772
+      },
+      {
+        "dataset": "endings",
+        "url": "https://s.xiaochao.org/data/endings.json",
+        "sha256": "f2302a5e5d9bdb846b5bdc5381995912bd161514761a8d81dbdbbddab9a05604",
+        "bytes": 30640
+      },
+      {
+        "dataset": "enemy-groups",
+        "url": "https://s.xiaochao.org/data/enemy-groups.json",
+        "sha256": "f4e7cac7a738276c212090c08bf8077b49d964a8eaaa80c040a50f98e7dc7815",
+        "bytes": 2912340
+      },
+      {
+        "dataset": "enemy-references",
+        "url": "https://s.xiaochao.org/data/enemy-references.json",
+        "sha256": "73bd40d769e757fb5faa18cba5de9f821a06a8599c8e03eed5994da30db2f9a4",
+        "bytes": 371724
+      },
+      {
+        "dataset": "events",
+        "url": "https://s.xiaochao.org/data/events.json",
+        "sha256": "a8bd883125db6bce0fa1a24d3d494c851b4d548d4371ef1f4753fcb34f14a0f3",
+        "bytes": 1032759
+      },
+      {
+        "dataset": "manifest",
+        "url": "https://s.xiaochao.org/data/manifest.json",
+        "sha256": "d8563b00afac4d8ab692175771a4953ad1fdc8701cd46be4f3923714066e31d4",
+        "bytes": 180226
+      },
+      {
+        "dataset": "skills",
+        "url": "https://s.xiaochao.org/data/skills.json",
+        "sha256": "9fcad12c69394382ed903986c7bfcc03fa13b0949173a3ed12b4aa008cb0b53e",
+        "bytes": 96970
+      },
+      {
+        "dataset": "tactic-tree",
+        "url": "https://s.xiaochao.org/data/tactic-tree.json",
+        "sha256": "a754ca2f4ac25f0f140c8df2d97693b5bb84ec5edf55a52ac59f8cd511a18625",
+        "bytes": 328119
+      },
+      {
+        "dataset": "tactics",
+        "url": "https://s.xiaochao.org/data/tactics.json",
+        "sha256": "209ce819d57fc8985308376ecc24fe12d2c3ca94dec75b775578f34543774c0e",
+        "bytes": 106533
+      }
+    ],
+    "scenarios": [
+      {
+        "id": 1,
+        "name": "风起汉中",
+        "regions": 3,
+        "levels": 21,
+        "battles": 603,
+        "events": 188,
+        "studyNodes": 150,
+        "enemyGroups": 603,
+        "missingGroups": [],
+        "distinctEnemySkills": 506,
+        "missingSkills": [],
+        "enemySkillCandidates": {
+          "same-normalized-text": 15,
+          "name-only": 422,
+          "unmatched": 69
+        },
+        "tacticCandidates": {
+          "same-normalized-text": 84,
+          "name-only": 97,
+          "unmatched": 148
+        }
+      },
+      {
+        "id": 2,
+        "name": "江东雄心",
+        "regions": 3,
+        "levels": 24,
+        "battles": 485,
+        "events": 183,
+        "studyNodes": 150,
+        "enemyGroups": 500,
+        "missingGroups": [],
+        "distinctEnemySkills": 579,
+        "missingSkills": [],
+        "enemySkillCandidates": {
+          "same-normalized-text": 17,
+          "name-only": 458,
+          "unmatched": 104
+        },
+        "tacticCandidates": {
+          "same-normalized-text": 84,
+          "name-only": 97,
+          "unmatched": 148
+        }
+      },
+      {
+        "id": 3,
+        "name": "山河图·妖",
+        "regions": 3,
+        "levels": 24,
+        "battles": 576,
+        "events": 188,
+        "studyNodes": 150,
+        "enemyGroups": 576,
+        "missingGroups": [],
+        "distinctEnemySkills": 272,
+        "missingSkills": [],
+        "enemySkillCandidates": {
+          "same-normalized-text": 6,
+          "name-only": 149,
+          "unmatched": 117
+        },
+        "tacticCandidates": {
+          "same-normalized-text": 84,
+          "name-only": 97,
+          "unmatched": 148
+        }
+      },
+      {
+        "id": 4,
+        "name": "军师联盟",
+        "regions": 6,
+        "levels": 48,
+        "battles": 204,
+        "events": 180,
+        "studyNodes": 150,
+        "enemyGroups": 272,
+        "missingGroups": [],
+        "distinctEnemySkills": 689,
+        "missingSkills": [],
+        "enemySkillCandidates": {
+          "same-normalized-text": 18,
+          "name-only": 522,
+          "unmatched": 149
+        },
+        "tacticCandidates": {
+          "same-normalized-text": 84,
+          "name-only": 97,
+          "unmatched": 148
+        }
+      },
+      {
+        "id": 5,
+        "name": "诸侯伐董",
+        "regions": 14,
+        "levels": 112,
+        "battles": 818,
+        "events": 186,
+        "studyNodes": 150,
+        "enemyGroups": 831,
+        "missingGroups": [],
+        "distinctEnemySkills": 771,
+        "missingSkills": [],
+        "enemySkillCandidates": {
+          "same-normalized-text": 17,
+          "name-only": 611,
+          "unmatched": 143
+        },
+        "tacticCandidates": {
+          "same-normalized-text": 84,
+          "name-only": 97,
+          "unmatched": 148
+        }
+      },
+      {
+        "id": 6,
+        "name": "长安行",
+        "regions": 10,
+        "levels": 74,
+        "battles": 305,
+        "events": 194,
+        "studyNodes": 150,
+        "enemyGroups": 305,
+        "missingGroups": [],
+        "distinctEnemySkills": 470,
+        "missingSkills": [],
+        "enemySkillCandidates": {
+          "same-normalized-text": 15,
+          "name-only": 375,
+          "unmatched": 80
+        },
+        "tacticCandidates": {
+          "same-normalized-text": 84,
+          "name-only": 97,
+          "unmatched": 151
+        }
+      },
+      {
+        "id": 7,
+        "name": "北望",
+        "regions": 7,
+        "levels": 56,
+        "battles": 492,
+        "events": 180,
+        "studyNodes": 150,
+        "enemyGroups": 348,
+        "missingGroups": [],
+        "distinctEnemySkills": 638,
+        "missingSkills": [],
+        "enemySkillCandidates": {
+          "same-normalized-text": 20,
+          "name-only": 499,
+          "unmatched": 119
+        },
+        "tacticCandidates": {
+          "same-normalized-text": 46,
+          "name-only": 30,
+          "unmatched": 88
+        }
+      }
+    ],
+    "nativeDescriptionCandidates": {
+      "skillDescriptions": 4655,
+      "tacticDefinitions": 169
+    },
+    "notes": [
+      "地区/地点/战斗条目是配置计数，不是可玩或已验收数量",
+      "同文案与同名匹配只用于人工复核，不授权技能或角色",
+      "外部快照只保存在.local；启动和LAN对局不得依赖资料站",
+      "提供方改变快照后校验拒绝替换，不能承诺旧资料永远可从原站下载"
+    ]
+  },
+  "communityCandidates": [
+    {
+      "repository": "https://github.com/xincheng213618/sanguosha-dotnet",
+      "commit": "d7bcc5b1110629e551949d9103f911a642fc412e",
+      "license": "MIT for original software; third-party reference text and assets excluded",
+      "role": "主要结构与规则来源索引参考",
+      "findings": [
+        "C#/.NET8与WPF实现，已有征程、事件、商店、战法及来源目录",
+        "含作者明确标记的本地步数、概率、替代阵容等约定，不能整体视作OL规则",
+        "本轮只静态核对源码与文档，未运行该客户端"
+      ]
+    },
+    {
+      "repository": "https://github.com/pryusnut/shanhaizhiyi",
+      "commit": "7b2828e8a9bd2391a345c723677feaee7768918c",
+      "license": "GPL-3.0",
+      "role": "无名杀BOSS与肉鸽机制参考",
+      "findings": ["山海志异/天书乱斗活动场扩展，未证明为OL山河图"]
+    },
+    {
+      "repository": "https://github.com/zziyoo/UltraStar",
+      "commit": "92e6fe7fe8a266bca6b9d81d0944f0056ad215a8",
+      "license": "GPL-3.0",
+      "role": "无名杀独立肉鸽模式生命周期参考",
+      "findings": ["奥特之星题材，有战斗/商店/事件/存档模块，未证明为OL山河图"]
+    },
+    {
+      "repository": "https://github.com/XcilGin/sgs-helper-sht-arena-addon",
+      "commit": "be2e69e38035a929e6ba7435dfebbdedf7962772",
+      "license": "MIT",
+      "role": "排除作为模式实现",
+      "findings": ["运行于商业游戏页面的擂台辅助模块，不包含独立征程或战斗引擎"]
+    },
+    {
+      "repository": "https://github.com/qq398768650/sgs-assistant",
+      "commit": "4e3efc82fb90550382253437357b0c3314036abd",
+      "license": null,
+      "role": "资料线索，未导入代码",
+      "findings": ["商业网页辅助工具，未证明为独立单机山河图"]
+    }
+  ],
+  "videos": [
+    {
+      "url": "https://www.bilibili.com/video/BV1c3ht6tE66/",
+      "title": "山河图·诸侯伐董S2：4000字开荒攻略",
+      "author": "倾之月丶",
+      "publishedOn": "2026-09-23",
+      "inspection": "公开页面标题、日期、作者及视频索引；未完整观看"
+    },
+    {
+      "url": "https://www.bilibili.com/video/BV16FHz6wEjA/",
+      "title": "普通技能池·截至伐董S2困难",
+      "author": "-nemi-",
+      "publishedOn": "2026-10-04",
+      "inspection": "公开页面及简介列出的技能；未完整观看"
+    },
+    {
+      "url": "https://www.bilibili.com/video/BV1qbhC6cEW6/",
+      "title": "诸侯伐董S2全任务达成条件一览",
+      "author": "T_B_H",
+      "publishedOn": "2026-09-22",
+      "inspection": "公开页面及合集条目，含战斗奇遇对照/全流程线索；未完整观看"
+    },
+    {
+      "url": "https://www.bilibili.com/video/BV1mZfDYGEVE/",
+      "title": "诸侯伐董怪物概览",
+      "author": "-nemi-",
+      "publishedOn": "2025-01-28",
+      "inspection": "历史版本索引，不与2026返场混用；未完整观看"
+    }
+  ],
+  "officialArchiveInspection": {
+    "url": "https://web.sanguosha.com/220/h5_2/res/config/Config.sgs",
+    "retrievedOn": "2026-11-07",
+    "bytes": 4178291,
+    "sha256": "68d0e2eb7e3bdbbb8a1b451a20298904488762a397bbf0333d07ccfbc7444a90",
+    "zipMember": "hd_roguelike.sgs",
+    "memberBytes": 577300,
+    "memberSha256": "8222a6345c3c9855a3378be7596399254362f529cac76beaad143971b551d70b",
+    "decoded": true,
+    "note": "取得41个公开配置表并验证完整字节；配置字段不等于服务端算法或全部实际行为。Adventure共1062而非社区1059，差3个条目仅记录为源差异。",
+    "decoder": "Statically read public client InitOfb; native AES-128-CFB then gzip, without executing client JavaScript",
+    "decodedBytes": 5225207,
+    "decodedSha256": "0e116ac3091748127e104878e01daddaf6cdb847d5b4f2cafa836a4223accca2",
+    "client": {
+      "url": "https://web.sanguosha.com/220/h5_2/sgsGame_a.sgs",
+      "bytes": 5406286,
+      "sha256": "f82d928b09a43a82082e0d06dba259e08800c3a46b100d00168c24faa92bc16d",
+      "zipMember": "sgsGame_a.sgs",
+      "memberBytes": 23132852,
+      "memberSha256": "52e27bc74779059a3d2e075755c6e11ed9a9d31d83e482f588a323aadb835f63"
+    },
+    "tableCounts": {
+      "Common": 1,
+      "Season": 7,
+      "Roundid": 15,
+      "ChapterCS": 21,
+      "Chapter": 46,
+      "Level": 359,
+      "UniversalGroup": 5095,
+      "ChapLimit": 97,
+      "Adventure": 1062,
+      "Choose": 2550,
+      "Fight": 3633,
+      "General": 8033,
+      "Shop": 36,
+      "Camp": 21,
+      "CampBonus": 9,
+      "RewardGroup": 211,
+      "Other": 14,
+      "Tactics": 357,
+      "Spell": 363,
+      "Card": 307,
+      "EnemyGrowth": 1643,
+      "DifficultySelection": 175,
+      "GeneralRankPriv": 5,
+      "saijilevel": 6,
+      "saijitianfu": 1050,
+      "settlement": 57,
+      "seed": 60,
+      "Text": 6423,
+      "plan": 4,
+      "quality": 5,
+      "school": 9,
+      "ending": 83,
+      "EnemyNumGrowth": 21,
+      "EnemyDiffGrowth": 15,
+      "Seasonstory": 63,
+      "showword": 25,
+      "quest": 27,
+      "combination": 0,
+      "ring": 21,
+      "Video": 3,
+      "EXDifficultySelection": 54
+    },
+    "season5ChapterThresholds": [
+      {
+        "chapter": 1,
+        "days": 4,
+        "bossAt": 4
+      },
+      {
+        "chapter": 2,
+        "days": 6,
+        "bossAt": 6
+      },
+      {
+        "chapter": 3,
+        "days": 7,
+        "bossAt": 7
+      }
+    ],
+    "decoderMethodSha256": "a2e0ae66ed27a0a078672e0f1f511a60446ed387238a2ef131c8c5c6f344844c",
+    "season5Regions": [
+      {
+        "id": 1,
+        "name": "大谷关",
+        "chapter": 2,
+        "minimumDifficulty": 1,
+        "next": [10],
+        "locations": [5011, 5012, 5013, 5014, 5015, 5016, 5017, 5018],
+        "bossLocation": 5018
+      },
+      {
+        "id": 2,
+        "name": "广成关",
+        "chapter": 1,
+        "minimumDifficulty": 1,
+        "next": [1, 6, 3, 7],
+        "locations": [5021, 5022, 5023, 5024, 5025, 5026, 5027, 5028],
+        "bossLocation": 5028
+      },
+      {
+        "id": 3,
+        "name": "函谷关",
+        "chapter": 2,
+        "minimumDifficulty": 16,
+        "next": [14],
+        "locations": [5031, 5032, 5033, 5034, 5035, 5036, 5037, 5038],
+        "bossLocation": 5038
+      },
+      {
+        "id": 4,
+        "name": "虎牢关",
+        "chapter": 1,
+        "minimumDifficulty": 1,
+        "next": [8, 9, 5, 13],
+        "locations": [5041, 5042, 5043, 5044, 5045, 5046, 5047, 5048],
+        "bossLocation": 5048
+      },
+      {
+        "id": 5,
+        "name": "轘辕关",
+        "chapter": 2,
+        "minimumDifficulty": 1,
+        "next": [10],
+        "locations": [5051, 5052, 5053, 5054, 5055, 5056, 5057, 5058],
+        "bossLocation": 5058
+      },
+      {
+        "id": 6,
+        "name": "伊阙关",
+        "chapter": 2,
+        "minimumDifficulty": 6,
+        "next": [10],
+        "locations": [5061, 5062, 5063, 5064, 5065, 5066, 5067, 5068],
+        "bossLocation": 5068
+      },
+      {
+        "id": 7,
+        "name": "颍川郡",
+        "chapter": 2,
+        "minimumDifficulty": 11,
+        "next": [12],
+        "locations": [5071, 5072, 5073, 5074, 5075, 5076, 5077, 5078],
+        "bossLocation": 5078
+      },
+      {
+        "id": 8,
+        "name": "孟津",
+        "chapter": 2,
+        "minimumDifficulty": 1,
+        "next": [10],
+        "locations": [5081, 5082, 5083, 5084, 5085, 5086, 5087, 5088],
+        "bossLocation": 5088
+      },
+      {
+        "id": 9,
+        "name": "小平津",
+        "chapter": 2,
+        "minimumDifficulty": 6,
+        "next": [10],
+        "locations": [5091, 5092, 5093, 5094, 5095, 5096, 5097, 5098],
+        "bossLocation": 5098
+      },
+      {
+        "id": 10,
+        "name": "洛阳",
+        "chapter": 3,
+        "minimumDifficulty": 1,
+        "next": [],
+        "locations": [5101, 5102, 5103, 5104, 5105, 5106, 5107, 5108],
+        "bossLocation": 5108
+      },
+      {
+        "id": 11,
+        "name": "河内",
+        "chapter": 3,
+        "minimumDifficulty": 11,
+        "next": [],
+        "locations": [5111, 5112, 5113, 5114, 5115, 5116, 5117, 5118],
+        "bossLocation": 5118
+      },
+      {
+        "id": 12,
+        "name": "酸枣",
+        "chapter": 3,
+        "minimumDifficulty": 11,
+        "next": [],
+        "locations": [5121, 5122, 5123, 5124, 5125, 5126, 5127, 5128],
+        "bossLocation": 5128
+      },
+      {
+        "id": 13,
+        "name": "荥阳",
+        "chapter": 2,
+        "minimumDifficulty": 11,
+        "next": [11, 12],
+        "locations": [5131, 5132, 5133, 5134, 5135, 5136, 5137, 5138],
+        "bossLocation": 5138
+      },
+      {
+        "id": 14,
+        "name": "崤函道",
+        "chapter": 3,
+        "minimumDifficulty": 16,
+        "next": [],
+        "locations": [5141, 5142, 5143, 5144, 5145, 5146, 5147, 5148],
+        "bossLocation": 5148
+      }
+    ],
+    "commonFields": {
+      "spellnum": 2,
+      "spellmax": 3,
+      "shoprefresh": "1;100",
+      "scenespellneeddiff": "11"
+    }
+  }
+}

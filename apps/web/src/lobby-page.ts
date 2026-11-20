@@ -84,7 +84,16 @@ export function showHomePage(info: ServerInfo, session: SessionView): void {
       <section class="panel create-panel" id="create-panel"><div class="panel-heading"><div><p class="section-index">从你开始</p><h2>我来开一桌</h2></div><span class="mini-seal" aria-hidden="true">邀</span></div><form id="create-form"><label for="nickname">怎么称呼你</label><input id="nickname" name="nickname" placeholder="取个朋友认得的昵称" autocomplete="nickname" maxlength="32" aria-describedby="nickname-hint" required /><p class="hint" id="nickname-hint">昵称 1–16 个字。创建后自动入座，成为房主。</p><button id="create-button" class="button primary full-width" type="submit">创建房间并入座${arrowIcon}</button><p class="create-note">玩法、武将和 AI，入座后由你安排。</p></form></section>
       <section class="panel rooms-panel" id="friends-rooms"><div class="panel-heading"><div><p class="section-index">好戏正在发生</p><h2>朋友的房间</h2></div><span id="room-total" class="room-total">0 间</span></div><div class="room-filters" aria-label="筛选房间"><button type="button" data-room-filter="all" aria-pressed="true" aria-controls="room-list">全部房间</button><button type="button" data-room-filter="joinable" aria-pressed="false" aria-controls="room-list">可加入</button><span class="live-note">实时更新</span></div><ul id="room-list" class="room-list"></ul><div id="empty-rooms" class="empty-rooms"><span class="empty-symbol" aria-hidden="true">${modeIcon('identity')}</span><h3 id="empty-room-title">第一桌，等你来开。</h3><p id="empty-room-hint">填个昵称，邀上朋友。人少也可以用 AI 补位。</p></div></section>
     </div>
-    <section class="lobby-discover" id="lobby-guide"><div class="discover-heading"><p class="section-index">随人数，选好戏</p><h2>各有玩法，同样尽兴。</h2><p class="hint">两个人也能开场，八个人正好热闹。</p></div><ul class="lobby-modes" aria-label="支持的玩法">${MODES.map((mode) => `<li><span class="lobby-mode-icon">${modeIcon(mode.id)}</span><strong>${mode.name}</strong><span>${mode.minPlayers === mode.maxPlayers ? mode.minPlayers : '5–8'} 人</span></li>`).join('')}</ul><div class="guide-panel"><div><h3>识英雄，知招式。</h3><p class="hint">标准27将、经典进阶96将与官方活动将池，上桌前先看看技能。</p></div>${guideButton}</div><p id="engine-preload" class="hint" role="status" hidden></p></section>`,
+    <section class="lobby-discover" id="lobby-guide"><div class="discover-heading"><p class="section-index">随人数，选好戏</p><h2>各有玩法，同样尽兴。</h2><p class="hint">两个人也能开场，八个人正好热闹。</p></div><ul class="lobby-modes" aria-label="支持的玩法">${MODES.filter(
+      (mode) => mode.id !== 'shanhetu' || info.engine.shanhetu,
+    )
+      .map(
+        (mode) =>
+          `<li><span class="lobby-mode-icon">${modeIcon(mode.id)}</span><strong>${mode.name}</strong><span>${mode.minPlayers === mode.maxPlayers ? mode.minPlayers : '5–8'} 人</span></li>`,
+      )
+      .join(
+        '',
+      )}</ul><div class="guide-panel"><div><h3>识英雄，知招式。</h3><p class="hint">标准27将、经典进阶96将与官方活动将池，上桌前先看看技能。</p></div>${guideButton}</div><p id="engine-preload" class="hint" role="status" hidden></p></section>`,
     heroArtwork,
   );
   bindGeneralGuide();

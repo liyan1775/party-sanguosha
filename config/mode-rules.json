@@ -98,5 +98,13 @@
     "otherHumanProxy": false,
     "candidateEngineMode": "doudizhu",
     "candidateEngineVariant": "normal"
+  },
+  "shanhetu": {
+    "players": 1,
+    "variant": "ol-2026-anti-dong-zhuo-solo-pve",
+    "campaign": "config/shanhetu-scenario.json",
+    "book": "config/shanhetu-book.json",
+    "npcSeats": "per-encounter",
+    "chapterDays": [4, 6, 7]
   }
 }

@@ -115,6 +115,110 @@ async function fixture(t: TestContext, engineRoot?: string) {
   return { base, engine, party, id, room, ownerCookie, workerCookie, started, socket, setup };
 }
 
+test('山河图协议只接固定阵容和规则宿主结果；错误节点中断、重复结算不重发', async (t) => {
+  const f = await fixture(t, await minimalEngineRoot(t));
+  const input: MatchSetup = {
+    ...f.setup,
+    settings: { ...f.setup.settings, mode: 'identity', playerCount: 1 },
+    seats: [f.setup.seats[0]!],
+    shanhetu: {
+      runId: 'run-1',
+      nodeId: 'node-1',
+      battleId: 2298,
+      difficulty: 2,
+      candidates: ['caocao'],
+    },
+  };
+  await assert.rejects(
+    f.engine.start({ ...input, shanhetu: { ...input.shanhetu!, battleId: 99999 } }),
+    /山河图战斗/,
+  );
+  assert.equal(
+    f.engine.matchId(f.room.code),
+    f.id,
+    'Rejected content must not destroy a live table',
+  );
+  const events: import('../packages/noname-adapter/src/index.js').EngineEvent[] = [];
+  const unsubscribe = f.engine.subscribe((event) => events.push(event));
+  t.after(unsubscribe);
+  const waitFor = async (condition: () => boolean) => {
+    for (let i = 0; i < 100 && !condition(); i++)
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    assert(condition());
+  };
+  const start = async () => {
+    const started = f.engine.start(input);
+    void started.catch(() => {});
+    const id = f.engine.matchId(f.room.code)!;
+    const ws = new WebSocket(`${f.base.replace('http:', 'ws:')}/engine/socket/${id}/worker`, {
+      origin: f.base,
+      headers: { Cookie: f.workerCookie },
+    });
+    t.after(() => ws.close());
+    await once(ws, 'open');
+    ws.send(JSON.stringify({ type: 'started' }));
+    await started;
+    return { id, ws };
+  };
+  const first = await start();
+  const phone = await (
+    await fetch(`${f.base}/engine/setup/${first.id}?role=player`, {
+      headers: { Cookie: f.ownerCookie },
+    })
+  ).json();
+  assert.equal(phone.seats.length, 3);
+  assert.equal(phone.seats.filter((seat: { kind: string }) => seat.kind === 'human').length, 1);
+  assert.equal(f.party.lobby.get(f.room.code).snapshot().players.length, 1);
+  assert.equal(phone.surrender, false);
+  assert.equal(phone.preset.id, 'beginner');
+  assert.equal(phone.preset.ruleset, 'shanhetu-s5');
+  assert.equal(phone.preset.cardPile.cardCount, 135);
+  assert.deepEqual(phone.preset.cardPile.packs, ['standard', 'extra']);
+  assert(phone.preset.definitionPacks.cards.includes('extra'));
+  assert.deepEqual(
+    phone.shanhetuRecipe.enemies.map((enemy: { name: string }) => enemy.name),
+    ['沮授', '高干'],
+  );
+  assert.deepEqual(
+    phone.shanhetuRecipe.enemies.map((enemy: { maxHp: number; startingCards: number }) => [
+      enemy.maxHp,
+      enemy.startingCards,
+    ]),
+    [
+      [4, 5],
+      [5, 5],
+    ],
+  );
+  assert.equal(
+    (
+      await fetch(`${f.base}/engine/setup/${first.id}?role=worker`, {
+        headers: { Cookie: f.ownerCookie },
+      })
+    ).status,
+    403,
+  );
+  const result = {
+    runId: 'run-1',
+    nodeId: 'node-1',
+    battleId: 2298,
+    outcome: 'victory',
+    hero: { general: 'caocao', group: 'wei', hp: 2, maxHp: 4 },
+    defeatedEnemies: 2,
+  };
+  first.ws.send(JSON.stringify({ type: 'ended', shanhetu: { ...result, nodeId: 'old-node' } }));
+  await waitFor(() => events.some((event) => event.type === 'failed'));
+  assert.equal(events.filter((event) => event.type === 'ended').length, 0);
+  const second = await start();
+  second.ws.send(JSON.stringify({ type: 'ended', shanhetu: { ...result, pile: ['secret'] } }));
+  second.ws.send(JSON.stringify({ type: 'ended', shanhetu: result }));
+  await waitFor(() => events.some((event) => event.type === 'ended'));
+  assert.equal(events.filter((event) => event.type === 'ended').length, 1);
+  const ended = events.find((event) => event.type === 'ended');
+  assert(ended?.type === 'ended');
+  assert.equal(ended.matchId, second.id);
+  assert.deepEqual(ended.shanhetu, result);
+});
+
 test('AI地主的真人操作者在HTTP、原生WebSocket及持续推送中均绑定同一AI角色；其他会话不能继承', async (t) => {
   const f = await fixture(
     t,
@@ -632,6 +736,21 @@ test('规则时钟仅限本机宿主：手机与公网不能连接，房间释�
   f.engine.release(f.room.code);
   assert.equal((await close)[0], 1000);
 });
+
+test(
+  '原生包在规则连接前加载失败时，已认证的时钟连接可立即结束开局',
+  { timeout: 5000 },
+  async (t) => {
+    const f = await fixture(t, await minimalEngineRoot(t));
+    const clock = f.socket('clock', f.workerCookie);
+    await once(clock, 'open');
+    const ended = assert.rejects(f.started, /Native rule worker unavailable/);
+    const close = once(clock, 'close');
+    clock.send(JSON.stringify({ type: 'startup-failed' }));
+    await ended;
+    assert.equal((await close)[0], 1000);
+  },
+);
 
 test('轻量网关：本机按席位镜像，手机只收自己的声明状态，过期或伪造操作不进入原生规则', async (t) => {
   const f = await fixture(t);

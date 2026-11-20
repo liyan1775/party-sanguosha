@@ -23,10 +23,22 @@ import { PollChannel } from './poll-channel.js';
 import { LanBridge } from './lan-bridge.js';
 import { sanitizeTable, tableAction } from './table.js';
 import type { TableState } from '../../shared/src/table.js';
-import { validateCardPile, type CardPile } from '../runtime/card-pile.js';
+import { validateCardPile, shanhetuCardPile, type CardPile } from '../runtime/card-pile.js';
 import { RuleClock } from './rule-clock.js';
 import { customRosterDigest } from './custom-roster-policy.js';
 import nativeInventory from '../../../config/native-character-inventory.json' with { type: 'json' };
+import {
+  prepareShanhetuBattle,
+  sanitizeShanhetuResult,
+  shanhetuRecipe,
+  shanhetuTerrain,
+  shanhetuGrowth,
+  shanhetuNpcSkills,
+  shanhetuBattleCompanions,
+  shanhetuCards,
+  shanhetuDefinitionPacks,
+  shanhetuEquipmentPacks,
+} from './shanhetu.js';
 
 type Match = {
   id: string;
@@ -61,6 +73,7 @@ type Match = {
 };
 type RosterPreset = {
   id: string;
+  ruleset?: 'shanhetu-s5';
   characters: string[];
   cardPile: CardPile;
   definitionPacks: { characters: string[]; cards: string[] };
@@ -295,6 +308,7 @@ export class NativeNonameService implements EngineAdapter {
       publicSpectating: true,
       experience: true,
       doudizhuPractice: true,
+      shanhetu: assets,
       message: ready
         ? '无名杀已就绪，真人准备后可以开始对局。'
         : assets
@@ -464,6 +478,39 @@ export class NativeNonameService implements EngineAdapter {
       )
         throw new Error('自定义将池引用与本局快照不一致');
       preset = this.effectivePreset(setup.settings.generalPreset, setup.customRoster);
+      setup = prepareShanhetuBattle(setup, preset.characters);
+      if (setup.shanhetu) {
+        const { battleId, difficulty, elapsedMonths, chapter } = setup.shanhetu;
+        const recipe = shanhetuRecipe(battleId, difficulty, elapsedMonths, chapter);
+        preset = {
+          ...preset,
+          ruleset: 'shanhetu-s5',
+          cardPile: structuredClone(shanhetuCardPile),
+          definitionPacks: {
+            ...preset.definitionPacks,
+            cards: [
+              ...new Set([
+                ...preset.definitionPacks.cards,
+                ...shanhetuCardPile.packs,
+                ...shanhetuEquipmentPacks(recipe),
+              ]),
+            ],
+            characters: [
+              ...new Set([
+                ...preset.definitionPacks.characters,
+                ...recipe.definitionPacks,
+                ...shanhetuBattleCompanions(setup.shanhetu).flatMap(
+                  (companion) => companion.definitionPacks,
+                ),
+                ...shanhetuGrowth()
+                  .skills.filter((skill) => setup.shanhetu!.build?.skills.includes(skill.id))
+                  .map((skill) => skill.definitionPack),
+              ]),
+            ],
+          },
+        };
+        validateCardPile(preset);
+      }
       if (
         setup.customRoster &&
         (Object.values(setup.generalSelections ?? {}).some(
@@ -875,7 +922,14 @@ export class NativeNonameService implements EngineAdapter {
           }
           match.clock = ws;
           if (match.clockController) match.clockController.bind(ws);
-          else match.clockController = new RuleClock(ws, Boolean(match.executionId));
+          else
+            match.clockController = new RuleClock(ws, Boolean(match.executionId), () => {
+              // The worker authenticates its clock before loading the rule packs.
+              // A pack failure can abort setup before the regular relay exists.
+              if (match.host || match.state !== 'starting') return false;
+              this.fail(match);
+              return true;
+            });
           this.ruleRecovered(match, 'clock');
           ws.on('close', (code) => this.ruleDisconnected(match, 'clock', ws, code));
         } else if (route![2] === 'worker') {
@@ -932,6 +986,16 @@ export class NativeNonameService implements EngineAdapter {
                 clearTimeout(match.timer);
                 match.resolve();
               } else if (message.type === 'ended' && match.state === 'playing') {
+                const shanhetu = match.setup.shanhetu
+                  ? sanitizeShanhetuResult(
+                      (message as unknown as { shanhetu: unknown }).shanhetu,
+                      match.setup,
+                    )
+                  : null;
+                if (match.setup.shanhetu && !shanhetu) {
+                  this.fail(match, 'protocol-error');
+                  return;
+                }
                 match.state = 'ended';
                 const value = (message as unknown as { winner: unknown }).winner;
                 this.emit({
@@ -939,6 +1003,7 @@ export class NativeNonameService implements EngineAdapter {
                   roomCode: match.setup.roomCode,
                   matchId: match.id,
                   winner: value === 'landlord' || value === 'farmers' ? value : null,
+                  ...(shanhetu ? { shanhetu } : {}),
                 });
               } else if (message.type === 'failed') this.fail(match);
             } catch {
@@ -1368,7 +1433,8 @@ export class NativeNonameService implements EngineAdapter {
         const mode = url.searchParams.get('mode') ?? 'identity';
         if (
           !GENERAL_PRESETS.some((entry) => entry.id === preset) ||
-          !['identity', 'duel', 'doudizhu', 'versus', 'college'].includes(mode)
+          !['identity', 'duel', 'doudizhu', 'versus', 'college', 'shanhetu'].includes(mode) ||
+          (mode === 'shanhetu' && !this.status().shanhetu)
         ) {
           json(response, 400, {});
           return true;
@@ -1386,7 +1452,7 @@ export class NativeNonameService implements EngineAdapter {
                 !/^[1-9]\d*$/.test(revision) ||
                 !Number.isSafeInteger(Number(revision)) ||
                 !this.rosterResolver ||
-                mode === 'college'))
+                ['college', 'shanhetu'].includes(mode)))
           )
             throw new Error('Invalid custom roster');
           const resolved = roster ? this.rosterResolver!(roster, Number(revision)) : undefined;
@@ -1396,6 +1462,28 @@ export class NativeNonameService implements EngineAdapter {
           )
             throw new Error('Invalid roster reference');
           effective = this.effectivePreset(preset, resolved);
+          if (mode === 'shanhetu') {
+            effective = {
+              ...effective,
+              ruleset: 'shanhetu-s5',
+              cardPile: structuredClone(shanhetuCardPile),
+              definitionPacks: {
+                cards: [
+                  ...new Set([
+                    ...effective.definitionPacks.cards,
+                    ...shanhetuCardPile.packs,
+                    ...shanhetuEquipmentPacks(),
+                  ]),
+                ],
+                characters: [
+                  ...new Set([
+                    ...effective.definitionPacks.characters,
+                    ...shanhetuDefinitionPacks(),
+                  ]),
+                ],
+              },
+            };
+          }
         } catch {
           json(response, 400, { error: { message: '自定义将池版本不存在或无效，请重新选择。' } });
           return true;
@@ -1438,7 +1526,7 @@ export class NativeNonameService implements EngineAdapter {
           'character/perfectPairs.js',
           ...definitions.cards.map((name: string) => `card/${name}.js`),
           ...definitions.characters.map((name: string) => `character/${name}.js`),
-          `mode/${mode === 'duel' ? 'single' : mode === 'college' ? 'doudizhu' : mode}.js`,
+          `mode/${mode === 'duel' ? 'single' : mode === 'college' ? 'doudizhu' : mode === 'shanhetu' ? 'identity' : mode}.js`,
           'image/background/ol_bg.jpg',
           'image/card/handcard.png',
           'image/card/tiesuo_mark.png',
@@ -1713,6 +1801,15 @@ export class NativeNonameService implements EngineAdapter {
               ...(assets.portraitVariants?.[name] ?? []),
             ]),
           );
+          const battle = match.setup.shanhetu;
+          const recipe =
+            battle &&
+            shanhetuRecipe(
+              battle.battleId,
+              battle.difficulty,
+              battle.elapsedMonths,
+              battle.chapter,
+            );
           json(response, 200, {
             id: match.id,
             serverVersion: APP_VERSION,
@@ -1720,7 +1817,7 @@ export class NativeNonameService implements EngineAdapter {
             connectionRecovery: true,
             controlVersions: true,
             luckCards: true,
-            surrender: true,
+            surrender: !match.setup.shanhetu,
             emotions: true,
             experience: true,
             rosterPolicy: true,
@@ -1729,6 +1826,16 @@ export class NativeNonameService implements EngineAdapter {
             ruleRecovery: worker,
             tablePresentation: true,
             ...match.setup,
+            ...(battle && recipe
+              ? {
+                  shanhetuRecipe: recipe,
+                  shanhetuTerrain: shanhetuTerrain(battle.terrainId),
+                  shanhetuGrowth: shanhetuGrowth(),
+                  shanhetuNpcSkills: shanhetuNpcSkills(recipe),
+                  shanhetuCompanions: shanhetuBattleCompanions(battle),
+                  shanhetuCards: shanhetuCards(),
+                }
+              : {}),
             generalSelections: worker ? match.setup.generalSelections : undefined,
             doudizhu: worker ? match.setup.doudizhu : undefined,
             farmerHandSharing: ['doudizhu', 'college', 'versus'].includes(
@@ -1839,6 +1946,11 @@ export class NativeNonameService implements EngineAdapter {
             'table-projection.js',
             'table-presentation.js',
             'farmer-hands.js',
+            'shanhetu.js',
+            'shanhetu-skills.js',
+            'shanhetu-medium.js',
+            'shanhetu-hard.js',
+            'shanhetu-terrain.js',
           ].includes(name)
         )
           throw new Error('Invalid runtime path');

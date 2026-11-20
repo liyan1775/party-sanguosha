@@ -6,7 +6,15 @@
   "checkedOn": "2026-10-04",
   "coreArchive": {
     "url": "https://github.com/libnoname/noname/releases/download/v1.11.6/noname.core.zip",
+    "apiUrl": "https://api.github.com/repos/libnoname/noname/releases/assets/602295324",
     "sha256": "d35538c702f5acc4a18be805a0f15d2639613dbe0805bf62e4d574db5bbb869e"
+  },
+  "assetArchive": {
+    "apiUrl": "https://api.github.com/repos/libnoname/noname/releases/assets/602295325",
+    "bytes": 1216102258,
+    "directoryOffset": 1214306718,
+    "directoryBytes": 1795518,
+    "directorySha256": "152f180c8cede10f115c54241e839d50456bbc5d11f1e44a5e41c9e02a365ffe"
   },
   "runtimeVerified": true,
   "runtimeVerification": {

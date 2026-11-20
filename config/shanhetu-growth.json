@@ -1,0 +1,311 @@
+{
+  "schemaVersion": 1,
+  "status": "internal-native-growth-integration",
+  "sourceDecodedSha256": "0e116ac3091748127e104878e01daddaf6cdb847d5b4f2cafa836a4223accca2",
+  "skills": [
+    {
+      "id": 3297,
+      "spellId": 62,
+      "nativeId": "kurou",
+      "name": "苦肉",
+      "description": "出牌阶段，你可以失去1点体力，然后摸两张牌。",
+      "rarity": 4,
+      "price": 1000,
+      "definitionPack": "standard"
+    },
+    {
+      "id": 3021,
+      "spellId": 57,
+      "nativeId": "qixi",
+      "definitionPack": "standard",
+      "name": "奇袭",
+      "description": "你可以将一张黑色牌当【过河拆桥】使用。",
+      "rarity": 2,
+      "price": 300
+    },
+    {
+      "id": 3049,
+      "spellId": 65,
+      "nativeId": "qingnang",
+      "definitionPack": "standard",
+      "name": "青囊",
+      "description": "出牌阶段限一次，你可以弃置一张手牌令一名角色回复1点体力。",
+      "rarity": 1,
+      "price": 100
+    },
+    {
+      "id": 3134,
+      "spellId": 36,
+      "nativeId": "kongcheng",
+      "definitionPack": "standard",
+      "name": "空城",
+      "description": "锁定技，若你没有手牌，你不能成为【杀】或【决斗】的目标。",
+      "rarity": 1,
+      "price": 100
+    },
+    {
+      "id": 3145,
+      "spellId": 33,
+      "nativeId": "wusheng",
+      "definitionPack": "standard",
+      "name": "武圣",
+      "description": "你可以将一张红色牌当【杀】使用或打出。",
+      "rarity": 3,
+      "price": 600
+    },
+    {
+      "id": 3264,
+      "spellId": 34,
+      "nativeId": "paoxiao",
+      "definitionPack": "standard",
+      "name": "咆哮",
+      "description": "锁定技，你使用【杀】无次数限制。",
+      "rarity": 4,
+      "price": 1000
+    },
+    {
+      "id": 3271,
+      "spellId": 712,
+      "nativeId": "reyingzi",
+      "definitionPack": "refresh",
+      "name": "英姿",
+      "description": "锁定技，摸牌阶段，你多摸一张牌。你的手牌上限为你的体力上限。",
+      "rarity": 2,
+      "price": 300
+    },
+    {
+      "id": 3025,
+      "spellId": 878,
+      "nativeId": "new_rewusheng",
+      "definitionPack": "refresh",
+      "name": "武圣",
+      "description": "你可以将一张红色牌当【杀】使用或打出。你使用的方片【杀】无距离限制。",
+      "rarity": 2,
+      "price": 300
+    },
+    {
+      "id": 3225,
+      "spellId": 876,
+      "nativeId": "rebiyue",
+      "definitionPack": "refresh",
+      "name": "闭月",
+      "description": "结束阶段，若你没有手牌，你可以摸两张牌，否则你可以摸一张牌。",
+      "rarity": 1,
+      "price": 100
+    },
+    {
+      "id": 3016,
+      "spellId": 716,
+      "nativeId": "relianying",
+      "definitionPack": "refresh",
+      "name": "连营",
+      "description": "当你失去所有手牌后，你可以令至多X名角色各摸一张牌（X为你失去的手牌数）。",
+      "rarity": 1,
+      "price": 100
+    },
+    {
+      "id": 3106,
+      "spellId": 119,
+      "nativeId": "weimu",
+      "definitionPack": "shenhua",
+      "name": "帷幕",
+      "description": "锁定技，你不能成为黑色锦囊牌的目标。",
+      "rarity": 1,
+      "price": 100
+    },
+    {
+      "id": 3091,
+      "spellId": 426,
+      "nativeId": "dangxian",
+      "definitionPack": "yijiang",
+      "name": "当先",
+      "description": "锁定技，回合开始时，你执行一个额外的出牌阶段。",
+      "rarity": 4,
+      "price": 1000
+    },
+    {
+      "id": 3253,
+      "spellId": 9000,
+      "nativeId": "juguan",
+      "definitionPack": "sp",
+      "name": "拒关",
+      "description": "出牌阶段限一次，你可将一张手牌当【杀】或【决斗】使用。若受到此牌伤害的角色未在你的下回合开始前对你造成过伤害，你的下个摸牌阶段摸牌数+2。",
+      "rarity": 2,
+      "price": 300
+    },
+    {
+      "id": 3268,
+      "spellId": 114,
+      "nativeId": "lieren",
+      "name": "烈刃",
+      "description": "当你使用【杀】对目标角色造成伤害后，你可以与其拼点：若你赢，你获得其一张牌。",
+      "rarity": 1,
+      "price": 100,
+      "definitionPack": "shenhua"
+    },
+    {
+      "id": 3177,
+      "spellId": 418,
+      "nativeId": "jueqing",
+      "name": "绝情",
+      "description": "锁定技，你即将造成的伤害视为失去体力。",
+      "rarity": 1,
+      "price": 100,
+      "definitionPack": "yijiang"
+    }
+  ],
+  "tactics": [
+    {
+      "id": 2030,
+      "nativeId": "zf_ershengsan",
+      "name": "二生三",
+      "description": "【无中生有】额外摸1张牌",
+      "rarity": 2,
+      "price": 300
+    },
+    {
+      "id": 2059,
+      "nativeId": "zf_mopai",
+      "name": "摸牌Ⅰ",
+      "description": "摸牌阶段，你的摸牌数+1",
+      "rarity": 2,
+      "price": 300
+    },
+    {
+      "id": 2010,
+      "nativeId": "zf_guandaozhiji",
+      "name": "关刀之脊",
+      "description": "方片【杀】无距离限制",
+      "rarity": 1,
+      "price": 200
+    },
+    {
+      "id": 2009,
+      "nativeId": "zf_touxi",
+      "name": "偷袭",
+      "description": "黑桃【杀】无次数限制",
+      "rarity": 4,
+      "price": 700
+    },
+    {
+      "id": 2002,
+      "nativeId": "zf_haoshenfa",
+      "name": "好身法",
+      "description": "【闪】不计入手牌上限",
+      "rarity": 3,
+      "price": 500
+    },
+    {
+      "id": 2003,
+      "nativeId": "zf_cangtaohu",
+      "name": "藏桃户",
+      "description": "【桃】不计入手牌上限",
+      "rarity": 1,
+      "price": 200
+    },
+    {
+      "id": 2132,
+      "nativeId": "zf_pinang",
+      "name": "皮囊",
+      "description": "手牌上限+1",
+      "rarity": 1,
+      "price": 200
+    },
+    {
+      "id": 2133,
+      "nativeId": "zf_pinang2",
+      "name": "皮囊Ⅱ",
+      "description": "手牌上限+2",
+      "rarity": 2,
+      "price": 300
+    },
+    {
+      "id": 2135,
+      "nativeId": "zf_pinang3",
+      "name": "皮囊Ⅲ",
+      "description": "手牌上限+5",
+      "rarity": 4,
+      "price": 700
+    },
+    {
+      "id": 2060,
+      "nativeId": "zf_mopai2",
+      "name": "摸牌Ⅱ",
+      "description": "摸牌阶段，你的摸牌数+2",
+      "rarity": 3,
+      "price": 500
+    },
+    {
+      "id": 2108,
+      "nativeId": "zf_hugujiu",
+      "name": "虎骨酒",
+      "description": "每回合，你可以额外使用1次【酒】",
+      "rarity": 2,
+      "price": 300
+    },
+    {
+      "id": 2109,
+      "nativeId": "zf_hugujiu2",
+      "name": "虎骨酒Ⅱ",
+      "description": "每回合，你可以额外使用2次【酒】",
+      "rarity": 4,
+      "price": 700
+    },
+    {
+      "id": 2036,
+      "nativeId": "zf_dangtouyibang",
+      "name": "当头一棒",
+      "description": "每轮，你的首张【杀】伤害+1",
+      "rarity": 3,
+      "price": 500
+    },
+    {
+      "id": 2037,
+      "nativeId": "zf_dangtouyibang2",
+      "name": "当头一棒Ⅱ",
+      "description": "每轮，你的首张【杀】伤害+2",
+      "rarity": 4,
+      "price": 700
+    },
+    {
+      "id": 2129,
+      "nativeId": "zf_yuanjiji",
+      "name": "远击技",
+      "description": "造成伤害时，若你与其距离大于1，此伤害+1",
+      "rarity": 1,
+      "price": 200
+    },
+    {
+      "id": 2069,
+      "nativeId": "zf_hujia",
+      "name": "护甲Ⅰ",
+      "description": "每轮开始时，你获得1点护甲",
+      "rarity": 2,
+      "price": 300
+    },
+    {
+      "id": 2070,
+      "nativeId": "zf_hujia2",
+      "name": "护甲Ⅱ",
+      "description": "每轮开始时，你获得2点护甲",
+      "rarity": 3,
+      "price": 500
+    },
+    {
+      "id": 2028,
+      "nativeId": "zf_xialuxiangfeng",
+      "name": "狭路相逢",
+      "description": "受到【决斗】伤害后回复1点体力",
+      "rarity": 1,
+      "price": 200
+    },
+    {
+      "id": 2007,
+      "nativeId": "zf_hengjiangsuo",
+      "name": "横江锁",
+      "description": "【铁索连环】能指定任意个目标",
+      "rarity": 3,
+      "price": 500
+    }
+  ]
+}

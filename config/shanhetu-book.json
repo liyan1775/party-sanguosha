@@ -1,0 +1,112 @@
+{
+  "schemaVersion": 1,
+  "sourceDecodedSha256": "0e116ac3091748127e104878e01daddaf6cdb847d5b4f2cafa836a4223accca2",
+  "scenarioId": 5,
+  "slots": [
+    {
+      "rarity": 1,
+      "spent": 0
+    },
+    {
+      "rarity": 1,
+      "spent": 0
+    },
+    {
+      "rarity": 2,
+      "spent": 0
+    },
+    {
+      "rarity": 2,
+      "spent": 200
+    },
+    {
+      "rarity": 3,
+      "spent": 400
+    },
+    {
+      "rarity": 4,
+      "spent": 600
+    }
+  ],
+  "tactics": [
+    {
+      "id": 2219,
+      "name": "和光盟",
+      "description": "开始征程时，你获得1名特殊队友",
+      "rarity": 2
+    },
+    {
+      "id": 2138,
+      "name": "传承",
+      "description": "开局时，三选一获得一次稀有的技能",
+      "rarity": 1
+    }
+  ],
+  "specialCompanions": [
+    {
+      "id": 997019,
+      "weight": 10
+    },
+    {
+      "id": 997023,
+      "weight": 0
+    },
+    {
+      "id": 997024,
+      "weight": 10
+    },
+    {
+      "id": 997025,
+      "weight": 10
+    }
+  ],
+  "nodes": [
+    {
+      "id": 1,
+      "plot": 2219,
+      "cost": 6,
+      "requires": []
+    },
+    {
+      "id": 2,
+      "plot": 2138,
+      "cost": 6,
+      "requires": []
+    },
+    {
+      "id": 3,
+      "plot": 3225,
+      "cost": 5,
+      "requires": [1]
+    },
+    {
+      "id": 5,
+      "plot": 3268,
+      "cost": 5,
+      "requires": [1]
+    },
+    {
+      "id": 7,
+      "plot": 3177,
+      "cost": 5,
+      "requires": [2]
+    },
+    {
+      "id": 15,
+      "plot": 4012,
+      "cost": 12,
+      "requires": [7]
+    }
+  ],
+  "lockedPlots": [3225, 3268, 3177, 4016, 4012, 4009, 4006, 2129, 4010, 4015, 3091, 2059, 2009],
+  "unlockMilestones": [
+    { "victories": 3, "skills": [3016], "lesson": "留意失去最后一张手牌的时机。" },
+    { "victories": 7, "skills": [3253], "lesson": "判断对手出牌与自己弃牌的时机。" },
+    { "victories": 12, "skills": [3268], "lesson": "在伤害后权衡手牌、拼点和夺牌。" },
+    {
+      "victories": 18,
+      "skills": [3177],
+      "lesson": "区分伤害与失去体力，留意哪些技能因此不再触发。"
+    }
+  ]
+}

@@ -8,6 +8,7 @@ export class RuleClock {
   constructor(
     socket: WebSocket,
     private readonly retainOnDisconnect = false,
+    private readonly startupFailed?: () => boolean,
   ) {
     this.bind(socket);
   }
@@ -19,6 +20,7 @@ export class RuleClock {
       if (this.socket !== socket) return;
       try {
         const packet = JSON.parse(bytes.toString());
+        if (packet?.type === 'startup-failed' && this.startupFailed?.()) return;
         if (
           !packet ||
           !Number.isSafeInteger(packet.id) ||

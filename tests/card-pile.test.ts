@@ -1,7 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { prepareCardPile, validateCardPile } from '../packages/noname-adapter/runtime/card-pile.js';
+import {
+  prepareCardPile,
+  validateCardPile,
+  shanhetuCardPile,
+} from '../packages/noname-adapter/runtime/card-pile.js';
 
 const presets = JSON.parse(
   await readFile(new URL('../config/roster-presets.json', import.meta.url), 'utf8'),
@@ -68,5 +72,36 @@ test('未经确认的牌包、木牛或张数、缺失定义拒绝开局', () =>
     const before = lib.card.list;
     assert.throws(() => prepareCardPile(lib, preset), /不符合|未载入|不一致/);
     assert.equal(lib.card.list, before, '失败时不改原模板');
+  }
+});
+
+test('山河图独立牌堆不随武将档位变化，保留军争基本牌并删除全部装备', () => {
+  for (const original of presets) {
+    const preset = {
+      ...original,
+      ruleset: 'shanhetu-s5',
+      cardPile: structuredClone(shanhetuCardPile),
+      definitionPacks: { ...original.definitionPacks, cards: ['standard', 'extra'] },
+    };
+    const lib = nativeTemplate(preset);
+    const entries = [...lib.card.list];
+    for (const id of shanhetuCardPile.excludedCards) lib.card[id].type = 'equip';
+    prepareCardPile(lib, preset);
+    assert.equal(lib.card.list.length, 135);
+    assert(lib.card.list.every((card: any) => lib.card[card[2]].type !== 'equip'));
+    assert(lib.card.list.some((card: any) => card[2] === 'jiu'));
+    assert(lib.card.list.some((card: any) => card[2] === 'sha' && card[3] === 'fire'));
+    assert(lib.card.list.some((card: any) => card[2] === 'sha' && card[3] === 'thunder'));
+    assert(lib.card.list.every((card: any) => entries.includes(card)));
+    prepareCardPile(lib, preset);
+    assert.equal(lib.card.list.length, 135);
+    assert.equal(original.cardPile.cardCount, original.id === 'beginner' ? 108 : 160);
+    assert.throws(() => validateCardPile({ ...preset, ruleset: undefined }), /不一致/);
+    assert.throws(() => validateCardPile({ ...preset, ruleset: 'unknown' }), /未经确认/);
+    const invalid = nativeTemplate(preset);
+    invalid.card.sha.type = 'equip';
+    const before = invalid.card.list;
+    assert.throws(() => prepareCardPile(invalid, preset), /不得包含装备/);
+    assert.equal(invalid.card.list, before);
   }
 });

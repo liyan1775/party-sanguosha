@@ -1,4 +1,4 @@
-import { randomBytes, timingSafeEqual } from 'node:crypto';
+import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -21,6 +21,7 @@ import { AppError } from './errors.js';
 import { findHomeUrls } from './network.js';
 import { LobbyStore } from './lobby.js';
 import { RosterLibrary } from './roster-library.js';
+import { ShanhetuBook } from './shanhetu-book.js';
 
 interface ServerOptions {
   webRoot: string;
@@ -30,6 +31,7 @@ interface ServerOptions {
   extensions?: ExtensionInfo[];
   entryMode?: EntryInfo['mode'];
   rosterDirectory?: string;
+  shanhetuDirectory?: string;
 }
 
 function cookies(request: IncomingMessage): Record<string, string> {
@@ -56,7 +58,11 @@ function json(response: ServerResponse, status: number, body: unknown): void {
   response.end(JSON.stringify(body));
 }
 
-async function readBody(request: IncomingMessage, limit = 4096): Promise<Record<string, unknown>> {
+async function readBody(
+  request: IncomingMessage,
+  limit = 4096,
+  allowEmpty = false,
+): Promise<Record<string, unknown>> {
   let length = 0;
   const chunks: Buffer[] = [];
   for await (const chunk of request) {
@@ -64,6 +70,7 @@ async function readBody(request: IncomingMessage, limit = 4096): Promise<Record<
     if (length > limit) throw new AppError(413, 'BODY_TOO_LARGE', '请求内容过长。');
     chunks.push(Buffer.from(chunk));
   }
+  if (!length && allowEmpty) return {};
   try {
     const body: unknown = JSON.parse(Buffer.concat(chunks).toString('utf8'));
     if (!body || typeof body !== 'object' || Array.isArray(body)) throw new Error();
@@ -81,6 +88,8 @@ export function createPartyServer(options: ServerOptions) {
   const extensions = options.extensions ?? [];
   const engine = options.adapter ?? new NonameAdapter();
   const rosters = new RosterLibrary(options.rosterDirectory);
+  const shanhetuBook = new ShanhetuBook(options.shanhetuDirectory);
+  const shanhetuCookieSecret = randomBytes(32);
   const lobby = new LobbyStore(engine, extensions, (id, revision) => rosters.select(id, revision));
   if (engine instanceof NativeNonameService)
     engine.setRosterResolver((id, revision) => rosters.resolve(id, revision));
@@ -231,6 +240,19 @@ export function createPartyServer(options: ServerOptions) {
       if (!validOrigin) throw new AppError(403, 'INVALID_ORIGIN', '请从本机房间页面操作。');
     }
     const playerToken = cookies(request).party_player;
+    const shanhetuBookKey = () => {
+      const prior = cookies(request).party_shanhetu_book;
+      const credential =
+        prior && /^[A-Za-z0-9_-]{43}$/.test(prior)
+          ? prior
+          : createHmac('sha256', shanhetuCookieSecret).update(playerToken!).digest('base64url');
+      if (credential !== prior)
+        response.setHeader(
+          'Set-Cookie',
+          `party_shanhetu_book=${credential}; Path=/; HttpOnly; SameSite=Strict; Max-Age=31536000${request.headers['x-party-ingress'] === 'public' ? '; Secure' : ''}`,
+        );
+      return ShanhetuBook.profileKey(credential);
+    };
     const rosterEditor = () => {
       const previous = cookies(request).party_roster_editor;
       const value =
@@ -415,7 +437,7 @@ export function createPartyServer(options: ServerOptions) {
     }
 
     const roomRoute =
-      /^\/api\/rooms\/([A-F0-9]{6})(?:\/(players(?:\/[\w-]+)?|me(?:\/(?:ready|general|doudizhu))?|owner(?:\/claim)?|start|rematch|bots|events|team|series\/end))?$/.exec(
+      /^\/api\/rooms\/([A-F0-9]{6})(?:\/(players(?:\/[\w-]+)?|me(?:\/(?:ready|general|doudizhu))?|owner(?:\/claim)?|start|rematch|bots|events|team|series\/end|shanhetu\/(?:action|end|book|restart)))?$/.exec(
         url.pathname,
       );
     if (roomRoute) {
@@ -432,6 +454,9 @@ export function createPartyServer(options: ServerOptions) {
         'POST owner/claim',
         'POST me/doudizhu',
         'PUT team',
+        'POST shanhetu/action',
+        'POST shanhetu/end',
+        'POST shanhetu/restart',
       ].includes(operation)
         ? await readBody(request)
         : undefined;
@@ -480,6 +505,24 @@ export function createPartyServer(options: ServerOptions) {
           room.endSeries(playerToken);
           json(response, 200, room.snapshot());
           return;
+        case 'POST shanhetu/action':
+          await room.shanhetuAction(playerToken, body);
+          json(response, 200, room.snapshot());
+          return;
+        case 'POST shanhetu/end':
+          room.endShanhetu(playerToken, body);
+          json(response, 200, room.snapshot());
+          return;
+        case 'POST shanhetu/restart':
+          await room.restartShanhetu(playerToken, body!);
+          json(response, 200, room.snapshot());
+          return;
+        case 'GET shanhetu/book': {
+          room.requireShanhetuBookOwner(playerToken);
+          const key = shanhetuBookKey();
+          json(response, 200, shanhetuBook.view(key));
+          return;
+        }
         case 'PUT me/general':
           json(response, 200, room.setGeneralChoice(playerToken, body!.general));
           return;
@@ -487,10 +530,19 @@ export function createPartyServer(options: ServerOptions) {
           room.updateSettings(body, playerToken);
           json(response, 200, room.snapshot());
           return;
-        case 'POST start':
-          await room.start(playerToken);
+        case 'POST start': {
+          let book;
+          let difficulty;
+          let openingTactic;
+          if (room.snapshot().settings.mode === 'shanhetu') {
+            room.requireShanhetuBookOwner(playerToken);
+            ({ difficulty, openingTactic } = await readBody(request, 4096, true));
+            book = { library: shanhetuBook, key: shanhetuBookKey() };
+          }
+          await room.start(playerToken, book, difficulty, openingTactic);
           json(response, 200, room.snapshot());
           return;
+        }
         case 'POST rematch':
           room.returnToWaiting(playerToken);
           json(response, 200, room.snapshot());
@@ -578,6 +630,10 @@ export function createPartyServer(options: ServerOptions) {
     const assets: Record<string, { file: string; mime: string }> = {
       '/assets/app.js': { file: 'app.js', mime: 'text/javascript; charset=utf-8' },
       '/assets/style.css': { file: 'style.css', mime: 'text/css; charset=utf-8' },
+      '/assets/shanhetu-pass.webp': { file: 'shanhetu-pass.webp', mime: 'image/webp' },
+      '/assets/shanhetu-encounter.webp': { file: 'shanhetu-encounter.webp', mime: 'image/webp' },
+      '/assets/shanhetu-market.webp': { file: 'shanhetu-market.webp', mime: 'image/webp' },
+      '/assets/shanhetu-camp.webp': { file: 'shanhetu-camp.webp', mime: 'image/webp' },
       '/assets/generals.json': { file: 'generals.json', mime: 'application/json; charset=utf-8' },
       '/assets/table.js': { file: 'table.js', mime: 'text/javascript; charset=utf-8' },
       '/assets/table.css': { file: 'table.css', mime: 'text/css; charset=utf-8' },

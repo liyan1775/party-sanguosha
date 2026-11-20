@@ -92,7 +92,8 @@ export function showServerPage(info: ServerInfo): void {
     const owner = room.players.find((player) => player.id === room.ownerId);
     element('#console-room-title').textContent =
       `${owner?.nickname ?? '朋友'}的房间 · ${room.code}`;
-    element('#console-room-phase').textContent = phases[room.phase];
+    element('#console-room-phase').textContent =
+      room.shanhetu && room.phase === 'waiting' ? '山河图征程中' : phases[room.phase];
     element('#console-room-settings').textContent =
       `${findMode(room.settings.mode)?.name} · ${room.settings.playerCount} 席 · ${GENERAL_PRESETS.find((preset) => preset.id === room.settings.generalPreset)?.name} · ${room.settings.allowGeneralSelection ? '点将开放' : '点将关闭'}`;
     const players = element('#console-players');
@@ -110,7 +111,7 @@ export function showServerPage(info: ServerInfo): void {
           ? '原生 AI'
           : `${player.online ? (player.ready ? '在线 · 已准备' : '在线') : '离线'}${current ? ` · ${routes[network.route]} · ${network.transport.toUpperCase()} · ${network.rtt ?? '—'} ms${network.unstable ? ' · 不稳' : ''}` : ''}`;
       row.append(name, status);
-      if (room.phase === 'waiting')
+      if (room.phase === 'waiting' && !room.shanhetu)
         row.append(
           commandButton(
             '移除席位',
@@ -124,14 +125,20 @@ export function showServerPage(info: ServerInfo): void {
     }
     const actions = element('#console-actions');
     actions.replaceChildren();
-    if (['starting', 'playing', 'finished'].includes(room.phase))
+    if (room.shanhetu || ['starting', 'playing', 'finished'].includes(room.phase))
       actions.append(
         commandButton(
-          room.phase === 'finished' ? '回房准备下一局' : '结束对局并回房',
+          room.shanhetu
+            ? '结束征程并回房'
+            : room.phase === 'finished'
+              ? '回房准备下一局'
+              : '结束对局并回房',
           entry,
           'POST',
           '/reset',
-          '结束这次对局并让所有玩家回到房间？当前对局将结束，席位保留，真人需要重新准备。',
+          room.shanhetu
+            ? '结束本次山河图征程并回房？本次征程的进度与成长将清除，席位保留。'
+            : '结束这次对局并让所有玩家回到房间？当前对局将结束，席位保留，真人需要重新准备。',
         ),
       );
     actions.append(

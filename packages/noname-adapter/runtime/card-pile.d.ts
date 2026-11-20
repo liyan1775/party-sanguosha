@@ -5,5 +5,6 @@ export interface CardPile {
   excludedCards: string[];
   cardCount: number;
 }
+export const shanhetuCardPile: CardPile;
 export function validateCardPile(preset: unknown): CardPile;
 export function prepareCardPile(lib: unknown, preset: unknown): void;

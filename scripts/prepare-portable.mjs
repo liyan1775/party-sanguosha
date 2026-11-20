@@ -14,7 +14,7 @@ try {
   await import('./prepare-noname-lab.mjs');
 } catch (error) {
   console.error(
-    '首次资源准备尚未完成。请确认电脑能访问 GitHub 和 raw.githubusercontent.com，再双击同一启动文件重试。',
+    '首次资源准备尚未完成。请确认电脑能访问 GitHub 及其资源下载域名，再双击同一启动文件重试。实际连接失败的地址见下方错误。',
   );
   console.error('已校验的文件会保留；重试会继续补齐缺少的资源。无需安装 Node.js、Git 或运行命令。');
   throw error;

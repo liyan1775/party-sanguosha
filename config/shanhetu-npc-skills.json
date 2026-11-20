@@ -1,0 +1,1019 @@
+{
+  "schemaVersion": 1,
+  "status": "internal-native-npc-integration",
+  "sourceDecodedSha256": "0286c6c209ae91ecaac29d3f2e31c985a7c8a11c0423066ec0d1c97ab7b5536b",
+  "skills": [
+    {
+      "id": 66,
+      "nativeId": "wushuang",
+      "name": "无双",
+      "description": "锁定技，你使用的【杀】需两张【闪】才能抵消；与你【决斗】的角色每次需打出两张【杀】。",
+      "implementation": "native-standard"
+    },
+    {
+      "id": 728,
+      "nativeId": "new_liyu",
+      "name": "利驭",
+      "description": "当你使用【杀】对其他角色造成伤害后，你可以获得其区域里的一张牌，若获得的牌：\n•不为装备牌，其摸一张牌；\n•为装备牌，你视为对由其指定的另一名角色使用一张【决斗】。",
+      "implementation": "native-refresh"
+    },
+    {
+      "id": 3617,
+      "nativeId": "oljuece",
+      "name": "绝策",
+      "description": "结束阶段，你可以对一名手牌数小于等于你的其他角色造成1点伤害。",
+      "implementation": "native-onlyOL"
+    },
+    {
+      "id": 14175,
+      "nativeId": "party_shanhetu_mieji",
+      "name": "灭计",
+      "description": "出牌阶段限一次，你可以令一名有手牌的其他角色选择一项：\n1.弃置一张锦囊牌；\n2.弃置所有手牌。",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 14176,
+      "nativeId": "party_shanhetu_fencheng",
+      "name": "焚城",
+      "description": "每两轮限一次，出牌阶段，你可以选择一名其他角色开始，令所有其他角色依次选择一项：\n1.弃置所有手牌；\n2.受到你造成的X点火焰伤害。（X为你与其手牌差值）",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 3419,
+      "nativeId": "olsbdulie",
+      "name": "笃烈",
+      "description": "每回合限一次，你成为其他角色基本牌或普通锦囊牌的唯一目标时，你可令此牌的效果额外结算一次，然后你摸X张牌（X为你的攻击范围且至多为5）。",
+      "implementation": "native-onlyOL"
+    },
+    {
+      "id": 14103,
+      "nativeId": "party_shanhetu_douchan",
+      "name": "斗缠",
+      "description": "锁定技，准备阶段，你从牌堆中依次获得X张【决斗】，否则每少获得一张【决斗】，你的攻击范围和出牌阶段使用【杀】的次数+1（X为你的体力上限）。",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 14113,
+      "nativeId": "party_shanhetu_langxi",
+      "name": "狼袭",
+      "description": "每个人的准备阶段，你可以对一名体力值小于等于你的其他角色造成1~2点随机伤害。",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 855,
+      "nativeId": "xinfu_yisuan",
+      "name": "亦算",
+      "description": "出牌阶段限一次，当你使用的锦囊牌置入弃牌堆时，你可以减少1点体力上限获得之。",
+      "implementation": "native-sp2"
+    },
+    {
+      "id": 238,
+      "nativeId": "party_shanhetu_zhenjun",
+      "name": "镇军",
+      "description": "准备阶段，你可以弃置一名角色X张牌（X为其手牌数减体力值且至少为1），然后选择一项：\n1.你弃置与其中非装备牌数等量张牌；\n2.其摸与其中非装备牌数等量张牌。",
+      "implementation": "scenario-specific",
+      "inherits": "rezhenjun"
+    },
+    {
+      "id": 14162,
+      "nativeId": "party_shanhetu_luanji",
+      "name": "乱击",
+      "description": "你可以将两张颜色相同的手牌当【万箭齐发】使用。你使用【万箭齐发】可以少选一个目标。",
+      "implementation": "scenario-specific",
+      "inherits": "olluanji"
+    },
+    {
+      "id": 3155,
+      "nativeId": "yilie",
+      "name": "义烈",
+      "description": "你可以将两张颜色相同的手牌当与本轮以此法使用过的牌牌名不同的基本牌使用。",
+      "implementation": "native-sp"
+    },
+    {
+      "id": 3252,
+      "nativeId": "olchuanwu",
+      "name": "穿屋",
+      "description": "锁定技，当你造成或受到伤害后，你失去武将牌上前X个技能直到回合结束（X为你的攻击范围），然后摸与失去技能数等量张牌。",
+      "implementation": "native-sp"
+    },
+    {
+      "id": 611,
+      "nativeId": "party_shanhetu_yishi",
+      "name": "义释",
+      "description": "当你使用【杀】对目标角色造成伤害时，若其区域里有牌，你可以防止此伤害，然后获得其区域里的一张牌。",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 962,
+      "nativeId": "xinfu_gongqing",
+      "name": "公清",
+      "description": "锁定技，当你受到伤害时，若伤害来源攻击范围：\n•小于3，你只受到1点伤害；\n•大于3，此伤害+1。",
+      "implementation": "native-sp"
+    },
+    {
+      "id": 949,
+      "nativeId": "oljiuchi",
+      "name": "酒池",
+      "description": "你可以将一张黑桃手牌当【酒】使用。你使用【酒】无次数限制。当你使用【酒】【杀】造成伤害后，本回合“崩坏”失效。",
+      "implementation": "native-refresh"
+    },
+    {
+      "id": 110,
+      "nativeId": "roulin",
+      "name": "肉林",
+      "description": "锁定技，你对女性角色使用的【杀】和女性角色对你使用的【杀】均需使用两张【闪】才能抵消。",
+      "implementation": "native-shenhua"
+    },
+    {
+      "id": 111,
+      "nativeId": "benghuai",
+      "name": "崩坏",
+      "description": "锁定技，结束阶段，若你不是体力值最小的角色，你失去1点体力或减少1点体力上限。",
+      "implementation": "native-shenhua"
+    },
+    {
+      "id": 950,
+      "nativeId": "party_shanhetu_baonue",
+      "name": "暴虐",
+      "description": "主公技，当其他群势力角色造成1点伤害后，你可以判定，若结果为黑桃，你回复1点体力并获得此判定牌。",
+      "implementation": "scenario-specific",
+      "inherits": "olbaonue"
+    },
+    {
+      "id": 491,
+      "nativeId": "jianying",
+      "name": "渐营",
+      "description": "当你于出牌阶段使用牌时，若此牌的点数或花色与你本阶段使用的上一张牌相同，你可以摸一张牌。",
+      "implementation": "native-yijiang"
+    },
+    {
+      "id": 492,
+      "nativeId": "shibei",
+      "name": "矢北",
+      "description": "锁定技，当你每回合首次受到伤害后，你回复1点体力，然后当你本回合再受到伤害后，你失去1点体力。",
+      "implementation": "native-yijiang"
+    },
+    {
+      "id": 9000,
+      "nativeId": "juguan",
+      "name": "拒关",
+      "description": "出牌阶段限一次，你可将一张手牌当【杀】或【决斗】使用。若受到此牌伤害的角色未在你的下回合开始前对你造成过伤害，你的下个摸牌阶段摸牌数+2。",
+      "implementation": "native-sp"
+    },
+    {
+      "id": 370,
+      "nativeId": "xinjushou",
+      "name": "据守",
+      "description": "结束阶段，你可以翻面并摸四张牌，然后弃置一张手牌，若为装备牌，你改为使用之。",
+      "implementation": "native-shenhua"
+    },
+    {
+      "id": 14118,
+      "nativeId": "party_shanhetu_fixed_distance",
+      "name": "马术",
+      "description": "锁定技，你计算与其他角色的距离都为1",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 14127,
+      "nativeId": "party_shanhetu_battle_wushuang",
+      "name": "无双",
+      "description": "锁定技，你使用的【杀】需X张【闪】才能抵消；与你【决斗】的角色每次需打出X张【杀】。（X为你本场战斗中使用的【杀】总次数，至少为1，至多为5）",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 14129,
+      "nativeId": "party_shanhetu_xiuluo",
+      "name": "修罗",
+      "description": "准备阶段，你可以弃置一张牌，然后弃置你判定区里所有牌。",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 3387,
+      "nativeId": "party_shanhetu_dungong",
+      "name": "盾弓",
+      "description": "锁定技，防止对你造成的超过3点以上部分的伤害",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 3547,
+      "nativeId": "olshisuan",
+      "name": "蓍算",
+      "description": "锁定技，你受到伤害后，你重铸一张牌，来源选择一项：<br>&nbsp;1.失去1点体力；<br>&nbsp;2.交给你一张装备区里的牌；<br>&nbsp;3.将武将牌翻面。",
+      "implementation": "native-sp"
+    },
+    {
+      "id": 3548,
+      "nativeId": "party_shanhetu_zonglve",
+      "name": "纵掠",
+      "description": "出牌阶段限一次，你可以将一张牌当【杀】使用。你使用【杀】对目标角色造成伤害后，若实体牌不为【杀】或没有实体牌，你可以获得其区域各一张牌。",
+      "implementation": "scenario-specific",
+      "inherits": "olzonglve"
+    },
+    {
+      "id": 57,
+      "nativeId": "qixi",
+      "name": "奇袭",
+      "description": "你可以将一张黑色牌当【过河拆桥】使用。",
+      "implementation": "native-standard"
+    },
+    {
+      "id": 95,
+      "nativeId": "oldniepan",
+      "name": "涅槃",
+      "description": "限定技，当你处于濒死状态时，你可以弃置你区域内里的所有牌，复原你的武将牌，摸三张牌，回复至3点体力。",
+      "implementation": "native-shenhua"
+    },
+    {
+      "id": 204,
+      "nativeId": "reyicong",
+      "name": "义从",
+      "description": "锁定技，你计算与其他角色的距离-1；若你的体力值小于等于2，其他角色计算与你的距离+1。",
+      "implementation": "native-refresh"
+    },
+    {
+      "id": 495,
+      "nativeId": "yaowu",
+      "name": "耀武",
+      "description": "锁定技，当一名角色使用红色【杀】对你造成伤害时，其选择回复1点体力或摸一张牌。",
+      "implementation": "native-standard"
+    },
+    {
+      "id": 505,
+      "nativeId": "party_shanhetu_rescue_lord",
+      "name": "救主",
+      "description": "当一名其他己方角色处于濒死状态时，若你的体力值大于1，你可以弃置一张牌并失去1点体力，然后令其回复1点体力。",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 722,
+      "nativeId": "new_retuxi",
+      "name": "突袭",
+      "description": "摸牌阶段，你可以少摸任意张牌并获得等量其他角色的各一张手牌。",
+      "implementation": "native-refresh"
+    },
+    {
+      "id": 724,
+      "nativeId": "new_reyiji",
+      "name": "遗计",
+      "description": "当你受到1点伤害后，你可以摸两张牌，然后你可以交给至多两名其他角色共计至多两张手牌。",
+      "implementation": "native-refresh"
+    },
+    {
+      "id": 814,
+      "nativeId": "party_shanhetu_chenglve",
+      "name": "成略",
+      "description": "转换技，出牌阶段限一次：\n阳：你可以摸一张牌并弃置两张手牌；\n阴：你可以摸两张牌并弃置一张手牌。\n然后你本阶段使用与弃置牌花色相同的牌无距离和次数限制。###转换技，出牌阶段限一次：\n阳：你可以摸一张牌并弃置两张手牌。\n阴：你可以摸两张牌并弃置一张手牌。\n然后你本阶段使用与弃置牌花色相同的牌无距离和次数限制。###转换技，出牌阶段限一次：\n阳：你可以摸一张牌并弃置两张手牌。\n阴：你可以摸两张牌并弃置一张手牌。\n然后你本阶段使用与弃置牌花色相同的牌无距离和次数限制。",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 815,
+      "nativeId": "party_shanhetu_shicai",
+      "name": "恃才",
+      "description": "当你每回合首次使用一种类型的牌后，你可以将之置于牌堆顶，然后摸一张牌。",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 816,
+      "nativeId": "nzry_cunmu",
+      "name": "寸目",
+      "description": "锁定技，当你摸牌时，你改为从牌堆底摸牌。",
+      "implementation": "native-shenhua"
+    },
+    {
+      "id": 863,
+      "nativeId": "xinfu_tanbei",
+      "name": "贪狈",
+      "description": "出牌阶段限一次，你可以令一名其他角色选择一项：\n1.你随机获得其区域里一张牌，本回合不能对其使用牌；\n2.你本回合对其使用牌无距离和次数限制。",
+      "implementation": "native-sp2"
+    },
+    {
+      "id": 864,
+      "nativeId": "xinfu_sidao",
+      "name": "伺盗",
+      "description": "出牌阶段限一次，当你对一名其他角色连续使用两张牌后，你可以将一张手牌当【顺手牵羊】对其使用（须合法）。",
+      "implementation": "native-sp2"
+    },
+    {
+      "id": 889,
+      "nativeId": "yuxu",
+      "name": "誉虚",
+      "description": "当你于出牌阶段使用牌后，你可以摸一张牌，若如此做，当你本阶段使用下一张牌后，你不能以此法摸牌且须弃置一张牌。",
+      "implementation": "native-sp"
+    },
+    {
+      "id": 890,
+      "nativeId": "xjshijian",
+      "name": "实荐",
+      "description": "当其他角色于其回合内使用第二张牌后，你可以弃置一张牌，令其于本回合获得“誉虚”。",
+      "implementation": "native-sp"
+    },
+    {
+      "id": 970,
+      "nativeId": "cxliushi",
+      "name": "流矢",
+      "description": "出牌阶段，你可以将一张红桃牌置于牌堆顶，视为对一名角色使用一张无距离和次数限制的【杀】，若此【杀】造成伤害，其手牌上限-1。",
+      "implementation": "native-huicui"
+    },
+    {
+      "id": 971,
+      "nativeId": "zhanwan",
+      "name": "斩腕",
+      "description": "锁定技，当受到“流矢”效果影响的角色于弃牌阶段弃牌后，你摸等量张牌并移除其“流矢”效果。",
+      "implementation": "native-huicui"
+    },
+    {
+      "id": 3187,
+      "nativeId": "olninge",
+      "name": "狞恶",
+      "description": "锁定技，当一名角色每回合第二次受到伤害后，若其为你或伤害来源为你，你摸一张牌并弃置其场上一张牌。",
+      "implementation": "native-refresh"
+    },
+    {
+      "id": 3389,
+      "nativeId": "repojun",
+      "name": "破军",
+      "description": "当你使用【杀】指定目标后，你可以将其至多X张牌移出游戏直到回合结束（X为其体力值）。你使用的【杀】对手牌区与装备区内牌数皆小于等于你的角色造成的伤害+1。",
+      "implementation": "native-refresh"
+    },
+    {
+      "id": 7005,
+      "nativeId": "yimie",
+      "name": "夷灭",
+      "description": "每回合限一次，当你对其他角色造成伤害时，你可以失去1点体力，令此伤害+X（X为其体力值减本次伤害值），造成伤害后，其回复X点体力。",
+      "implementation": "native-yingbian"
+    },
+    {
+      "id": 14104,
+      "nativeId": "party_shanhetu_envenom",
+      "name": "淬毒",
+      "description": "锁定技，你对敌方角色造成伤害后，令其获得技能“中毒”，然后你摸X张牌（X为当前轮数，最高为5）",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 14105,
+      "nativeId": "party_shanhetu_poison",
+      "name": "中毒",
+      "description": "锁定技，准备阶段，你判定，若结果为方块，你失去本技能，否则你失去X点体力。（X为当前轮数）",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 14135,
+      "nativeId": "party_shanhetu_newcomer_yaowu",
+      "name": "耀武",
+      "description": "锁定技，当你受到伤害时，若造成伤害的牌：\n•为红色，你增加等量体力上限；\n•不为红色，你回复等量体力。",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 14136,
+      "nativeId": "party_shanhetu_shizhan",
+      "name": "势斩",
+      "description": "出牌阶段限X次，你可以视为对一名其他角色使用一张【决斗】。（X为当前轮数）",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 14138,
+      "nativeId": "party_shanhetu_guixin",
+      "name": "归心",
+      "description": "当你受到1点伤害后，你可以获得每名其他角色随机一个区域里的所有牌，然后翻面。",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 14139,
+      "nativeId": "party_shanhetu_qiangxi",
+      "name": "强袭",
+      "description": "出牌阶段限两次，你可以失去1点体力或弃置一张武器牌，对一名其他角色造成X+1点伤害。（X为本轮次技能发动次数）",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 14166,
+      "nativeId": "party_shanhetu_qiaomeng",
+      "name": "趫猛",
+      "description": "当你使用【杀】指定目标后，你可以弃置其区域里的X张牌。（X为你的攻击范围）",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 831,
+      "nativeId": "drlt_congjian",
+      "name": "从谏",
+      "description": "当你成为锦囊牌的目标时，若此牌的目标数大于1，你可以交给其中一名目标角色一张牌，然后摸一张牌，若你给出的牌是装备牌，改为摸两张牌。",
+      "implementation": "native-shenhua"
+    },
+    {
+      "id": 14116,
+      "nativeId": "party_shanhetu_cyclic_xiongluan",
+      "name": "雄乱",
+      "description": "出牌阶段限一次，你可以指定一名其他角色并废除你的判定区和随机一个装备栏，然后你本回合对其使用牌无距离和次数限制，其本回合不能使用和打出手牌。",
+      "implementation": "scenario-specific",
+      "inherits": "drlt_xiongluan"
+    },
+    {
+      "id": 14143,
+      "nativeId": "party_shanhetu_ganglie",
+      "name": "刚烈",
+      "description": "当一名角色对你造成1点伤害后，你可以判定，若结果为：\n•红色，你对其造成2点伤害；\n•黑色，你弃置其两张牌。",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 14144,
+      "nativeId": "party_shanhetu_shensu",
+      "name": "神速",
+      "description": "你可以选择至多三项：\n1.跳过判定阶段和摸牌阶段；\n2.跳过出牌阶段；\n3.跳过弃牌阶段并翻面。\n你每选择一项，你视为使用一张无距离限制的【杀】，此【杀】造成伤害+X。（X为本回合你已跳过的阶段数）",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 311,
+      "nativeId": "feiying",
+      "name": "飞影",
+      "description": "锁定技，其他角色计算与你的距离+1。",
+      "implementation": "native-standard"
+    },
+    {
+      "id": 497,
+      "nativeId": "tongji",
+      "name": "同疾",
+      "description": "锁定技，若你的手牌数大于体力值，攻击范围内包含你的其他角色使用【杀】不能指定除你外的角色为目标。",
+      "implementation": "native-sp"
+    },
+    {
+      "id": 712,
+      "nativeId": "reyingzi",
+      "name": "英姿",
+      "description": "锁定技，摸牌阶段，你多摸一张牌。你的手牌上限为你的体力上限。",
+      "implementation": "native-refresh"
+    },
+    {
+      "id": 713,
+      "nativeId": "refanjian",
+      "name": "反间",
+      "description": "出牌阶段限一次，你可以展示并交给一名其他角色一张手牌，其选择一项：<br>&nbsp;1.展示所有手牌，弃置与此牌相同花色的牌；<br>&nbsp;2.失去1点体力。",
+      "implementation": "native-refresh"
+    },
+    {
+      "id": 721,
+      "nativeId": "party_shanhetu_qingjian",
+      "name": "清俭",
+      "description": "每当你于摸牌阶段外获得牌后，你可以将其中的至少一张牌交给其他角色。",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 799,
+      "nativeId": "qingzhong",
+      "name": "清忠",
+      "description": "出牌阶段开始时，你可以摸两张牌，若如此做，本阶段结束时，你与手牌数最少的角色交换手牌。",
+      "implementation": "native-sp"
+    },
+    {
+      "id": 869,
+      "nativeId": "reguanxing",
+      "name": "观星",
+      "description": "准备阶段，你可以观看牌堆顶的五张牌（存活角色数小于4时改为三张），然后将之以任意顺序置于牌堆顶或牌堆底。若皆置于牌堆底，结束阶段你可以再次发动本技能。",
+      "implementation": "native-refresh"
+    },
+    {
+      "id": 872,
+      "nativeId": "rezhiheng",
+      "name": "制衡",
+      "description": "出牌阶段限一次，你可以弃置任意张牌，然后摸等量张牌，若你以此法弃置了所有手牌，你额外摸一张牌。",
+      "implementation": "native-refresh"
+    },
+    {
+      "id": 905,
+      "nativeId": "shebian",
+      "name": "设变",
+      "description": "当你翻面时，你可以移动场上一张装备牌。",
+      "implementation": "native-refresh"
+    },
+    {
+      "id": 932,
+      "nativeId": "qigong",
+      "name": "齐攻",
+      "description": "当你使用的仅指定单一目标的【杀】被【闪】抵消后，你可以令一名角色对此目标再使用一张无距离限制的【杀】，此【杀】不可被响应。",
+      "implementation": "native-sp2"
+    },
+    {
+      "id": 933,
+      "nativeId": "liehou",
+      "name": "列侯",
+      "description": "出牌阶段限一次，你可以令你攻击范围内一名有手牌的角色交给你一张手牌，若如此做，你将一张手牌交给你攻击范围内的另一名其他角色。 ",
+      "implementation": "native-sp2"
+    },
+    {
+      "id": 1138,
+      "nativeId": "party_shanhetu_wuzang",
+      "name": "无脏",
+      "description": "锁定技，摸牌阶段，你改为摸X张牌（X为你的体力值一半且至少为5）。你的手牌上限为0。",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 3056,
+      "nativeId": "party_shanhetu_jixian",
+      "name": "急陷",
+      "description": "摸牌阶段结束时，你可以视为对满足以下任一条件的目标使用一张【杀】并摸X张牌（X为满足的条件数）：装备区有防具，技能数比你多，未受伤；若此【杀】没有对其造成伤害，你失去1点体力。",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 3097,
+      "nativeId": "yuanzi",
+      "name": "援资",
+      "description": "每轮限一次，其他角色的准备阶段，你可以交给其所有手牌。若如此做，当其本回合造成伤害后，若其手牌数大于等于你，你可以摸两张牌。",
+      "implementation": "native-sp"
+    },
+    {
+      "id": 3098,
+      "nativeId": "liejie",
+      "name": "烈节",
+      "description": "当你受到伤害后，你可以弃置至多三张牌并摸等量张牌，然后你可以弃置伤害来源至多X张牌（X为你以此法弃置的红色牌数）。",
+      "implementation": "native-sp"
+    },
+    {
+      "id": 3156,
+      "nativeId": "party_shanhetu_huanfu",
+      "name": "宦浮",
+      "description": "当你使用【杀】指定目标或成为【杀】的目标后，你可以弃置任意张牌（至多为你的体力上限），若此【杀】结算后对目标角色造成的伤害值为弃牌数，你摸弃牌数两倍的牌。",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 3159,
+      "nativeId": "party_shanhetu_reverse_shizhan",
+      "name": "势斩",
+      "description": "出牌阶段限两次，你可以令一名其他角色视为对你使用一张【决斗】。",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 3201,
+      "nativeId": "oljiang",
+      "name": "激昂",
+      "description": "当你使用【决斗】或红色【杀】指定目标后，或成为【决斗】或红色【杀】的目标后，你可以摸一张牌。每回合首次【决斗】或红色【杀】因弃置进入弃牌堆后，你可以失去1点体力获得之。",
+      "implementation": "native-refresh"
+    },
+    {
+      "id": 3231,
+      "nativeId": "party_shanhetu_leijie",
+      "name": "雷劫",
+      "description": "准备阶段，你可以令一名角色判定，若结果为黑桃2~9，你对其造成2点雷电伤害，否则其摸两张牌。",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 3292,
+      "nativeId": "party_shanhetu_yanyu",
+      "name": "炎狱",
+      "description": "锁定技，其他角色的准备阶段，其判定，若为红色，你对其造成1点火焰伤害并获得判定牌，然后重复此流程（每回合限三次）。",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 3327,
+      "nativeId": "party_shanhetu_baoli",
+      "name": "暴力",
+      "description": "锁定技，你造成的伤害+1",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 3435,
+      "nativeId": "olsbyipo",
+      "name": "毅魄",
+      "description": "你的体力值变化后，若当前体力值大于0且为你首次达到，你可以选择一名角色并选择一项：<br>&nbsp;1.令其摸X张牌，然后弃置一张牌；<br>&nbsp;2.令其摸一张牌，然后弃置X张牌。<br>&nbsp;（X为你已损失体力值且至少为1）",
+      "implementation": "native-onlyOL"
+    },
+    {
+      "id": 3567,
+      "nativeId": "guying",
+      "name": "固营",
+      "description": "锁定技，每回合限一次，当你于回合外失去一张牌后，当前回合角色选择一项：<br>&nbsp;1.随机交给你一张牌；<br>&nbsp;2.你获得此牌，若为装备牌则改为使用之。<br>准备阶段，你弃置X张牌（X为此前此技能发动过的次数），并重置此技能发动次数。",
+      "implementation": "native-shiji"
+    },
+    {
+      "id": 7003,
+      "nativeId": "party_shanhetu_shidu",
+      "name": "识度",
+      "description": "出牌阶段限一次，你可以拼点：若你赢，你获得被拼点者的所有手牌，然后交给其你一半的手牌（向下取整）。",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 14039,
+      "nativeId": "party_shanhetu_biri",
+      "name": "蔽日",
+      "description": "锁定技，防止你受到的火焰伤害，然后回复你防止伤害两倍的体力值并摸回复值的牌；",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 14150,
+      "nativeId": "party_shanhetu_hulie",
+      "name": "虎烈",
+      "description": "你使用【杀】或【决斗】仅指定一名角色为目标后，你可令此牌伤害+2。若此牌未造成伤害，你可令目标角色视为对你使用一张【杀】。",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 14153,
+      "nativeId": "party_shanhetu_hunzi",
+      "name": "魂姿",
+      "description": "觉醒技，准备阶段，若你的体力值不为满，你减少1点体力上限并获得“英姿”“英魂”，本回合结束阶段，你摸三张牌或回复2点体力。",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 14169,
+      "nativeId": "party_shanhetu_shuangxiong",
+      "name": "双雄",
+      "description": "摸牌阶段结束时，你可以弃置一张牌，然后你本回合可以将与之颜色不同的牌当伤害为X【决斗】使用。结束阶段，你获得本回合对你造成过伤害的牌。(X为本轮此技能发动次数）",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 14170,
+      "nativeId": "party_shanhetu_fuqi",
+      "name": "伏骑",
+      "description": "锁定技，其他角色不能使用或打出牌响应你使用的牌。",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 14171,
+      "nativeId": "party_shanhetu_jiaozi",
+      "name": "骄恣",
+      "description": "锁定技，若你的手牌数为全场最多，你造成或受到的伤害值+X。（X为当前轮数）",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 376,
+      "nativeId": "xianfu",
+      "name": "先辅",
+      "description": "锁定技，游戏开始时，你选择一名其他角色，在本局中：\n•当其受到伤害后，你受到等量伤害；\n•当其回复体力后，你回复等量体力。",
+      "implementation": "native-sp"
+    },
+    {
+      "id": 711,
+      "nativeId": "zhaxiang",
+      "name": "诈降",
+      "description": "锁定技，当你失去1点体力后，你摸三张牌，若在你的出牌阶段，你本回合使用【杀】的限制次数+1、使用红色【杀】无距离限制且不能被抵消。",
+      "implementation": "native-refresh"
+    },
+    {
+      "id": 991,
+      "nativeId": "sanyao",
+      "name": "散谣",
+      "description": "出牌阶段限一次，你可以弃置一张牌并对一名全场体力值最大的角色造成1点伤害。",
+      "implementation": "native-yijiang"
+    },
+    {
+      "id": 705,
+      "nativeId": "zhuhai",
+      "name": "诛害",
+      "description": "其他角色的结束阶段，若其本回合造成过伤害，你可以对其使用一张【杀】。",
+      "implementation": "native-refresh"
+    },
+    {
+      "id": 3616,
+      "nativeId": "olchunlao",
+      "name": "醇醪",
+      "description": "你或你相邻角色的【杀】因弃置置入弃牌堆后，将之置于你的武将牌上，称为“醇”（至多为9）。当一名角色处于濒死状态时，你可以移去X张“醇”视为其使用一张【酒】(X为本轮以此法使用【酒】的次数)。",
+      "implementation": "native-onlyOL"
+    },
+    {
+      "id": 444,
+      "nativeId": "junxing",
+      "name": "峻刑",
+      "description": "出牌阶段限一次，你可以弃置任意张手牌并令一名其他角色选择一项：\n1.弃置一张与你弃置牌类型皆不同的手牌；\n2.翻面，然后摸与你弃置牌数等量张牌。",
+      "implementation": "native-yijiang"
+    },
+    {
+      "id": 993,
+      "nativeId": "party_shanhetu_keshou",
+      "name": "恪守",
+      "description": "当你受到伤害时，你可以弃置两张颜色相同的牌，令此伤害-1，若没有与你势力相同的其他角色，你判定，若结果为红色，你摸一张牌。",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 383,
+      "nativeId": "zishu",
+      "name": "自书",
+      "description": "锁定技，其他角色的回合结束后，你将此回合获得的手牌置入弃牌堆。当你于回合内不因本技能获得手牌后，你摸一张牌。",
+      "implementation": "native-sp"
+    },
+    {
+      "id": 294,
+      "nativeId": "xiahui",
+      "name": "黠慧",
+      "description": "锁定技，你的黑色牌不计入手牌上限。当其他角色获得你的黑色牌时，其不能使用、打出、弃置这些牌直到其体力值减少。",
+      "implementation": "native-sp"
+    },
+    {
+      "id": 792,
+      "nativeId": "tianbian",
+      "name": "天辩",
+      "description": "当你拼点时，你可以用牌堆顶的牌拼点。你的红桃拼点牌的点数视为K。",
+      "implementation": "native-yijiang"
+    },
+    {
+      "id": 877,
+      "nativeId": "reyaowu",
+      "name": "耀武",
+      "description": "锁定技，当你受到伤害时，若造成伤害的牌：\n•为红色，伤害来源摸一张牌；\n•不为红色，你摸一张牌。",
+      "implementation": "native-refresh"
+    },
+    {
+      "id": 91,
+      "nativeId": "qiangxi",
+      "name": "强袭",
+      "description": "出牌阶段限一次，你可以失去1点体力或弃置一张武器牌，并对你攻击范围内的一名其他角色造成1点伤害。",
+      "implementation": "native-shenhua"
+    },
+    {
+      "id": 14047,
+      "nativeId": "party_shanhetu_rainstorm",
+      "name": "暴雨",
+      "description": "锁定技，防止你受到的火焰伤害；每轮开始时，对所有其他角色造成1点伤害；",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 3388,
+      "nativeId": "party_shanhetu_wuying",
+      "name": "无影",
+      "description": "锁定技，你的敌方若手牌数大于10，于其回合内获得手牌后（按次数），其受到你造成的1点伤害",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 3226,
+      "nativeId": "clanyunshen",
+      "name": "熨身",
+      "description": "出牌阶段限一次，你可以令一名其他角色回复1点体力并视为你对其或其对你使用一张冰【杀】。",
+      "implementation": "native-clan"
+    },
+    {
+      "id": 3227,
+      "nativeId": "clanshangshen",
+      "name": "伤神",
+      "description": "当每回合首次有角色受到属性伤害后，你可以进行【闪电】判定并令其将手牌摸至四张。",
+      "implementation": "native-clan"
+    },
+    {
+      "id": 3228,
+      "nativeId": "clanfenchai",
+      "name": "分钗",
+      "description": "锁定技，若首次成为你武将牌上技能目标的异性存活/死亡，你的判定牌视为红桃/黑桃。",
+      "implementation": "native-clan"
+    },
+    {
+      "id": 883,
+      "nativeId": "xinguidao",
+      "name": "鬼道",
+      "description": "当一张判定牌生效前，你可以用一张黑色牌替换之，若此黑色牌为黑桃2~9，你摸一张牌。",
+      "implementation": "native-refresh"
+    },
+    {
+      "id": 108,
+      "nativeId": "yinghun",
+      "name": "英魂",
+      "description": "准备阶段，若你已受伤，你可以选择一名其他角色并选择一项：\n1.令其摸X张牌，然后弃置一张牌；\n2.令其摸一张牌，然后弃置X张牌。（X为你已损失体力值）",
+      "implementation": "native-shenhua"
+    },
+    {
+      "id": 931,
+      "nativeId": "wulie",
+      "name": "武烈",
+      "description": "限定技，结束阶段，你可以失去任意点体力，你每以此法失去1点体力，便令一名其他角色获得“烈”标记。当有“烈”的角色受到伤害时，其移除“烈”并防止此伤害。",
+      "implementation": "native-refresh"
+    },
+    {
+      "id": 419,
+      "nativeId": "shangshi",
+      "name": "伤逝",
+      "description": "当你的手牌数小于X后，你可以将手牌摸至X张。（X为你已损失体力值）",
+      "implementation": "native-yijiang"
+    },
+    {
+      "id": 3505,
+      "nativeId": "party_shanhetu_ganlu",
+      "name": "甘露",
+      "description": "出牌阶段限一次，你可以令两名角色交换装备区里的牌。若X大于你已损失的体力值，你须在选择角色时弃置X张牌（X为其装备区里的牌数之差）。",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 3506,
+      "nativeId": "olbuyi",
+      "name": "补益",
+      "description": "当一名角色进入濒死状态时，你可以选择其一张牌，若此牌不为基本牌，则其弃置此牌，然后回复1点体力。",
+      "implementation": "native-onlyOL"
+    },
+    {
+      "id": 3470,
+      "nativeId": "dclihuo",
+      "name": "疠火",
+      "description": "你使用的非火【杀】可以改为火【杀】使用，此牌结算后，若其造成伤害，你弃置一张牌或失去1体力。你使用的火【杀】可以多指定一个目标。",
+      "implementation": "native-onlyOL"
+    },
+    {
+      "id": 433,
+      "nativeId": "gongji",
+      "name": "弓骑",
+      "description": "出牌阶段限一次，你可以弃置一张牌令你本回合攻击范围无限，若弃置牌为装备牌，你可以弃置一名其他角色一张牌。",
+      "implementation": "native-yijiang"
+    },
+    {
+      "id": 434,
+      "nativeId": "jiefan",
+      "name": "解烦",
+      "description": "限定技，出牌阶段，你可以选择一名角色，令所有攻击范围内包含其的角色各选择一项：\n1.弃置一张武器牌；2.令其摸一张牌。",
+      "implementation": "native-yijiang"
+    },
+    {
+      "id": 14183,
+      "nativeId": "party_shanhetu_zhouxuan",
+      "name": "周旋",
+      "description": "弃牌阶段开始时，你可以将任意张手牌暗置于你的武将牌上，称为“旋”。当你使用牌时，你移去一张“旋”并摸一张牌，若你的手牌不是唯一最多则额外摸X张牌（X为“旋”的数量）。",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 1189,
+      "nativeId": "fenglve",
+      "name": "锋略",
+      "description": "出牌阶段开始时，你可以拼点：\n•若你赢，被拼点者将其每个区域各一张牌交给你；\n•若你没赢，你交给被拼点者一张牌。\n拼点结算后你可以令其获得你的拼点牌。",
+      "implementation": "native-sp2"
+    },
+    {
+      "id": 1190,
+      "nativeId": "mouzhi",
+      "name": "谋识",
+      "description": "出牌阶段限一次，你可以交给一名角色一张手牌，然后当其于其下回合出牌阶段对一名角色首次造成伤害后，你摸一张牌。",
+      "implementation": "native-sp2"
+    },
+    {
+      "id": 3476,
+      "nativeId": "olqushi",
+      "name": "趋势",
+      "description": "出牌阶段限一次，你可以摸一张牌，然后扣置一张手牌于一名其他角色的武将牌上，称为“趋”。其结束阶段移去“趋”，然后若其本回合使用过与“趋”同类型牌，你摸X张牌(X为其本回合使用牌指定过的目标数且至多为5)。",
+      "implementation": "native-sp"
+    },
+    {
+      "id": 3477,
+      "nativeId": "olweijie",
+      "name": "诿解",
+      "description": "其他角色的回合限一次，当你需要使用或打出基本牌时，你可弃置你距离为1的其他角色一张手牌，若此牌与你需要使用/打出的牌名相同，你视为使用/打出此牌。",
+      "implementation": "native-sp"
+    },
+    {
+      "id": 1185,
+      "nativeId": "gangzhi",
+      "name": "刚直",
+      "description": "锁定技，其他角色对你造成的伤害，和你对其他角色造成的伤害均视为失去体力。",
+      "implementation": "native-sp2"
+    },
+    {
+      "id": 93,
+      "nativeId": "jieming",
+      "name": "节命",
+      "description": "当你受到1点伤害后，你可以令一名角色将手牌摸至X张（X为其体力上限且至多为5）。",
+      "implementation": "native-shenhua"
+    },
+    {
+      "id": 14191,
+      "nativeId": "party_shanhetu_luoyi",
+      "name": "裸衣",
+      "description": "摸牌阶段开始前，你可以亮出牌堆顶的X张牌，然后你可以跳过摸牌阶段并获得其中所有基本牌、武器牌和【决斗】，且直到你的下回合开始，你为伤害来源的【杀】和【决斗】对目标角色造成的伤害+X。（X为你当前体力值）",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 290,
+      "nativeId": "tuifeng",
+      "name": "推锋",
+      "description": "当你受到1点伤害后，你可以将一张牌置于你的武将牌上，称为“锋”。准备阶段，你移去所有“锋”，摸两倍数量的牌，你本回合使用【杀】的限制次数+X（X为你本回合移去“锋”的数量）。",
+      "implementation": "native-sp"
+    },
+    {
+      "id": 372,
+      "nativeId": "weikui",
+      "name": "伪溃",
+      "description": "出牌阶段限一次，你可以失去1点体力并观看一名有手牌的其他角色的手牌，若其中：\n•没有【闪】，你弃置其中一张牌;\n•有【闪】，你视为对其使用一张【杀】，且你本回合计算与其的距离视为1。",
+      "implementation": "native-sp"
+    },
+    {
+      "id": 373,
+      "nativeId": "lizhan",
+      "name": "励战",
+      "description": "结束阶段，你可以令任意名已受伤角色摸一张牌。",
+      "implementation": "native-sp"
+    },
+    {
+      "id": 37,
+      "nativeId": "longdan",
+      "name": "龙胆",
+      "description": "你可以将一张【杀】当【闪】、【闪】当【杀】使用或打出。",
+      "implementation": "native-standard"
+    },
+    {
+      "id": 208,
+      "nativeId": "chongzhen",
+      "name": "冲阵",
+      "description": "当你发动“龙胆”时，你可以获得对方的一张手牌。",
+      "implementation": "native-sp"
+    },
+    {
+      "id": 34,
+      "nativeId": "paoxiao",
+      "name": "咆哮",
+      "description": "锁定技，你使用【杀】无次数限制。",
+      "implementation": "native-standard"
+    },
+    {
+      "id": 3423,
+      "nativeId": "olxianzhen",
+      "name": "陷阵",
+      "description": "出牌阶段限一次，你可以与一名角色拼点：\n•若你赢，你本回合对其使用牌无距离和次数限制且无视其防具，你使用【杀】或普通锦囊牌能多指定其为目标；\n•若你没赢，你本回合不能对其使用【杀】且你的【杀】不计入手牌上限。",
+      "implementation": "native-onlyOL"
+    },
+    {
+      "id": 3424,
+      "nativeId": "decadejinjiu",
+      "name": "禁酒",
+      "description": "锁定技，你的【酒】视为点数K的【杀】。其他角色不能于你的回合使用【酒】。",
+      "implementation": "native-refresh"
+    },
+    {
+      "id": 14058,
+      "nativeId": "party_shanhetu_gulp",
+      "name": "吮血",
+      "description": "出牌阶段开始时和结束阶段开始时，你将手牌摸至手牌上限；",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 14130,
+      "nativeId": "party_shanhetu_might",
+      "name": "神威",
+      "description": "锁定技，摸牌阶段，你多摸X张牌，你的手牌上限+X（X为敌方角色数）。",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 14045,
+      "nativeId": "party_shanhetu_agility",
+      "name": "灵动",
+      "description": "锁定技，受到伤害时你判定，若判定结果为红色，则防止此伤害；",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 14042,
+      "nativeId": "party_shanhetu_featherblade",
+      "name": "羽刃",
+      "description": "当你造成伤害后可判定，若为红色，则对不为你的一名角色再造成1点雷属性伤害；",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 3383,
+      "nativeId": "party_shanhetu_jujue",
+      "name": "绝决",
+      "description": "锁定技，当受到伤害后，若你体力低于5，你令伤害来源其本回合非锁定技失效",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 893,
+      "nativeId": "olfangquan",
+      "name": "放权",
+      "description": "你可以跳过出牌阶段，然后弃牌阶段开始时，你可以弃置一张手牌并令一名其他角色执行一个额外的回合。",
+      "implementation": "native-refresh"
+    },
+    {
+      "id": 3312,
+      "nativeId": "olsaogu",
+      "name": "扫谷",
+      "description": "",
+      "sourceTextSha256": "1d88c9866712ace306b73366e3b9fcb16a51bcf90bc0aa563311dafcb46b5289",
+      "implementation": "native-sp"
+    },
+    {
+      "id": 3404,
+      "nativeId": "olsbfumeng",
+      "name": "赴梦",
+      "description": "",
+      "sourceTextSha256": "3d6f784066511f8c3a22f5384600152472db64726ff9a0652e4ef8e1cea2971b",
+      "implementation": "native-onlyOL"
+    },
+    {
+      "id": 62,
+      "nativeId": "kurou",
+      "name": "苦肉",
+      "description": "",
+      "sourceTextSha256": "935c3c2458b03940a2b62ee49b82e501c2fbca868e8c9c981a9ee54cde837f36",
+      "implementation": "native-standard"
+    },
+    {
+      "id": 925,
+      "nativeId": "reqimou",
+      "name": "奇谋",
+      "description": "",
+      "sourceTextSha256": "c8c1a6d432be0bbfc3edb8a118dfc3d5b863b1d1891f3821ddf34d772055416c",
+      "implementation": "native-refresh"
+    },
+    {
+      "id": 218,
+      "nativeId": "baobian",
+      "name": "豹变",
+      "description": "",
+      "sourceTextSha256": "8992c69101cdf81a6d9f13c3fecde42cd456d6bd76855c782845a52dda2819bf",
+      "implementation": "native-sp"
+    },
+    {
+      "id": 295,
+      "nativeId": "xinkuanggu",
+      "name": "狂骨",
+      "description": "",
+      "sourceTextSha256": "5d03f199d7504966c299a71f6ab5085aad9c1288ec80891ea73a1671af3a1746",
+      "implementation": "native-shenhua"
+    }
+  ]
+}

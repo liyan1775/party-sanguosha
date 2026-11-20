@@ -1,0 +1,689 @@
+{
+  "schemaVersion": 1,
+  "sourceDecodedSha256": "0e116ac3091748127e104878e01daddaf6cdb847d5b4f2cafa836a4223accca2",
+  "companions": [
+    {
+      "id": 997003,
+      "generalId": 122,
+      "name": "曹昂",
+      "elite": false,
+      "sex": "male",
+      "group": "wei",
+      "hp": 4,
+      "maxHp": 4,
+      "armor": 0,
+      "draw": 2,
+      "startingCards": 4,
+      "extraSha": 0,
+      "definitionPacks": ["sp", "yingbian"],
+      "skills": [
+        {
+          "id": 225,
+          "nativeId": "kaikang",
+          "name": "慷忾"
+        }
+      ]
+    },
+    {
+      "id": 997103,
+      "generalId": 122,
+      "name": "曹昂",
+      "elite": true,
+      "sex": "male",
+      "group": "wei",
+      "hp": 4,
+      "maxHp": 4,
+      "armor": 0,
+      "draw": 2,
+      "startingCards": 4,
+      "extraSha": 0,
+      "definitionPacks": ["sp", "yingbian"],
+      "skills": [
+        {
+          "id": 225,
+          "nativeId": "kaikang",
+          "name": "慷忾"
+        },
+        {
+          "id": 3084,
+          "nativeId": "party_shanhetu_weishu",
+          "name": "卫戍"
+        }
+      ]
+    },
+    {
+      "id": 997005,
+      "generalId": 402,
+      "name": "陆绩",
+      "elite": false,
+      "sex": "male",
+      "group": "wu",
+      "hp": 3,
+      "maxHp": 3,
+      "armor": 0,
+      "draw": 2,
+      "startingCards": 4,
+      "extraSha": 0,
+      "definitionPacks": ["shenhua", "refresh"],
+      "skills": [
+        {
+          "id": 804,
+          "nativeId": "nzry_huaiju",
+          "name": "怀橘"
+        },
+        {
+          "id": 805,
+          "nativeId": "nzry_yili",
+          "name": "遗礼"
+        },
+        {
+          "id": 806,
+          "nativeId": "nzry_zhenglun",
+          "name": "整论"
+        }
+      ]
+    },
+    {
+      "id": 997105,
+      "generalId": 402,
+      "name": "陆绩",
+      "elite": true,
+      "sex": "male",
+      "group": "wu",
+      "hp": 3,
+      "maxHp": 3,
+      "armor": 0,
+      "draw": 2,
+      "startingCards": 4,
+      "extraSha": 0,
+      "definitionPacks": ["shenhua", "refresh"],
+      "skills": [
+        {
+          "id": 804,
+          "nativeId": "nzry_huaiju",
+          "name": "怀橘"
+        },
+        {
+          "id": 805,
+          "nativeId": "nzry_yili",
+          "name": "遗礼"
+        },
+        {
+          "id": 806,
+          "nativeId": "nzry_zhenglun",
+          "name": "整论"
+        },
+        {
+          "id": 872,
+          "nativeId": "rezhiheng",
+          "name": "制衡"
+        }
+      ]
+    },
+    {
+      "id": 997010,
+      "generalId": 375,
+      "name": "戏志才",
+      "elite": false,
+      "sex": "male",
+      "group": "wei",
+      "hp": 3,
+      "maxHp": 3,
+      "armor": 0,
+      "draw": 2,
+      "startingCards": 4,
+      "extraSha": 0,
+      "definitionPacks": ["standard", "sp", "yingbian"],
+      "skills": [
+        {
+          "id": 51,
+          "nativeId": "tiandu",
+          "name": "天妒"
+        },
+        {
+          "id": 376,
+          "nativeId": "xianfu",
+          "name": "先辅"
+        },
+        {
+          "id": 377,
+          "nativeId": "chouce",
+          "name": "筹策"
+        }
+      ]
+    },
+    {
+      "id": 997110,
+      "generalId": 375,
+      "name": "戏志才",
+      "elite": true,
+      "sex": "male",
+      "group": "wei",
+      "hp": 3,
+      "maxHp": 3,
+      "armor": 0,
+      "draw": 2,
+      "startingCards": 4,
+      "extraSha": 0,
+      "definitionPacks": ["standard", "sp", "yingbian"],
+      "skills": [
+        {
+          "id": 51,
+          "nativeId": "tiandu",
+          "name": "天妒"
+        },
+        {
+          "id": 376,
+          "nativeId": "xianfu",
+          "name": "先辅"
+        },
+        {
+          "id": 377,
+          "nativeId": "chouce",
+          "name": "筹策"
+        },
+        {
+          "id": 977,
+          "nativeId": "zhongyun",
+          "name": "忠允"
+        }
+      ]
+    },
+    {
+      "id": 997011,
+      "generalId": 35,
+      "name": "荀彧",
+      "elite": false,
+      "sex": "male",
+      "group": "wei",
+      "hp": 3,
+      "maxHp": 3,
+      "armor": 0,
+      "draw": 2,
+      "startingCards": 4,
+      "extraSha": 0,
+      "definitionPacks": ["shenhua", "refresh"],
+      "skills": [
+        {
+          "id": 92,
+          "nativeId": "quhu",
+          "name": "驱虎"
+        },
+        {
+          "id": 93,
+          "nativeId": "jieming",
+          "name": "节命"
+        }
+      ]
+    },
+    {
+      "id": 997111,
+      "generalId": 35,
+      "name": "荀彧",
+      "elite": true,
+      "sex": "male",
+      "group": "wei",
+      "hp": 3,
+      "maxHp": 3,
+      "armor": 0,
+      "draw": 2,
+      "startingCards": 4,
+      "extraSha": 0,
+      "definitionPacks": ["shenhua", "refresh"],
+      "skills": [
+        {
+          "id": 92,
+          "nativeId": "quhu",
+          "name": "驱虎"
+        },
+        {
+          "id": 3128,
+          "nativeId": "oljieming",
+          "name": "节命"
+        }
+      ]
+    },
+    {
+      "id": 997015,
+      "generalId": 438,
+      "name": "曹嵩",
+      "elite": false,
+      "sex": "male",
+      "group": "wei",
+      "hp": 4,
+      "maxHp": 4,
+      "armor": 0,
+      "draw": 2,
+      "startingCards": 4,
+      "extraSha": 0,
+      "definitionPacks": ["sp2", "clan"],
+      "skills": [
+        {
+          "id": 9017,
+          "nativeId": "cslilu",
+          "name": "礼赂"
+        },
+        {
+          "id": 9018,
+          "nativeId": "csyizheng",
+          "name": "翊正"
+        }
+      ]
+    },
+    {
+      "id": 997115,
+      "generalId": 438,
+      "name": "曹嵩",
+      "elite": true,
+      "sex": "male",
+      "group": "wei",
+      "hp": 4,
+      "maxHp": 4,
+      "armor": 0,
+      "draw": 2,
+      "startingCards": 4,
+      "extraSha": 0,
+      "definitionPacks": ["sp2", "clan"],
+      "skills": [
+        {
+          "id": 9017,
+          "nativeId": "cslilu",
+          "name": "礼赂"
+        },
+        {
+          "id": 9018,
+          "nativeId": "csyizheng",
+          "name": "翊正"
+        },
+        {
+          "id": 3321,
+          "nativeId": "clanhuanghan",
+          "name": "惶汗"
+        }
+      ]
+    },
+    {
+      "id": 997016,
+      "generalId": 177,
+      "name": "关平",
+      "elite": false,
+      "sex": "male",
+      "group": "shu",
+      "hp": 4,
+      "maxHp": 4,
+      "armor": 0,
+      "draw": 2,
+      "startingCards": 4,
+      "extraSha": 0,
+      "definitionPacks": ["yijiang"],
+      "skills": [
+        {
+          "id": 446,
+          "nativeId": "longyin",
+          "name": "龙吟"
+        }
+      ]
+    },
+    {
+      "id": 997116,
+      "generalId": 177,
+      "name": "关平",
+      "elite": true,
+      "sex": "male",
+      "group": "shu",
+      "hp": 4,
+      "maxHp": 4,
+      "armor": 0,
+      "draw": 3,
+      "startingCards": 4,
+      "extraSha": 0,
+      "definitionPacks": ["yijiang"],
+      "skills": [
+        {
+          "id": 446,
+          "nativeId": "longyin",
+          "name": "龙吟"
+        },
+        {
+          "id": 639,
+          "nativeId": "party_shanhetu_moyan",
+          "name": "魔炎"
+        }
+      ]
+    },
+    {
+      "id": 997019,
+      "generalId": 4899,
+      "name": "曼珠",
+      "elite": false,
+      "sex": "female",
+      "group": "qun",
+      "hp": 3,
+      "maxHp": 3,
+      "armor": 0,
+      "draw": 2,
+      "startingCards": 0,
+      "extraSha": 0,
+      "definitionPacks": ["yijiang", "sp", "refresh"],
+      "skills": [
+        {
+          "id": 446,
+          "nativeId": "longyin",
+          "name": "龙吟"
+        },
+        {
+          "id": 3085,
+          "nativeId": "zengou",
+          "name": "谮构"
+        },
+        {
+          "id": 711,
+          "nativeId": "zhaxiang",
+          "name": "诈降"
+        }
+      ],
+      "fixedHand": [
+        {
+          "id": 21031,
+          "nativeId": "shan",
+          "suit": "club",
+          "number": 13
+        },
+        {
+          "id": 21032,
+          "nativeId": "shan",
+          "suit": "club",
+          "number": 12
+        },
+        {
+          "id": 21033,
+          "nativeId": "shan",
+          "suit": "club",
+          "number": 11
+        },
+        {
+          "id": 21034,
+          "nativeId": "sha",
+          "suit": "heart",
+          "number": 1
+        }
+      ]
+    },
+    {
+      "id": 997024,
+      "generalId": 4896,
+      "name": "风篁",
+      "elite": false,
+      "sex": "female",
+      "group": "qun",
+      "hp": 4,
+      "maxHp": 4,
+      "armor": 0,
+      "draw": 2,
+      "startingCards": 0,
+      "extraSha": 0,
+      "definitionPacks": ["sp"],
+      "skills": [
+        {
+          "id": 3330,
+          "nativeId": "olfudao",
+          "name": "抚悼"
+        },
+        {
+          "id": 3030,
+          "nativeId": "olxiuhao",
+          "name": "修好"
+        }
+      ],
+      "fixedHand": [
+        {
+          "id": 21057,
+          "nativeId": "sha",
+          "suit": "heart",
+          "number": 5
+        },
+        {
+          "id": 21058,
+          "nativeId": "shan",
+          "suit": "heart",
+          "number": 13
+        },
+        {
+          "id": 21059,
+          "nativeId": "wanjian",
+          "suit": "heart",
+          "number": 1
+        },
+        {
+          "id": 21060,
+          "nativeId": "jiu",
+          "suit": "spade",
+          "number": 3
+        }
+      ]
+    },
+    {
+      "id": 997025,
+      "generalId": 4897,
+      "name": "赤炼",
+      "elite": false,
+      "sex": "female",
+      "group": "qun",
+      "hp": 4,
+      "maxHp": 4,
+      "armor": 0,
+      "draw": 2,
+      "startingCards": 0,
+      "extraSha": 0,
+      "definitionPacks": ["onlyOL", "shenhua"],
+      "skills": [
+        {
+          "id": 3616,
+          "nativeId": "olchunlao",
+          "name": "醇醪"
+        },
+        {
+          "id": 820,
+          "nativeId": "liangyin",
+          "name": "良姻"
+        }
+      ],
+      "fixedHand": [
+        {
+          "id": 21061,
+          "nativeId": "sha",
+          "suit": "heart",
+          "number": 5
+        },
+        {
+          "id": 21062,
+          "nativeId": "jiu",
+          "suit": "spade",
+          "number": 3
+        }
+      ]
+    }
+  ],
+  "events": [
+    {
+      "id": 1484,
+      "name": "知己难逢",
+      "description": "听闻群雄起而讨董，九江故人递上拜帖，想来助你一臂之力",
+      "duration": 1,
+      "poolIds": [15, 17],
+      "options": [
+        {
+          "id": 148401,
+          "label": "划入军中",
+          "cost": 0,
+          "coins": 0,
+          "companionId": 997003
+        },
+        {
+          "id": 148402,
+          "label": "封为前锋",
+          "cost": 400,
+          "coins": 0,
+          "companionId": 997103
+        },
+        {
+          "id": 148403,
+          "label": "婉言谢绝",
+          "cost": 0,
+          "coins": 200,
+          "companionId": null
+        }
+      ]
+    },
+    {
+      "id": 1486,
+      "name": "投名状",
+      "description": "江上一声呼哨，一名大汉解下斗笠，率江盗数艘来投，想加入你军，闯荡一番事业",
+      "duration": 1,
+      "poolIds": [15, 17],
+      "options": [
+        {
+          "id": 148601,
+          "label": "划入军中",
+          "cost": 0,
+          "coins": 0,
+          "companionId": 997005
+        },
+        {
+          "id": 148602,
+          "label": "封为前锋",
+          "cost": 400,
+          "coins": 0,
+          "companionId": 997105
+        },
+        {
+          "id": 148603,
+          "label": "婉言谢绝",
+          "cost": 0,
+          "coins": 200,
+          "companionId": null
+        }
+      ]
+    },
+    {
+      "id": 1491,
+      "name": "训马有方",
+      "description": "牡马闹于集市，身手矫健的汉子一跃上马，制伏狂躁的马匹。你颇想将其招致麾下，大汉直言：”【400】铜币为我购买良驹，我愿加入军中辅佐将军。“",
+      "duration": 1,
+      "poolIds": [14, 16, 18, 19, 20, 21, 22, 26],
+      "options": [
+        {
+          "id": 149101,
+          "label": "招纳此人",
+          "cost": 0,
+          "coins": 0,
+          "companionId": 997010
+        },
+        {
+          "id": 149102,
+          "label": "强化帮手",
+          "cost": 400,
+          "coins": 0,
+          "companionId": 997110
+        },
+        {
+          "id": 149103,
+          "label": "忍痛拒绝",
+          "cost": 0,
+          "coins": 200,
+          "companionId": null
+        }
+      ]
+    },
+    {
+      "id": 1492,
+      "name": "箭落锦袍",
+      "description": "部将献上的锦袍被风吹起挂于树梢。一支利箭射出，直中细枝，摇落锦袍。射箭者对加入你军很感兴趣：“【400】铜币，为将军鞍前马后。”",
+      "duration": 1,
+      "poolIds": [14, 16, 18, 19, 20, 21, 22, 26],
+      "options": [
+        {
+          "id": 149201,
+          "label": "招纳此人",
+          "cost": 0,
+          "coins": 0,
+          "companionId": 997011
+        },
+        {
+          "id": 149202,
+          "label": "强化帮手",
+          "cost": 400,
+          "coins": 0,
+          "companionId": 997111
+        },
+        {
+          "id": 149203,
+          "label": "忍痛拒绝",
+          "cost": 0,
+          "coins": 200,
+          "companionId": null
+        }
+      ]
+    },
+    {
+      "id": 1496,
+      "name": "乡音未改",
+      "description": "小卒来报：“门外有人自称是将军的同乡，前来投奔。”你决定？",
+      "duration": 1,
+      "poolIds": [23, 24, 25, 27],
+      "options": [
+        {
+          "id": 149601,
+          "label": "招纳此人",
+          "cost": 0,
+          "coins": 0,
+          "companionId": 997015
+        },
+        {
+          "id": 149602,
+          "label": "奉为上宾",
+          "cost": 400,
+          "coins": 0,
+          "companionId": 997115
+        },
+        {
+          "id": 149603,
+          "label": "婉言谢绝",
+          "cost": 0,
+          "coins": 200,
+          "companionId": null
+        }
+      ]
+    },
+    {
+      "id": 1497,
+      "name": "杯酒逢君",
+      "description": "大汉声称：“仰慕将军已久，愿投入军中供将军差遣！”你决定？",
+      "duration": 1,
+      "poolIds": [23, 24, 25, 27],
+      "options": [
+        {
+          "id": 149701,
+          "label": "招纳此人",
+          "cost": 0,
+          "coins": 0,
+          "companionId": 997016
+        },
+        {
+          "id": 149702,
+          "label": "打造武备",
+          "cost": 400,
+          "coins": 0,
+          "companionId": 997116
+        },
+        {
+          "id": 149703,
+          "label": "婉言谢绝",
+          "cost": 0,
+          "coins": 200,
+          "companionId": null
+        }
+      ]
+    }
+  ]
+}

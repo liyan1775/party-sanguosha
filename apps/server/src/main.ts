@@ -36,6 +36,7 @@ const party = createPartyServer({
   extensions,
   adapter,
   rosterDirectory: path.join(root, 'data/rosters'),
+  shanhetuDirectory: path.join(root, 'data/shanhetu'),
   entryMode: entryMode as 'internet' | 'lan',
 });
 let port = preferredPort;

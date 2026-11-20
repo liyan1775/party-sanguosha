@@ -1,0 +1,3111 @@
+{
+  "schemaVersion": 1,
+  "status": "internal-native-battle-integration",
+  "scenarioId": 5,
+  "scenario": "诸侯伐董",
+  "source": {
+    "url": "https://web.sanguosha.com/220/h5_2/res/config/Config.sgs",
+    "retrievedOn": "2026-11-07",
+    "decodedSha256": "0e116ac3091748127e104878e01daddaf6cdb847d5b4f2cafa836a4223accca2",
+    "tables": ["Fight", "General"],
+    "scope": "普通1新手、普通2至5、中等1至5及困难1至5已核验遭遇，包含档级调整、固定牌与第二形态",
+    "actorTraits": "原表未给出的势力／性别按固定原生对应人物映射，不计入General数值核对"
+  },
+  "battles": [
+    {
+      "id": 22498,
+      "name": "落单禁军",
+      "groupId": 22498,
+      "definitionPacks": [],
+      "enemies": [
+        {
+          "generalId": 4861,
+          "name": "羽林军",
+          "hp": 2,
+          "maxHp": 2,
+          "armor": 0,
+          "draw": 1,
+          "startingCards": 2,
+          "extraSha": 0,
+          "skills": [],
+          "sourceSkills": []
+        }
+      ]
+    },
+    {
+      "id": 22298,
+      "name": "暗夺天子",
+      "groupId": 22298,
+      "definitionPacks": [],
+      "enemies": [
+        {
+          "generalId": 330,
+          "name": "沮授",
+          "hp": 1,
+          "maxHp": 1,
+          "armor": 0,
+          "draw": 1,
+          "startingCards": 2,
+          "extraSha": 0,
+          "skills": [],
+          "sourceSkills": []
+        },
+        {
+          "generalId": 482,
+          "name": "高干",
+          "hp": 2,
+          "maxHp": 2,
+          "armor": 0,
+          "draw": 1,
+          "startingCards": 2,
+          "extraSha": 0,
+          "skills": [],
+          "sourceSkills": []
+        }
+      ]
+    },
+    {
+      "id": 22644,
+      "name": "无双奉先",
+      "groupId": 22644,
+      "definitionPacks": ["standard", "refresh"],
+      "enemies": [
+        {
+          "generalId": 319,
+          "name": "吕布",
+          "hp": 5,
+          "maxHp": 5,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["wushuang", "new_liyu"],
+          "sourceSkills": [66, 728]
+        }
+      ]
+    },
+    {
+      "id": 22668,
+      "name": "毒士谋深",
+      "groupId": 22668,
+      "definitionPacks": ["onlyOL"],
+      "enemies": [
+        {
+          "generalId": 642,
+          "name": "李儒",
+          "hp": 3,
+          "maxHp": 3,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["oljuece", "party_shanhetu_mieji", "party_shanhetu_fencheng"],
+          "sourceSkills": [3617, 14175, 14176]
+        }
+      ]
+    },
+    {
+      "id": 22632,
+      "name": "笃烈之士",
+      "groupId": 22632,
+      "definitionPacks": ["onlyOL"],
+      "enemies": [
+        {
+          "generalId": 602,
+          "name": "太史慈",
+          "group": "wu",
+          "sex": "male",
+          "hp": 4,
+          "maxHp": 4,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["olsbdulie", "party_shanhetu_douchan"],
+          "sourceSkills": [3419, 14103]
+        }
+      ]
+    },
+    {
+      "id": 22636,
+      "name": "乱世恶徒",
+      "groupId": 22636,
+      "definitionPacks": ["sp2"],
+      "enemies": [
+        {
+          "generalId": 418,
+          "name": "李傕",
+          "hp": 4,
+          "maxHp": 4,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["party_shanhetu_langxi", "xinfu_yisuan"],
+          "sourceSkills": [14113, 855]
+        }
+      ]
+    },
+    {
+      "id": 22648,
+      "name": "毅重镇军",
+      "groupId": 22648,
+      "definitionPacks": ["yijiang"],
+      "enemies": [
+        {
+          "generalId": 160,
+          "name": "于禁",
+          "group": "wei",
+          "sex": "male",
+          "hp": 4,
+          "maxHp": 4,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["party_shanhetu_zhenjun"],
+          "sourceSkills": [238]
+        }
+      ]
+    },
+    {
+      "id": 22660,
+      "name": "盟首袁绍",
+      "groupId": 22660,
+      "definitionPacks": ["shenhua", "refresh"],
+      "enemies": [
+        {
+          "generalId": 450,
+          "name": "袁绍",
+          "hp": 4,
+          "maxHp": 4,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["party_shanhetu_luanji"],
+          "sourceSkills": [14162]
+        }
+      ]
+    },
+    {
+      "id": 2481,
+      "name": "以战行赏",
+      "groupId": 2481,
+      "definitionPacks": ["sp", "onlyOL"],
+      "enemies": [
+        {
+          "generalId": 4861,
+          "name": "游侠",
+          "hp": 4,
+          "maxHp": 4,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["yilie"],
+          "sourceSkills": [3155],
+          "hard": {
+            "skills": ["olchunlao"],
+            "sourceSkills": [3616]
+          }
+        }
+      ]
+    },
+    {
+      "id": 22481,
+      "name": "以战行赏",
+      "groupId": 22481,
+      "definitionPacks": ["sp"],
+      "enemies": [
+        {
+          "generalId": 4861,
+          "name": "游侠",
+          "hp": 4,
+          "maxHp": 4,
+          "armor": 0,
+          "draw": 1,
+          "startingCards": 2,
+          "extraSha": 0,
+          "skills": ["yilie"],
+          "sourceSkills": [3155]
+        }
+      ]
+    },
+    {
+      "id": 2489,
+      "name": "寓练于乐",
+      "groupId": 2489,
+      "definitionPacks": ["sp"],
+      "enemies": [
+        {
+          "generalId": 4871,
+          "name": "辛评",
+          "hp": 4,
+          "maxHp": 4,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["olchuanwu"],
+          "sourceSkills": [3252]
+        }
+      ]
+    },
+    {
+      "id": 22489,
+      "name": "寓练于乐",
+      "groupId": 22489,
+      "definitionPacks": ["sp"],
+      "enemies": [
+        {
+          "generalId": 4871,
+          "name": "辛评",
+          "hp": 4,
+          "maxHp": 4,
+          "armor": 0,
+          "draw": 1,
+          "startingCards": 2,
+          "extraSha": 0,
+          "skills": ["olchuanwu"],
+          "sourceSkills": [3252]
+        }
+      ]
+    },
+    {
+      "id": 2495,
+      "name": "监牢深处",
+      "groupId": 2495,
+      "definitionPacks": ["sp", "yijiang"],
+      "enemies": [
+        {
+          "generalId": 4861,
+          "name": "校事典刑官",
+          "hp": 4,
+          "maxHp": 4,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["party_shanhetu_yishi", "xinfu_gongqing"],
+          "sourceSkills": [611, 962],
+          "medium": {
+            "sourceSkills": [3156],
+            "skills": ["party_shanhetu_huanfu"]
+          },
+          "hard": {
+            "skills": ["junxing"],
+            "sourceSkills": [444]
+          }
+        }
+      ]
+    },
+    {
+      "id": 22495,
+      "name": "监牢深处",
+      "groupId": 22495,
+      "definitionPacks": ["sp"],
+      "enemies": [
+        {
+          "generalId": 4861,
+          "name": "校事典刑官",
+          "hp": 5,
+          "maxHp": 5,
+          "armor": 0,
+          "draw": 1,
+          "startingCards": 2,
+          "extraSha": 0,
+          "skills": ["party_shanhetu_yishi", "xinfu_gongqing"],
+          "sourceSkills": [611, 962]
+        }
+      ]
+    },
+    {
+      "id": 22671,
+      "name": "董氏凶僚",
+      "groupId": 22671,
+      "definitionPacks": ["shenhua", "refresh"],
+      "enemies": [
+        {
+          "generalId": 470,
+          "name": "董卓",
+          "group": "qun",
+          "sex": "male",
+          "hp": 4,
+          "maxHp": 4,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["oljiuchi", "roulin", "benghuai", "party_shanhetu_baonue"],
+          "sourceSkills": [949, 110, 111, 950]
+        }
+      ]
+    },
+    {
+      "id": 2298,
+      "name": "暗夺天子",
+      "groupId": 2298,
+      "definitionPacks": ["yijiang", "sp"],
+      "enemies": [
+        {
+          "generalId": 330,
+          "name": "沮授",
+          "hp": 3,
+          "maxHp": 3,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["jianying", "shibei"],
+          "sourceSkills": [491, 492],
+          "medium": {
+            "hp": 1,
+            "maxHp": 1
+          },
+          "hard": {
+            "skills": ["party_shanhetu_qingjian"],
+            "sourceSkills": [721]
+          }
+        },
+        {
+          "generalId": 482,
+          "name": "高干",
+          "hp": 4,
+          "maxHp": 4,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["juguan"],
+          "sourceSkills": [9000],
+          "medium": {
+            "hp": 1,
+            "maxHp": 1
+          },
+          "hard": {
+            "startingCards": 2,
+            "skills": ["xianfu"],
+            "sourceSkills": [376]
+          }
+        }
+      ]
+    },
+    {
+      "id": 2498,
+      "name": "落单禁军",
+      "groupId": 2498,
+      "definitionPacks": ["shenhua"],
+      "enemies": [
+        {
+          "generalId": 4861,
+          "name": "羽林军",
+          "hp": 4,
+          "maxHp": 4,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["xinjushou"],
+          "sourceSkills": [370],
+          "hard": {
+            "skills": ["party_shanhetu_keshou"],
+            "sourceSkills": [993]
+          }
+        }
+      ]
+    },
+    {
+      "id": 2632,
+      "name": "笃烈之士",
+      "groupId": 2632,
+      "definitionPacks": ["onlyOL"],
+      "enemies": [
+        {
+          "generalId": 602,
+          "name": "太史慈",
+          "group": "wu",
+          "sex": "male",
+          "hp": 4,
+          "maxHp": 4,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["olsbdulie", "party_shanhetu_douchan"],
+          "sourceSkills": [3419, 14103],
+          "hard": {
+            "equipment": [
+              {
+                "id": 20866,
+                "name": "铁甲胄",
+                "nativeId": "party_shanhetu_iron_guard",
+                "suit": "heart",
+                "number": 2,
+                "range": 0,
+                "spellId": 14085,
+                "subtype": "equip2"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": 2636,
+      "name": "乱世恶徒",
+      "groupId": 2636,
+      "definitionPacks": ["sp2", "sp"],
+      "enemies": [
+        {
+          "generalId": 418,
+          "name": "李傕",
+          "hp": 4,
+          "maxHp": 4,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["party_shanhetu_langxi", "xinfu_yisuan"],
+          "sourceSkills": [14113, 855],
+          "fixedEquipment": [
+            {
+              "id": 20666,
+              "name": "赤血青锋",
+              "nativeId": "chixueqingfeng",
+              "suit": "spade",
+              "number": 6,
+              "range": 2,
+              "spellId": 1135
+            }
+          ],
+          "hard": {
+            "startingCards": 5,
+            "equipment": [
+              {
+                "id": 20626,
+                "name": "玲珑狮蛮带",
+                "nativeId": "linglongshimandai",
+                "suit": "spade",
+                "number": 2,
+                "range": 0,
+                "spellId": 391,
+                "subtype": "equip2"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": 2644,
+      "name": "无双奉先",
+      "groupId": 2644,
+      "definitionPacks": ["refresh", "standard", "sp"],
+      "enemies": [
+        {
+          "generalId": 319,
+          "name": "吕布",
+          "hp": 5,
+          "maxHp": 5,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["wushuang", "new_liyu"],
+          "sourceSkills": [66, 728],
+          "fixedEquipment": [
+            {
+              "id": 20546,
+              "name": "方天画戟",
+              "nativeId": "fangtian",
+              "suit": "diamond",
+              "number": 12,
+              "range": 4,
+              "spellId": 29
+            }
+          ],
+          "nextForm": {
+            "sourceGroupId": 264401,
+            "difficulties": [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+            "generalId": 192,
+            "name": "暴怒的战神",
+            "group": "qun",
+            "sex": "male",
+            "hp": 5,
+            "maxHp": 5,
+            "armor": 0,
+            "draw": 2,
+            "startingCards": 4,
+            "extraSha": 0,
+            "skills": [
+              "party_shanhetu_fixed_distance",
+              "party_shanhetu_battle_wushuang",
+              "party_shanhetu_xiuluo"
+            ],
+            "sourceSkills": [14118, 14127, 14129],
+            "fixedEquipment": [
+              {
+                "id": 20611,
+                "name": "无双方天戟",
+                "nativeId": "wushuangfangtianji",
+                "suit": "diamond",
+                "number": 12,
+                "range": 4,
+                "spellId": 388
+              }
+            ],
+            "medium": {
+              "equipment": [
+                {
+                  "id": 20616,
+                  "name": "束发紫金冠",
+                  "nativeId": "shufazijinguan",
+                  "suit": "diamond",
+                  "number": 1,
+                  "range": 0,
+                  "spellId": 389,
+                  "subtype": "equip5"
+                }
+              ]
+            },
+            "hard": {
+              "skills": ["party_shanhetu_might"],
+              "sourceSkills": [14130],
+              "equipment": [
+                {
+                  "id": 20621,
+                  "name": "红锦百花袍",
+                  "nativeId": "hongmianbaihuapao",
+                  "suit": "club",
+                  "number": 1,
+                  "range": 0,
+                  "spellId": 390,
+                  "subtype": "equip2"
+                }
+              ]
+            }
+          },
+          "hard": {
+            "startingCards": 5,
+            "equipment": [
+              {
+                "id": 20571,
+                "name": "白银狮子",
+                "nativeId": "baiyin",
+                "suit": "club",
+                "number": 1,
+                "range": 0,
+                "spellId": 89,
+                "subtype": "equip2"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": 2648,
+      "name": "毅重镇军",
+      "groupId": 2648,
+      "definitionPacks": ["yijiang", "shiji", "sp"],
+      "enemies": [
+        {
+          "generalId": 160,
+          "name": "于禁",
+          "group": "wei",
+          "sex": "male",
+          "hp": 4,
+          "maxHp": 4,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["party_shanhetu_zhenjun"],
+          "sourceSkills": [238],
+          "medium": {
+            "sourceSkills": [3567],
+            "skills": ["guying"]
+          },
+          "hard": {
+            "skills": ["party_shanhetu_featherblade"],
+            "sourceSkills": [14042],
+            "equipment": [
+              {
+                "id": 20666,
+                "name": "赤血青锋",
+                "nativeId": "chixueqingfeng",
+                "suit": "spade",
+                "number": 6,
+                "range": 2,
+                "spellId": 1135
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": 2660,
+      "name": "盟首袁绍",
+      "groupId": 2660,
+      "definitionPacks": ["shenhua", "refresh"],
+      "enemies": [
+        {
+          "generalId": 450,
+          "name": "袁绍",
+          "hp": 4,
+          "maxHp": 4,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["party_shanhetu_luanji"],
+          "sourceSkills": [14162],
+          "medium": {
+            "hp": 3,
+            "maxHp": 3
+          },
+          "hard": {
+            "startingCards": 5
+          }
+        }
+      ]
+    },
+    {
+      "id": 2668,
+      "name": "毒士谋深",
+      "groupId": 2668,
+      "definitionPacks": ["onlyOL"],
+      "enemies": [
+        {
+          "generalId": 642,
+          "name": "李儒",
+          "hp": 3,
+          "maxHp": 3,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["oljuece", "party_shanhetu_mieji", "party_shanhetu_fencheng"],
+          "sourceSkills": [3617, 14175, 14176],
+          "medium": {
+            "hp": 3,
+            "maxHp": 3
+          }
+        }
+      ]
+    },
+    {
+      "id": 2671,
+      "name": "董氏凶僚",
+      "groupId": 2671,
+      "definitionPacks": ["shenhua", "refresh", "sp"],
+      "enemies": [
+        {
+          "generalId": 470,
+          "name": "董卓",
+          "group": "qun",
+          "sex": "male",
+          "hp": 4,
+          "maxHp": 4,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["oljiuchi", "roulin", "benghuai", "party_shanhetu_baonue"],
+          "sourceSkills": [949, 110, 111, 950],
+          "nextForm": {
+            "sourceGroupId": 267101,
+            "difficulties": [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+            "generalId": 4872,
+            "name": "董旻",
+            "group": "qun",
+            "sex": "male",
+            "hp": 5,
+            "maxHp": 5,
+            "armor": 0,
+            "draw": 2,
+            "startingCards": 4,
+            "extraSha": 0,
+            "skills": ["party_shanhetu_dungong"],
+            "sourceSkills": [3387],
+            "hard": {
+              "equipment": [
+                {
+                  "id": 20661,
+                  "name": "虚妄之冕",
+                  "nativeId": "xuwangzhimian",
+                  "suit": "club",
+                  "number": 4,
+                  "range": 0,
+                  "spellId": 1134,
+                  "subtype": "equip5"
+                }
+              ]
+            }
+          },
+          "medium": {
+            "hp": 3,
+            "maxHp": 3
+          },
+          "hard": {
+            "startingCards": 5
+          }
+        }
+      ]
+    },
+    {
+      "id": 2645,
+      "name": "无双奉先",
+      "groupId": 2645,
+      "definitionPacks": ["standard", "refresh", "sp"],
+      "enemies": [
+        {
+          "generalId": 319,
+          "name": "吕布",
+          "group": "qun",
+          "sex": "male",
+          "hp": 4,
+          "maxHp": 4,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["wushuang", "new_liyu"],
+          "sourceSkills": [66, 728],
+          "fixedEquipment": [
+            {
+              "id": 20546,
+              "name": "方天画戟",
+              "nativeId": "fangtian",
+              "suit": "diamond",
+              "number": 12,
+              "range": 4,
+              "spellId": 29
+            }
+          ],
+          "nextForm": {
+            "sourceGroupId": 264501,
+            "difficulties": [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+            "generalId": 193,
+            "name": "神鬼无前",
+            "group": "qun",
+            "sex": "male",
+            "hp": 3,
+            "maxHp": 3,
+            "armor": 0,
+            "draw": 2,
+            "startingCards": 4,
+            "extraSha": 0,
+            "skills": ["wushuang"],
+            "sourceSkills": [66],
+            "fixedEquipment": [
+              {
+                "id": 20656,
+                "name": "修罗炼狱戟",
+                "nativeId": "party_shanhetu_inferno_halberd",
+                "suit": "diamond",
+                "number": 12,
+                "range": 4,
+                "spellId": 1133
+              }
+            ],
+            "medium": {
+              "equipment": [
+                {
+                  "id": 20616,
+                  "name": "束发紫金冠",
+                  "nativeId": "shufazijinguan",
+                  "suit": "diamond",
+                  "number": 1,
+                  "range": 0,
+                  "spellId": 389,
+                  "subtype": "equip5"
+                }
+              ]
+            },
+            "hard": {
+              "hp": 1,
+              "maxHp": 1,
+              "equipment": [
+                {
+                  "id": 20626,
+                  "name": "玲珑狮蛮带",
+                  "nativeId": "linglongshimandai",
+                  "suit": "spade",
+                  "number": 2,
+                  "range": 0,
+                  "spellId": 391,
+                  "subtype": "equip2"
+                }
+              ]
+            }
+          },
+          "hard": {
+            "hp": 1,
+            "maxHp": 1,
+            "startingCards": 5,
+            "equipment": [
+              {
+                "id": 20571,
+                "name": "白银狮子",
+                "nativeId": "baiyin",
+                "suit": "club",
+                "number": 1,
+                "range": 0,
+                "spellId": 89,
+                "subtype": "equip2"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": 22645,
+      "name": "无双奉先",
+      "groupId": 22645,
+      "definitionPacks": ["standard", "refresh"],
+      "enemies": [
+        {
+          "generalId": 319,
+          "name": "吕布",
+          "group": "qun",
+          "sex": "male",
+          "hp": 5,
+          "maxHp": 5,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["wushuang", "new_liyu"],
+          "sourceSkills": [66, 728]
+        }
+      ]
+    },
+    {
+      "id": 2670,
+      "name": "急功悍将",
+      "groupId": 2670,
+      "definitionPacks": ["shenhua", "refresh", "sp"],
+      "enemies": [
+        {
+          "generalId": 470,
+          "name": "董卓",
+          "group": "qun",
+          "sex": "male",
+          "hp": 4,
+          "maxHp": 4,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["oljiuchi", "roulin", "benghuai", "party_shanhetu_baonue"],
+          "sourceSkills": [949, 110, 111, 950],
+          "nextForm": {
+            "sourceGroupId": 267001,
+            "difficulties": [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+            "generalId": 655,
+            "name": "牛辅",
+            "group": "qun",
+            "sex": "male",
+            "hp": 5,
+            "maxHp": 5,
+            "armor": 0,
+            "draw": 2,
+            "startingCards": 4,
+            "extraSha": 0,
+            "skills": ["olshisuan", "party_shanhetu_zonglve"],
+            "sourceSkills": [3547, 3548],
+            "hard": {
+              "startingCards": 5,
+              "skills": ["party_shanhetu_jujue"],
+              "sourceSkills": [3383],
+              "equipment": [
+                {
+                  "id": 20661,
+                  "name": "虚妄之冕",
+                  "nativeId": "xuwangzhimian",
+                  "suit": "club",
+                  "number": 4,
+                  "range": 0,
+                  "spellId": 1134,
+                  "subtype": "equip5"
+                }
+              ]
+            }
+          },
+          "medium": {
+            "hp": 3,
+            "maxHp": 3
+          },
+          "hard": {
+            "startingCards": 5
+          }
+        }
+      ]
+    },
+    {
+      "id": 22670,
+      "name": "急功悍将",
+      "groupId": 22670,
+      "definitionPacks": ["shenhua", "refresh"],
+      "enemies": [
+        {
+          "generalId": 470,
+          "name": "董卓",
+          "group": "qun",
+          "sex": "male",
+          "hp": 4,
+          "maxHp": 4,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["oljiuchi", "roulin", "benghuai", "party_shanhetu_baonue"],
+          "sourceSkills": [949, 110, 111, 950]
+        }
+      ]
+    },
+    {
+      "id": 2633,
+      "name": "黑山匪害",
+      "groupId": 2633,
+      "definitionPacks": ["shenhua", "sp"],
+      "enemies": [
+        {
+          "generalId": 4871,
+          "name": "于毒",
+          "group": "qun",
+          "sex": "male",
+          "hp": 3,
+          "maxHp": 3,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["party_shanhetu_envenom", "party_shanhetu_poison", "oldniepan"],
+          "sourceSkills": [14104, 14105, 95],
+          "medium": {
+            "equipment": [
+              {
+                "id": 20636,
+                "name": "国风玉袍",
+                "nativeId": "guofengyupao",
+                "suit": "spade",
+                "number": 9,
+                "range": 0,
+                "spellId": 1129,
+                "subtype": "equip2"
+              }
+            ]
+          },
+          "hard": {
+            "equipment": [
+              {
+                "id": 20661,
+                "name": "虚妄之冕",
+                "nativeId": "xuwangzhimian",
+                "suit": "club",
+                "number": 4,
+                "range": 0,
+                "spellId": 1134,
+                "subtype": "equip5"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": 22633,
+      "name": "黑山匪害",
+      "groupId": 22633,
+      "definitionPacks": ["shenhua"],
+      "enemies": [
+        {
+          "generalId": 4871,
+          "name": "于毒",
+          "group": "qun",
+          "sex": "male",
+          "hp": 3,
+          "maxHp": 3,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["party_shanhetu_envenom", "party_shanhetu_poison", "oldniepan"],
+          "sourceSkills": [14104, 14105, 95]
+        }
+      ]
+    },
+    {
+      "id": 2634,
+      "name": "其实难副",
+      "groupId": 2634,
+      "definitionPacks": ["sp", "standard", "refresh"],
+      "enemies": [
+        {
+          "generalId": 427,
+          "name": "许靖",
+          "group": "shu",
+          "sex": "male",
+          "hp": 3,
+          "maxHp": 3,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["yuxu", "xjshijian"],
+          "sourceSkills": [889, 890],
+          "hard": {
+            "skills": ["zishu"],
+            "sourceSkills": [383],
+            "equipment": [
+              {
+                "id": 20741,
+                "name": "三略",
+                "nativeId": "sanlve",
+                "suit": "spade",
+                "number": 5,
+                "range": 0,
+                "spellId": 6016,
+                "subtype": "equip5"
+              }
+            ]
+          }
+        },
+        {
+          "generalId": 4871,
+          "name": "徐璆",
+          "group": "qun",
+          "sex": "male",
+          "hp": 4,
+          "maxHp": 4,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["qixi", "new_reyiji"],
+          "sourceSkills": [57, 724],
+          "hard": {
+            "skills": ["xiahui"],
+            "sourceSkills": [294],
+            "equipment": [
+              {
+                "id": 20741,
+                "name": "三略",
+                "nativeId": "sanlve",
+                "suit": "spade",
+                "number": 5,
+                "range": 0,
+                "spellId": 6016,
+                "subtype": "equip5"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": 22634,
+      "name": "其实难副",
+      "groupId": 22634,
+      "definitionPacks": ["sp", "standard", "refresh"],
+      "enemies": [
+        {
+          "generalId": 427,
+          "name": "许靖",
+          "group": "shu",
+          "sex": "male",
+          "hp": 3,
+          "maxHp": 3,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["yuxu", "xjshijian"],
+          "sourceSkills": [889, 890]
+        },
+        {
+          "generalId": 4871,
+          "name": "徐璆",
+          "group": "qun",
+          "sex": "male",
+          "hp": 4,
+          "maxHp": 4,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["qixi", "new_reyiji"],
+          "sourceSkills": [57, 724]
+        }
+      ]
+    },
+    {
+      "id": 2637,
+      "name": "祸国凶贼",
+      "groupId": 2637,
+      "definitionPacks": ["sp2"],
+      "enemies": [
+        {
+          "generalId": 424,
+          "name": "郭汜",
+          "group": "qun",
+          "sex": "male",
+          "hp": 4,
+          "maxHp": 4,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["xinfu_tanbei", "xinfu_sidao"],
+          "sourceSkills": [863, 864],
+          "fixedEquipment": [
+            {
+              "id": 20871,
+              "name": "斩魂刀",
+              "nativeId": "party_shanhetu_soul_cutter",
+              "suit": "heart",
+              "number": 2,
+              "range": 3,
+              "spellId": 14086
+            }
+          ],
+          "hard": {
+            "skills": ["party_shanhetu_gulp"],
+            "sourceSkills": [14058],
+            "equipment": [
+              {
+                "id": 20841,
+                "name": "昆仑镜",
+                "nativeId": "party_shanhetu_kunlun_mirror",
+                "suit": "heart",
+                "number": 12,
+                "range": 0,
+                "spellId": 14080,
+                "subtype": "equip5"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": 22637,
+      "name": "祸国凶贼",
+      "groupId": 22637,
+      "definitionPacks": ["sp2"],
+      "enemies": [
+        {
+          "generalId": 424,
+          "name": "郭汜",
+          "group": "qun",
+          "sex": "male",
+          "hp": 4,
+          "maxHp": 4,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["xinfu_tanbei", "xinfu_sidao"],
+          "sourceSkills": [863, 864]
+        }
+      ]
+    },
+    {
+      "id": 2639,
+      "name": "夺目一箭",
+      "groupId": 2639,
+      "definitionPacks": ["huicui", "yijiang"],
+      "enemies": [
+        {
+          "generalId": 476,
+          "name": "曹性",
+          "group": "qun",
+          "sex": "male",
+          "hp": 4,
+          "maxHp": 4,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["cxliushi", "zhanwan"],
+          "sourceSkills": [970, 971],
+          "medium": {
+            "sourceSkills": [7003],
+            "skills": ["party_shanhetu_shidu"]
+          },
+          "hard": {
+            "skills": ["tianbian"],
+            "sourceSkills": [792]
+          }
+        }
+      ]
+    },
+    {
+      "id": 22639,
+      "name": "夺目一箭",
+      "groupId": 22639,
+      "definitionPacks": ["huicui"],
+      "enemies": [
+        {
+          "generalId": 476,
+          "name": "曹性",
+          "group": "qun",
+          "sex": "male",
+          "hp": 4,
+          "maxHp": 4,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["cxliushi", "zhanwan"],
+          "sourceSkills": [970, 971]
+        }
+      ]
+    },
+    {
+      "id": 2646,
+      "name": "文远之威",
+      "groupId": 2646,
+      "definitionPacks": ["refresh"],
+      "enemies": [
+        {
+          "generalId": 314,
+          "name": "张辽",
+          "group": "wei",
+          "sex": "male",
+          "hp": 4,
+          "maxHp": 4,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["new_retuxi", "repojun"],
+          "sourceSkills": [722, 3389],
+          "fixedEquipment": [
+            {
+              "id": 20766,
+              "name": "刑天破军斧",
+              "nativeId": "party_shanhetu_xingtian_axe",
+              "suit": "diamond",
+              "number": 5,
+              "range": 4,
+              "spellId": 1513
+            }
+          ],
+          "hard": {
+            "skills": ["party_shanhetu_agility"],
+            "sourceSkills": [14045],
+            "equipment": [
+              {
+                "id": 20866,
+                "name": "铁甲胄",
+                "nativeId": "party_shanhetu_iron_guard",
+                "suit": "heart",
+                "number": 2,
+                "range": 0,
+                "spellId": 14085,
+                "subtype": "equip2"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": 22646,
+      "name": "文远之威",
+      "groupId": 22646,
+      "definitionPacks": ["refresh"],
+      "enemies": [
+        {
+          "generalId": 314,
+          "name": "张辽",
+          "group": "wei",
+          "sex": "male",
+          "hp": 4,
+          "maxHp": 4,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["new_retuxi", "repojun"],
+          "sourceSkills": [722, 3389]
+        }
+      ]
+    },
+    {
+      "id": 2647,
+      "name": "华雄耀武",
+      "groupId": 2647,
+      "definitionPacks": ["standard", "refresh", "sp"],
+      "enemies": [
+        {
+          "generalId": 446,
+          "name": "华雄",
+          "group": "qun",
+          "sex": "male",
+          "hp": 5,
+          "maxHp": 5,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["yaowu"],
+          "sourceSkills": [495],
+          "medium": {
+            "sourceSkills": [3159],
+            "skills": ["party_shanhetu_reverse_shizhan"],
+            "equipment": [
+              {
+                "id": 20836,
+                "name": "断魂",
+                "nativeId": "party_shanhetu_duanhun",
+                "suit": "heart",
+                "number": 5,
+                "range": 2,
+                "spellId": 14079
+              }
+            ]
+          },
+          "hard": {
+            "hp": 1,
+            "maxHp": 1,
+            "skills": ["reyaowu"],
+            "sourceSkills": [877],
+            "removeSourceSkills": [495],
+            "equipment": [
+              {
+                "id": 20741,
+                "name": "三略",
+                "nativeId": "sanlve",
+                "suit": "spade",
+                "number": 5,
+                "range": 0,
+                "spellId": 6016,
+                "subtype": "equip5"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": 22647,
+      "name": "华雄耀武",
+      "groupId": 22647,
+      "definitionPacks": [],
+      "enemies": [
+        {
+          "generalId": 446,
+          "name": "华雄",
+          "group": "qun",
+          "sex": "male",
+          "hp": 3,
+          "maxHp": 3,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["party_shanhetu_newcomer_yaowu", "party_shanhetu_shizhan"],
+          "sourceSkills": [14135, 14136]
+        }
+      ]
+    },
+    {
+      "id": 2649,
+      "name": "俊彦曹操",
+      "groupId": 2649,
+      "definitionPacks": ["standard"],
+      "enemies": [
+        {
+          "generalId": 205,
+          "name": "曹操",
+          "group": "wei",
+          "sex": "male",
+          "hp": 3,
+          "maxHp": 3,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["party_shanhetu_guixin"],
+          "sourceSkills": [14138],
+          "medium": {
+            "hp": 1,
+            "maxHp": 1,
+            "sourceSkills": [311],
+            "skills": ["feiying"]
+          },
+          "hard": {
+            "equipment": [
+              {
+                "id": 20866,
+                "name": "铁甲胄",
+                "nativeId": "party_shanhetu_iron_guard",
+                "suit": "heart",
+                "number": 2,
+                "range": 0,
+                "spellId": 14085,
+                "subtype": "equip2"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": 22649,
+      "name": "俊彦曹操",
+      "groupId": 22649,
+      "definitionPacks": [],
+      "enemies": [
+        {
+          "generalId": 205,
+          "name": "曹操",
+          "group": "wei",
+          "sex": "male",
+          "hp": 3,
+          "maxHp": 3,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["party_shanhetu_guixin"],
+          "sourceSkills": [14138]
+        }
+      ]
+    },
+    {
+      "id": 2650,
+      "name": "忠烈双卫",
+      "groupId": 2650,
+      "definitionPacks": ["refresh", "sp"],
+      "enemies": [
+        {
+          "generalId": 229,
+          "name": "典韦",
+          "group": "wei",
+          "sex": "male",
+          "hp": 4,
+          "maxHp": 4,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["party_shanhetu_qiangxi", "olninge"],
+          "sourceSkills": [14139, 3187],
+          "medium": {
+            "hp": 3,
+            "maxHp": 3
+          },
+          "hard": {
+            "equipment": [
+              {
+                "id": 20841,
+                "name": "昆仑镜",
+                "nativeId": "party_shanhetu_kunlun_mirror",
+                "suit": "heart",
+                "number": 12,
+                "range": 0,
+                "spellId": 14080,
+                "subtype": "equip5"
+              }
+            ]
+          }
+        },
+        {
+          "generalId": 501,
+          "name": "卫兹",
+          "group": "wei",
+          "sex": "male",
+          "hp": 3,
+          "maxHp": 3,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": [],
+          "sourceSkills": [],
+          "medium": {
+            "hp": 3,
+            "maxHp": 3,
+            "sourceSkills": [3097, 3098],
+            "skills": ["yuanzi", "liejie"]
+          },
+          "hard": {
+            "startingCards": 5
+          }
+        }
+      ]
+    },
+    {
+      "id": 22650,
+      "name": "忠烈双卫",
+      "groupId": 22650,
+      "definitionPacks": ["refresh"],
+      "enemies": [
+        {
+          "generalId": 229,
+          "name": "典韦",
+          "group": "wei",
+          "sex": "male",
+          "hp": 4,
+          "maxHp": 4,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["party_shanhetu_qiangxi", "olninge"],
+          "sourceSkills": [14139, 3187]
+        },
+        {
+          "generalId": 501,
+          "name": "卫兹",
+          "group": "wei",
+          "sex": "male",
+          "hp": 3,
+          "maxHp": 3,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": [],
+          "sourceSkills": []
+        }
+      ]
+    },
+    {
+      "id": 2661,
+      "name": "谋臣双璧",
+      "groupId": 2661,
+      "definitionPacks": ["shenhua", "yijiang"],
+      "enemies": [
+        {
+          "generalId": 406,
+          "name": "许攸",
+          "group": "wei",
+          "sex": "male",
+          "hp": 3,
+          "maxHp": 3,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["party_shanhetu_chenglve", "party_shanhetu_shicai", "nzry_cunmu"],
+          "sourceSkills": [814, 815, 816],
+          "medium": {
+            "hp": 3,
+            "maxHp": 3
+          }
+        },
+        {
+          "generalId": 330,
+          "name": "沮授",
+          "group": "qun",
+          "sex": "male",
+          "hp": 3,
+          "maxHp": 3,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["jianying", "shibei"],
+          "sourceSkills": [491, 492],
+          "medium": {
+            "hp": 3,
+            "maxHp": 3
+          }
+        }
+      ]
+    },
+    {
+      "id": 22661,
+      "name": "谋臣双璧",
+      "groupId": 22661,
+      "definitionPacks": ["shenhua", "yijiang"],
+      "enemies": [
+        {
+          "generalId": 406,
+          "name": "许攸",
+          "group": "wei",
+          "sex": "male",
+          "hp": 3,
+          "maxHp": 3,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["party_shanhetu_chenglve", "party_shanhetu_shicai", "nzry_cunmu"],
+          "sourceSkills": [814, 815, 816]
+        },
+        {
+          "generalId": 330,
+          "name": "沮授",
+          "group": "qun",
+          "sex": "male",
+          "hp": 3,
+          "maxHp": 3,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["jianying", "shibei"],
+          "sourceSkills": [491, 492]
+        }
+      ]
+    },
+    {
+      "id": 2662,
+      "name": "白马将军",
+      "groupId": 2662,
+      "definitionPacks": ["refresh"],
+      "enemies": [
+        {
+          "generalId": 320,
+          "name": "公孙瓒",
+          "group": "qun",
+          "sex": "male",
+          "hp": 4,
+          "maxHp": 4,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["party_shanhetu_qiaomeng", "reyicong"],
+          "sourceSkills": [14166, 204],
+          "medium": {
+            "hp": 3,
+            "maxHp": 3
+          }
+        },
+        {
+          "generalId": 4871,
+          "name": "公孙越",
+          "group": "qun",
+          "sex": "male",
+          "hp": 4,
+          "maxHp": 4,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["party_shanhetu_rescue_lord"],
+          "sourceSkills": [505],
+          "medium": {
+            "hp": 3,
+            "maxHp": 3
+          }
+        }
+      ]
+    },
+    {
+      "id": 22662,
+      "name": "白马将军",
+      "groupId": 22662,
+      "definitionPacks": ["refresh"],
+      "enemies": [
+        {
+          "generalId": 320,
+          "name": "公孙瓒",
+          "group": "qun",
+          "sex": "male",
+          "hp": 4,
+          "maxHp": 4,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["party_shanhetu_qiaomeng", "reyicong"],
+          "sourceSkills": [14166, 204]
+        },
+        {
+          "generalId": 4871,
+          "name": "公孙越",
+          "group": "qun",
+          "sex": "male",
+          "hp": 4,
+          "maxHp": 4,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["party_shanhetu_rescue_lord"],
+          "sourceSkills": [505]
+        }
+      ]
+    },
+    {
+      "id": 2663,
+      "name": "西凉暗军",
+      "groupId": 2663,
+      "definitionPacks": ["yingbian", "shenhua"],
+      "enemies": [
+        {
+          "generalId": 4871,
+          "name": "秦谊",
+          "group": "qun",
+          "sex": "male",
+          "hp": 3,
+          "maxHp": 4,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["yimie"],
+          "sourceSkills": [7005],
+          "hard": {
+            "skills": ["qiangxi"],
+            "sourceSkills": [91]
+          }
+        },
+        {
+          "generalId": 4872,
+          "name": "陈卫",
+          "group": "qun",
+          "sex": "male",
+          "hp": 3,
+          "maxHp": 4,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["yimie"],
+          "sourceSkills": [7005],
+          "hard": {
+            "skills": ["qiangxi"],
+            "sourceSkills": [91]
+          }
+        },
+        {
+          "generalId": 4873,
+          "name": "李黑",
+          "group": "qun",
+          "sex": "male",
+          "hp": 3,
+          "maxHp": 4,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["yimie"],
+          "sourceSkills": [7005],
+          "hard": {
+            "skills": ["qiangxi"],
+            "sourceSkills": [91]
+          }
+        }
+      ]
+    },
+    {
+      "id": 22663,
+      "name": "西凉暗军",
+      "groupId": 22663,
+      "definitionPacks": ["yingbian"],
+      "enemies": [
+        {
+          "generalId": 4871,
+          "name": "秦谊",
+          "group": "qun",
+          "sex": "male",
+          "hp": 3,
+          "maxHp": 4,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["yimie"],
+          "sourceSkills": [7005]
+        },
+        {
+          "generalId": 4872,
+          "name": "陈卫",
+          "group": "qun",
+          "sex": "male",
+          "hp": 3,
+          "maxHp": 4,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["yimie"],
+          "sourceSkills": [7005]
+        },
+        {
+          "generalId": 4873,
+          "name": "李黑",
+          "group": "qun",
+          "sex": "male",
+          "hp": 3,
+          "maxHp": 4,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["yimie"],
+          "sourceSkills": [7005]
+        }
+      ]
+    },
+    {
+      "id": 2638,
+      "name": "枪王张绣",
+      "groupId": 2638,
+      "definitionPacks": ["shenhua", "sp"],
+      "enemies": [
+        {
+          "generalId": 2081,
+          "name": "张绣",
+          "group": "qun",
+          "sex": "male",
+          "hp": 4,
+          "maxHp": 4,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["party_shanhetu_cyclic_xiongluan", "drlt_congjian"],
+          "sourceSkills": [14116, 831],
+          "fixedEquipment": [
+            {
+              "id": 20856,
+              "name": "雷震",
+              "nativeId": "party_shanhetu_thunder_blade",
+              "suit": "heart",
+              "number": 1,
+              "range": 2,
+              "spellId": 14083
+            }
+          ],
+          "hard": {
+            "startingCards": 5,
+            "equipment": [
+              {
+                "id": 20618,
+                "name": "束发紫金冠",
+                "nativeId": "shufazijinguan",
+                "suit": "diamond",
+                "number": 1,
+                "range": 0,
+                "spellId": 389,
+                "subtype": "equip5"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": 22638,
+      "name": "枪王张绣",
+      "groupId": 22638,
+      "definitionPacks": ["shenhua"],
+      "enemies": [
+        {
+          "generalId": 2081,
+          "name": "张绣",
+          "group": "qun",
+          "sex": "male",
+          "hp": 4,
+          "maxHp": 4,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["party_shanhetu_cyclic_xiongluan", "drlt_congjian"],
+          "sourceSkills": [14116, 831]
+        }
+      ]
+    },
+    {
+      "id": 2651,
+      "name": "盟中夏侯",
+      "groupId": 2651,
+      "definitionPacks": ["refresh"],
+      "enemies": [
+        {
+          "generalId": 313,
+          "name": "夏侯惇",
+          "group": "wei",
+          "sex": "male",
+          "hp": 4,
+          "maxHp": 4,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["party_shanhetu_ganglie"],
+          "sourceSkills": [14143],
+          "medium": {
+            "sourceSkills": [721],
+            "skills": ["party_shanhetu_qingjian"]
+          }
+        },
+        {
+          "generalId": 453,
+          "name": "夏侯渊",
+          "group": "wei",
+          "sex": "male",
+          "hp": 4,
+          "maxHp": 4,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["party_shanhetu_shensu"],
+          "sourceSkills": [14144],
+          "medium": {
+            "sourceSkills": [905],
+            "skills": ["shebian"]
+          }
+        }
+      ],
+      "maximumDifficulty": 10
+    },
+    {
+      "id": 22651,
+      "name": "盟中夏侯",
+      "groupId": 22651,
+      "definitionPacks": [],
+      "enemies": [
+        {
+          "generalId": 313,
+          "name": "夏侯惇",
+          "group": "wei",
+          "sex": "male",
+          "hp": 4,
+          "maxHp": 4,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["party_shanhetu_ganglie"],
+          "sourceSkills": [14143]
+        },
+        {
+          "generalId": 453,
+          "name": "夏侯渊",
+          "group": "wei",
+          "sex": "male",
+          "hp": 4,
+          "maxHp": 4,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["party_shanhetu_shensu"],
+          "sourceSkills": [14144]
+        }
+      ]
+    },
+    {
+      "id": 2652,
+      "name": "年少风华",
+      "groupId": 2652,
+      "definitionPacks": ["refresh"],
+      "enemies": [
+        {
+          "generalId": 308,
+          "name": "周瑜",
+          "group": "wu",
+          "sex": "male",
+          "hp": 3,
+          "maxHp": 3,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["reyingzi", "refanjian"],
+          "sourceSkills": [712, 713],
+          "hard": {
+            "startingCards": 5,
+            "equipment": [
+              {
+                "id": 20641,
+                "name": "赤炎镇魂琴",
+                "nativeId": "party_shanhetu_fire_lute",
+                "suit": "diamond",
+                "number": 1,
+                "range": 4,
+                "spellId": 1130
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": 2653,
+      "name": "黄巾余匪",
+      "groupId": 2653,
+      "definitionPacks": [],
+      "enemies": [
+        {
+          "generalId": 4871,
+          "name": "张牛角",
+          "group": "qun",
+          "sex": "male",
+          "hp": 3,
+          "maxHp": 3,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": [],
+          "sourceSkills": [],
+          "nextForm": {
+            "sourceGroupId": 265301,
+            "difficulties": [6, 7, 8, 9, 10],
+            "generalId": 4872,
+            "name": "张燕",
+            "group": "qun",
+            "sex": "male",
+            "hp": 4,
+            "maxHp": 4,
+            "armor": 0,
+            "draw": 2,
+            "startingCards": 4,
+            "extraSha": 0,
+            "skills": ["party_shanhetu_yanyu"],
+            "sourceSkills": [3292],
+            "medium": {
+              "sourceSkills": [14039],
+              "skills": ["party_shanhetu_biri"]
+            }
+          },
+          "medium": {
+            "sourceSkills": [3231],
+            "skills": ["party_shanhetu_leijie"]
+          }
+        }
+      ],
+      "maximumDifficulty": 10
+    },
+    {
+      "id": 2654,
+      "name": "代汉涂高",
+      "groupId": 2654,
+      "definitionPacks": ["sp", "refresh"],
+      "enemies": [
+        {
+          "generalId": 4871,
+          "name": "袁耀",
+          "group": "qun",
+          "sex": "male",
+          "hp": 3,
+          "maxHp": 3,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["qingzhong"],
+          "sourceSkills": [799],
+          "hard": {
+            "startingCards": 5
+          }
+        },
+        {
+          "generalId": 100,
+          "name": "袁术",
+          "group": "qun",
+          "sex": "male",
+          "hp": 4,
+          "maxHp": 4,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["party_shanhetu_wuzang", "tongji"],
+          "sourceSkills": [1138, 497],
+          "hard": {
+            "skills": ["olfangquan"],
+            "sourceSkills": [893]
+          }
+        },
+        {
+          "generalId": 4872,
+          "name": "袁胤",
+          "group": "qun",
+          "sex": "male",
+          "hp": 3,
+          "maxHp": 3,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["qingzhong"],
+          "sourceSkills": [799],
+          "hard": {
+            "startingCards": 5
+          }
+        }
+      ]
+    },
+    {
+      "id": 2655,
+      "name": "江东猛虎",
+      "groupId": 2655,
+      "definitionPacks": ["refresh", "onlyOL", "shenhua"],
+      "enemies": [
+        {
+          "generalId": 442,
+          "name": "孙权",
+          "group": "wu",
+          "sex": "male",
+          "hp": 3,
+          "maxHp": 3,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["rezhiheng"],
+          "sourceSkills": [872]
+        },
+        {
+          "generalId": 609,
+          "name": "孙坚",
+          "group": "wu",
+          "sex": "male",
+          "hp": 3,
+          "maxHp": 4,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["party_shanhetu_hulie", "olsbyipo"],
+          "sourceSkills": [14150, 3435]
+        },
+        {
+          "generalId": 452,
+          "name": "孙策",
+          "group": "wu",
+          "sex": "male",
+          "hp": 3,
+          "maxHp": 3,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["oljiang", "party_shanhetu_hunzi"],
+          "sourceSkills": [3201, 14153]
+        }
+      ],
+      "maximumDifficulty": 10
+    },
+    {
+      "id": 2664,
+      "name": "悍将朱灵",
+      "groupId": 2664,
+      "definitionPacks": ["sp"],
+      "enemies": [
+        {
+          "generalId": 489,
+          "name": "朱灵",
+          "group": "wei",
+          "sex": "male",
+          "hp": 4,
+          "maxHp": 4,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["party_shanhetu_jixian", "party_shanhetu_baoli"],
+          "sourceSkills": [3056, 3327],
+          "medium": {
+            "hp": 3,
+            "maxHp": 3
+          }
+        }
+      ]
+    },
+    {
+      "id": 2665,
+      "name": "河北双雄",
+      "groupId": 2665,
+      "definitionPacks": [],
+      "enemies": [
+        {
+          "generalId": 550,
+          "name": "颜良文丑",
+          "group": "qun",
+          "sex": "male",
+          "hp": 4,
+          "maxHp": 4,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["party_shanhetu_shuangxiong"],
+          "sourceSkills": [14169],
+          "medium": {
+            "hp": 3,
+            "maxHp": 3
+          }
+        }
+      ]
+    },
+    {
+      "id": 2666,
+      "name": "凉州猛将",
+      "groupId": 2666,
+      "definitionPacks": ["sp"],
+      "enemies": [
+        {
+          "generalId": 374,
+          "name": "麹义",
+          "group": "qun",
+          "sex": "male",
+          "hp": 4,
+          "maxHp": 4,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["party_shanhetu_fuqi", "party_shanhetu_jiaozi"],
+          "sourceSkills": [14170, 14171],
+          "hard": {
+            "startingCards": 5,
+            "equipment": [
+              {
+                "id": 20611,
+                "name": "无双方天戟",
+                "nativeId": "wushuangfangtianji",
+                "suit": "diamond",
+                "number": 12,
+                "range": 4,
+                "spellId": 388
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": 2667,
+      "name": "幽燕双骑",
+      "groupId": 2667,
+      "definitionPacks": ["sp2"],
+      "enemies": [
+        {
+          "generalId": 434,
+          "name": "吕旷吕翔",
+          "group": "qun",
+          "sex": "male",
+          "hp": 4,
+          "maxHp": 4,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["qigong", "liehou"],
+          "sourceSkills": [932, 933]
+        }
+      ],
+      "maximumDifficulty": 10
+    },
+    {
+      "id": 2438,
+      "name": "皇室物品",
+      "groupId": 2438,
+      "definitionPacks": ["refresh"],
+      "enemies": [
+        {
+          "generalId": 4861,
+          "name": "天子近卫",
+          "group": "qun",
+          "sex": "male",
+          "hp": 4,
+          "maxHp": 4,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["party_shanhetu_dungong"],
+          "sourceSkills": [3387],
+          "hard": {
+            "skills": ["zhuhai"],
+            "sourceSkills": [705]
+          }
+        }
+      ]
+    },
+    {
+      "id": 22438,
+      "name": "皇室物品",
+      "groupId": 22438,
+      "definitionPacks": [],
+      "enemies": [
+        {
+          "generalId": 4861,
+          "name": "天子近卫",
+          "group": "qun",
+          "sex": "male",
+          "hp": 5,
+          "maxHp": 5,
+          "armor": 0,
+          "draw": 1,
+          "startingCards": 2,
+          "extraSha": 0,
+          "skills": ["party_shanhetu_dungong"],
+          "sourceSkills": [3387]
+        }
+      ]
+    },
+    {
+      "id": 2445,
+      "name": "杯弓蛇影",
+      "groupId": 2445,
+      "definitionPacks": ["sp2"],
+      "enemies": [
+        {
+          "generalId": 434,
+          "name": "吕旷吕翔",
+          "group": "qun",
+          "sex": "male",
+          "hp": 4,
+          "maxHp": 4,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["qigong"],
+          "sourceSkills": [932],
+          "hard": {
+            "skills": ["liehou"],
+            "sourceSkills": [933]
+          }
+        }
+      ]
+    },
+    {
+      "id": 22445,
+      "name": "杯弓蛇影",
+      "groupId": 22445,
+      "definitionPacks": ["sp2"],
+      "enemies": [
+        {
+          "generalId": 434,
+          "name": "吕旷吕翔",
+          "group": "qun",
+          "sex": "male",
+          "hp": 4,
+          "maxHp": 4,
+          "armor": 0,
+          "draw": 1,
+          "startingCards": 2,
+          "extraSha": 0,
+          "skills": ["qigong"],
+          "sourceSkills": [932]
+        }
+      ]
+    },
+    {
+      "id": 2301,
+      "name": "杀良冒功",
+      "groupId": 2301,
+      "definitionPacks": ["sp", "refresh"],
+      "enemies": [
+        {
+          "generalId": 489,
+          "name": "朱灵",
+          "group": "wei",
+          "sex": "male",
+          "hp": 4,
+          "maxHp": 4,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["party_shanhetu_jixian"],
+          "sourceSkills": [3056],
+          "hard": {
+            "skills": ["zhaxiang"],
+            "sourceSkills": [711]
+          }
+        }
+      ]
+    },
+    {
+      "id": 22301,
+      "name": "杀良冒功",
+      "groupId": 22301,
+      "definitionPacks": [],
+      "enemies": [
+        {
+          "generalId": 489,
+          "name": "朱灵",
+          "group": "wei",
+          "sex": "male",
+          "hp": 2,
+          "maxHp": 2,
+          "armor": 0,
+          "draw": 1,
+          "startingCards": 2,
+          "extraSha": 0,
+          "skills": [],
+          "sourceSkills": []
+        }
+      ]
+    },
+    {
+      "id": 2420,
+      "name": "敌兵奇袭",
+      "groupId": 2420,
+      "definitionPacks": ["refresh", "huicui", "yijiang"],
+      "enemies": [
+        {
+          "generalId": 476,
+          "name": "曹性",
+          "group": "qun",
+          "sex": "male",
+          "hp": 4,
+          "maxHp": 4,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["cxliushi", "zhanwan"],
+          "sourceSkills": [970, 971],
+          "medium": {
+            "sourceSkills": [869],
+            "skills": ["reguanxing"]
+          },
+          "hard": {
+            "skills": ["sanyao"],
+            "sourceSkills": [991],
+            "equipment": [
+              {
+                "id": 20501,
+                "name": "诸葛连弩",
+                "nativeId": "zhuge",
+                "suit": "diamond",
+                "number": 1,
+                "range": 1,
+                "spellId": 23
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": 22420,
+      "name": "敌兵奇袭",
+      "groupId": 22420,
+      "definitionPacks": [],
+      "enemies": [
+        {
+          "generalId": 476,
+          "name": "曹性",
+          "group": "qun",
+          "sex": "male",
+          "hp": 2,
+          "maxHp": 2,
+          "armor": 0,
+          "draw": 1,
+          "startingCards": 2,
+          "extraSha": 0,
+          "skills": [],
+          "sourceSkills": []
+        }
+      ]
+    },
+    {
+      "id": 2656,
+      "name": "末路残梁",
+      "groupId": 2656,
+      "definitionPacks": [],
+      "enemies": [
+        {
+          "generalId": 4871,
+          "name": "隐士张梁",
+          "hp": 3,
+          "maxHp": 4,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["party_shanhetu_rainstorm", "party_shanhetu_wuying"],
+          "sourceSkills": [14047, 3388],
+          "medium": {
+            "hp": 3,
+            "maxHp": 3
+          },
+          "hard": {
+            "startingCards": 5
+          }
+        }
+      ]
+    },
+    {
+      "id": 2657,
+      "name": "狂傲荀粲",
+      "groupId": 2657,
+      "definitionPacks": ["clan", "refresh"],
+      "enemies": [
+        {
+          "generalId": 525,
+          "name": "荀粲",
+          "group": "wei",
+          "hp": 3,
+          "maxHp": 3,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["clanyunshen", "clanshangshen", "clanfenchai"],
+          "sourceSkills": [3226, 3227, 3228],
+          "medium": {
+            "hp": 3,
+            "maxHp": 3
+          }
+        },
+        {
+          "generalId": 4876,
+          "name": "曹氏",
+          "sex": "female",
+          "hp": 3,
+          "maxHp": 3,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["party_shanhetu_leijie", "xinguidao"],
+          "sourceSkills": [3231, 883],
+          "medium": {
+            "hp": 3,
+            "maxHp": 3
+          },
+          "hard": {
+            "startingCards": 5
+          }
+        }
+      ]
+    },
+    {
+      "id": 2658,
+      "name": "贤侣虎将",
+      "groupId": 2658,
+      "definitionPacks": ["shenhua", "refresh", "yijiang", "onlyOL"],
+      "enemies": [
+        {
+          "generalId": 458,
+          "name": "孙坚",
+          "group": "wu",
+          "hp": 4,
+          "maxHp": 4,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["yinghun", "wulie"],
+          "sourceSkills": [108, 931],
+          "hard": {
+            "skills": ["shangshi"],
+            "sourceSkills": [419]
+          }
+        },
+        {
+          "generalId": 640,
+          "name": "吴国太",
+          "group": "wu",
+          "sex": "female",
+          "hp": 3,
+          "maxHp": 3,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["party_shanhetu_ganlu", "olbuyi"],
+          "sourceSkills": [3505, 3506],
+          "medium": {
+            "hp": 3,
+            "maxHp": 3
+          },
+          "hard": {
+            "startingCards": 5
+          }
+        }
+      ]
+    },
+    {
+      "id": 2659,
+      "name": "东吴宿将",
+      "groupId": 2659,
+      "definitionPacks": ["onlyOL", "yijiang"],
+      "enemies": [
+        {
+          "generalId": 620,
+          "name": "程普",
+          "group": "wu",
+          "hp": 4,
+          "maxHp": 4,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["dclihuo", "olchunlao"],
+          "sourceSkills": [3470, 3616],
+          "hard": {
+            "hand": [
+              {
+                "id": 20811,
+                "name": "杀",
+                "nativeId": "sha",
+                "suit": "spade",
+                "number": 1
+              }
+            ]
+          }
+        },
+        {
+          "generalId": 170,
+          "name": "韩当",
+          "group": "wu",
+          "hp": 4,
+          "maxHp": 4,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["gongji", "jiefan"],
+          "sourceSkills": [433, 434],
+          "hard": {
+            "hand": [
+              {
+                "id": 20812,
+                "name": "杀",
+                "nativeId": "sha",
+                "suit": "spade",
+                "number": 1
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": 2673,
+      "name": "俊乂张郃",
+      "groupId": 2673,
+      "definitionPacks": ["sp"],
+      "enemies": [
+        {
+          "generalId": 357,
+          "name": "张郃",
+          "group": "wei",
+          "hp": 4,
+          "maxHp": 4,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["party_shanhetu_zhouxuan"],
+          "sourceSkills": [14183],
+          "hard": {
+            "equipment": [
+              {
+                "id": 20631,
+                "name": "鬼龙斩月刀",
+                "nativeId": "guilongzhanyuedao",
+                "suit": "spade",
+                "number": 5,
+                "range": 3,
+                "spellId": 1128
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": 2674,
+      "name": "谋士争衡",
+      "groupId": 2674,
+      "definitionPacks": ["sp2", "sp", "shenhua"],
+      "enemies": [
+        {
+          "generalId": 460,
+          "name": "荀谌",
+          "hp": 3,
+          "maxHp": 3,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["fenglve", "mouzhi"],
+          "sourceSkills": [1189, 1190],
+          "hard": {
+            "startingCards": 5,
+            "equipment": [
+              {
+                "id": 20721,
+                "name": "黑光铠",
+                "nativeId": "heiguangkai",
+                "suit": "club",
+                "number": 2,
+                "range": 0,
+                "spellId": 6011,
+                "subtype": "equip2"
+              }
+            ]
+          }
+        },
+        {
+          "generalId": 624,
+          "name": "郭图",
+          "hp": 3,
+          "maxHp": 3,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["olqushi", "olweijie"],
+          "sourceSkills": [3476, 3477],
+          "hard": {
+            "startingCards": 5,
+            "equipment": [
+              {
+                "id": 20722,
+                "name": "黑光铠",
+                "nativeId": "heiguangkai",
+                "suit": "club",
+                "number": 2,
+                "range": 0,
+                "spellId": 6011,
+                "subtype": "equip2"
+              }
+            ]
+          }
+        },
+        {
+          "generalId": 459,
+          "name": "审配",
+          "hp": 3,
+          "maxHp": 3,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["gangzhi", "jieming"],
+          "sourceSkills": [1185, 93],
+          "hard": {
+            "startingCards": 5,
+            "equipment": [
+              {
+                "id": 20723,
+                "name": "黑光铠",
+                "nativeId": "heiguangkai",
+                "suit": "club",
+                "number": 2,
+                "range": 0,
+                "spellId": 6011,
+                "subtype": "equip2"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": 2676,
+      "name": "虎痴许褚",
+      "groupId": 2676,
+      "definitionPacks": ["sp"],
+      "enemies": [
+        {
+          "generalId": 315,
+          "name": "许褚",
+          "group": "wei",
+          "hp": 4,
+          "maxHp": 4,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["party_shanhetu_luoyi"],
+          "sourceSkills": [14191],
+          "hard": {
+            "skills": ["tuifeng"],
+            "sourceSkills": [290]
+          }
+        }
+      ]
+    },
+    {
+      "id": 2678,
+      "name": "双雄际会",
+      "groupId": 2678,
+      "definitionPacks": ["sp", "yingbian", "standard"],
+      "enemies": [
+        {
+          "generalId": 111,
+          "name": "曹仁",
+          "group": "wei",
+          "hp": 4,
+          "maxHp": 4,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["weikui", "lizhan"],
+          "sourceSkills": [372, 373],
+          "hard": {
+            "skills": ["yimie"],
+            "sourceSkills": [7005]
+          }
+        },
+        {
+          "generalId": 108,
+          "name": "赵云",
+          "group": "qun",
+          "hp": 3,
+          "maxHp": 3,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["longdan", "chongzhen"],
+          "sourceSkills": [37, 208],
+          "hard": {
+            "skills": ["paoxiao"],
+            "sourceSkills": [34]
+          }
+        }
+      ]
+    },
+    {
+      "id": 2680,
+      "name": "陷阵高顺",
+      "groupId": 2680,
+      "definitionPacks": ["onlyOL", "refresh"],
+      "enemies": [
+        {
+          "generalId": 604,
+          "name": "高顺",
+          "hp": 4,
+          "maxHp": 4,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["olxianzhen", "decadejinjiu"],
+          "sourceSkills": [3423, 3424],
+          "medium": {
+            "hp": 3,
+            "maxHp": 3
+          }
+        }
+      ]
+    },
+    {
+      "id": 2681,
+      "name": "白马从龙",
+      "groupId": 2681,
+      "definitionPacks": ["refresh", "standard", "sp"],
+      "enemies": [
+        {
+          "generalId": 320,
+          "name": "公孙瓒",
+          "hp": 4,
+          "maxHp": 4,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["party_shanhetu_qiaomeng", "reyicong"],
+          "sourceSkills": [14166, 204],
+          "medium": {
+            "hp": 3,
+            "maxHp": 3
+          }
+        },
+        {
+          "generalId": 108,
+          "name": "赵云",
+          "group": "qun",
+          "hp": 3,
+          "maxHp": 3,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["longdan", "chongzhen"],
+          "sourceSkills": [37, 208],
+          "medium": {
+            "hp": 3,
+            "maxHp": 3
+          }
+        }
+      ]
+    },
+    {
+      "id": 2215,
+      "name": "狂妄之人",
+      "groupId": 2215,
+      "definitionPacks": ["sp", "refresh", "onlyOL"],
+      "enemies": [
+        {
+          "generalId": 560,
+          "name": "段颎",
+          "group": "qun",
+          "sex": "male",
+          "hp": 4,
+          "maxHp": 4,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["olsaogu"],
+          "sourceSkills": [3312],
+          "medium": {
+            "skills": ["rezhiheng"],
+            "sourceSkills": [872]
+          },
+          "hard": {
+            "skills": ["olsbfumeng"],
+            "sourceSkills": [3404]
+          }
+        }
+      ]
+    },
+    {
+      "id": 12215,
+      "name": "狂妄之人",
+      "groupId": 12215,
+      "definitionPacks": ["sp", "refresh", "onlyOL"],
+      "enemies": [
+        {
+          "generalId": 560,
+          "name": "段颎",
+          "group": "qun",
+          "sex": "male",
+          "hp": 5,
+          "maxHp": 5,
+          "armor": 0,
+          "draw": 3,
+          "startingCards": 5,
+          "extraSha": 0,
+          "skills": ["olsaogu"],
+          "sourceSkills": [3312],
+          "medium": {
+            "skills": ["rezhiheng"],
+            "sourceSkills": [872]
+          },
+          "hard": {
+            "skills": ["olsbfumeng"],
+            "sourceSkills": [3404]
+          }
+        }
+      ]
+    },
+    {
+      "id": 22215,
+      "name": "狂妄之人",
+      "groupId": 22215,
+      "definitionPacks": ["sp"],
+      "enemies": [
+        {
+          "generalId": 560,
+          "name": "段颎",
+          "group": "qun",
+          "sex": "male",
+          "hp": 2,
+          "maxHp": 2,
+          "armor": 0,
+          "draw": 1,
+          "startingCards": 2,
+          "extraSha": 0,
+          "skills": ["olsaogu"],
+          "sourceSkills": [3312]
+        }
+      ]
+    },
+    {
+      "id": 2225,
+      "name": "老当益壮",
+      "groupId": 2225,
+      "definitionPacks": ["standard", "refresh", "sp", "shenhua"],
+      "enemies": [
+        {
+          "generalId": 11,
+          "name": "黄盖",
+          "group": "wu",
+          "sex": "male",
+          "hp": 4,
+          "maxHp": 4,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["kurou", "reqimou"],
+          "sourceSkills": [62, 925],
+          "medium": {
+            "skills": ["baobian"],
+            "sourceSkills": [218]
+          },
+          "hard": {
+            "skills": ["xinkuanggu"],
+            "sourceSkills": [295]
+          }
+        }
+      ]
+    },
+    {
+      "id": 12225,
+      "name": "老当益壮",
+      "groupId": 12225,
+      "definitionPacks": ["standard", "refresh", "sp", "shenhua"],
+      "enemies": [
+        {
+          "generalId": 11,
+          "name": "黄盖",
+          "group": "wu",
+          "sex": "male",
+          "hp": 5,
+          "maxHp": 5,
+          "armor": 0,
+          "draw": 3,
+          "startingCards": 5,
+          "extraSha": 0,
+          "skills": ["kurou", "reqimou"],
+          "sourceSkills": [62, 925],
+          "medium": {
+            "skills": ["baobian"],
+            "sourceSkills": [218]
+          },
+          "hard": {
+            "skills": ["xinkuanggu"],
+            "sourceSkills": [295]
+          }
+        }
+      ]
+    },
+    {
+      "id": 22225,
+      "name": "老当益壮",
+      "groupId": 22225,
+      "definitionPacks": ["standard", "refresh"],
+      "enemies": [
+        {
+          "generalId": 11,
+          "name": "黄盖",
+          "group": "wu",
+          "sex": "male",
+          "hp": 2,
+          "maxHp": 2,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 2,
+          "extraSha": 0,
+          "skills": ["kurou", "reqimou"],
+          "sourceSkills": [62, 925]
+        }
+      ]
+    }
+  ]
+}

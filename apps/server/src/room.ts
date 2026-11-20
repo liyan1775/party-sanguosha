@@ -5,6 +5,7 @@ import {
   DoudizhuPreparation,
   PreparationError,
 } from '../../../packages/noname-adapter/src/doudizhu-preparation.js';
+import { shanhetuDifficulty } from '../../../packages/noname-adapter/src/shanhetu.js';
 import generalCatalog from '../../../config/general-catalog.json' with { type: 'json' };
 import {
   findMode,
@@ -22,6 +23,10 @@ import {
   type ResolvedCustomRoster,
 } from '../../../packages/shared/src/contracts.js';
 import { AppError } from './errors.js';
+import { ShanhetuCampaign } from './shanhetu-campaign.js';
+import { createShanhetuScenario, shanhetuRestartWaitMs } from './shanhetu-scenario.js';
+import type { ShanhetuBook } from './shanhetu-book.js';
+import type { ShanhetuCampaignView } from '../../../packages/shared/src/shanhetu.js';
 
 type Human = PlayerView & {
   kind: 'human';
@@ -65,6 +70,10 @@ export class RoomStore {
   private preparation: DoudizhuPreparation | undefined;
   private series: CollegeSeriesView | undefined;
   private customRoster: ResolvedCustomRoster | undefined;
+  private campaign: ShanhetuCampaign | undefined;
+  private campaignBook: { library: ShanhetuBook; key: string } | undefined;
+  private campaignAward: ShanhetuCampaignView['bookAward'];
+  private campaignRestartAt: number | undefined;
   private readonly scoredMatches = new Set<string>();
 
   constructor(
@@ -89,6 +98,7 @@ export class RoomStore {
         else {
           this.matchRecovery = undefined;
           if (event.type === 'failed') {
+            this.campaign?.interrupt(this.engine.matchId?.(this.code) ?? null);
             this.matchFailure = { code: event.code ?? 'runtime-error', at: Date.now() };
             // Keep an interrupted in-progress table visible until explicit
             // return. It has no winner and must not silently become a new lobby.
@@ -96,7 +106,13 @@ export class RoomStore {
             this.resetReady();
           } else {
             this.phase = 'finished';
-            this.scoreCollege(event);
+            if (this.campaign) {
+              const id = event.matchId ?? this.engine.matchId?.(this.code);
+              if (!id || !event.shanhetu || !this.campaign.settle(id, event.shanhetu)) {
+                this.campaign.interrupt(id ?? null);
+                this.matchFailure = { code: 'protocol-error', at: Date.now() };
+              } else this.settleCampaignBook();
+            } else this.scoreCollege(event);
           }
           this.betweenMatchesSince = Date.now();
         }
@@ -123,6 +139,17 @@ export class RoomStore {
       ...(this.matchRecovery ? { matchRecovery: { ...this.matchRecovery } } : {}),
       ...(this.preparation ? { doudizhu: this.preparation.publicState() } : {}),
       ...(this.series ? { series: structuredClone(this.series) } : {}),
+      ...(this.campaign
+        ? {
+            shanhetu: {
+              ...this.campaign.view(),
+              ...(this.campaignAward ? { bookAward: { ...this.campaignAward } } : {}),
+              ...(this.phase === 'playing' && this.campaignRestartAt !== undefined
+                ? { restartAt: this.campaignRestartAt }
+                : {}),
+            },
+          }
+        : {}),
     };
   }
 
@@ -315,6 +342,8 @@ export class RoomStore {
       (body.playerCount as number) > mode.maxPlayers
     )
       throw new AppError(400, 'INVALID_MODE', '模式或人数不符合要求。');
+    if (mode.id === 'shanhetu' && !this.engine.status().shanhetu)
+      throw new AppError(503, 'SHANHETU_NOT_SUPPORTED', '电脑服务尚未开放山河图。');
     if (!Array.isArray(body.extensions) || body.extensions.some((id) => typeof id !== 'string'))
       throw new AppError(400, 'INVALID_EXTENSIONS', '扩展包设置无效。');
     const extensions = [...new Set(body.extensions as string[])];
@@ -370,8 +399,14 @@ export class RoomStore {
         roster = structuredClone(this.resolveRoster(ref.id, ref.revision as number));
     }
     if (roster) {
-      if (mode.id === 'college')
-        throw new AppError(400, 'CUSTOM_ROSTER_UNSUPPORTED', '高校联赛练习使用固定高校将池。');
+      if (mode.id === 'college' || mode.id === 'shanhetu')
+        throw new AppError(
+          400,
+          'CUSTOM_ROSTER_UNSUPPORTED',
+          mode.id === 'college'
+            ? '高校联赛练习使用固定高校将池。'
+            : '山河图接入阶段请使用内置将池。',
+        );
       if (roster.summary.basePreset !== next.generalPreset)
         throw new AppError(
           400,
@@ -384,6 +419,11 @@ export class RoomStore {
     if (mode.id === 'college') {
       if (!['standard', 'quick'].includes(next.collegeFormat!))
         throw new AppError(400, 'INVALID_FORMAT', '请选择标准或快速赛制。');
+      next.allowGeneralSelection = false;
+    }
+    if (mode.id === 'shanhetu') {
+      if (extensions.length)
+        throw new AppError(400, 'UNSUPPORTED_EXTENSION', '山河图暂不支持扩展包。');
       next.allowGeneralSelection = false;
     }
     if (JSON.stringify(next) === JSON.stringify(this.settings)) return;
@@ -410,7 +450,12 @@ export class RoomStore {
     this.changed();
   }
 
-  async start(ownerToken?: string): Promise<void> {
+  async start(
+    ownerToken?: string,
+    book?: { library: ShanhetuBook; key: string },
+    difficulty: unknown = 1,
+    openingTactic: unknown = null,
+  ): Promise<void> {
     this.requireOwner(ownerToken);
     this.assertWaiting();
     if (this.customRoster) {
@@ -437,9 +482,35 @@ export class RoomStore {
       throw new AppError(503, 'COLLEGE_NOT_SUPPORTED', '电脑规则服务需要更新后才能运行高校练习。');
     if (
       this.players.size !== this.settings.playerCount ||
-      [...this.players.values()].some((player) => !player.online || !player.ready)
+      [...this.players.values()].some(
+        (player) => !player.online || (this.settings.mode !== 'shanhetu' && !player.ready),
+      )
     )
       throw new AppError(409, 'PLAYERS_NOT_READY', '需要人数齐全且所有真人在线、已准备。');
+    if (this.settings.mode === 'shanhetu') {
+      if (!this.engine.status().shanhetu)
+        throw new AppError(503, 'SHANHETU_NOT_SUPPORTED', '电脑服务尚未开放山河图。');
+      if (this.players.size !== 1 || this.players.get(this.ownerId!)?.kind !== 'human')
+        throw new AppError(409, 'SHANHETU_SINGLE_PLAYER', '山河图由一位真人出征。');
+      const rule = shanhetuDifficulty(difficulty);
+      if (!rule) throw new AppError(400, 'INVALID_DIFFICULTY', '请选择已接入的山河图难度。');
+      if (!book && rule.prerequisite !== null)
+        throw new AppError(409, 'DIFFICULTY_LOCKED', rule.unlockText);
+      this.campaign = new ShanhetuCampaign(
+        createShanhetuScenario(
+          this.effectiveCharacters(),
+          book?.library.unlockedForRun(book.key, rule.id),
+          rule.id,
+          openingTactic,
+        ),
+      );
+      this.campaignBook = book;
+      this.campaignAward = undefined;
+      this.matchFailure = undefined;
+      this.resetReady();
+      this.changed();
+      return;
+    }
     this.phase = 'starting';
     this.matchFailure = undefined;
     this.matchRecovery = undefined;
@@ -509,11 +580,22 @@ export class RoomStore {
   private async launch(setup: MatchSetup, generation: number): Promise<void> {
     try {
       const starting = this.engine.start(setup);
+      if (setup.shanhetu && this.campaign) {
+        const id = this.engine.matchId?.(this.code);
+        if (!id) {
+          void starting.catch(() => {});
+          throw new Error('缺少原生山河图战斗编号');
+        }
+        this.campaign.bindMatch(setup.shanhetu, id);
+      }
       this.changed();
       await starting;
       if (generation !== this.startGeneration)
         throw new AppError(409, 'MATCH_CANCELLED', '电脑控制台已结束这次开局。');
-      if (this.phase === 'starting') this.phase = 'playing';
+      if (this.phase === 'starting') {
+        this.phase = 'playing';
+        if (setup.shanhetu) this.campaignRestartAt = Date.now() + shanhetuRestartWaitMs;
+      }
       this.changed();
     } catch {
       if (generation !== this.startGeneration)
@@ -528,6 +610,7 @@ export class RoomStore {
   }
 
   private startFailed(): void {
+    this.campaign?.interrupt(this.engine.matchId?.(this.code) ?? null);
     this.preparation?.cancel();
     this.preparation = undefined;
     this.phase = 'waiting';
@@ -537,6 +620,111 @@ export class RoomStore {
     this.resetReady();
     this.engine.release?.(this.code);
     this.changed();
+  }
+
+  async shanhetuAction(token: string | undefined, input: unknown): Promise<void> {
+    this.requireOwner(token);
+    if (!this.campaign || this.settings.mode !== 'shanhetu')
+      throw new AppError(409, 'NO_CAMPAIGN', '本房间没有进行中的山河图征程。');
+    if (this.phase !== 'waiting') {
+      if (this.campaign.isDuplicate(input)) return;
+      throw new AppError(409, 'ROOM_LOCKED', '请先回到征程再操作。');
+    }
+    const result = this.campaign.act(input);
+    if (!result.battle) {
+      this.settleCampaignBook();
+      this.changed();
+      return;
+    }
+    if (!this.engine.status().ready) {
+      this.campaign.interrupt(null);
+      this.changed();
+      throw new AppError(503, 'ENGINE_NOT_READY', this.engine.status().message);
+    }
+    await this.launchShanhetu(result.battle);
+  }
+
+  async restartShanhetu(token: string | undefined, input: Record<string, unknown>): Promise<void> {
+    this.requireOwner(token);
+    const matchId = this.engine.matchId?.(this.code);
+    if (
+      !this.campaign ||
+      this.phase !== 'playing' ||
+      !matchId ||
+      input.matchId !== matchId ||
+      input.runId !== this.campaign.view().id
+    )
+      throw new AppError(409, 'CAMPAIGN_CHANGED', '本关已改变，请查看当前征程。');
+    if (this.campaignRestartAt === undefined || Date.now() < this.campaignRestartAt)
+      throw new AppError(409, 'CAMPAIGN_RESTART_COOLDOWN', '请在本关开局30秒后再重开。');
+    if (!this.engine.status().ready || this.matchRecovery)
+      throw new AppError(503, 'ENGINE_NOT_READY', '请等电脑规则服务恢复后再重开。');
+    await this.launchShanhetu(this.campaign.restart(matchId));
+  }
+
+  private async launchShanhetu(ticket: NonNullable<MatchSetup['shanhetu']>): Promise<void> {
+    this.phase = 'starting';
+    this.campaignRestartAt = undefined;
+    this.matchFailure = undefined;
+    this.matchRecovery = undefined;
+    const generation = ++this.startGeneration;
+    await this.launch(
+      {
+        roomCode: this.code,
+        ownerPlayerId: this.ownerId!,
+        settings: structuredClone(this.settings),
+        seats: [...this.players.values()].map(({ id, nickname, kind }) => ({ id, nickname, kind })),
+        aiPolicy: 'strongest-native',
+        shanhetu: ticket,
+      },
+      generation,
+    );
+  }
+
+  endShanhetu(token: string | undefined, input: unknown): void {
+    this.requireOwner(token);
+    if (
+      !this.campaign ||
+      !input ||
+      typeof input !== 'object' ||
+      (input as { runId?: unknown }).runId !== this.campaign.view().id
+    )
+      throw new AppError(409, 'CAMPAIGN_CHANGED', '征程已改变，请刷新后操作。');
+    this.settleCampaignBook(true);
+    if (this.campaignAward && 'pending' in this.campaignAward)
+      throw new AppError(503, 'BOOK_WRITE_FAILED', '山河册结算尚未保存，请稍后再返回房间。');
+    this.resetMatch();
+    this.changed();
+  }
+
+  requireShanhetuBookOwner(token?: string): void {
+    this.requireOwner(token);
+    this.assertWaiting();
+    if (this.settings.mode !== 'shanhetu' || !this.engine.status().shanhetu)
+      throw new AppError(409, 'BOOK_UNAVAILABLE', '请先在等待房间选择山河图。');
+  }
+
+  private settleCampaignBook(retreat = false): void {
+    if (!this.campaignBook || (this.campaignAward && 'victories' in this.campaignAward)) return;
+    const journey = this.campaign?.view();
+    if (!journey) return;
+    const outcome =
+      journey.phase === 'won' ? 'victory' : journey.phase === 'lost' ? 'defeat' : 'retreat';
+    if (outcome === 'retreat' && (!retreat || journey.victories === 0)) return;
+    const { library, key } = this.campaignBook;
+    try {
+      this.campaignAward = library.record(key, {
+        runId: journey.id,
+        hero: journey.heroName ?? '征战者',
+        difficulty: journey.difficulty,
+        outcome,
+        victories: journey.victories,
+        ...(journey.finalReport ? { ending: journey.finalReport.title } : {}),
+      });
+    } catch (error) {
+      if (!(error instanceof AppError)) throw error;
+      this.campaignAward = { pending: true };
+    }
   }
 
   doudizhuChoice(token?: string): DoudizhuPrivateState {
@@ -641,7 +829,7 @@ export class RoomStore {
   }
 
   consoleReset(): void {
-    if (!['starting', 'playing', 'finished'].includes(this.phase))
+    if (!this.campaign && !['starting', 'playing', 'finished'].includes(this.phase))
       throw new AppError(409, 'NO_ACTIVE_MATCH', '这个房间已在等待玩家。');
     this.resetMatch();
     this.changed();
@@ -652,6 +840,7 @@ export class RoomStore {
     this.preparation?.cancel();
     this.preparation = undefined;
     this.series = undefined;
+    this.campaign = undefined;
     this.phase = 'closed';
     this.ownerId = null;
     this.players.clear();
@@ -665,7 +854,7 @@ export class RoomStore {
     this.requireOwner(ownerToken);
     if (this.phase !== 'finished')
       throw new AppError(409, 'MATCH_NOT_FINISHED', '请等这一局结束后再返回房间。');
-    this.resetMatch();
+    this.resetMatch(!!this.campaign);
     this.changed();
   }
 
@@ -784,6 +973,7 @@ export class RoomStore {
   }
 
   private idleCloseAt(): number | null {
+    if (this.campaign && !['won', 'lost'].includes(this.campaign.view().phase)) return null;
     if (!['waiting', 'finished'].includes(this.phase)) return null;
     const humans = [...this.players.values()].filter(
       (seat): seat is Human => seat.kind === 'human',
@@ -796,10 +986,16 @@ export class RoomStore {
     return lastOffline + ROOM_IDLE_GRACE_MS;
   }
 
-  private resetMatch(): void {
+  private resetMatch(keepCampaign = false): void {
     this.startGeneration++;
     this.preparation?.cancel();
     this.preparation = undefined;
+    this.campaignRestartAt = undefined;
+    if (!keepCampaign) {
+      this.campaign = undefined;
+      this.campaignBook = undefined;
+      this.campaignAward = undefined;
+    }
     this.phase = 'waiting';
     this.betweenMatchesSince = Date.now();
     this.matchFailure = undefined;
@@ -814,7 +1010,7 @@ export class RoomStore {
   }
 
   private assertWaiting(): void {
-    if (this.phase !== 'waiting')
+    if (this.phase !== 'waiting' || this.campaign)
       throw new AppError(409, 'ROOM_LOCKED', '房间已关闭或对局正在启动，暂时不能修改。');
   }
 

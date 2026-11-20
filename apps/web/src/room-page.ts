@@ -40,6 +40,8 @@ import { bindMatchExperience } from './match-experience.js';
 import { bindDoudizhuPanel } from './doudizhu-panel.js';
 import { bindCollegeStage } from './college-stage.js';
 import { bindCustomRosters, rosterKey } from './custom-rosters.js';
+import { bindShanhetuPanel } from './shanhetu-panel.js';
+import { bindShanhetuLaunch } from './shanhetu-launch.js';
 
 export function showRoomPage(initial: RoomInfo, initialSession: SessionView): void {
   let room = initial.room;
@@ -114,7 +116,7 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
         <form id="join-form"><label for="nickname">怎么称呼你</label><input id="nickname" name="nickname" placeholder="输入昵称，朋友才认得你" autocomplete="nickname" maxlength="32" required /><p class="hint">昵称 1–16 个字，无需注册账号。</p><button id="join-button" class="button primary full-width" type="submit">入座</button></form>
         <div id="my-seat" hidden><p class="my-seat-label" id="my-role"></p><h3 id="my-nickname"></h3><button id="ready-button" class="button primary full-width" type="button">我准备好了</button><button id="share-button" class="button secondary full-width" type="button">展示房间二维码</button><div id="owner-start" hidden><button id="start-button" class="button primary full-width" type="button" disabled>开始对局</button></div><button id="leave-button" class="button text-button full-width" type="button">离开房间</button><p id="owner-leave-hint" class="hint" hidden>离开后房主交接给下一位真人；最后一位真人离开会关闭房间。</p></div>
       </section>
-      <section class="panel players-panel"><div class="panel-heading"><h2>等朋友到齐</h2><span id="player-counter" class="tag muted"></span></div><p id="seat-count" class="hint seat-count"></p><div id="bot-controls" class="bot-controls" hidden><button id="add-bot" class="button secondary" type="button">添加 1 个 AI</button><button id="fill-bots" class="button subtle" type="button">用 AI 补满空位</button><p class="hint">AI 自动准备，使用无名杀完整原生决策。</p></div><ul id="players" class="players"></ul><p id="waiting-text" class="waiting-text"></p><p id="owner-status" class="hint"></p><p id="engine-status" class="hint engine-status"></p></section>
+      <section class="panel players-panel"><div class="panel-heading"><h2 id="room-seats-title">等朋友到齐</h2><span id="player-counter" class="tag muted"></span></div><p id="seat-count" class="hint seat-count"></p><div id="bot-controls" class="bot-controls" hidden><button id="add-bot" class="button secondary" type="button">添加 1 个 AI</button><button id="fill-bots" class="button subtle" type="button">用 AI 补满空位</button><p class="hint">AI 自动准备，使用无名杀完整原生决策。</p></div><ul id="players" class="players"></ul><p id="waiting-text" class="waiting-text"></p><p id="owner-status" class="hint"></p><p id="engine-status" class="hint engine-status"></p></section>
       <details id="settings-panel" class="panel settings-panel" hidden><summary><span>房主设置</span><small>玩法 · 武将 · 扩展</small></summary><div class="settings-body"><div class="mode-grid">${MODES.map((mode) => `<button type="button" class="mode-card" data-mode="${mode.id}" aria-pressed="false"><span class="mode-mark">${modeIcon(mode.id)}</span><strong>${mode.name}</strong><small>${mode.minPlayers === mode.maxPlayers ? mode.minPlayers : '5–8'} 席</small></button>`).join('')}</div><p id="mode-description" class="mode-description"></p><div class="field-row"><label for="player-count">总席位（含 AI）<select id="player-count"></select></label><label for="general-preset">武将范围<select id="general-preset">${GENERAL_PRESETS.map((preset) => `<option value="${preset.id}">${preset.name}</option>`).join('')}</select></label></div><p id="preset-description" class="hint"></p><div class="extensions"><h3>扩展包</h3><p class="hint">暂无已接入的扩展包</p></div><button id="save-settings" class="button secondary full-width" type="button" hidden>重试保存</button><p id="settings-state" class="hint" role="status" aria-live="polite"></p></div></details>
     </div>
     <dialog id="share-dialog" aria-labelledby="share-title"><div class="panel-heading"><h2 id="share-title">扫码直接进入本房间</h2><button id="close-share" class="close-dialog" type="button" aria-label="关闭房间二维码">×</button></div><p class="room-code">房间 <strong>${room.code}</strong></p>${qrMarkup('本房间邀请二维码', '微信扫一扫 · 直接进入这张牌桌')}</dialog>`,
@@ -195,7 +197,8 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
       room.settings.mode === 'college' ? room.matchId : matchId,
       Boolean(room.settings.mode === 'college' ? room.matchId : matchId) &&
         room.phase === 'playing' &&
-        Boolean(room.engine.surrender),
+        Boolean(room.engine.surrender) &&
+        room.settings.mode !== 'shanhetu',
       connected && navigator.onLine !== false,
     );
     experience.context(
@@ -364,7 +367,19 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
   }
 
   const collegeStage = bindCollegeStage(collegeEnd, collegeVote);
+  const shanhetuPanel = bindShanhetuPanel(async (operation, body) => {
+    renderRoom(
+      await roomApi<RoomView>(
+        `${roomPath}/shanhetu/${operation}`,
+        'POST',
+        body,
+        {},
+        operation === 'end' ? 20000 : matchStartTimeout(room.settings, 1) + 10000,
+      ),
+    );
+  });
   const owner = () => session.roomCode === room.code && session.playerId === room.ownerId;
+  const shanhetuLaunch = bindShanhetuLaunch(() => roomApi(`${roomPath}/shanhetu/book`));
   const refresh = () => renderRoom(room);
 
   function renderOwnership(): void {
@@ -373,7 +388,8 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
       session.roomCode === room.code
         ? room.players.find((player) => player.id === session.playerId)
         : undefined;
-    const between = ['waiting', 'finished'].includes(room.phase);
+    const between =
+      room.settings.mode !== 'shanhetu' && ['waiting', 'finished'].includes(room.phase);
     const supported = room.ownerClaimAt !== undefined;
     element('#owner-transfer-row').hidden = !me || !owner() || !between || !supported;
     disable(element('#owner-transfer'), settingsDirty || settingsSaving || !between);
@@ -406,7 +422,8 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
   function resizeTable(): void {
     const panel = element('#match-panel');
     const portrait = window.innerWidth < window.innerHeight;
-    const rotated = portrait && horizontalTable;
+    const journey = Boolean(room.shanhetu && room.phase === 'waiting');
+    const rotated = !journey && portrait && horizontalTable;
     panel.classList.toggle('rotated-table', rotated);
     panel.style.setProperty('--table-width', `${window.innerHeight}px`);
     panel.style.setProperty('--table-height', `${window.innerWidth}px`);
@@ -418,7 +435,7 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
       'stage-short',
       (rotated ? window.innerWidth : window.innerHeight) <= 440,
     );
-    element('#match-orientation').hidden = !portrait;
+    element('#match-orientation').hidden = journey || !portrait;
     element('#match-orientation').textContent = horizontalTable ? '竖屏显示' : '横屏牌桌';
     element('#orientation-hint').hidden = !rotated;
   }
@@ -630,6 +647,15 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
       element<HTMLSelectElement>('#general-preset').value = 'ol-college-2026';
       element<HTMLInputElement>('#allow-general-selection').checked = false;
     }
+    if (modeId === 'shanhetu') {
+      const basePreset = draftRosterSummary?.basePreset ?? room.settings.generalPreset;
+      if (draftRoster) {
+        draftRoster = undefined;
+        draftRosterSummary = undefined;
+        element<HTMLSelectElement>('#general-preset').value = basePreset;
+      }
+      element<HTMLInputElement>('#allow-general-selection').checked = false;
+    }
     preloader.update(
       Boolean(room.engine.preload) && room.phase === 'waiting',
       selectedPreset(),
@@ -674,7 +700,8 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
     );
   }
 
-  function cardPileDescription(presetId: string): string {
+  function cardPileDescription(presetId: string, modeId: ModeId = draftMode): string {
+    if (modeId === 'shanhetu') return '山河图独立无装备牌堆；随身牌与装备沿途取得，每场重新发放。';
     const preset = GENERAL_PRESETS.find((entry) => entry.id === presetId);
     if (!room.engine.cardPilePolicy)
       return '牌堆：标准108张；电脑更新并重启服务后，进阶档使用军争160张。';
@@ -744,7 +771,8 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
       localAttemptAt = Date.now();
       Object.assign(window, { partyLan: localConnection });
     }
-    const waiting = room.phase === 'waiting';
+    const waiting = room.phase === 'waiting' && !room.shanhetu;
+    const inJourney = Boolean(me && room.shanhetu && room.phase === 'waiting');
     const standby = Boolean(
       me &&
       room.settings.mode === 'college' &&
@@ -762,6 +790,7 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
     );
     const inStage =
       inMatch ||
+      inJourney ||
       Boolean(
         me &&
         (standby ||
@@ -789,7 +818,13 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
         ` · A ${room.series.scores[0]} : ${room.series.scores[1]} B`;
     element('#rematch-button').hidden = room.phase !== 'finished';
     element('#rematch-button').textContent =
-      room.settings.mode === 'college' ? '整场休息' : isOwner ? '回到房间，准备下一局' : '回到房间';
+      room.settings.mode === 'shanhetu'
+        ? '继续征程'
+        : room.settings.mode === 'college'
+          ? '整场休息'
+          : isOwner
+            ? '回到房间，准备下一局'
+            : '回到房间';
     element('#finished-hint').hidden = room.phase !== 'finished' || isOwner;
     matchLeave.hidden = room.phase !== 'finished' || room.ownerClaimAt === undefined;
     waitingReturn.hidden = room.phase !== 'finished' || returnedMatchId !== room.matchId;
@@ -915,11 +950,15 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
     const readyHumans = humans.filter((player) => player.online && player.ready).length;
     const empty = room.settings.playerCount - room.players.length;
     const mode = findMode(room.settings.mode)!;
+    const shanhetuMode = mode.id === 'shanhetu';
     const preset = GENERAL_PRESETS.find((entry) => entry.id === room.settings.generalPreset);
     renderRosterSource(element('#summary-roster-source'), room.settings.generalPreset, room.roster);
     element('#player-counter').textContent =
       `${room.players.length} / ${room.settings.playerCount} 席`;
-    element('#seat-count').textContent = `${humans.length} 位真人 · ${bots.length} 个 AI`;
+    element('#room-seats-title').textContent = shanhetuMode ? '出征席位' : '等朋友到齐';
+    element('#seat-count').textContent = shanhetuMode
+      ? '单人出征 · 队友在征程中加入'
+      : `${humans.length} 位真人 · ${bots.length} 个 AI`;
     element('#player-room-code').textContent = room.code;
     element('#summary-mode').textContent = mode.name;
     element('#summary-details').textContent =
@@ -927,7 +966,10 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
     element('#summary-preset').textContent = room.roster
       ? `自定义名单 ${room.roster.characterCount} 将 · 第 ${room.roster.revision} 版；继承 ${preset?.name ?? room.settings.generalPreset} 的规则和牌堆。`
       : (preset?.description ?? '请房主选择当前可用的武将范围，再准备下一局。');
-    element('#summary-deck').textContent = cardPileDescription(room.settings.generalPreset);
+    element('#summary-deck').textContent = cardPileDescription(
+      room.settings.generalPreset,
+      room.settings.mode,
+    );
     if (room.engine.luckCards)
       element('#summary-deck').textContent +=
         ' 每位真人每局可免费刷新起手牌3次，30秒内完成；AI保留原牌。';
@@ -937,6 +979,9 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
     );
     element('#summary-selection').textContent =
       `${room.settings.allowGeneralSelection ? '点将已开放' : '点将未开放'}${room.settings.mode === 'identity' ? ` · 主公 ${room.settings.generalPreset === 'beginner' ? 5 : 10} 名候选，其余每人 ${room.roster ? `最多 ${ordinaryChoices}` : room.settings.generalPreset === 'beginner' ? 3 : 6} 名；主公先选并展示` : room.settings.mode === 'duel' && room.roster ? ` · 每人最多 ${Math.min(5, Math.floor(room.roster.characterCount / 2))} 名候选，一人一将` : ''}`;
+    if (shanhetuMode)
+      element('#summary-selection').textContent =
+        '出征前从候选中选择一名武将，三章沿用该将与途中成长。';
     element('#summary-rules').hidden = room.settings.mode !== 'versus';
     element('#summary-rules').textContent =
       'OL 常规 2v2：随机座次，1、4 号位同队，2、3 号位同队，按 1→2→3→4 行动。每队共享 10 名候选，两名队友从同一将池各选一名；已选武将保留在将池，标明「队友已选」且不可重复选择。起手分别 4/4/4/5 张，1 号位首回合摸牌阶段少摸 1 张；队友阵亡可摸 1 张，击杀无额外奖惩，敌方全部阵亡获胜。';
@@ -948,7 +993,9 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
       ? `房主：${roomOwner.nickname}${roomOwner.online ? '' : ' · 暂时离线，等待重新连接'}`
       : '房间已关闭';
     element('#waiting-text').textContent = waiting
-      ? `${readyHumans} / ${humans.length} 位真人已准备，${empty} 个空位；AI 自动准备。`
+      ? shanhetuMode
+        ? '可独自出征。'
+        : `${readyHumans} / ${humans.length} 位真人已准备，${empty} 个空位；AI 自动准备。`
       : room.phase === 'closed'
         ? '这张牌桌已散，返回主页可以另开一局。'
         : room.phase === 'finished'
@@ -964,15 +1011,23 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
     disable(element('#join-button'), empty <= 0 || !waiting);
     if (me) {
       element('#my-nickname').textContent = me.nickname;
-      element('#my-role').textContent = isOwner ? '你是房主，也参加这一局' : '已为你留好座位';
+      element('#my-role').textContent = shanhetuMode
+        ? '你将独自出征'
+        : isOwner
+          ? '你是房主，也参加这一局'
+          : '已为你留好座位';
       const ready = element<HTMLButtonElement>('#ready-button');
+      ready.hidden = shanhetuMode;
       ready.textContent = me.ready ? '已准备 · 点击取消' : '我准备好了';
       ready.classList.toggle('is-ready', me.ready);
       disable(ready, !me.online || !waiting || (isOwner && settingsPending));
     }
     element('#owner-start').hidden = !isOwner;
     element('#owner-leave-hint').hidden = !isOwner;
-    element('#bot-controls').hidden = !isOwner;
+    element('#owner-leave-hint').textContent = shanhetuMode
+      ? '离开后将关闭此房间。'
+      : '离开后房主交接给下一位真人；最后一位真人离开会关闭房间。';
+    element('#bot-controls').hidden = !isOwner || shanhetuMode;
     element('#settings-panel').hidden = !isOwner;
     disable(element('#add-bot'), empty === 0 || !waiting || settingsPending || seriesLocked);
     disable(element('#fill-bots'), empty === 0 || !waiting || settingsPending || seriesLocked);
@@ -986,10 +1041,15 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
         !room.engine.ready ||
         !waiting ||
         empty !== 0 ||
-        readyHumans !== humans.length ||
+        (shanhetuMode ? !me?.online : readyHumans !== humans.length) ||
         settingsPending,
     );
     collegeStage.context(room, me?.id ?? null, inMatch, standby, inStage);
+    shanhetuPanel.context(room, isOwner, inJourney);
+    shanhetuLaunch.context(
+      isOwner && waiting && shanhetuMode && !room.shanhetu && !!room.engine.shanhetu,
+    );
+    element('#start-button').textContent = shanhetuMode ? '择将出征' : '开始对局';
     if (!settingsDirty) {
       draftRoster = room.settings.customRoster;
       draftRosterSummary = room.roster;
@@ -1013,7 +1073,10 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
         : `${settingsSaved ? '设置已自动保存。' : '修改设置后会自动保存。'}修改玩法、点将或增减席位后，真人需要重新准备；缩小房间时会自动移除多余 AI。`;
     const selectionSupported = typeof room.settings.allowGeneralSelection === 'boolean';
     element<HTMLInputElement>('#allow-general-selection').disabled =
-      !waiting || !selectionSupported || seriesLocked || room.settings.mode === 'college';
+      !waiting ||
+      !selectionSupported ||
+      seriesLocked ||
+      ['college', 'shanhetu'].includes(room.settings.mode);
     element('#general-selection-description').textContent = selectionSupported
       ? `开放后，真人可在大厅点一名武将作为第1个候选；${room.settings.mode === 'versus' ? '2v2 会加入本队共享将池，队友也可选择；' : ''}同局上场武将不重复。关闭点将或更换武将档会清除已有点将。`
       : '电脑服务更新并重新启动后可开放点将。';
@@ -1022,16 +1085,15 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
     element<HTMLSelectElement>('#college-format').disabled = !waiting || seriesLocked;
     element('#save-settings').hidden = !settingsError;
     disable(element('#save-settings'), !waiting || settingsSaving || !isOwner);
-    app
-      .querySelectorAll<HTMLButtonElement>('[data-mode]')
-      .forEach((button) =>
-        disable(
-          button,
-          !waiting ||
-            seriesLocked ||
-            (button.dataset.mode === 'college' && !room.engine.doudizhuPractice),
-        ),
+    app.querySelectorAll<HTMLButtonElement>('[data-mode]').forEach((button) => {
+      button.hidden = button.dataset.mode === 'shanhetu' && !room.engine.shanhetu;
+      disable(
+        button,
+        !waiting ||
+          seriesLocked ||
+          (button.dataset.mode === 'college' && !room.engine.doudizhuPractice),
       );
+    });
     if (me && !qrBound) {
       bindQr(initial.joinUrls, room.code, initial.entry);
       qrBound = true;
@@ -1196,7 +1258,7 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
         await roomApi<RoomView>(
           `${roomPath}/start`,
           'POST',
-          undefined,
+          room.settings.mode === 'shanhetu' ? shanhetuLaunch.startOptions() : undefined,
           {},
           matchStartTimeout(
             room.settings,
@@ -1353,6 +1415,8 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
       owner() &&
       room.phase === 'waiting' &&
       draftMode !== 'college' &&
+      draftMode !== 'shanhetu' &&
+      !room.shanhetu &&
       !(room.series && !room.series.finished),
     request: roomApi,
     flush: async () => {

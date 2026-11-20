@@ -4,8 +4,9 @@ import { connectRuleHost } from './relay.js';
 import { broadcastCharacterInit } from './privacy.js';
 
 function configure(setup) {
-  const mode =
-    setup.settings.mode === 'duel'
+  const mode = setup.shanhetu
+    ? 'identity'
+    : setup.settings.mode === 'duel'
       ? 'single'
       : setup.settings.mode === 'college'
         ? 'doudizhu'
@@ -337,6 +338,11 @@ export function trackVersusChoices(batch, replayChoice) {
 
 /** Identity alone reveals the lord before asking the remaining seats. */
 export async function selectGenerals(setup, pool, initialize, replayChoice) {
+  if (setup.shanhetu) {
+    const { selectShanhetuGenerals } = await import('./shanhetu.js');
+    await selectShanhetuGenerals(setup, initialize);
+    return;
+  }
   if (setup.doudizhu) {
     const selected = new Set();
     for (const player of game.players) {
@@ -430,8 +436,18 @@ export async function selectGenerals(setup, pool, initialize, replayChoice) {
 export async function initialDraw(setup) {
   const versus = setup.settings.mode === 'versus';
   const first = versus ? game.players[0] : game.zhu;
+  const shanhetu = setup.shanhetu ? await import('./shanhetu.js') : null;
   if (versus) _status.first_less = true;
-  await game.gameDraw(first, versus ? (player) => (player === first.previousSeat ? 5 : 4) : 4);
+  const draw = game.gameDraw(
+    first,
+    shanhetu
+      ? (player) => shanhetu.shanhetuStartingCards(player, setup)
+      : versus
+        ? (player) => (player === first.previousSeat ? 5 : 4)
+        : 4,
+  );
+  if (shanhetu) shanhetu.setShanhetuStartingHands(draw);
+  await draw;
   return first;
 }
 // Older WebKit gives module-level async declarations Function.prototype, so the
@@ -471,6 +487,7 @@ const start = async function start() {
   proof.roster = [...allowed];
   // This also keeps transformation/AI candidate lists inside the room's preset.
   for (const name of Object.keys(lib.character)) if (!allowed.has(name)) delete lib.character[name];
+  if (setup.shanhetu) await (await import('./shanhetu.js')).installShanhetu(setup);
   const groups = ['wei', 'shu', 'wu', 'qun', 'shen'];
   if ([...allowed].some((name) => lib.character[name]?.group === 'jin')) groups.push('jin');
   lib.group = lib.group.filter((group) => groups.includes(group));
@@ -596,22 +613,28 @@ const start = async function start() {
   _status.waitingForPlayer = false;
   // A random seat order also randomizes landlord/first action in open modes.
   const seats = setup.seats.slice().randomSort();
-  if (setup.doudizhu) seats.splice(0, seats.length, ...setup.seats);
-  const roles = identities(setup.settings.mode, seats.length);
+  if (setup.doudizhu || setup.shanhetu) seats.splice(0, seats.length, ...setup.seats);
+  const roles = identities(setup.shanhetu ? 'shanhetu' : setup.settings.mode, seats.length);
   for (let index = 0; index < seats.length; index++) {
     const seat = seats[index],
       player = game.players[index];
     player.playerid = seat.id;
     player.nickname = seat.nickname;
     player.setNickname();
-    player.identity = roles[index];
+    const companion = setup.shanhetu && index > setup.shanhetuRecipe.enemies.length;
+    player.identity = companion ? 'zhong' : roles[index];
     if (['versus', 'doudizhu', 'college'].includes(setup.settings.mode)) player.seatNum = index + 1;
-    player.side = setup.settings.mode === 'versus' ? index === 0 || index === 3 : index % 2 === 0;
-    player.ai.shown = player.identity === 'zhu' || setup.settings.mode !== 'identity' ? 1 : 0;
+    player.side = setup.shanhetu
+      ? index === 0 || companion
+      : setup.settings.mode === 'versus'
+        ? index === 0 || index === 3
+        : index % 2 === 0;
+    player.ai.shown =
+      setup.shanhetu || player.identity === 'zhu' || setup.settings.mode !== 'identity' ? 1 : 0;
     player.identityShown = player.ai.shown === 1;
     if (player.identity === 'zhu') {
       game.zhu = player;
-      player.isZhu = true;
+      player.isZhu = !setup.shanhetu;
     }
     if (seat.kind === 'human') player.ws = lib.node.clients.find((client) => client.id === seat.id);
     lib.playerOL[seat.id] = player;
@@ -631,7 +654,7 @@ const start = async function start() {
       seatNum: current.seatNum,
     }));
     player.send(
-      function (map, config, variant, pile, natures) {
+      function (map, config, variant, pile, natures, pve) {
         lib.configOL = config;
         _status.mode = variant;
         // prepareArena creates the pile before phones connect. Its native
@@ -657,7 +680,7 @@ const start = async function start() {
           current.setIdentity(seat.identity);
           if (seat.identity === 'zhu') {
             game.zhu = current;
-            current.isZhu = true;
+            current.isZhu = !pve;
           }
           lib.playerOL[seat.id] = current;
         });
@@ -673,6 +696,7 @@ const start = async function start() {
       _status.mode,
       lib.inpile,
       lib.inpile_nature,
+      !!setup.shanhetu,
     );
   }
   if (setup.settings.mode === 'duel') {
@@ -709,6 +733,7 @@ const start = async function start() {
       broadcastCharacterInit(player, name);
       if (
         setup.settings.mode === 'identity' &&
+        !setup.shanhetu &&
         player === game.zhu &&
         !player.isInitFilter('noZhuHp')
       )
@@ -718,7 +743,7 @@ const start = async function start() {
           lord.hp++;
           lord.update();
         }, player.playerid);
-      const groups = get.selectGroup(name);
+      const groups = setup.shanhetu?.hero ? [] : get.selectGroup(name);
       if (groups.length > 1) {
         player._groupChosen = get.selectGroup(name, true);
         const result = await player
@@ -750,17 +775,36 @@ const start = async function start() {
     );
   }
   if (setup.settings.mode === 'college') game.addGlobalSkill('_party_college_round_limit');
-  if (setup.settings.mode === 'identity') {
+  if (setup.settings.mode === 'identity' && !setup.shanhetu) {
     // Native identity death handling needs the lord skills and shown flags.
     game.zhu.isZhu = true;
     game.zhu.identityShown = true;
   }
   _status.videoInited = true;
   game.syncState();
-  _status.event.trigger('gameStart');
+  const shanhetu = setup.shanhetu ? await import('./shanhetu.js') : null;
+  if (shanhetu) await shanhetu.equipShanhetuOpeningGear();
+  const fixedCompanionHands = setup.shanhetuCompanions?.some(
+    (companion) => companion.fixedHand?.length,
+  );
+  if (!fixedCompanionHands) _status.event.trigger('gameStart');
   const first = await initialDraw(setup);
+  if (fixedCompanionHands) _status.event.trigger('gameStart');
   if (setup.farmerHandSharing) (await import('./farmer-hands.js')).installFarmerHands();
   if (offerLuckCards) await offerLuckCards();
+  if (shanhetu) await shanhetu.dealShanhetuCarryCards(setup);
+  if (setup.shanhetu)
+    proof.shanhetu = {
+      actors: game.players.map((player) => ({
+        id: player.playerid,
+        general: player.name1,
+        hp: player.hp,
+        maxHp: player.maxHp,
+        armor: player.hujia,
+        initialCards: player.countCards('h'),
+        equipment: player.getCards('e').map(({ name, suit, number }) => ({ name, suit, number })),
+      })),
+    };
   proof.started = true;
   globalThis.partyEngine.signal('started');
   enableSurrender?.();
@@ -832,5 +876,9 @@ export function adaptMode(mode) {
     mode.game.checkResult = function () {
       if (game.players.length === 1) game.over();
     };
+  if (globalThis.partyEngine.setup.shanhetu) {
+    // bootstrap loads this module before importing the wrapped native mode.
+    globalThis.partyEngine.adaptShanhetuMode(mode);
+  }
   return mode;
 }
