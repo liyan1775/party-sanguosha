@@ -2,6 +2,38 @@
 import { _status, game, get, lib, ui } from 'noname';
 
 export function installShanhetuHardSkills(recordUse) {
+  const roar = 'party_shanhetu_paoxiao939';
+  const charge = 'party_shanhetu_paoxiao939_charge';
+  lib.skill[roar] = {
+    mod: {
+      cardUsable(card) {
+        if (card.name === 'sha') return Infinity;
+      },
+    },
+    trigger: { player: ['shaMiss', 'eventNeutralized'] },
+    forced: true,
+    filter: (event) => event.card?.name === 'sha',
+    async content(event, trigger, player) {
+      recordUse(roar);
+      player.addTempSkill(charge, { global: 'phaseAfter' });
+      player.addMark(charge, 1, false);
+    },
+  };
+  lib.skill[charge] = {
+    trigger: { source: 'damageBegin1' },
+    forced: true,
+    charlotte: true,
+    onremove: true,
+    marktext: '咆',
+    intro: { content: '本回合下次以【杀】造成的伤害+#' },
+    filter: (event, player) => event.card?.name === 'sha' && player.countMark(charge) > 0,
+    async content(event, trigger, player) {
+      recordUse(roar);
+      trigger.num += player.countMark(charge);
+      player.removeSkill(charge);
+    },
+  };
+  lib.translate[charge] = '咆哮';
   lib.skill.party_shanhetu_keshou = {
     trigger: { player: 'damageBegin3' },
     direct: true,

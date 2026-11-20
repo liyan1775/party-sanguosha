@@ -79,6 +79,23 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
   // Keep the former client reachable only for explicit regression fixtures.
   const lightweight = sessionStorage.getItem('party_lightweight_verification') === '1';
   const playerFrameUrl = (id: string) => `/engine/${lightweight ? 'table' : 'player'}/${id}`;
+  function shanhetuReturn() {
+    if (room.settings.mode !== 'shanhetu') return undefined;
+    return room.shanhetu?.phase === 'won' || room.shanhetu?.phase === 'lost'
+      ? 'ending'
+      : 'continue';
+  }
+  function notifyFinished(frame: HTMLIFrameElement) {
+    if (
+      frame === document.querySelector('#game-frame') &&
+      room.phase === 'finished' &&
+      !room.matchFailure
+    )
+      frame.contentWindow?.postMessage(
+        { type: 'party-finished', matchId: room.matchId, shanhetuReturn: shanhetuReturn() },
+        location.origin,
+      );
+  }
   let horizontalTable = sessionStorage.getItem('party_table_view') !== 'portrait';
   let localConnection: ReturnType<typeof createLanConnection>;
   let localMatchAttempt: string | null = null;
@@ -596,6 +613,7 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
     if (event.data.type === 'party-connected') {
       element('#match-loading').hidden = true;
       if (!room.engine.connectionRecovery) confirmConnection();
+      if (frame && room.settings.mode === 'shanhetu') notifyFinished(frame);
       refresh();
     }
   });
@@ -816,15 +834,17 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
     if (room.series)
       element('#match-label').textContent +=
         ` · A ${room.series.scores[0]} : ${room.series.scores[1]} B`;
+    const journeyReturn = shanhetuReturn();
     element('#rematch-button').hidden = room.phase !== 'finished';
-    element('#rematch-button').textContent =
-      room.settings.mode === 'shanhetu'
-        ? '继续征程'
-        : room.settings.mode === 'college'
-          ? '整场休息'
-          : isOwner
-            ? '回到房间，准备下一局'
-            : '回到房间';
+    element('#rematch-button').textContent = journeyReturn
+      ? journeyReturn === 'ending'
+        ? '查看结局'
+        : '继续征程'
+      : room.settings.mode === 'college'
+        ? '整场休息'
+        : isOwner
+          ? '回到房间，准备下一局'
+          : '回到房间';
     element('#finished-hint').hidden = room.phase !== 'finished' || isOwner;
     matchLeave.hidden = room.phase !== 'finished' || room.ownerClaimAt === undefined;
     waitingReturn.hidden = room.phase !== 'finished' || returnedMatchId !== room.matchId;
@@ -834,13 +854,7 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
       frame.title = '三国杀对局';
       frame.allow = 'autoplay';
       frame.src = playerFrameUrl(room.matchId!);
-      frame.addEventListener('load', () => {
-        if (room.phase === 'finished' && !room.matchFailure)
-          frame.contentWindow?.postMessage(
-            { type: 'party-finished', matchId: room.matchId },
-            location.origin,
-          );
-      });
+      frame.addEventListener('load', () => notifyFinished(frame));
       element('#game-frame-mount').replaceChildren(frame);
       element('#match-loading').hidden = false;
       element('#match-sound').textContent = '开启声音';
@@ -858,13 +872,10 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
       connectionNotice.hidden = true;
       clearTimeout(noticeTimer);
     }
-    if (inMatch && room.phase === 'finished' && !room.matchFailure)
-      document
-        .querySelector<HTMLIFrameElement>('#game-frame')
-        ?.contentWindow?.postMessage(
-          { type: 'party-finished', matchId: room.matchId },
-          location.origin,
-        );
+    if (inMatch && room.phase === 'finished' && !room.matchFailure) {
+      const frame = document.querySelector<HTMLIFrameElement>('#game-frame');
+      if (frame) notifyFinished(frame);
+    }
     updateMatchControls();
     records.context(inMatch ? room.matchId : null, Boolean(room.engine.playerHistory));
     roomFailure.hidden = !room.matchFailure || inMatch;
@@ -878,7 +889,7 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
       clearTimeout(finishedSyncTimer);
       showConnectionNotice(
         '本局中断 · 未判胜负',
-        `${MATCH_FAILURE_MESSAGES[room.matchFailure.code]} 房间和席位仍在，请点击「回到房间」后重新准备。`,
+        `${MATCH_FAILURE_MESSAGES[room.matchFailure.code]} ${journeyReturn ? '点击「继续征程」可重新挑战本关。' : '房间和席位仍在，请点击「回到房间」后重新准备。'}`,
         true,
       );
       element('#match-retry').hidden = true;

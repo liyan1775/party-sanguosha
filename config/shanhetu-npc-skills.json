@@ -1014,6 +1014,13 @@
       "description": "",
       "sourceTextSha256": "5d03f199d7504966c299a71f6ab5085aad9c1288ec80891ea73a1671af3a1746",
       "implementation": "native-shenhua"
+    },
+    {
+      "id": 939,
+      "nativeId": "party_shanhetu_paoxiao939",
+      "name": "咆哮",
+      "description": "锁定技，你使用【杀】无次数限制。当你使用的【杀】被抵消后，你本回合下一次【杀】造成的伤害+1。",
+      "implementation": "scenario-specific"
     }
   ]
 }

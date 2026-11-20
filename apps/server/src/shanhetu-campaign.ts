@@ -60,6 +60,7 @@ export interface ShanhetuNode {
     id: string;
     decisionId?: number;
     encounter?: ShanhetuNodeBattle;
+    offer?: ShanhetuReward['offer'];
     label: string;
     description: string;
     cost: number;
@@ -105,6 +106,7 @@ export interface ShanhetuCampaignCatalog {
   heroChoices?: (ShanhetuHeroState & { name: string; description: string; portrait?: string })[];
   openingCompanions?: number[];
   openingTactics?: string[];
+  openingBattleTactic?: number;
   openingRewards?: ShanhetuNode['rewardGroups'];
   regions?: ShanhetuRegion[];
   initialRegion?: string;
@@ -148,6 +150,7 @@ export class ShanhetuCampaign {
   private shopRefreshCount = 0;
   private currentRegionId: string | null = null;
   private visitedNodes = new Set<string>();
+  private readonly defeatedBosses: { regionId: string; battleId: number }[] = [];
   private elapsedMonths = 0;
   private readonly stats: JourneyStats = {
     earnedCoins: 0,
@@ -174,7 +177,10 @@ export class ShanhetuCampaign {
       skillSlots: catalog.initialSkillSlots,
       ...(catalog.restartLimit !== undefined ? { restartsLeft: catalog.restartLimit } : {}),
       hero: null,
-      build: emptyBuild(),
+      build: {
+        ...emptyBuild(),
+        tactics: catalog.openingBattleTactic === undefined ? [] : [catalog.openingBattleTactic],
+      },
       companions: [...(this.catalog.openingCompanions ?? [])],
       ...(this.catalog.openingTactics?.length
         ? { initialTactics: [...this.catalog.openingTactics] }
@@ -217,7 +223,7 @@ export class ShanhetuCampaign {
           }
         : {}),
       actions: this.actions.map(
-        ({ id, kind, label, description, cost, general, group, offer, portrait }) => ({
+        ({ id, kind, label, description, cost, general, group, offer, portrait, replacement }) => ({
           id,
           kind,
           label,
@@ -226,10 +232,15 @@ export class ShanhetuCampaign {
           ...(general ? { general, group } : {}),
           ...(portrait ? { portrait } : {}),
           ...(offer ? { offer } : {}),
+          ...(replacement ? { replacement } : {}),
         }),
       ),
       ...(this.currentRegionId ? { map: this.mapView() } : {}),
     });
+  }
+
+  bossVictories() {
+    return structuredClone(this.defeatedBosses);
   }
 
   private node(): ShanhetuNode {
@@ -377,6 +388,8 @@ export class ShanhetuCampaign {
           kind: node.kind,
           x: node.position?.x ?? 0,
           y: node.position?.y ?? 0,
+          duration: node.duration,
+          unlockDay: id === region.boss ? region.bossAt : (node.unlockDay ?? 0),
           status: this.visitedNodes.has(id) ? 'completed' : action ? 'available' : 'locked',
           ...(action ? { actionId: action.id } : {}),
         };
@@ -481,6 +494,9 @@ export class ShanhetuCampaign {
       return true;
     }
     this.state.victories++;
+    if (this.currentRegionId && this.node().kind === 'boss') {
+      this.defeatedBosses.push({ regionId: this.currentRegionId, battleId: ticket.battleId });
+    }
     this.state.coins += encounter.coins ?? 0;
     this.stats.earnedCoins += encounter.coins ?? 0;
     if (encounter.unlockSkillSlots)
@@ -531,10 +547,12 @@ export class ShanhetuCampaign {
           effects: choice.effects,
         }).map((variant) => ({
           ...this.action('choice', variant.name, variant.description, choice.cost),
+          ...(choice.offer ? { offer: choice.offer } : {}),
           effects: structuredClone(choice.effects),
           ...(choice.decisionId === undefined ? {} : { decisionId: choice.decisionId }),
           ...(choice.encounter ? { encounter: choice.encounter } : {}),
           ...(variant.replaceSkill === undefined ? {} : { replaceSkill: variant.replaceSkill }),
+          ...(variant.replacement ? { replacement: variant.replacement } : {}),
         })),
       );
     }
@@ -617,6 +635,7 @@ export class ShanhetuCampaign {
         ...(reward.offer ? { offer: reward.offer } : {}),
         effects: structuredClone(reward.effects),
         ...(variant.replaceSkill === undefined ? {} : { replaceSkill: variant.replaceSkill }),
+        ...(variant.replacement ? { replacement: variant.replacement } : {}),
       })),
     );
     if (group.allowSkip !== false)
@@ -650,6 +669,7 @@ export class ShanhetuCampaign {
         target: reward.id,
         effects: structuredClone(reward.effects),
         ...(variant.replaceSkill === undefined ? {} : { replaceSkill: variant.replaceSkill }),
+        ...(variant.replacement ? { replacement: variant.replacement } : {}),
       }));
     });
     if (node.refreshPool?.length) {
@@ -667,25 +687,32 @@ export class ShanhetuCampaign {
     this.actions.push(this.action('leave', '离开集市', '保留铜币，继续征程。'));
   }
 
-  private rewardVariants(
-    reward: ShanhetuReward,
-  ): { name: string; description: string; replaceSkill?: number }[] {
+  private rewardVariants(reward: ShanhetuReward): {
+    name: string;
+    description: string;
+    replaceSkill?: number;
+    replacement?: Action['replacement'];
+  }[] {
     if (this.eligible(reward.effects)) {
       const equipment = this.cards.filter(
         (card) => card.autoEquip && this.state.build.cards?.includes(card.id),
       );
-      const replaced = new Set<string>();
+      const replaced = new Map<number, { name: string; description: string }>();
       for (const effect of reward.effects) {
         if (effect.kind !== 'card') continue;
         const card = this.cards.find((item) => item.id === effect.amount);
         if (!card?.autoEquip) continue;
         const old = equipment.find((item) => item.equipmentSlot === card.equipmentSlot);
-        if (old && old.id !== card.id) replaced.add(old.name);
+        if (old && old.id !== card.id)
+          replaced.set(old.id, { name: old.name, description: old.description ?? '' });
       }
-      const description = replaced.size
-        ? `${reward.description}\n将替换现有装备${[...replaced].map((name) => `【${name}】`).join('、')}。`
-        : reward.description;
-      return [{ name: reward.name, description }];
+      return [
+        {
+          name: reward.name,
+          description: reward.description,
+          ...(replaced.size ? { replacement: [...replaced.values()] } : {}),
+        },
+      ];
     }
     const skills = reward.effects.filter((effect) => effect.kind === 'skill');
     if (
@@ -697,11 +724,15 @@ export class ShanhetuCampaign {
     const definitions = this.growth.skills;
     return this.state.build.skills
       .filter((id) => this.eligible(reward.effects, id))
-      .map((id) => ({
-        name: `${reward.name}（替换${definitions.find((skill) => skill.id === id)!.name}）`,
-        description: reward.description,
-        replaceSkill: id,
-      }));
+      .map((id) => {
+        const old = definitions.find((skill) => skill.id === id)!;
+        return {
+          name: `${reward.name}（替换${old.name}）`,
+          description: reward.description,
+          replaceSkill: id,
+          replacement: [{ name: old.name, description: old.description }],
+        };
+      });
   }
 
   private eligible(effects: ShanhetuEffect[], replaceSkill?: number): boolean {
@@ -864,6 +895,8 @@ export class ShanhetuCampaign {
       !bounded(c.initialSkillSlots, 1, 3) ||
       (c.restartLimit !== undefined && !bounded(c.restartLimit, 0, 10)) ||
       (c.openingCompanions?.length ?? 0) > 1 ||
+      (c.openingBattleTactic !== undefined &&
+        !growth.tactics.some((tactic) => tactic.id === c.openingBattleTactic)) ||
       c.openingCompanions?.some((id) => !shanhetuCompanion(id)) ||
       (c.openingRewards?.length && !c.heroChoices) ||
       invalidGroups(c.openingRewards) ||

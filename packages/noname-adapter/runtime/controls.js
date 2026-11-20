@@ -734,21 +734,36 @@ export function installControls() {
   }).observe(document.body, { childList: true, subtree: true });
   if (globalThis.partyEngine.setup.role === 'player') {
     if (!globalThis.partyEngine.setup.tableView) {
+      const setup = globalThis.partyEngine.setup;
+      let returnLabel = setup.shanhetu ? '继续征程' : '回到房间';
+      const returnFromTable = () => {
+        parent.postMessage({ type: 'party-return-room', matchId: setup.id }, location.origin);
+      };
       // Online settlement may execute a serialized native function, or reinit
       // may set over directly. Observe its real dialog instead of only wrapping
       // game.over/lib.onover; neither intercepts all native ending paths.
       updateSettlement = () => {
         if (_status.over && ui.dialog?.isConnected && !ui.partyReturnRoom?.isConnected) {
           globalThis.partyEngine.proof.ended = true;
-          ui.partyReturnRoom = ui.create.control('回到房间', () => {
-            parent.postMessage(
-              { type: 'party-return-room', matchId: globalThis.partyEngine.setup.id },
-              location.origin,
-            );
-          });
+          ui.partyReturnRoom = ui.create.control(returnLabel, returnFromTable);
           ui.partyReturnRoom.id = 'party-return-room';
         }
       };
+      if (setup.shanhetu)
+        window.addEventListener('message', (event) => {
+          if (
+            event.source !== parent ||
+            event.origin !== location.origin ||
+            event.data?.type !== 'party-finished' ||
+            event.data.matchId !== setup.id ||
+            event.data.shanhetuReturn !== 'ending' ||
+            returnLabel === '查看结局'
+          )
+            return;
+          returnLabel = '查看结局';
+          if (ui.partyReturnRoom?.isConnected)
+            ui.partyReturnRoom.replace(returnLabel, returnFromTable);
+        });
     }
     const feedback = document.createElement('div');
     feedback.id = 'party-action-status';

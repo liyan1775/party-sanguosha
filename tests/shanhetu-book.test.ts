@@ -7,6 +7,7 @@ import { join } from 'node:path';
 import { ShanhetuBook } from '../apps/server/src/shanhetu-book.js';
 import { createShanhetuScenario } from '../apps/server/src/shanhetu-scenario.js';
 import { ShanhetuCampaign } from '../apps/server/src/shanhetu-campaign.js';
+import { shanhetuRecipe } from '../packages/noname-adapter/src/shanhetu.js';
 
 test('胜场自动解锁，败北和撤军记录已赢的战斗，重复结算只记一次', async (t) => {
   const directory = await mkdtemp(join(tmpdir(), 'party-shanhetu-book-'));
@@ -20,7 +21,7 @@ test('胜场自动解锁，败北和撤军记录已赢的战斗，重复结算�
     [true, ...Array<boolean>(14).fill(false)],
   );
   const oldPool = createShanhetuScenario(['caocao'], book.unlockedForRun(key, 1));
-  assert.equal(oldPool.rewards.filter((reward) => reward.id.startsWith('skill-')).length, 11);
+  assert.equal(oldPool.rewards.filter((reward) => reward.id.startsWith('skill-')).length, 12);
   assert.equal(oldPool.rewards.filter((reward) => reward.id.startsWith('tactic-')).length, 19);
   assert.equal(oldPool.rewards.filter((reward) => reward.id.startsWith('card-')).length, 95);
   for (const id of ['skill-3225', 'skill-3091', 'card-4012']) {
@@ -36,8 +37,8 @@ test('胜场自动解锁，败北和撤军记录已赢的战斗，重复结算�
     difficulty: 1,
     victories: 3,
   };
-  assert.deepEqual(book.record(key, result), { victories: 3, unlocked: ['连营'] });
-  assert.deepEqual(book.record(key, result), { victories: 3, unlocked: ['连营'] });
+  assert.deepEqual(book.record(key, result), { victories: 3, unlocked: ['连营', '弱袭'] });
+  assert.deepEqual(book.record(key, result), { victories: 3, unlocked: ['连营', '弱袭'] });
   const reopened = new ShanhetuBook(directory);
   assert.equal(reopened.view(key).victories, 3);
   assert.equal(reopened.view(key).recent.length, 1);
@@ -52,11 +53,11 @@ test('胜场自动解锁，败北和撤军记录已赢的战斗，重复结算�
   assert(!oldPool.rewards.some((reward) => reward.id === 'skill-3016'));
 
   const retreat = { ...result, runId: 'native-retreat', outcome: 'retreat' as const, victories: 4 };
-  assert.deepEqual(reopened.record(key, retreat), { victories: 4, unlocked: ['拒关'] });
+  assert.deepEqual(reopened.record(key, retreat), { victories: 4, unlocked: ['拒关', '卫境'] });
   assert.throws(() => reopened.unlockedForRun(key, 2), /普通1/);
   assert.deepEqual(
     reopened.record(key, { ...result, runId: 'native-win-1', outcome: 'victory', victories: 11 }),
-    { victories: 11, unlocked: ['烈刃', '绝情'] },
+    { victories: 11, unlocked: ['烈刃', '绝情', '智愚'] },
   );
   assert.equal(reopened.view(key).victories, 18);
   assert.equal(reopened.view(key).difficulties[1]?.unlocked, true);
@@ -113,7 +114,7 @@ test('旧档保留难度前置和已研习进阶技能，只有明确记录的�
     }),
   );
   const book = new ShanhetuBook(directory);
-  assert.deepEqual([...book.unlockedForRun(key, 2)], [3268, 3016]);
+  assert.deepEqual([...book.unlockedForRun(key, 2)], [3268, 3016, 2360, 3040, 2303]);
   assert.equal(book.view(key).victories, 3);
   assert.deepEqual(
     book.view(key).recent.map((item) => [item.difficulty, item.outcome, item.historic]),
@@ -131,9 +132,9 @@ test('旧档保留难度前置和已研习进阶技能，只有明确记录的�
       outcome: 'defeat',
       victories: 4,
     }),
-    { victories: 4, unlocked: ['拒关'] },
+    { victories: 4, unlocked: ['拒关', '卫境'] },
   );
-  assert.equal(JSON.parse(await readFile(path, 'utf8')).schemaVersion, 2);
+  assert.equal(JSON.parse(await readFile(path, 'utf8')).schemaVersion, 3);
   const reopened = new ShanhetuBook(directory);
   assert.deepEqual(reopened.view(key), book.view(key));
 });
@@ -164,4 +165,149 @@ test('和光盟、传承从首次出征可选，每次只生效一项原初始�
   assert.equal(campaign.view().days, 0);
   assert.equal(act(0).battle!.build!.skills.length, 1);
   assert.throws(() => createShanhetuScenario(['caocao'], undefined, 1, [2219, 2138]), /初始战法/);
+});
+
+test('两趟征程的第二章关底分别记功，重开、重复回执和领奖前撤军都按实际结果结算', () => {
+  const book = new ShanhetuBook();
+  const key = ShanhetuBook.profileKey('two-cities');
+  function journey(city: number, hulaoFight: number) {
+    const catalog = createShanhetuScenario(['caocao'], book.unlockedForRun(key, 1), 1, 2360);
+    catalog.initialRegion = 'region-4';
+    for (const region of catalog.regions!) {
+      const opening = catalog.nodes.find((node) => node.id === region.nodes[0])!;
+      opening.duration = region.bossAt;
+      opening.rewardGroups = [];
+    }
+    const hulao = catalog.regions!.find((region) => region.id === 'region-4')!;
+    const boss = catalog.nodes.find((node) => node.id === hulao.boss)!;
+    boss.battleId = hulaoFight;
+    boss.rewardGroups = [];
+    const campaign = new ShanhetuCampaign(catalog);
+    const act = (id = campaign.view().actions[0]!.id) => {
+      const { id: runId, revision } = campaign.view();
+      return campaign.act({ runId, revision, actionId: id });
+    };
+    const win = (restart = false) => {
+      let ticket = act().battle!;
+      assert.deepEqual(ticket.build!.tactics, [2360]);
+      campaign.bindMatch(ticket, 'first-instance');
+      if (restart) {
+        ticket = campaign.restart('first-instance');
+        campaign.bindMatch(ticket, 'replacement');
+      }
+      const match = restart ? 'replacement' : 'first-instance';
+      const result = {
+        runId: ticket.runId,
+        nodeId: ticket.nodeId,
+        battleId: ticket.battleId,
+        hero: ticket.hero!,
+        outcome: 'victory' as const,
+        defeatedEnemies: shanhetuRecipe(ticket.battleId).enemies.length,
+      };
+      assert(!campaign.settle(match, { ...result, defeatedEnemies: result.defeatedEnemies - 1 }));
+      if (restart) assert(!campaign.settle('first-instance', result));
+      assert(campaign.settle(match, result));
+      assert(!campaign.settle(match, result));
+    };
+    act();
+    win();
+    assert.deepEqual(campaign.bossVictories(), []);
+    win(true);
+    const cityAction = campaign
+      .view()
+      .map!.regions.find((region) => region.id === `region-${city}`)!;
+    act(cityAction.actionId!);
+    win();
+    assert.equal(campaign.bossVictories().length, 1);
+    win();
+    assert.equal(campaign.view().phase, 'reward');
+    const result = {
+      runId: campaign.view().id,
+      difficulty: 1,
+      hero: '曹操',
+      outcome: 'retreat' as const,
+      victories: campaign.view().victories,
+      bossVictories: campaign.bossVictories(),
+    };
+    const award = book.record(key, result);
+    assert.deepEqual(book.record(key, result), award);
+    return award;
+  }
+  const battleGoal = (id: number) =>
+    book.view(key).goals.find((goal) => goal.content.some((item) => item.id === id))!;
+  assert.throws(
+    () => createShanhetuScenario(['caocao'], book.unlockedForRun(key, 1), 1, 2303),
+    /尚未解锁/,
+  );
+  const before = createShanhetuScenario(['caocao'], book.unlockedForRun(key, 1));
+  assert(before.rewards.some((item) => item.id === 'skill-3040'));
+  assert(!journey(5, 22646).unlocked.includes('淬血Ⅱ'));
+  assert.equal(battleGoal(2249).progress, 1);
+  assert.deepEqual(battleGoal(2249).cities, ['轘辕关']);
+  assert(journey(5, 22644).unlocked.includes('淬血Ⅱ'));
+  assert.equal(battleGoal(2249).progress, 1);
+  assert(journey(8, 22645).unlocked.includes('博闻Ⅰ'));
+  assert.equal(battleGoal(2249).progress, 2);
+  assert.deepEqual(battleGoal(2249).cities, ['轘辕关', '孟津']);
+  assert.equal(book.view(key).victories, 12);
+  assert.equal(
+    before.rewards.some((item) => item.id === 'tactic-2049'),
+    false,
+  );
+  for (const opening of [2303, 2249]) {
+    const next = createShanhetuScenario(['caocao'], book.unlockedForRun(key, 1), 1, opening);
+    assert.deepEqual(new ShanhetuCampaign(next).view().build.tactics, [opening]);
+    assert(next.rewards.some((item) => item.id === 'tactic-2049'));
+    assert(
+      !next.rewards.some((item) => ['tactic-2360', 'tactic-2303', 'tactic-2249'].includes(item.id)),
+    );
+  }
+});
+
+test('第二版山河册从已证胜场补开新内容，未记录的征途不推定吕布或第二章城池', async (t) => {
+  const directory = await mkdtemp(join(tmpdir(), 'party-shanhetu-book-v2-'));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const key = ShanhetuBook.profileKey('v2-without-route');
+  const path = join(directory, `${key}.json`);
+  await writeFile(
+    path,
+    JSON.stringify({
+      schemaVersion: 2,
+      scenarioId: 5,
+      profile: {
+        revision: 1,
+        legacySkills: [],
+        receipts: [
+          {
+            runId: 'old',
+            hero: '曹操',
+            finishedAt: 1,
+            outcome: 'victory',
+            difficulty: 1,
+            victories: 36,
+            unlocked: [3016, 3253, 3268, 3177],
+          },
+        ],
+      },
+    }),
+  );
+  const book = new ShanhetuBook(directory);
+  const unlocked = book.unlockedForRun(key, 2);
+  for (const id of [2360, 3040, 2303, 3218, 3178, 2100, 3086]) assert(unlocked.has(id));
+  for (const id of [2249, 2049]) assert(!unlocked.has(id));
+  const next = createShanhetuScenario(['caocao'], unlocked);
+  for (const id of ['skill-3040', 'skill-3218', 'skill-3178', 'tactic-2100', 'skill-3086'])
+    assert(next.rewards.some((reward) => reward.id === id));
+  assert.deepEqual(
+    book.record(key, {
+      runId: 'next',
+      hero: '曹操',
+      outcome: 'defeat',
+      difficulty: 2,
+      victories: 1,
+      bossVictories: [{ regionId: 'region-4', battleId: 2645 }],
+    }),
+    { victories: 1, unlocked: ['淬血Ⅱ'] },
+  );
+  assert.equal(new ShanhetuBook(directory).view(key).recent[0]!.newUnlocks?.[0], '淬血Ⅱ');
 });

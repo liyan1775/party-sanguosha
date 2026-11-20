@@ -40,6 +40,24 @@
       "name": "传承",
       "description": "开局时，三选一获得一次稀有的技能",
       "rarity": 1
+    },
+    {
+      "id": 2360,
+      "name": "勤勉",
+      "description": "你始终跳过你的判定阶段",
+      "rarity": 1
+    },
+    {
+      "id": 2303,
+      "name": "弱袭",
+      "description": "你的手牌数小于体力值时，造成的伤害+1",
+      "rarity": 1
+    },
+    {
+      "id": 2249,
+      "name": "博闻Ⅰ",
+      "description": "你的回合开始时，从牌堆中获得1张随机锦囊牌",
+      "rarity": 2
     }
   ],
   "specialCompanions": [
@@ -98,15 +116,76 @@
       "requires": [7]
     }
   ],
-  "lockedPlots": [3225, 3268, 3177, 4016, 4012, 4009, 4006, 2129, 4010, 4015, 3091, 2059, 2009],
+  "lockedPlots": [
+    3225, 3268, 3218, 3177, 4016, 4012, 2303, 3178, 4009, 4006, 3040, 2360, 2129, 4010, 2249, 4015,
+    3086, 2049, 3091, 2059, 2100, 2009
+  ],
   "unlockMilestones": [
-    { "victories": 3, "skills": [3016], "lesson": "留意失去最后一张手牌的时机。" },
-    { "victories": 7, "skills": [3253], "lesson": "判断对手出牌与自己弃牌的时机。" },
-    { "victories": 12, "skills": [3268], "lesson": "在伤害后权衡手牌、拼点和夺牌。" },
+    {
+      "victories": 3,
+      "skills": [3016],
+      "lesson": "留意失去最后一张手牌的时机。"
+    },
+    {
+      "victories": 7,
+      "skills": [3253],
+      "lesson": "判断对手出牌与自己弃牌的时机。"
+    },
+    {
+      "victories": 12,
+      "skills": [3268],
+      "lesson": "在伤害后权衡手牌、拼点和夺牌。"
+    },
     {
       "victories": 18,
       "skills": [3177],
       "lesson": "区分伤害与失去体力，留意哪些技能因此不再触发。"
     }
-  ]
+  ],
+  "explorationGoals": [
+    {
+      "condition": "victories",
+      "target": 0,
+      "content": [2360, 3040]
+    },
+    {
+      "condition": "victories",
+      "target": 3,
+      "content": [2303]
+    },
+    {
+      "condition": "secondChapterCities",
+      "target": 2,
+      "content": [2249]
+    },
+    {
+      "condition": "hulaoLubu",
+      "target": 1,
+      "content": [2049]
+    },
+    {
+      "condition": "victories",
+      "target": 7,
+      "content": [3218]
+    },
+    {
+      "condition": "victories",
+      "target": 12,
+      "content": [3178]
+    },
+    {
+      "condition": "victories",
+      "target": 24,
+      "content": [2100]
+    },
+    {
+      "condition": "victories",
+      "target": 36,
+      "content": [3086]
+    }
+  ],
+  "hulaoLubu": {
+    "regionId": 4,
+    "battleIds": [2644, 2645, 22644, 22645]
+  }
 }

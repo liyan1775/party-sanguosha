@@ -2302,10 +2302,13 @@
           "startingCards": 4,
           "extraSha": 0,
           "skills": ["qigong", "liehou"],
-          "sourceSkills": [932, 933]
+          "sourceSkills": [932, 933],
+          "hard": {
+            "skills": ["party_shanhetu_paoxiao939"],
+            "sourceSkills": [939]
+          }
         }
-      ],
-      "maximumDifficulty": 10
+      ]
     },
     {
       "id": 2438,
@@ -3104,6 +3107,50 @@
           "extraSha": 0,
           "skills": ["kurou", "reqimou"],
           "sourceSkills": [62, 925]
+        }
+      ]
+    },
+    {
+      "id": 22444,
+      "name": "南蛮刺客",
+      "groupId": 22444,
+      "definitionPacks": ["huicui"],
+      "enemies": [
+        {
+          "generalId": 4871,
+          "name": "风矍",
+          "hp": 3,
+          "maxHp": 3,
+          "armor": 0,
+          "draw": 1,
+          "startingCards": 2,
+          "extraSha": 0,
+          "skills": ["cxliushi"],
+          "sourceSkills": [970]
+        }
+      ]
+    },
+    {
+      "id": 2444,
+      "name": "南蛮刺客",
+      "groupId": 2444,
+      "definitionPacks": ["huicui"],
+      "enemies": [
+        {
+          "generalId": 4871,
+          "name": "风矍",
+          "hp": 3,
+          "maxHp": 3,
+          "armor": 0,
+          "draw": 2,
+          "startingCards": 4,
+          "extraSha": 0,
+          "skills": ["cxliushi"],
+          "sourceSkills": [970],
+          "hard": {
+            "skills": ["zhanwan"],
+            "sourceSkills": [971]
+          }
         }
       ]
     }

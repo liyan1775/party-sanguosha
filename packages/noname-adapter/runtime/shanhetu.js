@@ -12,6 +12,7 @@ const identityLabels = {
   zhong2: '队友',
 };
 const publicBossSkills = ['party_shanhetu_poison', 'party_shanhetu_xingtian_ban', 'repojun2'];
+const roarCharge = 'party_shanhetu_paoxiao939_charge';
 
 function actorFor(player) {
   const actor = actors.find((actor) => actor.id === player.playerid);
@@ -239,7 +240,8 @@ export async function installShanhetu(setup) {
             .map((tactic) => tactic.nativeId),
           bossSkills: Object.entries(lib.playerOL).flatMap(([id, player]) => {
             const skills = publicBossSkills.filter((skill) => player.hasSkill(skill));
-            return skills.length ? [{ id, skills }] : [];
+            const roar = player.countMark(roarCharge);
+            return skills.length || roar ? [{ id, skills, ...(roar ? { roar } : {}) }] : [];
           }),
         };
         // Native loadModeAsync copies only a small set of mode methods on
@@ -289,7 +291,13 @@ export function restoreShanhetuGrowth(id, saved) {
   if (tactics.length) hero.markSkill('zhanfa', null, null, true);
   if (setup.shanhetuTerrain) attachTerrain(hero.playerid);
   for (const player of Object.values(lib.playerOL)) {
-    const publicSkills = saved.bossSkills?.find((item) => item.id === player.playerid)?.skills;
+    const summary = saved.bossSkills?.find((item) => item.id === player.playerid);
+    const publicSkills = summary?.skills;
+    if (summary?.roar > 0 && lib.skill[roarCharge]) {
+      player.addTempSkill(roarCharge, { global: 'phaseAfter' });
+      player.storage[roarCharge] = summary.roar;
+      player.markSkill(roarCharge);
+    }
     for (const skill of publicBossSkills) {
       if (!lib.skill[skill]) continue;
       if (publicSkills?.includes(skill)) {

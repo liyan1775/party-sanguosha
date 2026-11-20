@@ -38,7 +38,7 @@ test('每种敌军、第二形态及队友都使用原表指定的独立本机�
     paths.add(actor.portrait);
   }
   assert.equal(paths.size, art.portraits.length);
-  assert.equal(art.portraits.length, 75);
+  assert(art.portraits.some((p) => p.names.includes('风矍') && p.skinId === 1000397));
   assert.equal(
     new Set(art.portraits.filter((p) => p.generalId === 4861).map((p) => p.sha256)).size,
     4,

@@ -74,6 +74,41 @@ async function fixture() {
   };
 }
 
+test('幽燕双骑的咆哮仅计自己的杀，下次杀伤害结算一次并在本回合结束清除', async () => {
+  const { lib } = await fixture();
+  const skill = lib.skill.party_shanhetu_paoxiao939;
+  const charged = lib.skill.party_shanhetu_paoxiao939_charge;
+  let marks = 0,
+    expiry: unknown;
+  const player = {
+    addTempSkill(_name: string, duration: unknown) {
+      expiry = duration;
+    },
+    addMark(_name: string, n: number) {
+      marks += n;
+    },
+    countMark() {
+      return marks;
+    },
+    removeSkill() {
+      marks = 0;
+    },
+  };
+  assert.equal(skill.mod.cardUsable({ name: 'sha' }), Infinity);
+  assert.equal(skill.mod.cardUsable({ name: 'juedou' }), undefined);
+  assert.deepEqual([...skill.trigger.player], ['shaMiss', 'eventNeutralized']);
+  assert.equal(charged.trigger.source, 'damageBegin1');
+  const attack = { card: { name: 'sha' }, num: 1 };
+  assert(skill.filter(attack));
+  await skill.content({}, attack, player);
+  assert.equal((expiry as { global: string }).global, 'phaseAfter');
+  assert(!charged.filter({ card: { name: 'juedou' } }, player));
+  assert(charged.filter(attack, player));
+  await charged.content({}, attack, player);
+  assert.equal(attack.num, 2);
+  assert(!charged.filter(attack, player));
+});
+
 test('地形用实际出牌阶段历史计上限，河流在手牌上限计算后封顶', async () => {
   const { get, terrain } = await fixture();
   const previous = {};

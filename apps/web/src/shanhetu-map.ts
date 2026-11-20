@@ -15,6 +15,7 @@ const chapters = ['一', '二', '三'];
 
 export function renderLocations(
   map: MapView,
+  days: number,
   choose: (
     actionId: string | undefined,
     preview: { name: string; description: string },
@@ -25,21 +26,29 @@ export function renderLocations(
   board.setAttribute('aria-label', `${map.name}行军图`);
   for (const location of map.locations) {
     const [symbol, label] = labels[location.kind] ?? ['途', '地点'];
+    const travel = location.duration ? `耗时 ${location.duration} 日` : '不耗行军日';
+    const availableAt = location.kind === 'boss' ? map.bossAt : location.unlockDay;
+    const lock =
+      location.status === 'locked' && availableAt != null && availableAt > days
+        ? `行军满 ${availableAt} 日开放`
+        : '';
+    const preview = [label, status[location.status], travel, lock].filter(Boolean).join(' · ');
     const pin = button('', `shanhetu-pin ${location.status}`);
     pin.dataset.choiceKey = location.id;
     if (location.actionId) pin.dataset.actionId = location.actionId;
     pin.style.left = `${Math.min(89, Math.max(11, 50 + location.x / 14))}%`;
     pin.style.top = `${Math.min(82, Math.max(12, 65 - location.y / 5.8))}%`;
-    pin.setAttribute('aria-label', `${location.name} · ${label} · ${status[location.status]}`);
+    pin.setAttribute('aria-label', `${location.name} · ${preview}`);
     pin.setAttribute('aria-pressed', 'false');
     pin.append(make('span', 'shanhetu-pin-symbol', location.status === 'completed' ? '✓' : symbol));
-    if (location.status === 'available') pin.append(make('span', 'shanhetu-pin-label', label));
+    if (location.status === 'available')
+      pin.append(make('span', 'shanhetu-pin-label', `${label} · ${location.duration}日`));
     pin.onclick = () =>
       choose(
         location.actionId,
         {
           name: location.name,
-          description: `${label} · ${status[location.status]}`,
+          description: preview,
         },
         location.id,
       );
@@ -163,5 +172,19 @@ export function renderRegions(map: MapView, choose: (id: string) => void) {
 
   const observer = new ResizeObserver(drawPaths);
   observer.observe(plot);
-  return { plot, dispose: () => observer.disconnect() };
+  const terrain = make('dl', 'shanhetu-route-comparison');
+  for (const region of map.regions) {
+    if (!region.actionId || !region.terrain) continue;
+    const entry = make('div');
+    entry.append(
+      make('dt', '', `${region.name} · ${region.terrain.name}`),
+      make('dd', '', `全场${region.terrain.description}`),
+    );
+    terrain.append(entry);
+  }
+  return {
+    plot,
+    terrain: terrain.childElementCount ? terrain : null,
+    dispose: () => observer.disconnect(),
+  };
 }

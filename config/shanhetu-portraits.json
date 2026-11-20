@@ -524,6 +524,14 @@
     },
     {
       "generalId": 4871,
+      "names": ["风矍"],
+      "skinId": 1000397,
+      "file": "generalface_1000397.png",
+      "bytes": 24750,
+      "sha256": "ed933abdef92f8b047d70c0269a0537aea4811e5b35132212aa60b1533596e81"
+    },
+    {
+      "generalId": 4871,
       "names": ["秦谊"],
       "skinId": 1000413,
       "file": "generalface_1000413.png",
