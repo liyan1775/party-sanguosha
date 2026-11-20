@@ -9,6 +9,7 @@ const openings = [
   ...rules.tactics,
 ];
 const outcomes = { victory: '通关', defeat: '败北', retreat: '撤军' };
+const uses = { opening: '出征时可选的初始战法', skill: '途中技能奖励', tactic: '途中战法奖励' };
 
 export function bindShanhetuLaunch(request: () => Promise<ShanhetuBookView>) {
   const lobby = element('.room-grid');
@@ -40,7 +41,7 @@ export function bindShanhetuLaunch(request: () => Promise<ShanhetuBookView>) {
   const choices = make('div', 'shanhetu-opening');
   choices.setAttribute('role', 'group');
   choices.setAttribute('aria-label', '初始战法');
-  body.append(challenges, make('h3', '', '初始战法'), choices, operations);
+  body.append(challenges, make('h3', '', '初始战法 · 选一项'), choices, operations);
   launch.append(hero, body);
   lobby.before(launch);
 
@@ -105,6 +106,7 @@ export function bindShanhetuLaunch(request: () => Promise<ShanhetuBookView>) {
     if (available.some((rule) => rule.unlocked && String(rule.id) === previous))
       difficulty.value = previous;
     difficultyHint();
+    renderOpenings();
     ledger.replaceChildren();
     if (!view) return;
     const next = view.milestones.find((step) => step.skills.some((skill) => !skill.unlocked));
@@ -127,8 +129,26 @@ export function bindShanhetuLaunch(request: () => Promise<ShanhetuBookView>) {
             .join('、')}加入奖励池。`,
         ),
       );
-    } else ledger.append(make('p', 'shanhetu-muted', '进阶技能已全部加入奖励池。'));
+    }
     const trail = make('ol', 'shanhetu-milestones');
+    for (const step of view.goals) {
+      const row = make('li');
+      const tally = make('div', 'shanhetu-milestone-goal');
+      tally.append(make('span', '', step.target ? `${step.progress}/${step.target}` : '已开放'));
+      const details = make('div');
+      details.append(make('strong', '', step.label));
+      if (step.cities.length)
+        details.append(make('p', 'shanhetu-muted', `已攻克：${step.cities.join('、')}`));
+      for (const item of step.content) {
+        const line = make('details', 'shanhetu-book-skill');
+        const summary = make('summary');
+        summary.append(make('strong', '', item.name), make('span', '', uses[item.use]));
+        line.append(summary, make('p', '', plain(item.description)));
+        details.append(line);
+      }
+      row.append(tally, details);
+      trail.append(row);
+    }
     for (const step of view.milestones) {
       const milestone = make('li');
       const goal = make('div', 'shanhetu-milestone-goal');
@@ -157,7 +177,7 @@ export function bindShanhetuLaunch(request: () => Promise<ShanhetuBookView>) {
           make(
             'p',
             '',
-            `${item.hero} · ${view.difficulties.find((rule) => rule.id === item.difficulty)?.name ?? '诸侯伐董'} · ${item.ending ?? outcomes[item.outcome]}${item.historic ? ' · 旧版记录' : ` · ${item.victories}胜`}`,
+            `${item.hero} · ${view.difficulties.find((rule) => rule.id === item.difficulty)?.name ?? '诸侯伐董'} · ${item.ending ?? outcomes[item.outcome]}${item.historic ? ' · 旧版记录' : ` · ${item.victories}胜`}${item.newUnlocks?.length ? ` · 新解锁：${item.newUnlocks.join('、')}` : ''}`,
           ),
         );
       ledger.append(history);
@@ -186,17 +206,43 @@ export function bindShanhetuLaunch(request: () => Promise<ShanhetuBookView>) {
     }
   }
 
-  for (const opening of openings) {
-    const tile = button('', 'shanhetu-opening-choice');
-    tile.dataset.openingTactic = String(opening.id ?? '');
-    tile.setAttribute('aria-pressed', String(opening.id === selectedOpening));
-    tile.append(make('strong', '', opening.name), make('span', '', opening.description));
-    tile.onclick = () => {
-      selectedOpening = opening.id;
-      for (const child of choices.children)
-        child.setAttribute('aria-pressed', String(child === tile));
-    };
-    choices.append(tile);
+  function renderOpenings() {
+    choices.replaceChildren();
+    for (const opening of openings) {
+      const goal = view?.goals.find((step) => step.content.some((item) => item.id === opening.id));
+      const locked = goal
+        ? goal.progress < goal.target
+        : rules.explorationGoals.some(
+            (step) => opening.id !== null && step.target > 0 && step.content.includes(opening.id),
+          );
+      if (locked && selectedOpening === opening.id) selectedOpening = null;
+      const tile = button('', 'shanhetu-opening-choice');
+      tile.disabled = locked;
+      tile.dataset.openingTactic = String(opening.id ?? '');
+      tile.append(
+        make('strong', '', opening.name),
+        make(
+          'span',
+          '',
+          locked
+            ? goal
+              ? `${goal.label}（${goal.progress}/${goal.target}）`
+              : '读取山河册后可查看解锁条件'
+            : opening.description,
+        ),
+      );
+      tile.onclick = () => {
+        selectedOpening = opening.id;
+        for (const child of choices.children)
+          child.setAttribute('aria-pressed', String(child === tile));
+      };
+      choices.append(tile);
+    }
+    for (const child of choices.querySelectorAll<HTMLElement>('[data-opening-tactic]'))
+      child.setAttribute(
+        'aria-pressed',
+        String(child.dataset.openingTactic === String(selectedOpening ?? '')),
+      );
   }
 
   close.onclick = () => book.close();

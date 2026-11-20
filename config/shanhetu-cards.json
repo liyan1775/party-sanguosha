@@ -26,7 +26,8 @@
       "autoEquip": true,
       "rarity": 2,
       "price": 200,
-      "spellId": 25
+      "spellId": 25,
+      "description": "攻击范围：2。锁定技，当你使用【杀】指定目标后，你令其防具对此【杀】无效。"
     },
     {
       "id": 4005,
@@ -39,7 +40,8 @@
       "autoEquip": true,
       "rarity": 1,
       "price": 100,
-      "spellId": 26
+      "spellId": 26,
+      "description": "攻击范围：3。当你使用的【杀】被目标角色使用的【闪】抵消后，你可以对其使用一张【杀】。"
     },
     {
       "id": 4006,
@@ -52,7 +54,8 @@
       "autoEquip": true,
       "rarity": 2,
       "price": 200,
-      "spellId": 27
+      "spellId": 27,
+      "description": "攻击范围：3。你可以将两张手牌当【杀】使用或打出。"
     },
     {
       "id": 4007,
@@ -65,7 +68,8 @@
       "autoEquip": true,
       "rarity": 3,
       "price": 400,
-      "spellId": 28
+      "spellId": 28,
+      "description": "攻击范围：3。当你使用的【杀】被目标角色使用的【闪】抵消后，你可以弃置两张牌。若如此做，此【杀】依然会造成伤害。"
     },
     {
       "id": 4008,
@@ -78,7 +82,8 @@
       "autoEquip": true,
       "rarity": 1,
       "price": 100,
-      "spellId": 30
+      "spellId": 30,
+      "description": "攻击范围：5。当你使用【杀】对目标角色造成伤害时，你可以弃置其装备区里的一张坐骑牌。"
     },
     {
       "id": 4009,
@@ -91,7 +96,8 @@
       "autoEquip": true,
       "rarity": 2,
       "price": 200,
-      "spellId": 86
+      "spellId": 86,
+      "description": "攻击范围：2。锁定技，当你使用【杀】对目标角色造成伤害时，若该角色没有手牌，则此伤害+1。"
     },
     {
       "id": 4010,
@@ -104,7 +110,8 @@
       "autoEquip": true,
       "rarity": 2,
       "price": 200,
-      "spellId": 87
+      "spellId": 87,
+      "description": "攻击范围：4。当你使用普通【杀】时，你可以将此【杀】改为火【杀】。"
     },
     {
       "id": 4011,
@@ -117,7 +124,8 @@
       "autoEquip": true,
       "rarity": 1,
       "price": 100,
-      "spellId": 29
+      "spellId": 29,
+      "description": "攻击范围：4。锁定技，若你使用的【杀】是你最后的手牌，则此【杀】能多指定两个目标。"
     },
     {
       "id": 4012,
@@ -130,7 +138,8 @@
       "autoEquip": true,
       "rarity": 1,
       "price": 100,
-      "spellId": 201
+      "spellId": 201,
+      "description": "攻击范围：2。当你使用【杀】对目标角色造成伤害时，若其有牌，你可以防止此伤害，然后你依次弃置其两张牌。"
     },
     {
       "id": 4013,
@@ -143,7 +152,8 @@
       "autoEquip": true,
       "rarity": 3,
       "price": 400,
-      "spellId": 16
+      "spellId": 16,
+      "description": "当你需要使用或打出【闪】时，你可以判定，若判定结果为红色，则你视为使用或打出一张【闪】。"
     },
     {
       "id": 4014,
@@ -156,7 +166,8 @@
       "autoEquip": true,
       "rarity": 3,
       "price": 400,
-      "spellId": 16
+      "spellId": 16,
+      "description": "当你需要使用或打出【闪】时，你可以判定，若判定结果为红色，则你视为使用或打出一张【闪】。"
     },
     {
       "id": 4015,
@@ -169,7 +180,8 @@
       "autoEquip": true,
       "rarity": 3,
       "price": 400,
-      "spellId": 200
+      "spellId": 200,
+      "description": "锁定技，黑色【杀】对你无效。"
     },
     {
       "id": 4016,
@@ -182,7 +194,8 @@
       "autoEquip": true,
       "rarity": 2,
       "price": 200,
-      "spellId": 88
+      "spellId": 88,
+      "description": "锁定技，【南蛮入侵】【万箭齐发】和普通【杀】对你无效。当你受到火焰伤害时，此伤害+1。"
     },
     {
       "id": 4017,
@@ -195,7 +208,8 @@
       "autoEquip": true,
       "rarity": 2,
       "price": 200,
-      "spellId": 88
+      "spellId": 88,
+      "description": "锁定技，【南蛮入侵】【万箭齐发】和普通【杀】对你无效。当你受到火焰伤害时，此伤害+1。"
     },
     {
       "id": 4018,
@@ -208,7 +222,8 @@
       "autoEquip": true,
       "rarity": 2,
       "price": 200,
-      "spellId": 89
+      "spellId": 89,
+      "description": "锁定技，当你受到伤害时，若伤害值大于1，将此伤害值改为1。当你失去装备区里的【白银狮子】时，你回复1点体力。"
     },
     {
       "id": 4062,

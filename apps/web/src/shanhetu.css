@@ -318,6 +318,9 @@
   font-size: 14px;
   color: var(--sht-muted);
 }
+.shanhetu-map-days p:empty {
+  display: none;
+}
 .shanhetu-theme progress {
   height: 6px;
   width: 100%;
@@ -491,6 +494,27 @@
   outline: 2px solid var(--sht-gold);
   outline-offset: 2px;
 }
+.shanhetu-route-comparison {
+  display: grid;
+  gap: 8px;
+  margin: 10px 0 0;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 128px), 1fr));
+}
+.shanhetu-route-comparison > div {
+  padding: 9px;
+  border: 1px solid var(--sht-line);
+  border-radius: 5px;
+  background: var(--sht-panel);
+}
+.shanhetu-route-comparison dt {
+  color: var(--sht-gold);
+  font-weight: 700;
+}
+.shanhetu-route-comparison dd {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: var(--sht-muted);
+}
 .shanhetu-options {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 225px), 1fr));
@@ -547,6 +571,32 @@
   white-space: pre-line;
   overflow-wrap: anywhere;
 }
+.shanhetu-option-compared {
+  grid-column: 1 / -1;
+}
+.shanhetu-replacement {
+  display: grid;
+  gap: 6px 10px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 118px), 1fr));
+}
+.shanhetu-replacement > span {
+  display: grid;
+  align-content: start;
+  gap: 4px;
+  padding: 7px;
+  border-radius: 4px;
+  background: #101d1a80;
+  overflow-wrap: anywhere;
+}
+.shanhetu-replacement b {
+  font-size: 12px;
+}
+.shanhetu-replacement-incoming b {
+  color: #b6dfc5;
+}
+.shanhetu-replacement-outgoing b {
+  color: #f0c09b;
+}
 .shanhetu-option[data-general] {
   padding: 7px;
 }
@@ -586,6 +636,14 @@
   color: var(--sht-gold);
   font-size: 12px;
   font-weight: 700;
+}
+.shanhetu-price {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 12px;
+}
+.shanhetu-price .shanhetu-insufficient {
+  color: #f0c09b;
 }
 .shanhetu-option[data-rarity='2'] .shanhetu-option-type {
   color: #a0d2b8;
@@ -647,6 +705,17 @@
   overflow-wrap: anywhere;
   font-size: 13px;
   color: var(--sht-muted);
+}
+.shanhetu-tray-info .shanhetu-tray-meta {
+  display: block;
+  color: var(--sht-gold);
+}
+.shanhetu-spot-meta {
+  color: var(--sht-gold);
+  margin-bottom: 8px;
+}
+.shanhetu-spot-meta:empty {
+  display: none;
 }
 .shanhetu-tray-info p:empty,
 .shanhetu-status:empty {

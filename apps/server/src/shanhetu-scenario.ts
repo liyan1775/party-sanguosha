@@ -17,9 +17,11 @@ import type { ShanhetuCampaignCatalog, ShanhetuNode, ShanhetuReward } from './sh
 import { AppError } from './errors.js';
 
 export const shanhetuRestartWaitMs = source.restart.waitSeconds * 1000;
-const progressionSkills = new Set(
-  bookRules.unlockMilestones.flatMap((milestone) => milestone.skills),
-);
+const gatedContent = new Set([
+  ...bookRules.unlockMilestones.flatMap((milestone) => milestone.skills),
+  ...bookRules.explorationGoals.filter((goal) => goal.target > 0).flatMap((goal) => goal.content),
+]);
+const openingIds = new Set(bookRules.tactics.map((tactic) => tactic.id));
 
 function sample<T>(items: readonly T[], count: number): T[] {
   const remaining = [...items],
@@ -38,8 +40,17 @@ export function createShanhetuScenario(
 ): ShanhetuCampaignCatalog {
   const rules = shanhetuDifficulty(difficulty);
   if (!rules) throw new Error('尚未接入的山河图难度');
-  if (openingTactic !== null && !bookRules.tactics.some((tactic) => tactic.id === openingTactic))
+  if (
+    openingTactic !== null &&
+    (typeof openingTactic !== 'number' || !openingIds.has(openingTactic))
+  )
     throw new AppError(400, 'INVALID_OPENING_TACTIC', '请选择本次征程的初始战法。');
+  if (
+    typeof openingTactic === 'number' &&
+    gatedContent.has(openingTactic) &&
+    !unlocked.has(openingTactic)
+  )
+    throw new AppError(409, 'OPENING_TACTIC_LOCKED', '这项初始战法尚未解锁，请查看山河册。');
   const allowed = new Set(presets.presets.flatMap((preset) => preset.characters));
   if (
     !characters.length ||
@@ -78,10 +89,15 @@ export function createShanhetuScenario(
       ...card,
       category: card.autoEquip ? 5 : 4,
       rewardId: `card-${card.id}`,
-      description: `每场开局${card.autoEquip ? '装备' : '获得'}${card.name}，${({ spade: '黑桃', heart: '红桃', club: '梅花', diamond: '方片' } as Record<string, string>)[card.suit]} ${card.number}；进入弃牌堆时销毁。`,
+      description: [
+        card.description,
+        `每场开局${card.autoEquip ? '装备' : '获得'}${card.name}，${({ spade: '黑桃', heart: '红桃', club: '梅花', diamond: '方片' } as Record<string, string>)[card.suit]} ${card.number}，进入弃牌堆时销毁。`,
+      ]
+        .filter(Boolean)
+        .join('\n'),
     })),
   ].filter(
-    (entry) => entry.category !== 3 || !progressionSkills.has(entry.id) || unlocked.has(entry.id),
+    (entry) => !openingIds.has(entry.id) && (!gatedContent.has(entry.id) || unlocked.has(entry.id)),
   );
   const rewards: ShanhetuReward[] = entries.map((entry) => ({
     id: entry.rewardId,
@@ -241,11 +257,13 @@ export function createShanhetuScenario(
               ? sample(rewardGroup(option.rewardGroup).rewards, 1)[0]
               : null;
             const selected = offeredId ? rewards.find((reward) => reward.id === offeredId)! : null;
+            const optionLabel = [193302, 193402].includes(option.id) ? '带走装备' : option.label;
             return {
               id: `option-${option.id}`,
               decisionId: option.id,
-              label: `${option.label}${selected ? ` · ${selected.name}` : ''}`,
+              label: `${optionLabel} · ${selected?.name ?? `${option.coins}铜币`}`,
               description: selected?.description ?? `获得${option.coins}铜币`,
+              ...(selected?.offer ? { offer: selected.offer } : {}),
               cost: 0,
               effects: selected ? selected.effects : [{ kind: 'coins', amount: option.coins }],
             };
@@ -334,6 +352,10 @@ export function createShanhetuScenario(
     openingTactics: bookRules.tactics
       .filter((tactic) => tactic.id === openingTactic)
       .map((tactic) => tactic.name),
+    ...(typeof openingTactic === 'number' &&
+    growth.tactics.some((tactic) => tactic.id === openingTactic)
+      ? { openingBattleTactic: openingTactic }
+      : {}),
     initialRegion: `region-${sample(source.initialRegions, 1)[0]}`,
     regions,
     nodes,

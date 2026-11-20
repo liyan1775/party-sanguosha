@@ -15,9 +15,11 @@ import source from '../config/shanhetu-scenario.json' with { type: 'json' };
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const nightmareBook = process.env.SHANHETU_VERIFY_NIGHTMARE_BOOK;
-const full = process.env.SHANHETU_VERIFY_FULL === '1';
+const exploreBook = process.env.SHANHETU_VERIFY_EXPLORATION === '1';
+const full = exploreBook || process.env.SHANHETU_VERIFY_FULL === '1';
 const fullHard = full && process.env.SHANHETU_VERIFY_HARD === '1';
-const fullMedium = full && (fullHard || process.env.SHANHETU_VERIFY_MEDIUM === '1');
+const fullMedium = full && (exploreBook || fullHard || process.env.SHANHETU_VERIFY_MEDIUM === '1');
+const stopAfterExploration = exploreBook && !fullHard;
 const fullNormal2 = full && !fullMedium && process.env.SHANHETU_VERIFY_NORMAL2 === '1';
 const fullNormal3 = fullNormal2 && process.env.SHANHETU_VERIFY_NORMAL3 === '1';
 const checkRestart = process.env.SHANHETU_VERIFY_RESTART === '1';
@@ -74,6 +76,7 @@ const errors = [],
   missing = new Set(),
   events = [],
   checks = { battles: [], recruits: [], purchases: [] };
+const exploredCities = new Set();
 for (const page of [phone, computer]) {
   page.on('pageerror', (error) => errors.push(String(error.stack)));
   page.on('console', (message) => {
@@ -364,6 +367,16 @@ async function battle(general, restart = false) {
     }),
   );
   await concealed();
+  if (journey().initialTactics.includes('博闻Ⅰ')) {
+    const marked = () =>
+      playerFrame().evaluate(() => {
+        const { game } = partyEngine;
+        return game.me.hasZhanfa('zf_bowen') && Boolean(game.me.marks.zhanfa?.isConnected);
+      });
+    await expect.poll(marked).toBe(true);
+    assert(await worker.evaluate(() => partyEngine.game.zhu.hasZhanfa('zf_bowen')));
+    checks.exploration.restored = true;
+  }
   if (
     !checks.battles.length ||
     companions.length > (checks.battles.at(-1)?.opening.companions.length ?? 0)
@@ -382,6 +395,20 @@ async function battle(general, restart = false) {
   const ended = events.find((event) => event.type === 'ended' && event.matchId === matchId);
   assert(ended?.shanhetu, 'No authenticated PVE settlement');
   const { outcome, defeatedEnemies } = ended.shanhetu;
+  if (exploreBook && outcome === 'victory' && chapter === 2 && node.kind === 'boss')
+    exploredCities.add(map.name);
+  if (journey().initialTactics.includes('博闻Ⅰ')) {
+    const gains = await worker.evaluate(() => {
+      const { game, get, lib } = partyEngine;
+      const skill = lib.zhanfa.getSkill('zf_bowen');
+      return game.zhu
+        .getAllHistory('gain')
+        .filter((gain) => gain.getParent(skill)?.name === skill)
+        .map((gain) => gain.cards.length === 1 && get.type2(gain.cards[0]) === 'trick');
+    });
+    assert(gains.length > 0 && gains.every(Boolean), '博闻Ⅰ did not obtain a native trick card');
+    checks.exploration.trickGains = gains.length;
+  }
   if (outcome === 'victory') assert.equal(defeatedEnemies, opening.enemies);
   const nativeHero = ended.shanhetu.hero;
   const expectedRecovery =
@@ -432,13 +459,23 @@ async function battle(general, restart = false) {
   console.log(
     `${rules.name}, chapter ${chapter} ${map.name} ${node.name}: ${outcome}, ${companions.length} companions`,
   );
-  await expect(phone.locator('#rematch-button')).toHaveText('继续征程');
-  await phone.locator('#rematch-button').tap();
+  const returnLabel = ['won', 'lost'].includes(journey().phase) ? '查看结局' : '继续征程';
+  await expect(phone.locator('#rematch-button')).toHaveText(returnLabel);
+  const nativeReturn = phone.frameLocator('#game-frame').locator('#party-return-room');
+  await expect(nativeReturn).toHaveText(returnLabel);
+  if (returnLabel === '查看结局' && !checks.endingReturnRestored) {
+    await phone.reload();
+    await expect(phone.locator('#rematch-button')).toHaveText(returnLabel);
+    await expect(nativeReturn).toHaveText(returnLabel, { timeout: 120000 });
+    assert.equal(room.snapshot().matchId, matchId);
+    checks.endingReturnRestored = true;
+  }
+  await nativeReturn.tap();
   await expect(phone.locator('#shanhetu-panel')).toBeVisible();
   await expect(phone.locator('#game-frame')).toHaveCount(0);
   return outcome;
 }
-async function playRemainingRoute(general, allowDefeat = false) {
+async function playRemainingRoute(general, allowDefeat = false, stopAfterSecondChapter = false) {
   const { id: runId, difficulty } = journey();
   const shopsVisited = new Set();
   let refreshedShop = false;
@@ -447,6 +484,7 @@ async function playRemainingRoute(general, allowDefeat = false) {
   let capturedCamp = false;
   for (let step = 0; step < 120; step++) {
     const view = journey();
+    if (stopAfterSecondChapter && exploredCities.size >= 2) return true;
     if (view.phase === 'won' || view.phase === 'lost') break;
     if (view.phase === 'reward') {
       const reward = view.actions.find((action) =>
@@ -539,8 +577,16 @@ async function playRemainingRoute(general, allowDefeat = false) {
             );
           }, visibleCities);
           assert(fit, `All ${visibleCities} cities fit on the narrow route map`);
-          if (difficulty >= 11)
+          if (difficulty >= 11) {
             await expect(phone.locator('.shanhetu-route-terrain').first()).toBeVisible();
+            const terrain = view.map.regions.filter((region) => region.actionId && region.terrain);
+            for (const region of terrain) {
+              const option = phone.locator('.shanhetu-route-comparison > div').filter({
+                hasText: region.name,
+              });
+              await expect(option).toContainText(region.terrain.description);
+            }
+          }
           await shot(`branch-${difficulty}-320`);
           await phone.setViewportSize({ width: 390, height: 844 });
           if (difficulty >= 16) checks.narrowNightmareRoute = true;
@@ -734,6 +780,10 @@ async function verifyJourneys() {
   const openBook = () => phone.getByRole('button', { name: '山河册', exact: true }).tap();
   const closeBook = () => book.getByRole('button', { name: '关闭', exact: true }).tap();
   const chooseOpening = (id) => phone.locator(`[data-opening-tactic="${id}"]`).tap();
+  const bowen = phone.locator('[data-opening-tactic="2249"]');
+  const bowenGoal = book
+    .locator('.shanhetu-milestones > li')
+    .filter({ has: phone.getByText('博闻Ⅰ', { exact: true }) });
   const startJourney = async () => {
     await expect(phone.locator('#start-button')).toBeEnabled();
     await phone.locator('#start-button').tap();
@@ -748,6 +798,10 @@ async function verifyJourneys() {
   await shot('00-launch-desktop');
   await phone.setViewportSize({ width: 390, height: 844 });
   await openBook();
+  if (exploreBook) {
+    await expect(bowen).toBeDisabled();
+    await expect(bowenGoal).toContainText('0/2');
+  }
   await expect(book.getByRole('progressbar', { name: '下一项解锁进度' })).toHaveAttribute(
     'value',
     '0',
@@ -775,6 +829,9 @@ async function verifyJourneys() {
   await expect(phone.locator('.shanhetu-map')).toBeVisible();
   await expect(phone.locator('.shanhetu-pin.available[aria-pressed=true]')).toHaveCount(1);
   await expect(phone.locator('#shanhetu-confirm')).toBeEnabled();
+  await expect(phone.locator('.shanhetu-map-days')).toContainText('距首领 4 日');
+  await expect(phone.locator('.shanhetu-map-days')).toContainText('集市在行军满 3 日后开放');
+  await expect(phone.locator('.shanhetu-tray-meta')).toContainText('耗时 1 日');
   checks.mapLayout = await phone.locator('#match-panel').evaluate((panel) => ({
     transformed: getComputedStyle(panel).transform !== 'none',
     width: panel.getBoundingClientRect().width,
@@ -851,6 +908,11 @@ async function verifyJourneys() {
   await expect(phone.locator('#shanhetu-launch')).toBeVisible();
   await openBook();
   await expect(book.locator('.shanhetu-book-score strong')).toHaveText(String(firstVictories));
+  if (exploreBook) {
+    await expect(bowen).toBeDisabled();
+    await expect(bowenGoal).toContainText('1/2');
+    for (const city of exploredCities) await expect(bowenGoal).toContainText(city);
+  }
   const firstRecord = await profile();
   assert.equal(firstRecord.victories, firstVictories);
   assert.equal(firstRecord.recent[0].outcome, full ? 'victory' : 'retreat');
@@ -903,9 +965,16 @@ async function verifyJourneys() {
         await select(locationAction('battle'));
         opening = await battle(hero);
       }
-      if (opening === 'victory') checks.fullMedium = await playRemainingRoute(hero, true);
+      if (opening === 'victory')
+        checks.fullMedium = await playRemainingRoute(hero, true, stopAfterExploration);
       checks.mediumAttempts.push({ runId: journey().id, outcome: journey().phase });
+      const terminal = ['won', 'lost'].includes(journey().phase);
       await phone.locator('#shanhetu-end').tap();
+      if (!terminal)
+        await phone
+          .locator('#shanhetu-end-dialog')
+          .getByRole('button', { name: '结束并回房', exact: true })
+          .tap();
       await wait(() => !journey(), 'Medium terminal journey stayed open');
     }
     assert(checks.fullMedium, 'Three natural medium-1 attempts did not clear the journey');
@@ -917,13 +986,15 @@ async function verifyJourneys() {
           [2652, 2653, 2654, 2655, 2664, 2665, 2666, 2667].includes(item.opening.battleId),
       ),
     );
-    await expect(difficulty.locator('option[value="7"]')).toBeEnabled();
-    assert.deepEqual(
-      (await profile()).recent
-        .filter((receipt) => receipt.outcome === 'victory')
-        .map((receipt) => receipt.difficulty),
-      [6, 1],
-    );
+    if (!stopAfterExploration) {
+      await expect(difficulty.locator('option[value="7"]')).toBeEnabled();
+      assert.deepEqual(
+        (await profile()).recent
+          .filter((receipt) => receipt.outcome === 'victory')
+          .map((receipt) => receipt.difficulty),
+        [6, 1],
+      );
+    }
   }
   if (fullNormal2) {
     assert.equal(checks.book.firstEncounter, 'victory', 'Normal 2 opened with a natural defeat');
@@ -1004,6 +1075,24 @@ async function verifyJourneys() {
       [3, 2, 1],
     );
   }
+  if (exploreBook) {
+    assert(exploredCities.size >= 2);
+    await expect(bowen).toBeEnabled();
+    await openBook();
+    await expect(bowenGoal).toContainText('2/2');
+    for (const city of exploredCities) await expect(bowenGoal).toContainText(city);
+    await shot('book-exploration');
+    await closeBook();
+    await difficulty.selectOption('1');
+    await chooseOpening(2249);
+    await startJourney();
+    await expect(phone.locator('#shanhetu-options [data-general]')).toHaveCount(5);
+    assert.deepEqual(journey().initialTactics, ['博闻Ⅰ']);
+    checks.exploration = { cities: [...exploredCities] };
+    const hero = await chooseNextHero();
+    await select(locationAction('battle'));
+    checks.exploration.outcome = await battle(hero);
+  }
   assert.equal(errors.length, 0);
   assert.equal(missing.size, 0);
   assert(await phone.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
@@ -1011,17 +1100,19 @@ async function verifyJourneys() {
     `${output}/result.json`,
     JSON.stringify(
       {
-        scope: fullHard
-          ? 'Isolated normal-1, medium-1 and hard-1 journeys through mobile-sized UI'
-          : fullMedium
-            ? 'Isolated full normal-1 and medium-1 journeys through mobile-sized UI'
-            : fullNormal3
-              ? 'Isolated normal-1 to 3 full journeys through mobile-sized UI'
-              : fullNormal2
-                ? 'Isolated normal-1 and 2 full journeys through mobile-sized UI'
-                : full
-                  ? 'Isolated full normal-1 journey through mobile-sized UI'
-                  : 'Isolated first native encounter through mobile-sized UI',
+        scope: exploreBook
+          ? 'Isolated native exploration unlock and bowen opening through mobile-sized UI'
+          : fullHard
+            ? 'Isolated normal-1, medium-1 and hard-1 journeys through mobile-sized UI'
+            : fullMedium
+              ? 'Isolated full normal-1 and medium-1 journeys through mobile-sized UI'
+              : fullNormal3
+                ? 'Isolated normal-1 to 3 full journeys through mobile-sized UI'
+                : fullNormal2
+                  ? 'Isolated normal-1 and 2 full journeys through mobile-sized UI'
+                  : full
+                    ? 'Isolated full normal-1 journey through mobile-sized UI'
+                    : 'Isolated first native encounter through mobile-sized UI',
         physicalPhone: false,
         checks,
         errors,

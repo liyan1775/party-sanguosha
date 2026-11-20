@@ -81,6 +81,7 @@ export interface ShanhetuCampaignView {
     group?: string;
     portrait?: string;
     offer?: { kind: 'skill' | 'tactic' | 'card' | 'equipment'; rarity: number };
+    replacement?: { name: string; description: string }[];
   }[];
   map?: {
     regionId: string;
@@ -93,6 +94,8 @@ export interface ShanhetuCampaignView {
       kind: string;
       x: number;
       y: number;
+      duration: number;
+      unlockDay: number;
       status: 'available' | 'completed' | 'locked';
       actionId?: string;
     }[];
@@ -136,6 +139,19 @@ export interface ShanhetuBookView {
     lesson: string;
     skills: { id: number; name: string; description: string; unlocked: boolean }[];
   }[];
+  goals: {
+    label: string;
+    progress: number;
+    target: number;
+    cities: string[];
+    content: {
+      id: number;
+      name: string;
+      description: string;
+      use: 'opening' | 'skill' | 'tactic';
+      unlocked: boolean;
+    }[];
+  }[];
   recent: {
     hero: string;
     difficulty: number;
@@ -143,6 +159,7 @@ export interface ShanhetuBookView {
     victories: number;
     historic?: boolean;
     ending?: string;
+    newUnlocks?: string[];
     finishedAt: number;
   }[];
 }

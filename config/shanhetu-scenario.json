@@ -3009,6 +3009,60 @@
       ]
     },
     {
+      "id": 1906,
+      "name": "长命难锁",
+      "description": "一人前来献宝以求军中任职。你观此其穿着破烂，佩戴着一枚长命锁，看似精明强干，但面泛死气",
+      "duration": 1,
+      "poolIds": [15, 17],
+      "options": [
+        {
+          "id": 190601,
+          "label": "选择战法",
+          "rewardGroup": 201,
+          "coins": 0
+        },
+        {
+          "id": 190602,
+          "label": "选择装备",
+          "rewardGroup": 231,
+          "coins": 0
+        },
+        {
+          "id": 190603,
+          "label": "婉言谢绝",
+          "rewardGroup": null,
+          "coins": 140
+        }
+      ]
+    },
+    {
+      "id": 1907,
+      "name": "怀璧其罪",
+      "description": "战后，一小毛贼在战场左顾右盼，脖颈上挂着的长命锁十分眼熟，被你发现后向你献宝。你决定？",
+      "duration": 1,
+      "poolIds": [15, 17],
+      "options": [
+        {
+          "id": 190701,
+          "label": "杀贼夺宝",
+          "rewardGroup": 202,
+          "coins": 0
+        },
+        {
+          "id": 190702,
+          "label": "收下装备",
+          "rewardGroup": 232,
+          "coins": 0
+        },
+        {
+          "id": 190703,
+          "label": "婉言谢绝",
+          "rewardGroup": null,
+          "coins": 210
+        }
+      ]
+    },
+    {
       "id": 1928,
       "name": "世有大儒",
       "description": "路过此地，你听闻城中有人施粥讲学。你决定？",
@@ -3090,6 +3144,60 @@
       ]
     },
     {
+      "id": 1933,
+      "name": "荒庙遗宝",
+      "description": "你率军歇憩在山野荒庙，向山神施礼借地，低头恰好看到桌案下摆着一本战法和一个装备，或许这就是天意？",
+      "duration": 1,
+      "poolIds": [14, 16, 18, 19, 20, 21, 22, 26],
+      "options": [
+        {
+          "id": 193301,
+          "label": "带走战法",
+          "rewardGroup": 201,
+          "coins": 0
+        },
+        {
+          "id": 193302,
+          "label": "带走战法",
+          "rewardGroup": 231,
+          "coins": 0
+        },
+        {
+          "id": 193303,
+          "label": "无畏天意",
+          "rewardGroup": null,
+          "coins": 140
+        }
+      ]
+    },
+    {
+      "id": 1934,
+      "name": "荒庙遗宝",
+      "description": "你率军歇憩在山野荒庙，向山神施礼借地，低头恰好看到桌案下摆着一本战法和一个装备，或许这就是天意？",
+      "duration": 1,
+      "poolIds": [14, 16, 18, 19, 20, 21, 22, 26],
+      "options": [
+        {
+          "id": 193401,
+          "label": "带走战法",
+          "rewardGroup": 202,
+          "coins": 0
+        },
+        {
+          "id": 193402,
+          "label": "带走战法",
+          "rewardGroup": 232,
+          "coins": 0
+        },
+        {
+          "id": 193403,
+          "label": "无畏天意",
+          "rewardGroup": null,
+          "coins": 210
+        }
+      ]
+    },
+    {
       "id": 1951,
       "name": "为官有价",
       "description": "一布衣文士在驴背上摇摇欲坠，一番抢救后，你得知他因交不齐买官钱弃官而逃，他将随身战法赠你，换你对他逃官“视而不见”",
@@ -3167,6 +3275,60 @@
           "label": "谨慎放回",
           "rewardGroup": null,
           "coins": 140
+        }
+      ]
+    },
+    {
+      "id": 1954,
+      "name": "锦囊妙计",
+      "description": "甫一攻下城池，敌人援军姗姗来迟，逃则前功尽弃，战则损失更甚，你决定打开其中一枚锦囊",
+      "duration": 1,
+      "poolIds": [23, 24, 25, 27],
+      "options": [
+        {
+          "id": 195401,
+          "label": "打开锦囊",
+          "rewardGroup": 212,
+          "coins": 0
+        },
+        {
+          "id": 195402,
+          "label": "打开锦囊",
+          "rewardGroup": 212,
+          "coins": 0
+        },
+        {
+          "id": 195403,
+          "label": "打开锦囊",
+          "rewardGroup": null,
+          "coins": 210
+        }
+      ]
+    },
+    {
+      "id": 1955,
+      "name": "锦囊妙计",
+      "description": "甫一攻下城池，敌人援军姗姗来迟，逃则前功尽弃，战则损失更甚，你决定打开其中一枚锦囊",
+      "duration": 1,
+      "poolIds": [23, 24, 25, 27],
+      "options": [
+        {
+          "id": 195501,
+          "label": "打开锦囊",
+          "rewardGroup": 213,
+          "coins": 0
+        },
+        {
+          "id": 195502,
+          "label": "打开锦囊",
+          "rewardGroup": 213,
+          "coins": 0
+        },
+        {
+          "id": 195503,
+          "label": "打开锦囊",
+          "rewardGroup": null,
+          "coins": 420
         }
       ]
     },
@@ -3457,6 +3619,16 @@
       "random": 3
     },
     {
+      "id": 232,
+      "name": "随机装备",
+      "category": 5,
+      "rarities": [2],
+      "count": 1,
+      "allowSkip": true,
+      "skipCoins": 0,
+      "random": 3
+    },
+    {
       "id": 222,
       "name": "随机手牌",
       "category": 4,
@@ -3467,10 +3639,20 @@
       "random": 3
     },
     {
-      "id": 232,
-      "name": "随机装备",
-      "category": 5,
+      "id": 212,
+      "name": "随机技能",
+      "category": 3,
       "rarities": [2],
+      "count": 1,
+      "allowSkip": true,
+      "skipCoins": 0,
+      "random": 3
+    },
+    {
+      "id": 213,
+      "name": "随机技能",
+      "category": 3,
+      "rarities": [3],
       "count": 1,
       "allowSkip": true,
       "skipCoins": 0,

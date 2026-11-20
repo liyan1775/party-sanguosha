@@ -2,6 +2,7 @@
 import type { RoomView } from '../../../packages/shared/src/contracts.js';
 import type { ShanhetuCampaignView } from '../../../packages/shared/src/shanhetu.js';
 import growth from '../../../config/shanhetu-growth.json' with { type: 'json' };
+import bookRules from '../../../config/shanhetu-book.json' with { type: 'json' };
 import cards from '../../../config/shanhetu-cards.json' with { type: 'json' };
 import companionCatalog from '../../../config/shanhetu-companions.json' with { type: 'json' };
 import { element } from './ui.js';
@@ -27,8 +28,12 @@ const suits: Record<string, string> = {
   club: '梅花',
   diamond: '方片',
 };
+const equipmentSlots: Record<number, string> = {
+  1: '武器栏',
+  2: '防具栏',
+};
 
-function choiceTile(action: Choice) {
+function choiceTile(action: Choice, coins: number) {
   const isHero = action.kind === 'hero';
   const tile = button('', 'shanhetu-option');
   tile.dataset.actionId = tile.dataset.choiceKey = action.id;
@@ -55,14 +60,34 @@ function choiceTile(action: Choice) {
     );
   }
   tile.append(make('strong', '', action.label));
-  tile.append(
-    make(
-      'span',
-      'shanhetu-option-description',
-      plain(isHero ? action.description.split('\n')[0]! : action.description),
-    ),
+  const effect = make(
+    'span',
+    'shanhetu-option-description',
+    plain(isHero ? action.description.split('\n')[0]! : action.description),
   );
-  if (action.cost) tile.append(make('span', 'shanhetu-price', `${action.cost} 铜币`));
+  if (action.replacement?.length) {
+    tile.classList.add('shanhetu-option-compared');
+    const comparison = make('span', 'shanhetu-replacement');
+    const incoming = make('span', 'shanhetu-replacement-incoming');
+    incoming.append(make('b', '', '将获得'), effect);
+    comparison.append(incoming);
+    for (const item of action.replacement) {
+      const outgoing = make('span', 'shanhetu-replacement-outgoing');
+      outgoing.append(
+        make('b', '', `将失去 · ${item.name}`),
+        make('span', 'shanhetu-option-description', plain(item.description)),
+      );
+      comparison.append(outgoing);
+    }
+    tile.append(comparison);
+  } else tile.append(effect);
+  if (action.cost || action.kind === 'buy') {
+    const price = make('span', 'shanhetu-price', `${action.cost} 铜币`);
+    const balance = coins - action.cost;
+    if (balance < 0) price.append(make('span', 'shanhetu-insufficient', `还差 ${-balance} 铜币`));
+    else if (action.kind === 'buy') price.append(make('span', '', `购买后余 ${balance} 铜币`));
+    tile.append(price);
+  }
   return tile;
 }
 
@@ -104,10 +129,11 @@ export function bindShanhetuPanel(
   const mapText = make('div', 'shanhetu-map-days');
   const mapLabel = make('p');
   const mapTerrain = make('p', 'shanhetu-map-terrain');
+  const shopOpening = make('p');
   const march = make('progress');
   march.setAttribute('aria-label', '距本城首领的行军进度');
   const mapSwitch = button('章间路线', 'shanhetu-quiet');
-  mapText.append(mapLabel, mapTerrain, march);
+  mapText.append(mapLabel, march, shopOpening, mapTerrain);
   mapHeader.append(mapText, mapSwitch);
   map.append(mapHeader, mapBody);
 
@@ -127,12 +153,13 @@ export function bindShanhetuPanel(
   openSpot.setAttribute('aria-label', '查看地点详情');
   const detail = make('p');
   detail.id = 'shanhetu-description';
+  const detailMeta = make('p', 'shanhetu-tray-meta');
   const status = make('p', 'shanhetu-status');
   status.setAttribute('role', 'status');
   const confirm = button('确认选择', 'shanhetu-primary');
   confirm.id = 'shanhetu-confirm';
   trayHeading.append(detailTitle, openSpot);
-  trayInfo.append(trayHeading, detail);
+  trayInfo.append(trayHeading, detailMeta, detail);
   tray.append(heroDetail, trayInfo, confirm);
   panel.append(hud, scene, map, shopControls, list, aftermath, status, tray);
 
@@ -155,12 +182,14 @@ export function bindShanhetuPanel(
   spotTitle.id = 'shanhetu-spot-title';
   spot.setAttribute('aria-labelledby', spotTitle.id);
   const spotText = make('p', 'shanhetu-story');
+  const spotMeta = make('p', 'shanhetu-spot-meta');
   const closeSpot = button('关闭', 'shanhetu-quiet');
   spotHeading.append(spotTitle, closeSpot);
-  spot.append(spotHeading, spotText);
+  spot.append(spotHeading, spotMeta, spotText);
   host.after(spot);
   openSpot.onclick = () => {
     spotTitle.textContent = detailTitle.textContent;
+    spotMeta.textContent = detailMeta.textContent;
     spotText.textContent = detail.textContent;
     spot.showModal();
   };
@@ -303,8 +332,13 @@ export function bindShanhetuPanel(
     }
     mapSwitch.disabled = busy;
     detailTitle.textContent = readableName;
-    detail.textContent =
-      journey.phase === 'map' ? plain(action?.description ?? peek?.description ?? '') : '';
+    detailMeta.textContent =
+      journey.phase === 'map'
+        ? (peek?.description ?? '')
+        : action?.kind === 'buy' && canAfford
+          ? `购买后余 ${journey.coins - action.cost} 铜币`
+          : '';
+    detail.textContent = journey.phase === 'map' ? plain(action?.description ?? '') : '';
     openSpot.hidden = (detail.textContent?.length ?? 0) <= 20;
     heroDetail.textContent =
       journey.phase === 'selection' && action
@@ -354,27 +388,30 @@ export function bindShanhetuPanel(
     mapLabel.textContent = leaving
       ? '本城已攻下 · 选择下一座城池'
       : journey.days >= region.bossAt
-        ? '首领已出现'
-        : `行军 ${journey.days} / ${region.bossAt} 日 · 首领`;
+        ? `行军 ${journey.days} 日 · 首领已出现`
+        : `行军 ${journey.days} 日 · 距首领 ${region.bossAt - journey.days} 日`;
+    const market = region.locations.find((location) => location.kind === 'shop');
+    shopOpening.textContent =
+      !leaving && market?.unlockDay != null ? `集市在行军满 ${market.unlockDay} 日后开放` : '';
     march.max = region.bossAt;
     march.value = Math.min(journey.days, region.bossAt);
     march.hidden = leaving;
     if (showRoutes || leaving) {
-      const { plot, dispose } = renderRegions(region, (id) => choose(id));
+      const { plot, terrain, dispose } = renderRegions(region, (id) => choose(id));
       disposeMap = dispose;
       mapBody.append(plot);
+      if (terrain) mapBody.append(terrain);
     } else {
-      mapBody.append(renderLocations(region, (id, preview, key) => choose(id, preview, key)));
+      mapBody.append(
+        renderLocations(region, journey.days, (id, preview, key) => choose(id, preview, key)),
+      );
     }
     if (journey.actions.length === 1) {
       const action = journey.actions[0]!;
       const tile = [...mapBody.querySelectorAll<HTMLElement>('[data-action-id]')].find(
         (candidate) => candidate.dataset.actionId === action.id,
       );
-      if (tile) {
-        selected = action.id;
-        selectionKey = tile.dataset.choiceKey;
-      }
+      tile?.click();
     }
   }
 
@@ -423,13 +460,32 @@ export function bindShanhetuPanel(
       '战法',
       growth.tactics.filter((item) => build.tactics.includes(item.id)),
     );
+    const counts = new Map<number, number>();
+    for (const id of build.cards ?? []) counts.set(id, (counts.get(id) ?? 0) + 1);
+    const carried = cards.cards.filter((card) => counts.has(card.id));
+    const cardDescription = (card: (typeof carried)[number]) =>
+      `${suits[card.suit]} ${card.number} · 每场开局${card.autoEquip ? '装备' : '获得'}，进入弃牌堆时销毁`;
     group(
-      '随身牌与装备',
-      cards.cards
-        .filter((item) => build.cards?.includes(item.id))
+      '随身牌',
+      carried
+        .filter((card) => !card.autoEquip)
         .map((card) => ({
-          name: card.name,
-          description: `${suits[card.suit]} ${card.number} · 每场开局${card.autoEquip ? '装备' : '获得'}，进入弃牌堆时销毁`,
+          name: `${card.name} ×${counts.get(card.id)}`,
+          description: cardDescription(card),
+        })),
+    );
+    group(
+      '装备',
+      carried
+        .filter((card) => card.autoEquip)
+        .map((card) => ({
+          name: `${equipmentSlots[card.equipmentSlot] ?? '装备栏'} · ${card.name}`,
+          description: [
+            cardDescription(card),
+            'description' in card && typeof card.description === 'string' ? card.description : '',
+          ]
+            .filter(Boolean)
+            .join('\n'),
         })),
     );
     group(
@@ -517,7 +573,7 @@ export function bindShanhetuPanel(
       ...choices
         .filter((action) => !isShopControl(action))
         .map((action) => {
-          const tile = choiceTile(action);
+          const tile = choiceTile(action, journey.coins);
           tile.onclick = () => choose(action.id);
           return tile;
         }),
@@ -558,8 +614,14 @@ export function bindShanhetuPanel(
       else if (journey.bookAward?.unlocked.length) {
         const unlock = make('section', 'shanhetu-unlocked');
         unlock.append(
-          make('h3', '', '奖励池新增'),
-          make('p', '', journey.bookAward.unlocked.join('、')),
+          make('h3', '', '山河册新解锁'),
+          ...journey.bookAward.unlocked.map((name) =>
+            make(
+              'p',
+              '',
+              `${name} · ${bookRules.tactics.some((tactic) => tactic.name === name) ? '下次出征可选初始战法' : '下次出征加入途中奖励池'}`,
+            ),
+          ),
         );
         aftermath.append(unlock);
       }

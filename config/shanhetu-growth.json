@@ -152,6 +152,46 @@
       "rarity": 1,
       "price": 100,
       "definitionPack": "yijiang"
+    },
+    {
+      "id": 3040,
+      "spellId": 46,
+      "nativeId": "qingguo",
+      "definitionPack": "standard",
+      "name": "倾国",
+      "description": "你可以将一张黑色手牌当【闪】使用或打出。",
+      "rarity": 1,
+      "price": 100
+    },
+    {
+      "id": 3218,
+      "spellId": 800,
+      "nativeId": "weijing",
+      "definitionPack": "sp",
+      "name": "卫境",
+      "description": "每轮限一次，你可以视为使用一张【杀】或【闪】。",
+      "rarity": 1,
+      "price": 100
+    },
+    {
+      "id": 3178,
+      "spellId": 424,
+      "nativeId": "zhiyu",
+      "definitionPack": "yijiang",
+      "name": "智愚",
+      "description": "当你受到伤害后，你可以摸一张牌，然后展示所有手牌，若颜色均相同，伤害来源弃置一张手牌。",
+      "rarity": 1,
+      "price": 100
+    },
+    {
+      "id": 3086,
+      "spellId": 441,
+      "nativeId": "chengxiang",
+      "definitionPack": "yijiang",
+      "name": "称象",
+      "description": "当你受到伤害后，你可以亮出牌堆顶四张牌，获得其中任意张点数和小于等于13的牌。",
+      "rarity": 3,
+      "price": 600
     }
   ],
   "tactics": [
@@ -306,6 +346,46 @@
       "description": "【铁索连环】能指定任意个目标",
       "rarity": 3,
       "price": 500
+    },
+    {
+      "id": 2360,
+      "name": "勤勉",
+      "description": "你始终跳过你的判定阶段",
+      "rarity": 1,
+      "nativeId": "zf_qinmian",
+      "price": 200
+    },
+    {
+      "id": 2303,
+      "name": "弱袭",
+      "description": "你的手牌数小于体力值时，造成的伤害+1",
+      "rarity": 1,
+      "nativeId": "zf_ruoxi",
+      "price": 200
+    },
+    {
+      "id": 2249,
+      "name": "博闻Ⅰ",
+      "description": "你的回合开始时，从牌堆中获得1张随机锦囊牌",
+      "rarity": 2,
+      "nativeId": "zf_bowen",
+      "price": 300
+    },
+    {
+      "id": 2049,
+      "name": "淬血Ⅱ",
+      "description": "你每轮【杀】首次造成伤害后摸2张牌",
+      "rarity": 3,
+      "nativeId": "zf_cuixue2",
+      "price": 500
+    },
+    {
+      "id": 2100,
+      "name": "雷火势Ⅰ",
+      "description": "每回合限一次，你使用的第一张属性【杀】伤害+1",
+      "rarity": 2,
+      "nativeId": "zf_leihuoshi",
+      "price": 300
     }
   ]
 }

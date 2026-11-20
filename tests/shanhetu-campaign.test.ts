@@ -171,10 +171,11 @@ test('奇遇选择只加一次战功，重开仍打所选阵容，胜后发钱�
   });
 });
 
-test('林中岔路的两种配方按实际选择记录声望、智谋或商才', () => {
-  for (const eventId of [1956, 1957]) {
+test('各档新奇遇按实际选项记录声望、智谋或商才', () => {
+  for (const eventId of [1906, 1907, 1933, 1934, 1954, 1955, 1956, 1957]) {
+    const skillBag = eventId === 1954 || eventId === 1955;
     for (const [index, attribute, amount] of [
-      [1, 'reputation', 1],
+      [1, skillBag ? 'strategy' : 'reputation', skillBag ? 10 : 1],
       [2, 'strategy', 10],
       [3, 'trade', 10],
     ] as const) {
@@ -399,9 +400,15 @@ test('必选随身牌、放弃技能铜币、满槽替换及同槽装备替换�
   assert.deepEqual(campaign.view().build.skills, [3297, 3021]);
   choose(campaign, '集市');
   const equipment = campaign.view().actions.find((action) => action.label === '麒麟弓')!;
-  assert.match(equipment.description, /将替换现有装备【青釭剑】/);
+  assert.equal(equipment.replacement?.[0]?.name, '青釭剑');
+  assert.match(equipment.replacement![0]!.description, /防具/);
   assert.deepEqual(campaign.view().build.cards, [4062, 4062, 4004]);
   assert(campaign.view().actions.some((action) => action.label === '当先（替换苦肉）'));
+  assert.match(
+    campaign.view().actions.find((action) => action.label === '当先（替换苦肉）')!.replacement![0]!
+      .description,
+    /失去1点体力/,
+  );
   assert(campaign.view().actions.some((action) => action.label === '当先（替换奇袭）'));
   const replaced = choose(campaign, '当先（替换苦肉）');
   assert.deepEqual(campaign.view().build.skills, [3021, 3091]);

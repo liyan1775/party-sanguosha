@@ -719,6 +719,7 @@ export class RoomStore {
         difficulty: journey.difficulty,
         outcome,
         victories: journey.victories,
+        bossVictories: this.campaign!.bossVictories(),
         ...(journey.finalReport ? { ending: journey.finalReport.title } : {}),
       });
     } catch (error) {

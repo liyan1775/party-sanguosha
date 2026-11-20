@@ -216,7 +216,10 @@ const fights = [...battleIds].map((id) => {
     unlockSkillSlot: row.rewarditem === '1007',
   };
 });
-const events = [1798, 1799, 1900, 1928, 1929, 1930, 1951, 1952, 1953, 1956, 1957].map((id) => {
+const events = [
+  1798, 1799, 1900, 1906, 1907, 1928, 1929, 1930, 1933, 1934, 1951, 1952, 1953, 1954, 1955, 1956,
+  1957,
+].map((id) => {
   const row = data.Adventure.find((row) => row.ID === id);
   const options = [1, 2, 3].map((index) => {
     const effect = data.Choose.find((choice) => choice.effectID === row[`effect${index}`]);

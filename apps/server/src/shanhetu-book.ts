@@ -20,9 +20,10 @@ import type {
 } from '../../../packages/shared/src/shanhetu.js';
 import { AppError } from './errors.js';
 
-type Receipt = ShanhetuBookView['recent'][number] & {
+type Receipt = Omit<ShanhetuBookView['recent'][number], 'newUnlocks'> & {
   runId: string;
   unlocked: number[];
+  bossVictories?: { regionId: string; battleId: number }[];
 };
 type Profile = {
   revision: number;
@@ -31,28 +32,82 @@ type Profile = {
 };
 
 const skills = new Map(growth.skills.map((skill) => [skill.id, skill]));
+const content = new Map([...growth.skills, ...growth.tactics].map((entry) => [entry.id, entry]));
+const openingIds = new Set(rules.tactics.map((entry) => entry.id));
+const regions = new Map(scenario.regions.map((region) => [`region-${region.id}`, region]));
 const maxReceipts = 10000;
 const empty = (): Profile => ({ revision: 0, legacySkills: [], receipts: [] });
-const totalVictories = (profile: Profile) =>
-  profile.receipts.reduce((total, receipt) => total + receipt.victories, 0);
-const unlockedSkills = (profile: Profile): Set<number> => {
-  const victories = totalVictories(profile);
+function explorationProgress(profile: Profile) {
+  const cities = new Set<string>();
+  let victories = 0,
+    hulaoLubu = 0;
+  for (const receipt of profile.receipts) {
+    victories += receipt.victories;
+    for (const { regionId, battleId } of receipt.bossVictories ?? []) {
+      const region = regions.get(regionId)!;
+      if (region.chapter === 2) cities.add(region.name);
+      if (region.id === rules.hulaoLubu.regionId && rules.hulaoLubu.battleIds.includes(battleId))
+        hulaoLubu = 1;
+    }
+  }
+  return { victories, secondChapterCities: cities.size, hulaoLubu, cities: [...cities] };
+}
+function goalProgress(condition: string, progress: ReturnType<typeof explorationProgress>) {
+  switch (condition) {
+    case 'victories':
+      return progress.victories;
+    case 'secondChapterCities':
+      return progress.secondChapterCities;
+    case 'hulaoLubu':
+      return progress.hulaoLubu;
+    default:
+      throw new Error('未知山河册目标');
+  }
+}
+const unlockedContent = (
+  profile: Profile,
+  progress = explorationProgress(profile),
+): Set<number> => {
   return new Set([
     ...profile.legacySkills,
     ...rules.unlockMilestones
-      .filter((milestone) => milestone.victories <= victories)
+      .filter((milestone) => milestone.victories <= progress.victories)
       .flatMap((milestone) => milestone.skills),
+    ...rules.explorationGoals
+      .filter((goal) => goalProgress(goal.condition, progress) >= goal.target)
+      .flatMap((goal) => goal.content),
   ]);
 };
 const award = (receipt: Receipt): ShanhetuExpeditionAward => ({
   victories: receipt.victories,
-  unlocked: receipt.unlocked.map((id) => skills.get(id)!.name),
+  unlocked: receipt.unlocked.map((id) => content.get(id)!.name),
 });
 const hasCleared = (profile: Profile, prerequisite: number | null) =>
   prerequisite === null ||
   profile.receipts.some(
     (receipt) => receipt.difficulty === prerequisite && receipt.outcome === 'victory',
   );
+
+function validBossVictories(receipt: Receipt): boolean {
+  const wins = receipt.bossVictories;
+  if (wins === undefined) return true;
+  if (!Array.isArray(wins) || wins.length > Math.min(3, receipt.victories)) return false;
+  const chapters = new Set<number>();
+  for (const win of wins) {
+    const region = regions.get(win?.regionId);
+    if (!region || region.openDifficulty > receipt.difficulty || chapters.has(region.chapter))
+      return false;
+    const fights =
+      receipt.difficulty === 1
+        ? region.bossIds
+        : receipt.difficulty >= 11
+          ? region.hardBossIds
+          : region.regularBossIds;
+    if (!fights.includes(win.battleId)) return false;
+    chapters.add(region.chapter);
+  }
+  return true;
+}
 
 function validReceipt(receipt: Receipt): boolean {
   return (
@@ -73,7 +128,8 @@ function validReceipt(receipt: Receipt): boolean {
         receipt.ending.length > 0 &&
         receipt.ending.length <= 24)) &&
     Array.isArray(receipt.unlocked) &&
-    receipt.unlocked.every((id) => skills.has(id))
+    receipt.unlocked.every((id) => content.has(id)) &&
+    validBossVictories(receipt)
   );
 }
 
@@ -124,10 +180,11 @@ export class ShanhetuBook {
 
   view(key: string): ShanhetuBookView {
     const profile = this.read(key);
-    const unlocked = unlockedSkills(profile);
+    const progress = explorationProgress(profile);
+    const unlocked = unlockedContent(profile, progress);
     return {
       revision: profile.revision,
-      victories: totalVictories(profile),
+      victories: progress.victories,
       difficulties: scenario.difficulties.map((rule) => {
         const bonuses = [
           rule.enemyHp ? `体力+${rule.enemyHp}` : '',
@@ -161,18 +218,44 @@ export class ShanhetuBook {
           return { id, name, description, unlocked: unlocked.has(id) };
         }),
       })),
+      goals: rules.explorationGoals.map((goal) => ({
+        label:
+          goal.condition === 'secondChapterCities'
+            ? '攻克第二章任意两座不同城池的关底'
+            : goal.condition === 'hulaoLubu'
+              ? '在虎牢关击败吕布阵容'
+              : goal.target === 0
+                ? '首次出征'
+                : `累计赢下 ${goal.target} 场战斗`,
+        progress: Math.min(goal.target, goalProgress(goal.condition, progress)),
+        target: goal.target,
+        cities: goal.condition === 'secondChapterCities' ? progress.cities : [],
+        content: goal.content.map((id) => {
+          const { name, description } = content.get(id)!;
+          return {
+            id,
+            name,
+            description,
+            use: openingIds.has(id) ? 'opening' : skills.has(id) ? 'skill' : 'tactic',
+            unlocked: unlocked.has(id),
+          };
+        }),
+      })),
       recent: profile.receipts
         .slice(-10)
         .reverse()
-        .map(({ hero, difficulty, outcome, victories, historic, ending, finishedAt }) => ({
-          hero,
-          difficulty,
-          outcome,
-          victories,
-          ...(historic ? { historic } : {}),
-          ...(ending ? { ending } : {}),
-          finishedAt,
-        })),
+        .map(
+          ({ hero, difficulty, outcome, victories, historic, ending, finishedAt, unlocked }) => ({
+            hero,
+            difficulty,
+            outcome,
+            victories,
+            ...(historic ? { historic } : {}),
+            ...(ending ? { ending } : {}),
+            ...(unlocked.length ? { newUnlocks: unlocked.map((id) => content.get(id)!.name) } : {}),
+            finishedAt,
+          }),
+        ),
     };
   }
 
@@ -182,7 +265,7 @@ export class ShanhetuBook {
     if (!rule) throw new AppError(400, 'INVALID_DIFFICULTY', '请选择已接入的山河图难度。');
     if (!hasCleared(profile, rule.prerequisite))
       throw new AppError(409, 'DIFFICULTY_LOCKED', rule.unlockText);
-    return unlockedSkills(profile);
+    return unlockedContent(profile);
   }
 
   record(
@@ -194,11 +277,11 @@ export class ShanhetuBook {
     if (previous) return award(previous);
     if (profile.receipts.length >= maxReceipts)
       throw new AppError(409, 'BOOK_FULL', '本机山河册征程记录已满。');
-    const before = unlockedSkills(profile);
+    const before = unlockedContent(profile);
     const receipt: Receipt = { ...result, finishedAt: Date.now(), unlocked: [] };
     if (!validReceipt(receipt)) throw new Error('无效的原生征程结算');
     profile.receipts.push(receipt);
-    receipt.unlocked = [...unlockedSkills(profile)].filter((id) => !before.has(id));
+    receipt.unlocked = [...unlockedContent(profile)].filter((id) => !before.has(id));
     profile.revision++;
     this.write(key, profile);
     return award(receipt);
@@ -216,7 +299,7 @@ export class ShanhetuBook {
     try {
       if (statSync(file).size > 4 * 1024 * 1024) throw new Error('size');
       const stored = JSON.parse(readFileSync(file, 'utf8'));
-      if (stored.scenarioId !== rules.scenarioId || ![1, 2].includes(stored.schemaVersion))
+      if (stored.scenarioId !== rules.scenarioId || ![1, 2, 3].includes(stored.schemaVersion))
         throw new Error('version');
       const profile: Profile =
         stored.schemaVersion === 1 ? migrate(stored.profile) : stored.profile;
@@ -253,7 +336,7 @@ export class ShanhetuBook {
       mkdirSync(this.directory!, { recursive: true });
       writeFileSync(
         temporary,
-        JSON.stringify({ schemaVersion: 2, scenarioId: rules.scenarioId, profile }),
+        JSON.stringify({ schemaVersion: 3, scenarioId: rules.scenarioId, profile }),
         { flag: 'wx', flush: true },
       );
       renameSync(temporary, file);
