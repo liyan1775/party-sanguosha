@@ -14,6 +14,8 @@
 
 后续先验证噩梦的函谷关、崤函道及专属结局。已开放十二城还缺英武壮志、智勇双杰和部分高难首领、奇遇，详细边界见[调研](shanhetu.md)。当前用户试玩使用独立解压目录，避免重启或热替换正在进行的牌局。
 
+首版源码在带固定引擎资源的环境通过281项测试。纯源码复测发现规则时钟测试在系统繁忙时可能先结束等待，再收到第二次计时通知。验证改为等服务端实发两次通知且已过取消期限，仍检查被取消的动作不会触发。发行文件和 Windows、Ubuntu 检查可分别从[三章版下载页](https://github.com/liyan1775/party-sanguosha/releases/tag/v0.10.0)和[版本检查](https://github.com/liyan1775/party-sanguosha/actions?query=branch%3Av0.10.0)核对。
+
 ### 2026-11-20 Windows 首启下载复测
 
 核心包新增同一资产的 GitHub API 下载地址，发布页下载失败时重试。两个地址均按既有 SHA-256 校验，缓存与原生引擎版本保持固定。实测匿名请求取得 40,085,634 字节且摘要一致。用实测返回的 ZIP 验证强制发布页超时后的回退分支，成功恢复 1053 个核心文件。改用损坏返回验证拒绝缓存。一次回退分支实时联网复测遇到连接超时。证据保存在 `.runtime/nov20-shanhetu-windows/`。[GitHub 资产下载接口](https://docs.github.com/en/rest/releases/assets#get-a-release-asset)

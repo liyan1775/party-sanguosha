@@ -220,9 +220,14 @@ test('本机规则时钟按期限推送，取消、断线与无效请求不会�
   socket.send(JSON.stringify({ type: 'schedule', id: -2, delay: 40, repeat: false }));
   socket.send(JSON.stringify({ type: 'cancel', id: -2 }));
   socket.send(JSON.stringify({ type: 'schedule', id: -3, delay: 15, repeat: true }));
-  await wait(80);
+  socket.send(JSON.stringify({ type: 'schedule', id: -4, delay: 80, repeat: false }));
+  const signal = AbortSignal.timeout(5000);
+  while (
+    !packets.some((packet) => packet.id === -4) ||
+    packets.filter((packet) => packet.id === -3).length < 2
+  )
+    await once(socket, 'message', { signal });
   assert(!packets.some((packet) => packet.id === -2));
-  assert(packets.filter((packet) => packet.id === -3).length >= 2);
   const closed = once(socket, 'close');
   socket.send(JSON.stringify({ type: 'schedule', id: 4, delay: 0, repeat: false }));
   assert.equal((await closed)[0], 1008);
