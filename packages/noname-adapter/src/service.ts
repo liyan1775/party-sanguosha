@@ -1964,6 +1964,10 @@ export class NativeNonameService implements EngineAdapter {
             'shanhetu-skills.js',
             'shanhetu-medium.js',
             'shanhetu-hard.js',
+            'shanhetu-nightmare-pass.js',
+            'shanhetu-nightmare-roads.js',
+            'shanhetu-nightmare-final.js',
+            'shanhetu-nightmare-gear.js',
             'shanhetu-terrain.js',
           ].includes(name)
         )

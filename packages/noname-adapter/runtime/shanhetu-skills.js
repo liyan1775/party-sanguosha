@@ -2,6 +2,10 @@
 // Scenario-only variants: never replace the selectable native generals' skills.
 import { lib, game, get, ui } from 'noname';
 import { installShanhetuHardSkills, installHardGear } from './shanhetu-hard.js';
+import { installNightmarePassSkills } from './shanhetu-nightmare-pass.js';
+import { installNightmareRoadSkills } from './shanhetu-nightmare-roads.js';
+import { installNightmareFinalSkills } from './shanhetu-nightmare-final.js';
+import { installNightmareGear } from './shanhetu-nightmare-gear.js';
 import { installShanhetuMediumSkills, installShanhetuDuanhun } from './shanhetu-medium.js';
 
 function recordUse(skill) {
@@ -507,6 +511,9 @@ export function installShanhetuNpcSkills(definitions) {
   installNormalBossSkills();
   installShanhetuMediumSkills(recordUse);
   installShanhetuHardSkills(recordUse);
+  installNightmarePassSkills(recordUse);
+  installNightmareRoadSkills(recordUse);
+  installNightmareFinalSkills(recordUse);
   lib.skill.party_shanhetu_baonue = {
     inherit: 'olbaonue',
     zhuSkill: false,
@@ -771,6 +778,7 @@ export function installShanhetuNpcSkills(definitions) {
 
 export function installShanhetuHardGear(ids) {
   installHardGear(ids, recordUse);
+  installNightmareGear(ids, recordUse);
 }
 
 export function installShanhetuInfernoHalberd() {

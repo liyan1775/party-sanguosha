@@ -1,6 +1,16 @@
 // SPDX-License-Identifier: GPL-3.0-only
 import { _status, lib, game, get } from 'noname';
 import { installShanhetuTerrain } from './shanhetu-terrain.js';
+import {
+  collectNightmareFinalState,
+  restoreNightmareFinalState,
+} from './shanhetu-nightmare-final.js';
+import {
+  collectNightmareRoadState,
+  restoreNightmareRoadState,
+} from './shanhetu-nightmare-roads.js';
+import { collectNightmarePassState, restoreNightmarePassState } from './shanhetu-nightmare-pass.js';
+import { collectNightmareGearState, restoreNightmareGearState } from './shanhetu-nightmare-gear.js';
 
 let actors = [];
 const identityLabels = {
@@ -12,6 +22,7 @@ const identityLabels = {
   zhong2: '队友',
 };
 const publicBossSkills = ['party_shanhetu_poison', 'party_shanhetu_xingtian_ban', 'repojun2'];
+const roarCharge = 'party_shanhetu_paoxiao939_charge';
 
 function actorFor(player) {
   const actor = actors.find((actor) => actor.id === player.playerid);
@@ -154,9 +165,16 @@ export async function installShanhetu(setup) {
       );
     },
     async content(event, trigger, player) {
-      const next = actorFor(player).nextForm;
+      const current = actorFor(player);
+      const next = current.nextForm;
       trigger.cancel();
       game.log(player, '进入第二形态');
+      if (
+        current.skills.includes('party_shanhetu_nm_14210') &&
+        player.hasSkill('zaiqi', null, null, false)
+      ) {
+        await player.removeSkill('zaiqi');
+      }
       // The native seat, turn history and private cards stay with this player.
       await player.reinitCharacter(player.name1, next.character);
       game.broadcastAll(
@@ -239,7 +257,24 @@ export async function installShanhetu(setup) {
             .map((tactic) => tactic.nativeId),
           bossSkills: Object.entries(lib.playerOL).flatMap(([id, player]) => {
             const skills = publicBossSkills.filter((skill) => player.hasSkill(skill));
-            return skills.length ? [{ id, skills }] : [];
+            const roar = player.countMark(roarCharge);
+            const final = collectNightmareFinalState(player, actorFor(player));
+            const roads = collectNightmareRoadState(player);
+            const pass = collectNightmarePassState(player);
+            const gearDisabled = collectNightmareGearState(player);
+            return skills.length || roar || final || roads || pass || gearDisabled.length
+              ? [
+                  {
+                    id,
+                    skills,
+                    ...(roar ? { roar } : {}),
+                    final,
+                    roads,
+                    pass,
+                    ...(gearDisabled.length ? { gearDisabled } : {}),
+                  },
+                ]
+              : [];
           }),
         };
         // Native loadModeAsync copies only a small set of mode methods on
@@ -289,7 +324,17 @@ export function restoreShanhetuGrowth(id, saved) {
   if (tactics.length) hero.markSkill('zhanfa', null, null, true);
   if (setup.shanhetuTerrain) attachTerrain(hero.playerid);
   for (const player of Object.values(lib.playerOL)) {
-    const publicSkills = saved.bossSkills?.find((item) => item.id === player.playerid)?.skills;
+    const summary = saved.bossSkills?.find((item) => item.id === player.playerid);
+    const publicSkills = summary?.skills;
+    restoreNightmareFinalState(player, summary?.final, actorFor(player));
+    restoreNightmareRoadState(player, summary?.roads);
+    restoreNightmarePassState(player, summary?.pass);
+    restoreNightmareGearState(player, summary?.gearDisabled);
+    if (summary?.roar > 0 && lib.skill[roarCharge]) {
+      player.addTempSkill(roarCharge, { global: 'phaseAfter' });
+      player.storage[roarCharge] = summary.roar;
+      player.markSkill(roarCharge);
+    }
     for (const skill of publicBossSkills) {
       if (!lib.skill[skill]) continue;
       if (publicSkills?.includes(skill)) {

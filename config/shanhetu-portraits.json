@@ -19,6 +19,14 @@
       "sha256": "a7d812ab28aeb293890becb3e34c9cd072a22f6c3df0698816ae0c3c8db430c1"
     },
     {
+      "generalId": 73,
+      "names": ["刘协"],
+      "skinId": null,
+      "file": "generalface_73.png",
+      "bytes": 19865,
+      "sha256": "1f7a97d6a72753030197af8051db382b9f575ee8eb75cd01cd94c42c7fbf3e2f"
+    },
+    {
       "generalId": 100,
       "names": ["袁术"],
       "skinId": 0,
@@ -107,6 +115,14 @@
       "sha256": "3faab1a53453375bf5cda42d62664335178bc1d7845689b9e5e4689f0070c01b"
     },
     {
+      "generalId": 303,
+      "names": ["马超"],
+      "skinId": null,
+      "file": "generalface_303.png",
+      "bytes": 21306,
+      "sha256": "f5558bdef8626ce5106c992bf5a55048db46d6a3c6ae4e424a38c85493136df0"
+    },
+    {
       "generalId": 308,
       "names": ["周瑜"],
       "skinId": 0,
@@ -140,7 +156,7 @@
     },
     {
       "generalId": 319,
-      "names": ["吕布"],
+      "names": ["吕布", "霸戟雄英"],
       "skinId": 0,
       "file": "generalface_319.png",
       "bytes": 20212,
@@ -163,12 +179,28 @@
       "sha256": "a8f60705a6cd1da274c3c626f243cc0459a518d5cce48903c00986e0b91e279b"
     },
     {
+      "generalId": 346,
+      "names": ["马云騄"],
+      "skinId": null,
+      "file": "generalface_346.png",
+      "bytes": 18823,
+      "sha256": "76b36494640827ba6b6a3d3b679d6d78e27550f3db04c4406deebac1181f1996"
+    },
+    {
       "generalId": 357,
       "names": ["张郃"],
       "skinId": 0,
       "file": "generalface_357.png",
       "bytes": 19133,
       "sha256": "4f06bc2d0da372e26afc437afcb65705dfaf030980956d7928658d33ad0b3c9c"
+    },
+    {
+      "generalId": 366,
+      "names": ["巧笑董姬"],
+      "skinId": null,
+      "file": "generalface_366.png",
+      "bytes": 20761,
+      "sha256": "28ae1d51d595f3a4504673a3de69d6130da3f27cd37742acb4efed484f94fdd4"
     },
     {
       "generalId": 374,
@@ -201,6 +233,14 @@
       "file": "generalface_406.png",
       "bytes": 21332,
       "sha256": "450f096c14c59619a609f2bfcad848e942ac887f8e66d6b02584e7e16a4b39a9"
+    },
+    {
+      "generalId": 417,
+      "names": ["徐荣"],
+      "skinId": null,
+      "file": "generalface_417.png",
+      "bytes": 57106,
+      "sha256": "b2a10b45961c7823fbc6527528756e911fbed685a5bbd29b49d5a04202cbba30"
     },
     {
       "generalId": 418,
@@ -249,6 +289,14 @@
       "file": "generalface_442.png",
       "bytes": 19440,
       "sha256": "93a1f2d7ef40a61f80ac4a2210f1d6f073b4f2088c608aac510bd9fc799ec466"
+    },
+    {
+      "generalId": 445,
+      "names": ["闭月仙伶"],
+      "skinId": null,
+      "file": "generalface_445.png",
+      "bytes": 18474,
+      "sha256": "9d446c98096577fd706a2a179478ec2db86810de7d071d694cfa9dfb79c7788a"
     },
     {
       "generalId": 446,
@@ -308,7 +356,7 @@
     },
     {
       "generalId": 470,
-      "names": ["董卓"],
+      "names": ["董卓", "霸心毁朝", "覆銮凶影", "改朝罪魁"],
       "skinId": 0,
       "file": "generalface_470.png",
       "bytes": 21082,
@@ -329,6 +377,14 @@
       "file": "generalface_482.png",
       "bytes": 59272,
       "sha256": "fadd3abc16248cd9e6f721b6bd88c40888bd626f78135322427f4725bf7092be"
+    },
+    {
+      "generalId": 487,
+      "names": ["刘辩"],
+      "skinId": null,
+      "file": "generalface_487.png",
+      "bytes": 62017,
+      "sha256": "8cd986f9ee95aaf1cc659b7b1e25a774ee339ace1c9c88bffd681fa7445140cb"
     },
     {
       "generalId": 489,
@@ -353,6 +409,14 @@
       "file": "generalface_525.png",
       "bytes": 49932,
       "sha256": "79d6cc1cf299141859c7975b9b06f78b9ce82fc9fe75912a1009058b30a6bd06"
+    },
+    {
+      "generalId": 538,
+      "names": ["马休马铁"],
+      "skinId": null,
+      "file": "generalface_538.png",
+      "bytes": 55635,
+      "sha256": "603519fbc4d904a7767f557ee83877d9721b05a02bf127d41266aabf8348f739"
     },
     {
       "generalId": 550,
@@ -385,6 +449,14 @@
       "file": "generalface_604.png",
       "bytes": 58187,
       "sha256": "5849dc3a2fed74269d23552d0f065fa60af497e6540ddad448ce9b9be2db213f"
+    },
+    {
+      "generalId": 605,
+      "names": ["逆京枭雄"],
+      "skinId": null,
+      "file": "generalface_605.png",
+      "bytes": 50720,
+      "sha256": "3292895d2d76b6d89023e488c7001f209cc8a3d3cf84cc1914f10d914477e1e9"
     },
     {
       "generalId": 609,
@@ -476,6 +548,14 @@
     },
     {
       "generalId": 4871,
+      "names": ["篡天恶魂"],
+      "skinId": 60501,
+      "file": "60501.png",
+      "bytes": 80015,
+      "sha256": "462b863b027a0a0899356bee88376f1b8c4b1e0848a431f8ea601d833c52472d"
+    },
+    {
+      "generalId": 4871,
       "names": ["于毒"],
       "skinId": 1000098,
       "file": "generalface_1000098.png",
@@ -521,6 +601,14 @@
       "file": "generalface_1000367.png",
       "bytes": 59402,
       "sha256": "5179ad123ae14df721495a864501cbd747c5c3172bded7515782fe1f0d40b19a"
+    },
+    {
+      "generalId": 4871,
+      "names": ["风矍"],
+      "skinId": 1000397,
+      "file": "generalface_1000397.png",
+      "bytes": 24750,
+      "sha256": "ed933abdef92f8b047d70c0269a0537aea4811e5b35132212aa60b1533596e81"
     },
     {
       "generalId": 4871,

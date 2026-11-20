@@ -8,9 +8,17 @@ import definitions from '../config/shanhetu-npc-skills.json' with { type: 'json'
 // Rule branch tests of our adapter code, not a substitute for native games.
 async function fixture() {
   const modules = await Promise.all(
-    ['shanhetu-medium.js', 'shanhetu-hard.js', 'shanhetu-terrain.js', 'shanhetu-skills.js'].map(
-      (name) =>
-        readFile(new URL(`../packages/noname-adapter/runtime/${name}`, import.meta.url), 'utf8'),
+    [
+      'shanhetu-medium.js',
+      'shanhetu-hard.js',
+      'shanhetu-nightmare-pass.js',
+      'shanhetu-nightmare-roads.js',
+      'shanhetu-nightmare-final.js',
+      'shanhetu-nightmare-gear.js',
+      'shanhetu-terrain.js',
+      'shanhetu-skills.js',
+    ].map((name) =>
+      readFile(new URL(`../packages/noname-adapter/runtime/${name}`, import.meta.url), 'utf8'),
     ),
   );
   const source = modules
