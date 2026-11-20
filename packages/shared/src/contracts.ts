@@ -11,7 +11,7 @@ import type { CustomRosterRef, CustomRosterSummary } from './rosters.js';
 import type { ShanhetuCampaignView } from './shanhetu.js';
 
 export const APP_ID = 'party-sanguosha';
-export const APP_VERSION = '0.10.0';
+export const APP_VERSION = '0.10.1';
 export const OWNER_OFFLINE_GRACE_MS = 60000;
 export const ROOM_IDLE_GRACE_MS = 10 * 60000;
 

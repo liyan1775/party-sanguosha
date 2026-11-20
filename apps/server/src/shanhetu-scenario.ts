@@ -237,10 +237,10 @@ export function createShanhetuScenario(
           description: event.description,
           duration: event.duration,
           choices: event.options.map((option) => {
-            const group = option.rewardGroup ? rewardGroup(option.rewardGroup) : null;
-            const selected = group
-              ? rewards.find((reward) => reward.id === sample(group.rewards, 1)[0])!
+            const offeredId = option.rewardGroup
+              ? sample(rewardGroup(option.rewardGroup).rewards, 1)[0]
               : null;
+            const selected = offeredId ? rewards.find((reward) => reward.id === offeredId)! : null;
             return {
               id: `option-${option.id}`,
               decisionId: option.id,

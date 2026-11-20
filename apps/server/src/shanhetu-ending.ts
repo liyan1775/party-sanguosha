@@ -6,11 +6,11 @@ export type JourneyStats = Omit<ShanhetuFinalReport, 'title'>;
 // S5 observations matched by decision ID, not the displayed label. Elite
 // recruitment and refusing a recruit can have different effects on reputation.
 const deltas: [readonly number[], Partial<JourneyStats>][] = [
-  [[179801, 179802, 192801, 192802, 195101, 195102], { reputation: 1 }],
+  [[179801, 179802, 192801, 192802, 195101, 195102, 195601, 195701], { reputation: 1 }],
   [
     [
       179901, 179902, 190001, 190002, 192901, 192902, 193001, 193002, 195201, 195202, 195301,
-      195302,
+      195302, 195602, 195702,
     ],
     { strategy: 10 },
   ],
@@ -24,7 +24,7 @@ const deltas: [readonly number[], Partial<JourneyStats>][] = [
   [
     [
       179803, 179903, 190003, 192803, 192903, 193003, 195103, 195203, 195303, 148403, 148603,
-      149103, 149203, 149603, 149703, 126903, 127303,
+      149103, 149203, 149603, 149703, 126903, 127303, 195603, 195703,
     ],
     { trade: 10 },
   ],

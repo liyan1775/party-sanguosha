@@ -738,6 +738,12 @@ for (const fight of scenario.fights) {
 }
 for (const event of scenario.events) {
   const original = data.Root.Adventure.find((row) => row.ID === event.id);
+  assert.deepEqual(
+    event.poolIds,
+    data.Root.UniversalGroup.filter((row) => row.premisegroup === event.id).map(
+      (row) => row.fightID,
+    ),
+  );
   assert.equal(event.name, sourceText(original.chapname));
   assert.equal(event.description, sourceText(original.text));
   assert.equal(event.duration, original.duration);

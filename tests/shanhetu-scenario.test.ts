@@ -483,3 +483,34 @@ test('城内不可循环领奖、首领不能绕过，断开的城图和不可�
     assert.throws(() => new ShanhetuCampaign(invalid));
   }
 });
+test('奇遇展示的战法、技能和牌来自指定品质池，只有领钱选项会发铜币', () => {
+  const options = new Map(
+    source.events.flatMap((event) => event.options.map((option) => [option.id, option] as const)),
+  );
+  const kinds = ['', '', 'tactic', 'skill', 'card', 'equipment'];
+  let checked = 0;
+  for (let sample = 0; sample < 12; sample++) {
+    const catalog = createShanhetuScenario(['caocao'], undefined, 11);
+    for (const node of catalog.nodes) {
+      for (const choice of node.choices ?? []) {
+        const original = options.get(choice.decisionId ?? 0);
+        if (!original) continue;
+        if (!original.rewardGroup) {
+          assert.deepEqual(choice.effects, [{ kind: 'coins', amount: original.coins }]);
+          continue;
+        }
+        const group = source.rewardGroups.find((entry) => entry.id === original.rewardGroup)!;
+        const effect = choice.effects[0]!;
+        const reward = catalog.rewards.find((entry) =>
+          entry.effects.some((item) => item.kind === effect.kind && item.amount === effect.amount),
+        );
+        assert(reward?.offer, `奇遇 ${choice.id} 未生成实际奖励`);
+        assert.equal(reward.offer.kind, kinds[group.category]);
+        assert(group.rarities.includes(reward.offer.rarity));
+        assert(choice.label.endsWith(` · ${reward.name}`));
+        checked++;
+      }
+    }
+  }
+  assert(checked > 0);
+});

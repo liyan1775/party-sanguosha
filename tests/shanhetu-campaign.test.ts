@@ -171,6 +171,21 @@ test('奇遇选择只加一次战功，重开仍打所选阵容，胜后发钱�
   });
 });
 
+test('林中岔路的两种配方按实际选择记录声望、智谋或商才', () => {
+  for (const eventId of [1956, 1957]) {
+    for (const [index, attribute, amount] of [
+      [1, 'reputation', 1],
+      [2, 'strategy', 10],
+      [3, 'trade', 10],
+    ] as const) {
+      const initial = { earnedCoins: 0, reputation: 0, strategy: 0, merit: 0, trade: 0 };
+      const stats = { ...initial };
+      recordJourneyDecision(stats, eventId * 100 + index);
+      assert.deepEqual(stats, { ...initial, [attribute]: amount });
+    }
+  }
+});
+
 test('三章结局按难度、声望、属性和累计铜币判定', () => {
   const stats = { earnedCoins: 4000, reputation: 0, strategy: 30, merit: 15, trade: 60 };
   for (const difficulty of [1, 6, 11])

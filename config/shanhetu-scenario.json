@@ -2699,6 +2699,60 @@
           "coins": 140
         }
       ]
+    },
+    {
+      "id": 1956,
+      "name": "林中岔路",
+      "description": "路过一片密林，斥候回禀前方有两条岔路，你选择？",
+      "duration": 1,
+      "poolIds": [23, 24, 25, 27],
+      "options": [
+        {
+          "id": 195601,
+          "label": "左边小道",
+          "rewardGroup": 201,
+          "coins": 0
+        },
+        {
+          "id": 195602,
+          "label": "右边小道",
+          "rewardGroup": 231,
+          "coins": 0
+        },
+        {
+          "id": 195603,
+          "label": "绕开密林",
+          "rewardGroup": null,
+          "coins": 140
+        }
+      ]
+    },
+    {
+      "id": 1957,
+      "name": "林中岔路",
+      "description": "路过一片密林，斥候回禀前方有两条岔路，你选择？",
+      "duration": 1,
+      "poolIds": [23, 24, 25, 27],
+      "options": [
+        {
+          "id": 195701,
+          "label": "左边小道",
+          "rewardGroup": 202,
+          "coins": 0
+        },
+        {
+          "id": 195702,
+          "label": "右边小道",
+          "rewardGroup": 232,
+          "coins": 0
+        },
+        {
+          "id": 195703,
+          "label": "绕开密林",
+          "rewardGroup": null,
+          "coins": 210
+        }
+      ]
     }
   ],
   "combatEvents": [

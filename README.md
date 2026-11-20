@@ -4,7 +4,7 @@
 
 对局规则、技能、AI 和手机牌桌来自 [无名杀](https://github.com/libnoname/noname)，固定 v1.11.6／commit `2367607e246d21aae168dba15c01151ee0651f30`。本项目主要负责扫码入口、房间管理、电脑运行和手机接入；感谢上游开发者。
 
-**v0.10.0 加入单人《山河图·诸侯伐董》，可以从择将一路打完三章。** Windows 玩家下载 `party-sanguosha-v0.10.0-windows-x64-setup.zip`，完整解压后双击「启动聚会三国杀.cmd」。手机扫电脑上的二维码，填写昵称、创建房间，在玩法中选择「山河图」，点「择将出征」。[下载 Windows 版](https://github.com/liyan1775/party-sanguosha/releases/tag/v0.10.0)
+**v0.10.1 加入单人《山河图·诸侯伐董》，可以从择将一路打完三章。** Windows 玩家下载 `party-sanguosha-v0.10.1-windows-x64-setup.zip`，完整解压后双击「启动聚会三国杀.cmd」。手机扫电脑上的二维码，填写昵称、创建房间，在玩法中选择「山河图」，点「择将出征」。[下载 Windows 版](https://github.com/liyan1775/party-sanguosha/releases/tag/v0.10.1)
 
 ## 如何组织一桌
 
