@@ -215,6 +215,7 @@ try {
     : ['standard'];
   Object.assign(config, {
     mode,
+    ...(setup.shanhetu ? { clear_log: true } : {}),
     characters: packs,
     cards: cardPacks,
     extensions: [],

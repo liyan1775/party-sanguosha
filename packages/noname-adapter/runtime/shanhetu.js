@@ -69,8 +69,6 @@ export async function installShanhetu(setup) {
   }));
   const forms = actors.flatMap((actor) => (actor.nextForm ? [actor, actor.nextForm] : [actor]));
   for (const actor of forms) {
-    // No unrelated native general is substituted for an activity NPC. The
-    // temporary silhouette uses an existing local resource until art is pinned.
     if (actor.skills.some((skill) => !lib.skill[skill]))
       throw new Error(`缺少${actor.name}的原生技能`);
     for (const item of actor.fixedEquipment ?? []) {
@@ -93,8 +91,9 @@ export async function installShanhetu(setup) {
       skills: actor.skills,
       isUnseen: true,
       isAiForbidden: true,
-      img: `image/character/default_silhouette_${actor.sex === 'female' ? 'female' : 'male'}.jpg`,
+      img: actor.portrait,
     });
+    (setup.mobilePortraits ??= {})[actor.character] = setup.assetBase + actor.portrait;
     lib.translate[actor.character] = actor.name;
   }
   lib.skill.party_shanhetu_npc_rule = {
@@ -376,18 +375,18 @@ export async function selectShanhetuGenerals(setup, initialize) {
     );
     if (skills.some((id) => !lib.skill[id])) throw new Error('缺少已接入的额外技能');
     game.broadcastAll(
-      function (id, skills, tactics, armor) {
+      function (id, skills, armor) {
         const player = lib.playerOL[id];
         player.addSkill(['party_shanhetu_growth_rule', ...skills]);
         player.hujia += armor;
         player.update();
-        for (const tactic of tactics) player.addZhanfa(tactic);
       },
       hero.playerid,
       skills,
-      tactics,
       build.armor,
     );
+    // The native acquisition already broadcasts its log, animation, skills and mark.
+    for (const tactic of tactics) hero.addZhanfa(tactic);
   }
 }
 

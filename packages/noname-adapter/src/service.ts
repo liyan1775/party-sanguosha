@@ -27,6 +27,7 @@ import { validateCardPile, shanhetuCardPile, type CardPile } from '../runtime/ca
 import { RuleClock } from './rule-clock.js';
 import { customRosterDigest } from './custom-roster-policy.js';
 import nativeInventory from '../../../config/native-character-inventory.json' with { type: 'json' };
+import shanhetuPortraits from '../../../config/shanhetu-portraits.json' with { type: 'json' };
 import {
   prepareShanhetuBattle,
   sanitizeShanhetuResult,
@@ -204,6 +205,7 @@ export class NativeNonameService implements EngineAdapter {
   private readonly runtimeRoot: string;
   private readonly assets = new EngineAssets();
   private readonly resourcesReady: boolean;
+  private readonly shanhetuArtReady: boolean;
   private readonly hostToken = randomBytes(32).toString('base64url');
   private readonly matches = new Map<string, Match>();
   private readonly listeners = new Set<(event: EngineEvent) => void>();
@@ -277,6 +279,18 @@ export class NativeNonameService implements EngineAdapter {
     } catch {
       this.resourcesReady = false;
     }
+    try {
+      this.shanhetuArtReady =
+        this.resourcesReady &&
+        shanhetuPortraits.portraits.every(({ sha256, bytes }) => {
+          const image = readFileSync(this.engineFile(`image/shanhetu/${sha256}.png`));
+          return (
+            image.length === bytes && createHash('sha256').update(image).digest('hex') === sha256
+          );
+        });
+    } catch {
+      this.shanhetuArtReady = false;
+    }
     this.expiry = setInterval(() => {
       this.lan.expire();
       if (this.hostOnline && Date.now() - this.lastSupervisor > 20000) {
@@ -308,7 +322,7 @@ export class NativeNonameService implements EngineAdapter {
       publicSpectating: true,
       experience: true,
       doudizhuPractice: true,
-      shanhetu: assets,
+      shanhetu: this.shanhetuArtReady,
       message: ready
         ? '无名杀已就绪，真人准备后可以开始对局。'
         : assets

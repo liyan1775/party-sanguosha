@@ -10,7 +10,10 @@ import { createPartyServer } from '../apps/server/src/server.ts';
 import { NativeNonameService } from '../packages/noname-adapter/src/service.ts';
 import { ShanhetuCampaign } from '../apps/server/src/shanhetu-campaign.ts';
 import { chooseGeneral } from './native-ui-actions.mjs';
-import { shanhetuRecipe } from '../packages/noname-adapter/src/shanhetu.ts';
+import {
+  shanhetuBattleCompanions,
+  shanhetuRecipe,
+} from '../packages/noname-adapter/src/shanhetu.ts';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const output = `${root}/.runtime/shanhetu-native/${new Date().toISOString().replaceAll(/[:.]/g, '-')}-${process.env.SHANHETU_VERIFY_ENCOUNTER ?? process.env.SHANHETU_VERIFY_BOSS ?? 'core'}-${randomUUID().slice(0, 8)}`;
@@ -239,6 +242,29 @@ async function observeBossStage(worker) {
   });
 }
 
+async function verifySeatPortrait(id, portrait) {
+  // Read the visible avatar, including the native reinit path for a second form.
+  const expected = await phone.evaluate(
+    (path) => new URL(partyEngine.setup.assetBase + path, location.href).href,
+    portrait,
+  );
+  await phone.waitForFunction(
+    ({ id, expected }) => {
+      const avatar = globalThis.partyEngine?.lib.playerOL[id]?.node.avatar;
+      return avatar && getComputedStyle(avatar).backgroundImage.includes(expected);
+    },
+    { id, expected },
+  );
+  assert(
+    await phone.evaluate(async (src) => {
+      const image = new Image();
+      image.src = src;
+      await image.decode();
+      return image.naturalWidth > 0 && image.naturalHeight > 0;
+    }, expected),
+  );
+}
+
 async function reloadBossStage(worker, matchId, stage, before, next) {
   assert.equal(stage.name, next.name);
   assert.notEqual(stage.to, stage.from);
@@ -264,6 +290,7 @@ async function reloadBossStage(worker, matchId, stage, before, next) {
       .sort(byName),
   );
   assert(!events.some((event) => event.type === 'ended' && event.matchId === matchId));
+  await verifySeatPortrait(stage.id, next.portrait);
   const hand = await worker.evaluate((id) => {
     const { lib, game } = partyEngine;
     return lib.playerOL[id]
@@ -290,6 +317,7 @@ async function reloadBossStage(worker, matchId, stage, before, next) {
     { ...stage, skills: next.skills },
     { timeout: 120000 },
   );
+  await verifySeatPortrait(stage.id, next.portrait);
   const tags = await phone.evaluate(
     (id) => ({
       hero: partyEngine.game.me.node.identity.firstChild.textContent,
@@ -642,6 +670,10 @@ try {
     }));
     const enemyCount = recipe.enemies.length;
     assert.equal(initial.actors.length, 1 + enemyCount + (shanhetu.companionIds?.length ?? 0));
+    const seats = [...recipe.enemies, ...shanhetuBattleCompanions(shanhetu)];
+    for (const [i, actor] of seats.entries()) {
+      await verifySeatPortrait(initial.actors[i + 1].id, actor.portrait);
+    }
     const pile = await worker.evaluate(() => ({
       ruleset: partyEngine.setup.preset.ruleset,
       count: partyEngine.lib.card.list.length,
@@ -733,6 +765,18 @@ try {
       recipe.enemies.map(({ hp, maxHp, armor }) => ({ hp, maxHp, armor })),
     );
     if (index === 1 && withGrowth) {
+      const tacticLogCount = () =>
+        phone.evaluate(
+          () =>
+            [...partyEngine.ui.sidebar.children].filter((row) =>
+              row.textContent.includes('获得战法'),
+            ).length,
+        );
+      await expect.poll(tacticLogCount).toBe(shanhetu.build.tactics.length);
+      await expect
+        .poll(() => phone.evaluate(() => partyEngine.ui.arenalog.textContent.includes('获得战法')))
+        .toBe(false);
+      assert.equal(await tacticLogCount(), shanhetu.build.tactics.length);
       const build = await worker.evaluate(() => {
         const player = partyEngine.game.zhu;
         return {

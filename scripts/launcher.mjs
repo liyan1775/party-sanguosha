@@ -118,7 +118,7 @@ async function prepare() {
     await readFile(path.join(root, 'dist/server/main.js'));
     await readFile(path.join(root, 'dist/web/index.html'));
     if (portable.resources === 'download-pinned-upstream') {
-      console.log('正在检查本机游戏资源；首次使用会从无名杀上游下载，完成后保存在本机。');
+      console.log('正在检查本机游戏资源，首次使用会下载无名杀资源和三国杀 OL 山河图立绘。');
       await runNode(['--use-env-proxy', path.join(root, 'scripts/prepare-portable.mjs')]);
     }
     console.log('发行包已就绪。');

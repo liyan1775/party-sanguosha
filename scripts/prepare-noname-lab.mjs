@@ -4,6 +4,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
 import { downloadArchiveAssets } from './download-noname-assets.mjs';
+import { prepareShanhetuPortraits } from './prepare-shanhetu-portraits.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const candidate = JSON.parse(await readFile(resolve(root, 'config/noname-candidate.json'), 'utf8'));
@@ -179,3 +180,11 @@ await writeFile(
   await readFile(resolve(engineRoot, 'LICENSE')),
 );
 console.log(`Verified ${manifest.assets.length} pinned lab assets; downloaded ${downloaded}.`);
+try {
+  await prepareShanhetuPortraits(engineRoot, downloadAsset);
+} catch (error) {
+  console.warn(
+    '山河图立绘尚未备齐。请在电脑能访问 web.sanguosha.com 时重新启动以补齐。其他玩法可照常使用。',
+    error.message,
+  );
+}

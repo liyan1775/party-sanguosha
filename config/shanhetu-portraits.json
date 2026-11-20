@@ -1,0 +1,606 @@
+{
+  "baseUrl": "https://web.sanguosha.com/220/h5_2/res/runtime/pc/general/seat/static/",
+  "sourceDecodedSha256": "0e116ac3091748127e104878e01daddaf6cdb847d5b4f2cafa836a4223accca2",
+  "portraits": [
+    {
+      "generalId": 11,
+      "names": ["黄盖"],
+      "skinId": 30704,
+      "file": "30704.png",
+      "bytes": 56333,
+      "sha256": "b1f6dda748ea856b7a360f070821685162f0f817c5612ccabd01059b68843b70"
+    },
+    {
+      "generalId": 35,
+      "names": ["荀彧"],
+      "skinId": 0,
+      "file": "generalface_35.png",
+      "bytes": 20886,
+      "sha256": "a7d812ab28aeb293890becb3e34c9cd072a22f6c3df0698816ae0c3c8db430c1"
+    },
+    {
+      "generalId": 100,
+      "names": ["袁术"],
+      "skinId": 0,
+      "file": "generalface_100.png",
+      "bytes": 20437,
+      "sha256": "ac6d677a2a1003c444a001a946951786c9327c5476260b90a36fed0ec005dbb5"
+    },
+    {
+      "generalId": 108,
+      "names": ["赵云"],
+      "skinId": 0,
+      "file": "generalface_108.png",
+      "bytes": 23309,
+      "sha256": "48c084dd880dc2759df873ded12d9d9e5922117eb26995a222ac9da84d219fd2"
+    },
+    {
+      "generalId": 111,
+      "names": ["曹仁"],
+      "skinId": 0,
+      "file": "generalface_111.png",
+      "bytes": 24263,
+      "sha256": "d4b2d5c2615d205a7c886b1ad399dc28d9b0c389f4927f4604cb46a1f4006cc1"
+    },
+    {
+      "generalId": 122,
+      "names": ["曹昂"],
+      "skinId": 0,
+      "file": "generalface_122.png",
+      "bytes": 22080,
+      "sha256": "b072d459c30237ca3c721869402347737000927616f271b2bda8f7cff24356c1"
+    },
+    {
+      "generalId": 160,
+      "names": ["于禁"],
+      "skinId": 0,
+      "file": "generalface_160.png",
+      "bytes": 23585,
+      "sha256": "e9fa011e177523234be1d4064e358eebc939b58392b2ce7e6ce8bef28398dc76"
+    },
+    {
+      "generalId": 170,
+      "names": ["韩当"],
+      "skinId": 0,
+      "file": "generalface_170.png",
+      "bytes": 22689,
+      "sha256": "f18b4405ad7826e110a1227f2f5ecf67bfaecffcdf5564835df17521780b1053"
+    },
+    {
+      "generalId": 177,
+      "names": ["关平"],
+      "skinId": 0,
+      "file": "generalface_177.png",
+      "bytes": 22710,
+      "sha256": "7eeceb0d68ceca8c029602c8f3e1820a7f6c0814c76b30cefff522bac5efa66c"
+    },
+    {
+      "generalId": 192,
+      "names": ["暴怒的战神"],
+      "skinId": 0,
+      "file": "generalface_192.png",
+      "bytes": 60280,
+      "sha256": "8af3ec4df41c22c4b83933e831a75d0da0cf8cec36bfc13d2ff404e1534b7fe3"
+    },
+    {
+      "generalId": 193,
+      "names": ["神鬼无前"],
+      "skinId": 0,
+      "file": "generalface_193.png",
+      "bytes": 61379,
+      "sha256": "6248cceac87a62668ab92925bf143d52db29ba8d7854cf020076015fb69b4d41"
+    },
+    {
+      "generalId": 205,
+      "names": ["曹操"],
+      "skinId": 0,
+      "file": "generalface_205.png",
+      "bytes": 22486,
+      "sha256": "983c9c5afa31de1250d2506a7352e8187b3963d4993f672f539801f2c08b44ec"
+    },
+    {
+      "generalId": 229,
+      "names": ["典韦"],
+      "skinId": 0,
+      "file": "generalface_229.png",
+      "bytes": 55727,
+      "sha256": "3faab1a53453375bf5cda42d62664335178bc1d7845689b9e5e4689f0070c01b"
+    },
+    {
+      "generalId": 308,
+      "names": ["周瑜"],
+      "skinId": 0,
+      "file": "generalface_308.png",
+      "bytes": 21552,
+      "sha256": "793d399c4c4b2db3131b7760d5d03ab7a41836b70d9f7e29cd6bc1e96d4a2244"
+    },
+    {
+      "generalId": 313,
+      "names": ["夏侯惇"],
+      "skinId": 0,
+      "file": "generalface_313.png",
+      "bytes": 20485,
+      "sha256": "72fc3b7833a6098e0016d20487b3dfb94d88bc51700bc0f6584f30c6dee17989"
+    },
+    {
+      "generalId": 314,
+      "names": ["张辽"],
+      "skinId": 0,
+      "file": "generalface_314.png",
+      "bytes": 22662,
+      "sha256": "51b69c63196cec9920f7b8ffa20ed86b2039ca44a64ab820ff25933a326fbb26"
+    },
+    {
+      "generalId": 315,
+      "names": ["许褚"],
+      "skinId": 0,
+      "file": "generalface_315.png",
+      "bytes": 20531,
+      "sha256": "30cc72182caf923e78db0fa9d8465213ee7523df0649b2abfca7405d948784fa"
+    },
+    {
+      "generalId": 319,
+      "names": ["吕布"],
+      "skinId": 0,
+      "file": "generalface_319.png",
+      "bytes": 20212,
+      "sha256": "5a55b27b775663462eedc0b778be666252396ad14d008707c5c5618eb271acc8"
+    },
+    {
+      "generalId": 320,
+      "names": ["公孙瓒"],
+      "skinId": 0,
+      "file": "generalface_320.png",
+      "bytes": 20680,
+      "sha256": "ec09987ff653a06f5ee6a635707ecc208512073998b29915c73efc34d54b7751"
+    },
+    {
+      "generalId": 330,
+      "names": ["沮授"],
+      "skinId": 0,
+      "file": "generalface_330.png",
+      "bytes": 18353,
+      "sha256": "a8f60705a6cd1da274c3c626f243cc0459a518d5cce48903c00986e0b91e279b"
+    },
+    {
+      "generalId": 357,
+      "names": ["张郃"],
+      "skinId": 0,
+      "file": "generalface_357.png",
+      "bytes": 19133,
+      "sha256": "4f06bc2d0da372e26afc437afcb65705dfaf030980956d7928658d33ad0b3c9c"
+    },
+    {
+      "generalId": 374,
+      "names": ["麹义"],
+      "skinId": 0,
+      "file": "generalface_374.png",
+      "bytes": 19250,
+      "sha256": "2ffda9643478ce329c789edc93b70b0e7cbfa73e90a5f8483bfc74634d33226e"
+    },
+    {
+      "generalId": 375,
+      "names": ["戏志才"],
+      "skinId": 0,
+      "file": "generalface_375.png",
+      "bytes": 17642,
+      "sha256": "15d76aca8d65f091ccf8a4a90c76f82fc7f344fa5b7c82560cd679866d383219"
+    },
+    {
+      "generalId": 402,
+      "names": ["陆绩"],
+      "skinId": 0,
+      "file": "generalface_402.png",
+      "bytes": 19496,
+      "sha256": "2606f3ef3df5d1f4c10cef44494a1f62470c68c8a2f65c70d78bd12f4166e3c5"
+    },
+    {
+      "generalId": 406,
+      "names": ["许攸"],
+      "skinId": 0,
+      "file": "generalface_406.png",
+      "bytes": 21332,
+      "sha256": "450f096c14c59619a609f2bfcad848e942ac887f8e66d6b02584e7e16a4b39a9"
+    },
+    {
+      "generalId": 418,
+      "names": ["李傕"],
+      "skinId": 0,
+      "file": "generalface_418.png",
+      "bytes": 57555,
+      "sha256": "3f1f7acce7a4be422d56579213fad4375e63c94477e2e79879685461f35a894f"
+    },
+    {
+      "generalId": 424,
+      "names": ["郭汜"],
+      "skinId": 0,
+      "file": "generalface_424.png",
+      "bytes": 22042,
+      "sha256": "1a0afc2cee5abb3eb5ab9dd80c86ad1f1c13b5bacc43f6816d88593d2fd2e4df"
+    },
+    {
+      "generalId": 427,
+      "names": ["许靖"],
+      "skinId": 0,
+      "file": "generalface_427.png",
+      "bytes": 18103,
+      "sha256": "888f5ef5c1099e645a7fb4642b635f1c6f3f2bb1fc4add44193da3b0379b88ee"
+    },
+    {
+      "generalId": 434,
+      "names": ["吕旷吕翔"],
+      "skinId": 0,
+      "file": "generalface_434.png",
+      "bytes": 61035,
+      "sha256": "b1474b5b71c7db5f195c64bbf8b5a6f659b38108d1bcef8122d7852c56e4b319"
+    },
+    {
+      "generalId": 438,
+      "names": ["曹嵩"],
+      "skinId": 0,
+      "file": "generalface_438.png",
+      "bytes": 54075,
+      "sha256": "02361373c7bfe126d0ea8f3dc49686c15ca76dd108318aa4b6910cdbcbf16be4"
+    },
+    {
+      "generalId": 442,
+      "names": ["孙权"],
+      "skinId": 0,
+      "file": "generalface_442.png",
+      "bytes": 19440,
+      "sha256": "93a1f2d7ef40a61f80ac4a2210f1d6f073b4f2088c608aac510bd9fc799ec466"
+    },
+    {
+      "generalId": 446,
+      "names": ["华雄"],
+      "skinId": 0,
+      "file": "generalface_446.png",
+      "bytes": 58229,
+      "sha256": "d6a884af6218d5000a9648cc209a40f554ce8cbb94d332552f68a1491bddd33a"
+    },
+    {
+      "generalId": 450,
+      "names": ["袁绍"],
+      "skinId": 0,
+      "file": "generalface_450.png",
+      "bytes": 20201,
+      "sha256": "fb56211b9e3b7977c39806c6dbf9e76f625689c2bd1ba82ac8e0107ad25edf52"
+    },
+    {
+      "generalId": 452,
+      "names": ["孙策"],
+      "skinId": 0,
+      "file": "generalface_452.png",
+      "bytes": 60061,
+      "sha256": "fa5aa5072f605ba5e5348beaa5aece07adeb9cd338c0ca8f7f99cebf3ceee813"
+    },
+    {
+      "generalId": 453,
+      "names": ["夏侯渊"],
+      "skinId": 0,
+      "file": "generalface_453.png",
+      "bytes": 20561,
+      "sha256": "62e16e5505f910b87b0223725bf596b503b0a79eaa68afde3000f97ec9529266"
+    },
+    {
+      "generalId": 458,
+      "names": ["孙坚"],
+      "skinId": 0,
+      "file": "generalface_458.png",
+      "bytes": 51828,
+      "sha256": "05b94121ee5a72a642687bc01edfe1ce9d74f037d410a77d33ad2aeb1234c911"
+    },
+    {
+      "generalId": 459,
+      "names": ["审配"],
+      "skinId": 0,
+      "file": "generalface_459.png",
+      "bytes": 47521,
+      "sha256": "2cf783edd2ba08874af46eb10f5a64aa8bb65c4d0a72891f2f89a08b0e02b0ba"
+    },
+    {
+      "generalId": 460,
+      "names": ["荀谌"],
+      "skinId": 0,
+      "file": "generalface_460.png",
+      "bytes": 50497,
+      "sha256": "fc4aaa30e87e76f46ed5fafcf9fe7a8889fe36f233bedf88a408dd3be1009ad9"
+    },
+    {
+      "generalId": 470,
+      "names": ["董卓"],
+      "skinId": 0,
+      "file": "generalface_470.png",
+      "bytes": 21082,
+      "sha256": "73a60567db078d390118d9a2f8db4b776e4092e3de578ce96e60a6e4c2082be8"
+    },
+    {
+      "generalId": 476,
+      "names": ["曹性"],
+      "skinId": 0,
+      "file": "generalface_476.png",
+      "bytes": 97633,
+      "sha256": "52dbd2c1149e155f3f803dc4ede90f0f2ad8f6ed4d8bb34052841ef16fa5b585"
+    },
+    {
+      "generalId": 482,
+      "names": ["高干"],
+      "skinId": 0,
+      "file": "generalface_482.png",
+      "bytes": 59272,
+      "sha256": "fadd3abc16248cd9e6f721b6bd88c40888bd626f78135322427f4725bf7092be"
+    },
+    {
+      "generalId": 489,
+      "names": ["朱灵"],
+      "skinId": 0,
+      "file": "generalface_489.png",
+      "bytes": 56218,
+      "sha256": "2b0c9ddf3072cdbcab9e8ac6b3b19b14f5a5440468ddd2900838a84df44228a1"
+    },
+    {
+      "generalId": 501,
+      "names": ["卫兹"],
+      "skinId": 0,
+      "file": "generalface_501.png",
+      "bytes": 51618,
+      "sha256": "de54c027e88ec214d16bb80225ae6ca678c524d0340daa17ce70010a7cd8023f"
+    },
+    {
+      "generalId": 525,
+      "names": ["荀粲"],
+      "skinId": 0,
+      "file": "generalface_525.png",
+      "bytes": 49932,
+      "sha256": "79d6cc1cf299141859c7975b9b06f78b9ce82fc9fe75912a1009058b30a6bd06"
+    },
+    {
+      "generalId": 550,
+      "names": ["颜良文丑"],
+      "skinId": 0,
+      "file": "generalface_550.png",
+      "bytes": 58396,
+      "sha256": "439b5c41ec89af2b89c3e8381f9d7681cb966894c59fdfde1878b04fd7ddb669"
+    },
+    {
+      "generalId": 560,
+      "names": ["段颎"],
+      "skinId": 56001,
+      "file": "56001.png",
+      "bytes": 56457,
+      "sha256": "d9d80226a7de50f5d5bc0e80e937276008a96fe43aee0ab1d03fdf78824eaf63"
+    },
+    {
+      "generalId": 602,
+      "names": ["太史慈"],
+      "skinId": 0,
+      "file": "generalface_602.png",
+      "bytes": 57142,
+      "sha256": "ff442fc7b4ffd15a3a18d6b5c6884b4d141200b387535865a36e06780f0cd28e"
+    },
+    {
+      "generalId": 604,
+      "names": ["高顺"],
+      "skinId": 0,
+      "file": "generalface_604.png",
+      "bytes": 58187,
+      "sha256": "5849dc3a2fed74269d23552d0f065fa60af497e6540ddad448ce9b9be2db213f"
+    },
+    {
+      "generalId": 609,
+      "names": ["孙坚"],
+      "skinId": 0,
+      "file": "generalface_609.png",
+      "bytes": 50565,
+      "sha256": "c6831ee4417099c80bc810a3b2afed75e681ad934eb42397c7fd623547418674"
+    },
+    {
+      "generalId": 620,
+      "names": ["程普"],
+      "skinId": 0,
+      "file": "generalface_620.png",
+      "bytes": 51944,
+      "sha256": "e08eacfc88ad5d034290a9bb4a995477480f1315f0b529b541abd89e209fd79d"
+    },
+    {
+      "generalId": 624,
+      "names": ["郭图"],
+      "skinId": 0,
+      "file": "generalface_624.png",
+      "bytes": 47087,
+      "sha256": "fccbb9862ebba2370341fa4727b82d42d3320284de1189669a1262d33225d835"
+    },
+    {
+      "generalId": 640,
+      "names": ["吴国太"],
+      "skinId": 0,
+      "file": "generalface_640.png",
+      "bytes": 56526,
+      "sha256": "3d5bb07c831326139ee782e983e956ae4806babd3aa65ca92604432e7aa380bf"
+    },
+    {
+      "generalId": 642,
+      "names": ["李儒"],
+      "skinId": 0,
+      "file": "generalface_642.png",
+      "bytes": 52105,
+      "sha256": "4c810f48a0b0084fd1bbb698bca84d67e9cb85451930bde96e32e4379448af09"
+    },
+    {
+      "generalId": 655,
+      "names": ["牛辅"],
+      "skinId": 1000373,
+      "file": "generalface_1000373.png",
+      "bytes": 59181,
+      "sha256": "99ff052180d29d4eb47a828d87af21fafd9a22248c81e16bc2d783ee2019f13e"
+    },
+    {
+      "generalId": 2081,
+      "names": ["张绣"],
+      "skinId": 0,
+      "file": "generalface_2081.png",
+      "bytes": 54183,
+      "sha256": "22bf08dd5dfebb4e0b0bd9bee66b0d7a2f25c1d4bfc891e0d942c1a0850d37ad"
+    },
+    {
+      "generalId": 4861,
+      "names": ["天子近卫"],
+      "skinId": 1000173,
+      "file": "generalface_1000173.png",
+      "bytes": 60691,
+      "sha256": "9c17a6f80b6c5743c93c4096e5959b9c2c2cb82e7185c905ea511aa94861a237"
+    },
+    {
+      "generalId": 4861,
+      "names": ["校事典刑官"],
+      "skinId": 1000237,
+      "file": "generalface_1000237.png",
+      "bytes": 52356,
+      "sha256": "196d31948c378458357c37020545e189c02d43784505bd50bb9ad71caa423d85"
+    },
+    {
+      "generalId": 4861,
+      "names": ["游侠"],
+      "skinId": 1000251,
+      "file": "generalface_1000251.png",
+      "bytes": 50881,
+      "sha256": "7bfb81c607a1e0c6df15d40b5fb666e35b1bcb9a690abbb8a07cdc80fa46c592"
+    },
+    {
+      "generalId": 4861,
+      "names": ["羽林军"],
+      "skinId": 1000316,
+      "file": "generalface_1000316.png",
+      "bytes": 57088,
+      "sha256": "922c2058dd5528a3d6adfdbe30740b7a43f2c131e7881b2d14bcede6255b270f"
+    },
+    {
+      "generalId": 4871,
+      "names": ["于毒"],
+      "skinId": 1000098,
+      "file": "generalface_1000098.png",
+      "bytes": 59263,
+      "sha256": "af261900bc7cc88be6b451e80e15886df7161ac4bd474c66372a1df9020ebfae"
+    },
+    {
+      "generalId": 4871,
+      "names": ["公孙越"],
+      "skinId": 1000165,
+      "file": "generalface_1000165.png",
+      "bytes": 56842,
+      "sha256": "4b644c35f8da4363bd578ea1977d9b5854ab6c30696ce69dd24d4fdc7b6b93e6"
+    },
+    {
+      "generalId": 4871,
+      "names": ["辛评"],
+      "skinId": 1000261,
+      "file": "generalface_1000261.png",
+      "bytes": 53617,
+      "sha256": "8a198fd00dba05716fec8327a087d5daa16d8907838d7b4a7f72b825127d033d"
+    },
+    {
+      "generalId": 4871,
+      "names": ["徐璆"],
+      "skinId": 1000307,
+      "file": "generalface_1000307.png",
+      "bytes": 60055,
+      "sha256": "33c16c2ede92729b2b1521638c1d83e0945fbbb5864b922d03b8028ff1ce536a"
+    },
+    {
+      "generalId": 4871,
+      "names": ["袁耀"],
+      "skinId": 1000339,
+      "file": "generalface_1000339.png",
+      "bytes": 53190,
+      "sha256": "2bd8f43b30a7c6198314a7c56b61c3894bb88de0667f57a31b5b79176f1d37e7"
+    },
+    {
+      "generalId": 4871,
+      "names": ["张牛角", "隐士张梁"],
+      "skinId": 1000367,
+      "file": "generalface_1000367.png",
+      "bytes": 59402,
+      "sha256": "5179ad123ae14df721495a864501cbd747c5c3172bded7515782fe1f0d40b19a"
+    },
+    {
+      "generalId": 4871,
+      "names": ["秦谊"],
+      "skinId": 1000413,
+      "file": "generalface_1000413.png",
+      "bytes": 193546,
+      "sha256": "d40be4a74e434d2d8578c7f8e3d00105173e369cdd65896f99b0318d177d1423"
+    },
+    {
+      "generalId": 4872,
+      "names": ["陈卫"],
+      "skinId": 1000121,
+      "file": "generalface_1000121.png",
+      "bytes": 53294,
+      "sha256": "81a02ef49cb90fc4a06223eee329260d7e101ddb892b25a4d7a509a6e62cac7c"
+    },
+    {
+      "generalId": 4872,
+      "names": ["袁胤"],
+      "skinId": 1000338,
+      "file": "generalface_1000338.png",
+      "bytes": 50743,
+      "sha256": "2e3259b413cb44b15e7c20065a4cdc2919876bd39bc8d6f750a602c9ab255f34"
+    },
+    {
+      "generalId": 4872,
+      "names": ["张燕"],
+      "skinId": 1000364,
+      "file": "generalface_1000364.png",
+      "bytes": 53762,
+      "sha256": "08b21148ebfa4e5495f33fd36c97b850536896ad84c2b97b341d2f80dbf57caf"
+    },
+    {
+      "generalId": 4872,
+      "names": ["董旻"],
+      "skinId": 1000377,
+      "file": "generalface_1000377.png",
+      "bytes": 56617,
+      "sha256": "36cad360205a5eb3a3f41b445e3504bff38d884b736c2a7deb9ffce7da092154"
+    },
+    {
+      "generalId": 4873,
+      "names": ["李黑"],
+      "skinId": 1000414,
+      "file": "generalface_1000414.png",
+      "bytes": 194585,
+      "sha256": "5dc1761cb60c1b4da3cdac44fd05349d728256e6b1d17ece9d1a0708b9e10705"
+    },
+    {
+      "generalId": 4876,
+      "names": ["曹氏"],
+      "skinId": 1000051,
+      "file": "generalface_1000051.png",
+      "bytes": 47832,
+      "sha256": "a5e02b4fa57584ac891a04bf0acbaf75728e5183ac9ff9f6cb480f20d48253b1"
+    },
+    {
+      "generalId": 4896,
+      "names": ["风篁"],
+      "skinId": 1000043,
+      "file": "generalface_1000043.png",
+      "bytes": 46760,
+      "sha256": "0e38154c37af736b6c1cf10ed65eae6e71ea63f9c7c8ee43c4309d9edb8d6c13"
+    },
+    {
+      "generalId": 4897,
+      "names": ["赤炼"],
+      "skinId": 1000055,
+      "file": "generalface_1000055.png",
+      "bytes": 49018,
+      "sha256": "5eb2052d83d805b95ed78e6b6a9edb32dfb4955ab427eda9fafa3f3883730528"
+    },
+    {
+      "generalId": 4899,
+      "names": ["曼珠"],
+      "skinId": 1000046,
+      "file": "generalface_1000046.png",
+      "bytes": 52068,
+      "sha256": "12e26ff519423e8f67f9e659f450841b0ef7df501b9e985b681e2feb77ee3af6"
+    }
+  ]
+}

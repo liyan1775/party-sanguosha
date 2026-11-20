@@ -5,6 +5,7 @@ import growth from '../../../config/shanhetu-growth.json' with { type: 'json' };
 import npcSkills from '../../../config/shanhetu-npc-skills.json' with { type: 'json' };
 import carryCards from '../../../config/shanhetu-cards.json' with { type: 'json' };
 import companionCatalog from '../../../config/shanhetu-companions.json' with { type: 'json' };
+import portraitCatalog from '../../../config/shanhetu-portraits.json' with { type: 'json' };
 import nativeCharacters from '../../../config/native-character-inventory.json' with { type: 'json' };
 import type { MatchSetup } from './index.js';
 import type {
@@ -84,6 +85,18 @@ interface ShanhetuEncounterRecipe {
   })[];
 }
 const recipes: ShanhetuEncounterRecipe[] = battles.battles;
+const portraitPaths = new Map(
+  portraitCatalog.portraits.flatMap(({ generalId, names, sha256 }) =>
+    names.map((name) => [`${generalId}/${name}`, `image/shanhetu/${sha256}.png`] as const),
+  ),
+);
+
+function withPortrait<T extends { generalId: number; name: string }>(actor: T) {
+  // OL reuses one general ID for several differently illustrated event NPCs.
+  const portrait = portraitPaths.get(`${actor.generalId}/${actor.name}`);
+  if (!portrait) throw new Error(`缺少${actor.name}的山河图立绘`);
+  return { ...actor, portrait };
+}
 
 const validId = (value: unknown) => typeof value === 'string' && /^[\w-]{1,80}$/.test(value);
 const integer = (value: unknown, min: number, max: number): value is number =>
@@ -107,7 +120,7 @@ export function shanhetuBattleCompanions(battle: ShanhetuBattleSetup) {
   return (battle.companionIds ?? []).map((id) => {
     const companion = shanhetuCompanion(id);
     if (!companion) throw new Error('尚未接入的山河图队友');
-    return companion;
+    return withPortrait(companion);
   });
 }
 
@@ -236,7 +249,13 @@ export function shanhetuRecipe(battleId: number, difficulty = 1, elapsedMonths =
       delete form.hard;
     }
   }
-  return result;
+  return {
+    ...result,
+    enemies: result.enemies.map(({ nextForm, ...enemy }) => ({
+      ...withPortrait(enemy),
+      ...(nextForm && { nextForm: withPortrait(nextForm) }),
+    })),
+  };
 }
 
 function applyNpcBonus(form: ShanhetuNpcForm, bonus: ShanhetuNpcBonus) {

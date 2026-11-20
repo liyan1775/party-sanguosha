@@ -2,10 +2,48 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import type { MatchSetup } from '../packages/noname-adapter/src/index.js';
+import encounters from '../config/shanhetu-battles.json' with { type: 'json' };
+import companions from '../config/shanhetu-companions.json' with { type: 'json' };
+import art from '../config/shanhetu-portraits.json' with { type: 'json' };
 import {
   prepareShanhetuBattle,
   sanitizeShanhetuResult,
+  shanhetuBattleCompanions,
+  shanhetuRecipe,
 } from '../packages/noname-adapter/src/shanhetu.js';
+
+test('每种敌军、第二形态及队友都使用原表指定的独立本机立绘', () => {
+  assert.equal(art.sourceDecodedSha256, companions.sourceDecodedSha256);
+  const paths = new Set<string>();
+  const actors = encounters.battles.flatMap((battle) =>
+    shanhetuRecipe(battle.id, Math.min(battle.maximumDifficulty ?? 15, 15)).enemies.flatMap(
+      (enemy) => (enemy.nextForm ? [enemy, enemy.nextForm] : [enemy]),
+    ),
+  );
+  const allies = companions.companions.flatMap((companion) =>
+    shanhetuBattleCompanions({ ...setup().shanhetu!, companionIds: [companion.id] }),
+  );
+  for (const actor of [...actors, ...allies]) {
+    const entry = art.portraits.find(
+      (p) => p.generalId === actor.generalId && p.names.includes(actor.name),
+    );
+    assert(entry, actor.name);
+    assert.match(entry.sha256, /^[a-f0-9]{64}$/);
+    const id = entry.skinId || entry.generalId;
+    assert.equal(
+      entry.file,
+      entry.skinId && entry.skinId < 1000000 ? `${id}.png` : `generalface_${id}.png`,
+    );
+    assert.equal(actor.portrait, `image/shanhetu/${entry.sha256}.png`);
+    paths.add(actor.portrait);
+  }
+  assert.equal(paths.size, art.portraits.length);
+  assert.equal(art.portraits.length, 75);
+  assert.equal(
+    new Set(art.portraits.filter((p) => p.generalId === 4861).map((p) => p.sha256)).size,
+    4,
+  );
+});
 
 function setup(): MatchSetup {
   return {
