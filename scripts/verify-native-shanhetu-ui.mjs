@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Actual mobile-sized journey with native battles. Isolated preview.
 import assert from 'node:assert/strict';
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
-import { randomUUID } from 'node:crypto';
+import { randomUUID, randomBytes } from 'node:crypto';
+import { ShanhetuBook } from '../apps/server/src/shanhetu-book.ts';
 import { once } from 'node:events';
 import { chromium, expect } from '@playwright/test';
 import { createPartyServer } from '../apps/server/src/server.ts';
@@ -13,6 +14,7 @@ import { chooseGeneral } from './native-ui-actions.mjs';
 import source from '../config/shanhetu-scenario.json' with { type: 'json' };
 
 const root = fileURLToPath(new URL('../', import.meta.url));
+const nightmareBook = process.env.SHANHETU_VERIFY_NIGHTMARE_BOOK;
 const full = process.env.SHANHETU_VERIFY_FULL === '1';
 const fullHard = full && process.env.SHANHETU_VERIFY_HARD === '1';
 const fullMedium = full && (fullHard || process.env.SHANHETU_VERIFY_MEDIUM === '1');
@@ -46,6 +48,27 @@ const context = await browser.newContext({
   isMobile: true,
   hasTouch: true,
 });
+if (nightmareBook) {
+  // Transfer only a prior test run's durable achievements. The room, browser and campaign are new.
+  const seed = await readFile(nightmareBook, 'utf8');
+  const saved = JSON.parse(seed);
+  assert.equal(saved.scenarioId, 5);
+  assert(saved.profile.receipts.some((r) => r.outcome === 'victory' && r.difficulty === 11));
+  const credential = randomBytes(32).toString('base64url');
+  await mkdir(output + '/book', { recursive: true });
+  await writeFile(output + '/book/' + ShanhetuBook.profileKey(credential) + '.json', seed, {
+    flag: 'wx',
+  });
+  await context.addCookies([
+    {
+      name: 'party_shanhetu_book',
+      value: credential,
+      url: origin,
+      httpOnly: true,
+      sameSite: 'Strict',
+    },
+  ]);
+}
 const phone = await context.newPage();
 const errors = [],
   missing = new Set(),
@@ -458,15 +481,17 @@ async function playRemainingRoute(general, allowDefeat = false) {
       assert.equal(view.phase, 'map');
       const destinations = view.actions.filter((action) => action.kind === 'region');
       const destination =
-        (fullHard && difficulty === 11
-          ? destinations.find((action) => /颍川郡|荥阳|河内|酸枣/.test(action.label))
-          : fullMedium && difficulty === 6
-            ? destinations.find((action) => /伊阙关|小平津/.test(action.label))
-            : undefined) ?? destinations[0];
+        (difficulty >= 16
+          ? destinations.find((action) => /函谷关|崤函道/.test(action.label))
+          : fullHard && difficulty === 11
+            ? destinations.find((action) => /颍川郡|荥阳|河内|酸枣/.test(action.label))
+            : fullMedium && difficulty === 6
+              ? destinations.find((action) => /伊阙关|小平津/.test(action.label))
+              : undefined) ?? destinations[0];
       if (destination) {
         await expect(phone.locator('.shanhetu-route')).toBeVisible();
-        if ([6, 11].includes(difficulty) && view.chapter === 1) {
-          const visibleCities = difficulty === 11 ? 12 : 8;
+        if (([6, 11].includes(difficulty) || difficulty >= 16) && view.chapter === 1) {
+          const visibleCities = difficulty >= 16 ? 14 : difficulty === 11 ? 12 : 8;
           await phone.setViewportSize({ width: 320, height: 780 });
           const fit = await phone.locator('.shanhetu-route').evaluate((route, visibleCities) => {
             const cities = [...route.querySelectorAll('.shanhetu-route-city')];
@@ -481,11 +506,12 @@ async function playRemainingRoute(general, allowDefeat = false) {
             );
           }, visibleCities);
           assert(fit, `All ${visibleCities} cities fit on the narrow route map`);
-          if (difficulty === 11)
+          if (difficulty >= 11)
             await expect(phone.locator('.shanhetu-route-terrain').first()).toBeVisible();
           await shot(`branch-${difficulty}-320`);
           await phone.setViewportSize({ width: 390, height: 844 });
-          if (difficulty === 11) checks.narrowHardRoute = true;
+          if (difficulty >= 16) checks.narrowNightmareRoute = true;
+          else if (difficulty === 11) checks.narrowHardRoute = true;
           else checks.narrowMediumRoute = true;
         }
         await shot(`branch-${difficulty}-${view.chapter}`);
@@ -542,7 +568,103 @@ async function chooseNextHero() {
   return general;
 }
 
-try {
+async function playNightmareJourneys(difficultyInput, chooseOpening, startJourney) {
+  const first = Number(process.env.SHANHETU_VERIFY_NIGHTMARE_FIRST ?? 16);
+  const last = Number(process.env.SHANHETU_VERIFY_NIGHTMARE_LAST ?? 20);
+  assert(
+    Number.isInteger(first) && Number.isInteger(last) && first >= 16 && last <= 20 && first <= last,
+  );
+  checks.nightmare = { first, last, attempts: [], clears: [] };
+  const snapshot = () => writeFile(`${output}/progress.json`, JSON.stringify(checks, null, 2));
+  const profile = async () =>
+    (await context.request.get(`${origin}/api/rooms/${room.code}/shanhetu/book`)).json();
+  for (let difficulty = first; difficulty <= last; difficulty++) {
+    await expect(difficultyInput.locator(`option[value="${difficulty}"]`)).toBeEnabled();
+    if (difficulty < 20)
+      await expect(difficultyInput.locator(`option[value="${difficulty + 1}"]`)).toBeDisabled();
+    let cleared = false;
+    for (let attempt = 0; attempt < 12 && !cleared; attempt++) {
+      await difficultyInput.selectOption(String(difficulty));
+      await expect(phone.locator('#shanhetu-difficulty-hint')).toContainText('函谷关');
+      await chooseOpening(2219);
+      await startJourney();
+      await expect(phone.locator('#shanhetu-options [data-general]')).toHaveCount(5);
+      const hero = await chooseNextHero();
+      const start = journey();
+      assert.equal(start.difficulty, difficulty);
+      if (difficulty === 16 && start.map.regionId !== 'region-2') {
+        await phone.locator('#shanhetu-end').tap();
+        await phone
+          .locator('#shanhetu-end-dialog')
+          .getByRole('button', { name: '结束并回房', exact: true })
+          .tap();
+        await wait(() => !journey(), 'Retreat did not return to room');
+        checks.nightmare.attempts.push({
+          difficulty,
+          runId: start.id,
+          initialRegion: start.map.regionId,
+          outcome: 'retreat',
+        });
+        await snapshot();
+        continue;
+      }
+      await select(locationAction('battle'));
+      const outcome = await battle(hero, !checks.restart && checkRestart);
+      if (outcome === 'victory') cleared = await playRemainingRoute(hero, true);
+      checks.nightmare.attempts.push({
+        difficulty,
+        runId: start.id,
+        initialRegion: start.map.regionId,
+        outcome: journey().phase,
+      });
+      if (cleared) {
+        const bosses = checks.battles.filter((b) => b.runId === start.id && b.kind === 'boss');
+        assert.equal(bosses.length, 3);
+        if (difficulty === 16) {
+          assert([2640, 2641, 2642, 2643].includes(bosses[1].opening.battleId));
+          assert([2684, 2685, 2686, 2687].includes(bosses[2].opening.battleId));
+          assert.equal(bosses[1].opening.terrain, 13278);
+          assert.equal(bosses[2].opening.terrain, null);
+        }
+        checks.nightmare.clears.push({
+          difficulty,
+          runId: start.id,
+          bosses: bosses.map((b) => b.opening.battleId),
+          ending: journey().finalReport.title,
+        });
+      }
+      await phone.locator('#shanhetu-end').tap();
+      await wait(() => !journey(), 'Nightmare terminal journey stayed open');
+      const record = (await profile()).recent[0];
+      assert.equal(record.difficulty, difficulty);
+      assert.equal(record.outcome, cleared ? 'victory' : 'defeat');
+      await snapshot();
+    }
+    assert(cleared, `No natural victory on difficulty ${difficulty}; retained individual attempts`);
+    if (difficulty < 20)
+      await expect(difficultyInput.locator(`option[value="${difficulty + 1}"]`)).toBeEnabled();
+  }
+  assert.equal(errors.length, 0);
+  assert.equal(missing.size, 0);
+  await writeFile(
+    `${output}/result.json`,
+    JSON.stringify(
+      {
+        scope:
+          'Natural nightmare campaigns from a copied prior clear, mobile-sized desktop browser',
+        physicalPhone: false,
+        checks,
+        errors,
+        missing: [...missing],
+      },
+      null,
+      2,
+    ),
+  );
+  console.log(`Nightmare UI campaign verification passed: ${output}`);
+}
+
+async function verifyJourneys() {
   await computer.goto(`${origin}/server`);
   await wait(() => adapter.status().ready, 'Computer supervisor did not become ready');
   await phone.goto(origin);
@@ -574,6 +696,7 @@ try {
     await expect(phone.locator('#start-button')).toBeEnabled();
     await phone.locator('#start-button').tap();
   };
+  if (nightmareBook) return playNightmareJourneys(difficulty, chooseOpening, startJourney);
   await expect(difficulty).toHaveValue('1');
   await expect(normal2).toBeDisabled();
   await expect(medium1).toBeDisabled();
@@ -867,6 +990,9 @@ try {
     ),
   );
   console.log(`Shanhetu page/native loop passed: ${output}`);
+}
+try {
+  await verifyJourneys();
 } catch (error) {
   await shot('failure').catch(() => {});
   await writeFile(

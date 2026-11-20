@@ -76,6 +76,7 @@ const bossIds = {
   'ambush-normal': 2298,
   'rage-stage': 2644,
   'shengui-stage': 2645,
+  'dongzhuo-nightmare-stage': 2687,
   'niufu-stage': 2670,
   'dongmin-stage': 2671,
 };
@@ -86,8 +87,17 @@ const stages = boss?.endsWith('-stage');
 const normal =
   ['lijue-normal', 'lvbu-normal', 'ambush-normal'].includes(boss) ||
   (numbered && finalBattleId < 20000);
-const difficulty = Number(process.env.SHANHETU_VERIFY_DIFFICULTY ?? (stages ? 3 : normal ? 2 : 1));
-if (stages) assert(difficulty >= 3 && difficulty <= 15);
+const minimumDifficulty =
+  (finalBattleId >= 2684 && finalBattleId <= 2687) ||
+  (finalBattleId >= 2640 && finalBattleId <= 2643)
+    ? 16
+    : stages
+      ? 3
+      : normal
+        ? 2
+        : 1;
+const difficulty = Number(process.env.SHANHETU_VERIFY_DIFFICULTY ?? minimumDifficulty);
+if (stages) assert(difficulty >= 3 && difficulty <= 20);
 const finalChapter = Number(process.env.SHANHETU_VERIFY_CHAPTER ?? 2);
 const finalTerrain = Number(process.env.SHANHETU_VERIFY_TERRAIN ?? 0);
 assert([2, 3].includes(finalChapter));
