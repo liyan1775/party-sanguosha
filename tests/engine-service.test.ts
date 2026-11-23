@@ -13,6 +13,7 @@ import { resolve, relative } from 'node:path';
 import type { TestContext } from 'node:test';
 import type { MatchSetup } from '../packages/noname-adapter/src/index.js';
 import { GENERAL_PRESETS } from '../packages/shared/src/contracts.js';
+import { publicCardTemplate } from '../packages/noname-adapter/src/observer.js';
 
 // Protocol tests need a minimal config, not a developer's downloaded engine.
 // Resource availability is separately required by the full engine API check.
@@ -425,6 +426,13 @@ test('后来者公开观战只读同房当前公开投影和分页，不授予�
   const path = `${f.base}/engine/observe/${f.id}?room=${f.room.code}`;
   assert.equal((await fetch(path)).status, 200);
   assert.equal((await (await fetch(path)).json()).observer, null);
+  const template = publicCardTemplate({
+    id: 'standard108',
+    name: '',
+    packs: ['standard'],
+    excludedCards: [],
+    cardCount: 108,
+  });
   worker.send(
     JSON.stringify({
       type: 'observer',
@@ -432,6 +440,33 @@ test('后来者公开观战只读同房当前公开投影和分页，不授予�
         round: 2,
         ended: false,
         deckCount: 91,
+        cardTracker: {
+          ...template,
+          pileName: 'SECRET',
+          epoch: 3,
+          deckCount: 91,
+          shuffledCount: 1,
+          knownPublicCount: 1,
+          unknownDiscards: 2,
+          deck: 'SECRET',
+          categories: template.categories.map((category) => ({
+            ...category,
+            templateTotal: 999,
+            seen: category.key === 'sha' ? 1 : 0,
+            hand: 'SECRET',
+          })),
+          recentRevealed: [
+            {
+              seq: 1,
+              cardName: '杀',
+              suit: 'heart',
+              number: 10,
+              action: 'use',
+              actor: '玩家',
+              cardid: 'SECRET',
+            },
+          ],
+        },
         currentPlayerId: f.room.ownerId,
         players: [
           {
@@ -468,6 +503,16 @@ test('后来者公开观战只读同房当前公开投影和分页，不授予�
   assert.equal(page.matchId, f.id);
   assert.equal(page.roomCode, f.room.code);
   assert.equal(page.observer.deckCount, 91);
+  assert.equal(page.observer.cardTracker.pileName, '标准108');
+  assert.equal(page.observer.cardTracker.deckCount, 91);
+  assert.equal(page.observer.cardTracker.shuffledCount, 1);
+  assert.equal(page.observer.cardTracker.unknownDiscards, 2);
+  assert.deepEqual(page.observer.cardTracker.categories[0], {
+    key: 'sha',
+    label: '杀',
+    templateTotal: 30,
+    seen: 1,
+  });
   assert.equal(page.observer.players[0].handCount, 5);
   assert.equal(page.observer.players[0].identity, '身份未公开');
   assert.equal(page.entries.length, 12);

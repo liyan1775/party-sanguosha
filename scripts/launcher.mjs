@@ -6,11 +6,13 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { setTimeout as delay } from 'node:timers/promises';
 import { LAUNCH_LOCK_TIMEOUT_MS, waitForStartup } from './launcher-readiness.mjs';
+import { startProgressServer } from './launcher-progress.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const runtime = path.join(root, '.runtime');
 const sessionFile = path.join(runtime, 'session.json');
 const lockFile = path.join(runtime, 'launcher.lock');
+const progressFile = path.join(runtime, 'launcher-progress.json');
 const pkg = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8'));
 const noBrowser = process.argv.includes('--no-browser');
 const entryMode = process.argv.includes('--lan') ? 'lan' : 'internet';
@@ -101,8 +103,54 @@ async function acquireLock() {
   throw new Error('服务仍在准备中，请稍后再双击启动。日志位于 .runtime 文件夹。');
 }
 
-async function runNode(args) {
-  const child = spawn(process.execPath, args, { cwd: root, windowsHide: true, stdio: 'inherit' });
+async function activeProgressUrl() {
+  try {
+    const info = JSON.parse(await readFile(progressFile, 'utf8'));
+    const url = new URL(info.url);
+    if (url.protocol !== 'http:' || url.hostname !== '127.0.0.1') return null;
+    try {
+      process.kill(info.pid, 0);
+    } catch (probe) {
+      if (probe.code === 'ESRCH') return null;
+    }
+    const res = await fetch(`${url.origin}/api/status`, { signal: AbortSignal.timeout(800) });
+    if (!res.ok) return null;
+    return url.href;
+  } catch {
+    return null;
+  }
+}
+
+async function runNode(args, onLine) {
+  const child = spawn(process.execPath, args, {
+    cwd: root,
+    windowsHide: true,
+    stdio: onLine ? ['ignore', 'pipe', 'pipe'] : 'inherit',
+  });
+  if (onLine && child.stdout && child.stderr) {
+    let bufOut = '';
+    let bufErr = '';
+    const flush = (chunk, target, isErr) => {
+      const text = chunk.toString('utf8');
+      if (isErr) process.stderr.write(text);
+      else process.stdout.write(text);
+      const merged = target + text;
+      const lines = merged.split(/\r?\n/);
+      const tail = lines.pop() ?? '';
+      for (const line of lines) onLine(line);
+      return tail;
+    };
+    child.stdout.on('data', (chunk) => {
+      bufOut = flush(chunk, bufOut, false);
+    });
+    child.stderr.on('data', (chunk) => {
+      bufErr = flush(chunk, bufErr, true);
+    });
+    child.once('close', () => {
+      if (bufOut.trim()) onLine(bufOut);
+      if (bufErr.trim()) onLine(bufErr);
+    });
+  }
   await new Promise((resolve, reject) => {
     child.once('error', reject);
     child.once('exit', (code) =>
@@ -111,16 +159,24 @@ async function runNode(args) {
   });
 }
 
-async function prepare() {
+async function prepare(progress) {
   if (portable) {
     if (portable.version !== pkg.version)
       throw new Error('发行包版本不匹配，请重新解压完整发行包。');
     await readFile(path.join(root, 'dist/server/main.js'));
     await readFile(path.join(root, 'dist/web/index.html'));
     if (portable.resources === 'download-pinned-upstream') {
+      progress?.update({
+        step: 2,
+        percent: 22,
+        stageTitle: '正在准备与校验游戏资源与山河图立绘…',
+      });
       console.log('正在检查本机游戏资源，首次使用会下载无名杀资源和三国杀 OL 山河图立绘。');
-      await runNode(['--use-env-proxy', path.join(root, 'scripts/prepare-portable.mjs')]);
+      await runNode(['--use-env-proxy', path.join(root, 'scripts/prepare-portable.mjs')], (line) =>
+        progress?.pushLog(line),
+      );
     }
+    progress?.update({ step: 3, percent: 86, stageTitle: '发行包资源已就绪，正在唤醒本机服务…' });
     console.log('发行包已就绪。');
     return;
   }
@@ -142,15 +198,20 @@ async function prepare() {
     installed = false;
   }
   if (!installed) {
+    progress?.update({ step: 1, percent: 18, stageTitle: '首次准备需要联网，正在安装依赖…' });
     console.log('首次准备需要联网，正在安装本项目依赖……');
     const npm = path.join(path.dirname(process.execPath), 'node_modules/npm/bin/npm-cli.js');
-    await runNode([npm, 'ci', '--no-audit', '--no-fund']);
+    await runNode([npm, 'ci', '--no-audit', '--no-fund'], (line) => progress?.pushLog(line));
   }
   await writeFile(stampFile, lockHash + '\n');
+  progress?.update({ step: 2, percent: 34, stageTitle: '正在校验固定无名杀引擎与立绘资源…' });
   console.log('正在检查无名杀资源，首次准备需要联网……');
-  await runNode(['--use-env-proxy', path.join(root, 'scripts/prepare-noname-lab.mjs')]);
+  await runNode(['--use-env-proxy', path.join(root, 'scripts/prepare-noname-lab.mjs')], (line) =>
+    progress?.pushLog(line),
+  );
+  progress?.update({ step: 3, percent: 78, stageTitle: '正在构建页面与本机服务…' });
   console.log('正在准备页面与快速载入引擎……');
-  await runNode([path.join(root, 'scripts/build.mjs')]);
+  await runNode([path.join(root, 'scripts/build.mjs')], (line) => progress?.pushLog(line));
 }
 
 async function start() {
@@ -177,7 +238,16 @@ async function start() {
     console.log(session.serverUrl);
     return;
   }
+  if (!noBrowser) {
+    const existingProgress = await activeProgressUrl();
+    if (existingProgress) {
+      console.log('启动准备正在进行中，打开可视化进度页。');
+      await openBrowser(existingProgress);
+      return;
+    }
+  }
   const release = await acquireLock();
+  let progress = null;
   try {
     session = await runningSession();
     if (session && session.entryMode !== entryMode)
@@ -187,7 +257,21 @@ async function start() {
     if (!session) {
       if (await runningSession(false))
         throw new Error('旧版本服务仍在运行。请先双击停止，再双击启动以加载新版本。');
-      await prepare();
+      if (!noBrowser) {
+        progress = await startProgressServer({
+          runtimeDir: runtime,
+          version: pkg.version,
+          entryMode,
+        }).catch(() => null);
+        if (progress) await openBrowser(progress.url).catch(() => {});
+      }
+      await prepare(progress);
+      progress?.update({
+        step: 3,
+        percent: 90,
+        stageTitle: '正在启动本机规则服务…',
+        detail: '首次资源校验可能需要几十秒，就绪后自动跳转客厅大屏。',
+      });
       const stdout = openSync(path.join(runtime, 'server.log'), 'a');
       const stderr = openSync(path.join(runtime, 'server-error.log'), 'a');
       const child = spawn(
@@ -228,8 +312,11 @@ async function start() {
             if (startupError) throw startupError;
             if (exited) throw new Error('服务未能启动，请查看 .runtime/server-error.log。');
           },
-          onProgress: (seconds) =>
-            console.log(`仍在启动本机服务（已等待${seconds}秒），首次运行可能较慢……`),
+          onProgress: (seconds) => {
+            const note = `仍在启动本机服务（已等待${seconds}秒），首次运行可能较慢……`;
+            console.log(note);
+            progress?.pushLog(note);
+          },
         });
       } catch (error) {
         // 只清理本次启动器刚创建的进程，绝不按端口杀掉其他服务。
@@ -243,8 +330,20 @@ async function start() {
         : '局域网服务已启动。手机连接同一 Wi-Fi，扫描电脑上的主页二维码。',
     );
     console.log(session.serverUrl);
-    await openBrowser(session.serverUrl);
+    if (progress) {
+      progress.setReady(session.serverUrl);
+      await delay(1800);
+    } else {
+      await openBrowser(session.serverUrl);
+    }
+  } catch (error) {
+    if (progress) {
+      progress.setFailed(error instanceof Error ? error.message : String(error));
+      await delay(3000);
+    }
+    throw error;
   } finally {
+    if (progress) await progress.close().catch(() => {});
     await release();
   }
 }

@@ -15,6 +15,7 @@ import {
 } from '../../../packages/noname-adapter/src/shanhetu.js';
 import type { ShanhetuCampaignCatalog, ShanhetuNode, ShanhetuReward } from './shanhetu-campaign.js';
 import { AppError } from './errors.js';
+import { openingPackage } from './shanhetu-build.js';
 
 export const shanhetuRestartWaitMs = source.restart.waitSeconds * 1000;
 const gatedContent = new Set([
@@ -36,10 +37,19 @@ export function createShanhetuScenario(
   characters: string[],
   unlocked: ReadonlySet<number> = new Set(),
   difficulty = 1,
-  openingTactic: unknown = null,
+  opening: unknown = null,
 ): ShanhetuCampaignCatalog {
   const rules = shanhetuDifficulty(difficulty);
   if (!rules) throw new Error('尚未接入的山河图难度');
+  let openingTactic: unknown = opening;
+  let pack: ReturnType<typeof openingPackage>;
+  if (opening && typeof opening === 'object' && !Array.isArray(opening)) {
+    const selection = opening as Record<string, unknown>;
+    pack = openingPackage(selection.package);
+    if (!pack || Object.keys(selection).some((key) => !['tactic', 'package'].includes(key)))
+      throw new AppError(400, 'INVALID_OPENING_PACKAGE', '请选择已接入的免费出征流派包。');
+    openingTactic = selection.tactic;
+  }
   if (
     openingTactic !== null &&
     (typeof openingTactic !== 'number' || !openingIds.has(openingTactic))
@@ -195,7 +205,12 @@ export function createShanhetuScenario(
           nodes.push({
             ...base,
             name: recruitment.name,
-            description: recruitment.description,
+            description:
+              recruitment.name === '训马有方'
+                ? '集市里的骏马受惊，一名汉子跃上马背将它驯服。他愿随军出征，若备齐良驹，还可担任前锋。'
+                : recruitment.name === '箭落锦袍'
+                  ? '一阵风将锦袍吹上树梢。一名弓手射断细枝，拾袍上前，愿加入军中。你可以为他备齐精英武具。'
+                  : recruitment.description,
             duration: recruitment.duration,
             choices: recruitment.options.map((option) => {
               const companion = option.companionId ? shanhetuCompanion(option.companionId) : null;
@@ -325,6 +340,7 @@ export function createShanhetuScenario(
     entries: [],
     initialCoins: 0,
     initialSkillSlots: 2,
+    ...(pack ? { openingPackageId: pack.id } : {}),
     restartLimit: source.restart.limit,
     candidates,
     heroChoices,

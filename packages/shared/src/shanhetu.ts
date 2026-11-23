@@ -31,6 +31,21 @@ export interface ShanhetuTerrain {
   description: string;
 }
 
+export const shanhetuSynergyNames = {
+  burst: '爆发首杀',
+  draw: '过牌续航',
+  defense: '铁壁防反',
+  ally: '队友协同',
+} as const;
+
+export type ShanhetuSynergyTag = keyof typeof shanhetuSynergyNames;
+
+export const shanhetuOpeningPackages = [
+  { id: 'burst', name: '爆发首杀包', description: '当头一棒 · 随身携带一张杀' },
+  { id: 'draw', name: '过牌续航包', description: '摸牌Ⅰ · 随身携带一张无中生有' },
+  { id: 'defense', name: '铁壁防反包', description: '护甲Ⅰ · 随身携带一张闪' },
+] as const;
+
 export interface ShanhetuFinalReport {
   title: string;
   earnedCoins: number;
@@ -38,6 +53,8 @@ export interface ShanhetuFinalReport {
   strategy: number;
   merit: number;
   trade: number;
+  battleSeconds?: number;
+  victories?: number;
 }
 
 export interface ShanhetuCampaignView {
@@ -56,6 +73,12 @@ export interface ShanhetuCampaignView {
   /** Recruited companion catalog IDs, independent of room seats and battle state. */
   companions: number[];
   initialTactics?: string[];
+  openingPackage?: string;
+  rerollUsed?: boolean;
+  highlight?: {
+    build: string[];
+    battle?: { name: string; defeatedEnemies: number; remainingHp: number; victory: boolean };
+  };
   restartsLeft?: number;
   restartAt?: number;
   bookAward?: ShanhetuExpeditionAward | { pending: true };
@@ -72,21 +95,32 @@ export interface ShanhetuCampaignView {
       | 'choice'
       | 'buy'
       | 'refresh'
+      | 'reroll'
+      | 'forge'
+      | 'recycle'
       | 'leave'
       | 'retry';
     label: string;
     description: string;
     cost: number;
+    refund?: number;
     general?: string;
     group?: string;
     portrait?: string;
     offer?: { kind: 'skill' | 'tactic' | 'card' | 'equipment'; rarity: number };
     replacement?: { name: string; description: string }[];
+    synergyTags?: ShanhetuSynergyTag[];
+    resonance?: string;
+    stackFormula?: string;
+    effectDelta?: string;
+    skills?: { name: string; description: string }[];
+    recruitLabel?: string;
   }[];
   map?: {
     regionId: string;
     name: string;
     bossAt: number;
+    marketClosing?: boolean;
     terrain?: ShanhetuTerrain;
     locations: {
       id: string;
@@ -96,6 +130,9 @@ export interface ShanhetuCampaignView {
       y: number;
       duration: number;
       unlockDay: number;
+      risk?: string;
+      rewardTypes?: string[];
+      terrainEffect?: string;
       status: 'available' | 'completed' | 'locked';
       actionId?: string;
     }[];

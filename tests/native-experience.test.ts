@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { setImmediate as tick } from 'node:timers/promises';
 import type { TestContext } from 'node:test';
-import { ObserverJournal } from '../packages/noname-adapter/src/observer.js';
+import { ObserverJournal, publicCardTemplate } from '../packages/noname-adapter/src/observer.js';
 
 test('触摸确认控件在原生画布建立前不重排，缩放完成后沿用原生重排', async (t) => {
   let updates = 0;
@@ -2111,4 +2111,180 @@ test('HTTP 多帧分开浏览器任务，微任务先完成，重复帧不会执
     'three-microtask',
   ]);
   assert.equal(engine.deliveryAge, 0);
+});
+test('权威记牌按实体去重，亮牌、判定和实际弃置才记牌，暗弃仅计数量', async (t) => {
+  let event: any = { name: 'chooseToMove' };
+  const actor = {
+    kind: 'player',
+    playerid: 'a',
+    nickname: '甲',
+    name: '赵云',
+    isDead: () => false,
+    isLinked: () => false,
+    isTurnedOver: () => false,
+    countCards: () => 4,
+    getCards: () => [],
+    identity: 'nei',
+  };
+  const deck = { childElementCount: 108 };
+  const discardPile = {
+    appendChild(card: any) {
+      card.position = 'd';
+      card.parentNode = this;
+      return card;
+    },
+    insertBefore(card: any) {
+      card.position = 'd';
+      card.parentNode = this;
+      return card;
+    },
+  };
+  const card = (name: string, number = 9) => ({
+    kind: 'card',
+    name,
+    suit: 'heart',
+    number,
+    position: 'o',
+    parentNode: null,
+    get cardid(): never {
+      return assert.fail('不得读取原生卡牌 ID');
+    },
+  });
+  const secret = Object.defineProperty(card('暗牌'), 'name', {
+    get: () => assert.fail('不得读取暗弃或暗区牌面'),
+  });
+  const virtualMaterial = card('shan');
+  const weapon = card('zhuge', 1);
+  const peach = card('tao', 4);
+  const delayed = card('lebu', 6);
+  const wugu = card('wugu', 7);
+  const hiddenShow = card('SECRET_HIDDEN');
+  const status = { over: false };
+  const ui = { cardPile: deck, discardPile, create: { dialog: (title: string) => title } };
+  const nativeOver = (title: string) => {
+    status.over = true;
+    return ui.create.dialog(title);
+  };
+  const lib = {
+    configOL: { gameStarted: true },
+    element: {
+      Client: class {
+        close() {}
+      },
+    },
+    message: { server: {} },
+  };
+  const game = {
+    players: [actor],
+    dead: [],
+    log(..._args: unknown[]) {},
+    over: nativeOver,
+    roundNumber: 2,
+    shuffleNumber: 0,
+  };
+  const window = new EventTarget();
+  const template = publicCardTemplate({
+    id: 'standard108',
+    name: '',
+    packs: ['standard'],
+    excludedCards: [],
+    cardCount: 108,
+  });
+  globals(t, {
+    window,
+    partyEngine: {
+      setup: { seats: [{ id: 'a', nickname: '甲', kind: 'human' }], cardTrackerTemplate: template },
+      proof: { started: true },
+    },
+    nativeFixture: {
+      lib,
+      game,
+      ui,
+      _status: status,
+      get: {
+        event: () => event,
+        position: (value: any) => value.position,
+        itemtype: (value: any) => (Array.isArray(value) ? 'cards' : value?.kind),
+        translation: (value: string | { name: string }) =>
+          typeof value === 'string' ? value : value.name,
+      },
+    },
+  });
+  t.after(() => window.dispatchEvent(new Event('pagehide')));
+  const { installObserver } = await runtime('observer');
+  let state: any;
+  const update = installObserver((value: unknown) => {
+    state = value;
+  });
+  game.log(actor, '获得', secret);
+  const virtual = { kind: 'card', name: 'sha', position: 'o', isViewAsCard: true };
+  event = { name: 'useCard', player: actor, card: virtual, cards: [virtualMaterial] };
+  game.log(actor, '使用了', virtual, '（', [virtualMaterial, virtualMaterial], '）');
+  discardPile.appendChild(virtualMaterial);
+  event = { name: 'respond', player: actor, card: weapon, cards: [weapon] };
+  game.log(actor, '打出了', weapon);
+  event = {
+    name: 'showCards',
+    player: actor,
+    cards: [peach, hiddenShow],
+    hiddenCards: [hiddenShow],
+  };
+  game.log(actor, '展示了', [peach, hiddenShow]);
+  event = { name: 'judge', player: actor, result: { card: delayed } };
+  game.log(actor, '的判定结果为', delayed);
+  event = {
+    name: 'wugu',
+    player: actor,
+    getParent: () => ({ name: 'useCard', card: wugu, wuguShownCards: [wugu] }),
+  };
+  game.log(wugu, '亮出了', [wugu]);
+  event = { name: 'loseToDiscardpile', blank: true, player: actor, cards: [secret] };
+  game.log(actor, '将', [secret], '置入了弃牌堆');
+  discardPile.insertBefore(secret);
+  event = { name: 'lose', visible: true, player: actor, cards: [card('guohe')] };
+  discardPile.appendChild(event.cards[0]);
+  deck.childElementCount = 37;
+  update();
+  const before = state.cardTracker;
+  assert.equal(before.epoch, 1);
+  assert.equal(before.deckCount, 37);
+  assert.equal(before.knownPublicCount, 6);
+  assert.equal(before.unknownDiscards, 1);
+  assert.equal(before.shuffledCount, 0);
+  assert.deepEqual(
+    before.categories.map(({ seen }: { seen: number }) => seen),
+    [0, 1, 1, 0, 0, 0, 1, 1, 0, 0],
+  );
+  assert.deepEqual(
+    before.recentRevealed.map(({ action }: { action: string }) => action),
+    ['use', 'respond', 'show', 'judge', 'show', 'discard'],
+  );
+  assert.deepEqual(
+    before.categories.map(({ templateTotal }: { templateTotal: number }) => templateTotal),
+    [30, 15, 8, 0, 4, 4, 11, 3, 3, 4],
+  );
+  assert(!/cardid|SECRET|暗牌/.test(JSON.stringify(before)));
+  assert.equal(state.players[0].identity, '身份未公开');
+  game.shuffleNumber = 1;
+  deck.childElementCount = 80;
+  for (let index = 0; index < 12; index++) {
+    const shown = card('sha');
+    event = { name: 'showCards', player: actor, cards: [shown] };
+    game.log(actor, '展示了', [shown]);
+  }
+  update();
+  const after = state.cardTracker;
+  assert.equal(after.epoch, 2);
+  assert.equal(after.deckCount, 80);
+  assert.equal(after.shuffledCount, 1);
+  assert.equal(state.recent.at(-1), '已洗牌（本局第 1 次）');
+  assert.equal(after.knownPublicCount, 18);
+  assert.equal(after.recentRevealed.length, 12);
+  assert.equal(after.recentRevealed[0].seq, 7);
+  assert(Buffer.byteLength(JSON.stringify(after)) < 2048);
+  assert.equal(game.over, nativeOver, '原生结算方法需要原样发送给玩家');
+  assert.equal(game.over('平局'), '平局');
+  update();
+  assert.equal(state.settlement.drawn, true);
+  assert.deepEqual(state.settlement.winners, []);
 });

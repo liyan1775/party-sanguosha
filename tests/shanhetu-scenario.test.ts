@@ -109,7 +109,7 @@ test('普通2在相同城市使用原表常规配方，难度只增量应用至�
   assert.equal(ticket.difficulty, 2);
   assert.deepEqual(ticket.hero, { general: 'caocao', group: 'wei', hp: 4, maxHp: 4 });
   assert.throws(() => campaign.bindMatch({ ...ticket, difficulty: 1 }, 'wrong-rules'));
-  assert.throws(() => createShanhetuScenario(['caocao'], undefined, 21));
+  assert.throws(() => createShanhetuScenario(['caocao'], undefined, 26));
 });
 
 test('困难档开启四座原版城池，全场地形与月份按战斗票据冻结', () => {
@@ -525,7 +525,9 @@ test('奇遇展示的战法、技能和牌来自指定品质池，只有领钱�
 test('噩梦五档延续旧路线并按原门槛增加函谷关和崤函道', () => {
   const difficultyIds = [16, 17, 18, 19, 20];
   assert.deepEqual(
-    source.difficulties.slice(15).map((d) => [d.prerequisite, d.albums, d.preserveHp]),
+    source.difficulties
+      .filter((d) => d.tier === 4)
+      .map((d) => [d.prerequisite, d.albums, d.preserveHp]),
     [11, 16, 17, 18, 19].map((p) => [p, 20, true]),
   );
   for (const difficulty of difficultyIds) {
@@ -550,7 +552,84 @@ test('噩梦五档延续旧路线并按原门槛增加函谷关和崤函道', ()
     }
   }
   assert.throws(() => shanhetuRecipe(2687, 15));
-  assert.throws(() => shanhetuRecipe(2640, 21));
+  assert.throws(() => shanhetuRecipe(2640, 26));
+});
+
+test('炼狱五档按噩梦1分支逐档解锁，并应用同季基础、月份和章级属性', () => {
+  const rows = source.difficulties.filter((difficulty) => difficulty.tier === 5);
+  assert.deepEqual(
+    rows.map((d) => [
+      d.id,
+      d.prerequisite,
+      d.preserveHp,
+      d.enemyHp,
+      d.enemyCards,
+      d.enemyDraw,
+      d.enemyExtraSha,
+      d.enemyArmor,
+      d.enemyDamage,
+    ]),
+    [
+      [21, 16, true, 0, 1, 1, 0, 0, 0],
+      [22, 21, true, 0, 2, 2, 0, 1, 0],
+      [23, 22, true, 1, 2, 2, 1, 2, 0],
+      [24, 23, true, 1, 3, 3, 1, 4, 1],
+      [25, 24, true, 2, 4, 3, 1, 6, 1],
+    ],
+  );
+  for (const { id, enemyDamage } of rows) {
+    const catalog = createShanhetuScenario(['caocao'], undefined, id);
+    assert.equal(catalog.regions!.length, 14);
+    assert.equal(catalog.difficulty, id);
+    const [first, second, third] = [1, 2, 3].map(
+      (chapter) => shanhetuRecipe(2632, id, 0, chapter).enemies[0]!,
+    );
+    assert.deepEqual(
+      [first!.extraDamage, second!.extraDamage, third!.extraDamage],
+      [enemyDamage, enemyDamage! + 1, enemyDamage! + 1],
+    );
+    assert.equal(first!.armorRecovery, 2);
+    assert.equal(third!.armorRecovery, 3);
+    assert(shanhetuRecipe(2632, id, 10).enemies[0]!.hp > first!.hp);
+    assert(shanhetuRecipe(2687, id, 16, 3).enemies[0]!.nextForm);
+    assert(shanhetuRecipe(2644, id).enemies[0]!.nextForm?.sourceSkills.includes(14131));
+    assert(shanhetuRecipe(2495, id).enemies[0]!.fixedEquipment?.some((card) => card.id === 20746));
+  }
+});
+
+test('英武壮志和智勇双杰的首领池包含新手和常规配方及预留兵位', () => {
+  for (const [cityId, noviceId, regularId, roles, generalIds] of [
+    [1, 22635, 2635, ['dragon-guard', undefined, 'dragon-guard'], [307, 458, 587]],
+    [10, 22669, 2669, ['spearman', undefined], [415, 484]],
+  ] as const) {
+    const city = source.regions.find(({ id }) => id === cityId)!;
+    assert(city.bossIds.includes(noviceId));
+    assert(city.regularBossIds.includes(regularId));
+    assert(city.hardBossIds.includes(regularId));
+    for (const [id, difficulty] of [
+      [noviceId, 1],
+      [regularId, 2],
+      [regularId, 25],
+    ] as const) {
+      const { enemies } = shanhetuRecipe(id, difficulty);
+      assert.deepEqual(
+        enemies.map(({ generalId }) => generalId),
+        generalIds,
+      );
+      assert.deepEqual(
+        enemies.map(({ reinforcement }) => reinforcement),
+        roles,
+      );
+      assert(enemies.length + 4 + 1 <= 8);
+      assert(enemies.every(({ portrait }) => portrait.startsWith('image/')));
+      assert(
+        enemies
+          .find(({ reinforcement }) => !reinforcement)!
+          .sourceSkills.includes(cityId === 1 ? 14101 : 3190),
+      );
+    }
+    assert.throws(() => shanhetuRecipe(noviceId, 2));
+  }
 });
 
 test('噩梦对既有敌人及同席第二形态叠加第四档配方', () => {

@@ -53,7 +53,9 @@ export function installPublicSummary() {
       if (sequence <= lastSequence) continue;
       if (
         !/进入了?.*阶段/.test(text) &&
-        /使用了|打出了|弃置了|置入了弃牌堆|发动了|判定|展示了|亮出/.test(text)
+        /使用了|打出了|弃置了|置入了弃牌堆|发动了|判定|展示了|亮出|^已洗牌（本局第 \d+ 次）$/.test(
+          text,
+        )
       ) {
         actions.push({ sequence, text });
         if (actions.length > 3) actions.shift();
@@ -64,6 +66,7 @@ export function installPublicSummary() {
       identityCounts: state.identityCounts,
       actions: actions.slice(),
       ...(Number.isSafeInteger(state.deckCount) ? { deckCount: state.deckCount } : {}),
+      ...(state.cardTracker ? { cardTracker: state.cardTracker } : {}),
     };
     const nextKey = JSON.stringify(summary);
     latest = summary;

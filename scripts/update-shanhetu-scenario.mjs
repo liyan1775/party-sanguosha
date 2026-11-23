@@ -35,7 +35,8 @@ const difficulties = data.DifficultySelection.filter(
       (row.bdif === 4 &&
         row.difID >= 16 &&
         row.difID <= 20 &&
-        row.isopentime === '20261015T040000')),
+        row.isopentime === '20261015T040000') ||
+      (row.bdif === 5 && row.difID >= 21 && row.difID <= 25)),
 ).map((row) => ({
   id: row.difID,
   name: row.sdifname,
@@ -50,6 +51,7 @@ const difficulties = data.DifficultySelection.filter(
   enemyExtraSha: row.skill,
   enemyArmor: row.armor,
   enemyArmorRecovery: row.getarmor,
+  ...(row.bdif >= 5 ? { enemyDamage: row.otherad } : {}),
   albums: row.reward2,
 }));
 const chapters = data.Chapter.filter(
@@ -61,18 +63,33 @@ const monthlyGrowth = Object.fromEntries(
     id,
     data.EnemyGrowth.filter((row) => row.diffnum === id).map((row, index) => {
       assert.equal(row.moon, index);
-      assert(!row.hp1 && !row.draw1 && !row.otherad);
-      return [row.hp, Number(row.cardnum), row.draw, row.exshatimes, row.armor, row.getarmor];
+      assert(!row.hp1 && !row.draw1);
+      const stats = [
+        row.hp,
+        Number(row.cardnum),
+        row.draw,
+        row.exshatimes,
+        row.armor,
+        row.getarmor,
+      ];
+      return row.otherad ? [...stats, row.otherad] : stats;
     }),
   ]),
 );
 const chapterGrowth = Object.fromEntries(
-  [1, 2, 3, 4].map((tier) => [
+  [1, 2, 3, 4, 5].map((tier) => [
     tier,
     data.EnemyDiffGrowth.filter((row) => row.diffnum === tier).map((row, index) => {
       assert.equal(row.chap, index + 1);
-      assert(!row.otherad);
-      return [row.hp, row.cardnum, row.draw, row.exshatimes, row.armor ?? 0, row.getarmor ?? 0];
+      const stats = [
+        row.hp,
+        row.cardnum,
+        row.draw,
+        row.exshatimes,
+        row.armor ?? 0,
+        row.getarmor ?? 0,
+      ];
+      return row.otherad ? [...stats, row.otherad] : stats;
     }),
   ]),
 );
@@ -264,7 +281,7 @@ const rewardGroups = [...rewardIds].map((id) => {
 });
 const output = {
   schemaVersion: 1,
-  status: 'internal-normal-through-nightmare-map-integration',
+  status: 'internal-normal-through-inferno-map-integration',
   sourceDecodedSha256: sha,
   scenarioId: 5,
   name: '诸侯伐董',

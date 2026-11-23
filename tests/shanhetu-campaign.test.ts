@@ -6,7 +6,12 @@ import {
   ShanhetuCampaign,
   type ShanhetuCampaignCatalog,
 } from '../apps/server/src/shanhetu-campaign.js';
-import type { ShanhetuBattleSetup } from '../packages/noname-adapter/src/shanhetu.js';
+import {
+  shanhetuRecipe,
+  prepareShanhetuBattle,
+  type ShanhetuBattleSetup,
+} from '../packages/noname-adapter/src/shanhetu.js';
+import { createShanhetuScenario } from '../apps/server/src/shanhetu-scenario.js';
 import type { ShanhetuBattleResult } from '../packages/shared/src/shanhetu.js';
 
 // A small integration fixture, deliberately not advertised as the S5 map.
@@ -468,4 +473,277 @@ test('集市首次免费刷新，后续扣100；购买涨价跨刷新保留，�
     /征程已更新/,
   );
   assert.deepEqual(campaign.view(), before);
+});
+
+test('高难特殊结局逐档验证正负门槛，普通通关仍保留', () => {
+  const stats = { earnedCoins: 0, reputation: 0, strategy: 30, merit: 20, trade: 0 };
+  for (const difficulty of [16, 17, 18, 19, 20]) {
+    assert.equal(finalJourneyReport(difficulty, true, stats, 1_200_000, 0).title, '功成不居');
+    assert.equal(finalJourneyReport(difficulty, true, stats, 1_200_001, 99).title, '大获全胜');
+    assert.equal(
+      finalJourneyReport(difficulty, true, { ...stats, strategy: 29 }, 0).title,
+      '大获全胜',
+    );
+    assert.equal(
+      finalJourneyReport(difficulty, true, { ...stats, reputation: -1 }, 0).title,
+      '大获全胜',
+    );
+    assert.equal(finalJourneyReport(difficulty, false, stats, 0).title, '折戟沉沙');
+  }
+  for (const difficulty of [21, 22, 23, 24, 25]) {
+    assert.equal(finalJourneyReport(difficulty, true, stats, 5_000_000, 10).title, '震古烁今');
+    assert.equal(finalJourneyReport(difficulty, true, stats, 0, 9).title, '大获全胜');
+    assert.equal(
+      finalJourneyReport(difficulty, true, { ...stats, merit: 19 }, 0, 10).title,
+      '大获全胜',
+    );
+    assert.equal(
+      finalJourneyReport(difficulty, true, { ...stats, reputation: -1 }, 0, 10).title,
+      '大获全胜',
+    );
+    assert.equal(finalJourneyReport(difficulty, false, stats, 0, 10).title, '折戟沉沙');
+  }
+});
+
+test('有效计时隔离地图与奖励停留，重开不回退已用时间，战斗高光保留', () => {
+  const route = catalog();
+  route.recordEndings = true;
+  route.restartLimit = 1;
+  route.difficulty = 16;
+  let now = 0;
+  const campaign = new ShanhetuCampaign(route, () => now);
+  now += 9_000_000;
+  const first = choose(campaign, '落单禁军').battle!;
+  campaign.bindMatch(first, 'old');
+  now += 450_000;
+  const replay = campaign.restart('old');
+  now += 100_000; // no bound native battle
+  assert(!campaign.settle('old', victory(first)));
+  campaign.bindMatch(replay, 'new');
+  now += 200_000;
+  assert(campaign.settle('new', victory(replay)));
+  now += 9_000_000;
+  choose(campaign, '摸牌Ⅰ');
+  choose(campaign, '集市');
+  choose(campaign, '离开集市');
+  const last = choose(campaign, '暗夺天子').battle!;
+  campaign.bindMatch(last, 'boss');
+  now += 550_000;
+  assert(
+    campaign.settle('boss', {
+      ...victory(last),
+      defeatedEnemies: shanhetuRecipe(last.battleId, 16, last.elapsedMonths, last.chapter).enemies
+        .length,
+    }),
+  );
+  assert.equal(campaign.view().finalReport?.battleSeconds, 1200);
+  assert.equal(campaign.view().finalReport?.victories, 2);
+  assert.equal(campaign.view().highlight?.battle?.name, '暗夺天子');
+  assert.deepEqual(campaign.view().highlight?.build, ['摸牌Ⅰ']);
+});
+
+test('同规则卡牌和同结果奇遇去重，且花色或属性存在实际差异时保留', () => {
+  const route = catalog();
+  route.rewards = [4138, 4139, 4140, 4141, 4062, 4066].map((id) => ({
+    id: String(id),
+    name: String(id),
+    description: String(id),
+    effects: [{ kind: 'card', amount: id }],
+  }));
+  route.nodes[2]!.products = [];
+  route.nodes[0]!.rewardGroups = [{ count: 3, rewards: route.rewards.map((reward) => reward.id) }];
+  route.nodes[1]!.kind = 'event';
+  route.nodes[1]!.choices = ['a', 'b'].map((id) => ({
+    id,
+    label: '锦囊妙计 · 奇袭',
+    description: '获得奇袭',
+    cost: 0,
+    effects: [{ kind: 'skill', amount: 3021 }],
+  }));
+  const campaign = new ShanhetuCampaign(route);
+  firstWin(campaign);
+  const rewards = campaign.view().actions.filter((action) => action.kind === 'reward');
+  assert.equal(rewards.length, 3);
+  assert.equal(rewards.filter((action) => Number(action.label) >= 4138).length, 1);
+  assert(rewards.some((action) => action.label === '4062'));
+  assert(rewards.some((action) => action.label === '4066'));
+  assert(!campaign.view().actions.some((action) => action.kind === 'reroll'));
+  assert.throws(
+    () =>
+      campaign.act({
+        runId: campaign.view().id,
+        revision: campaign.view().revision,
+        actionId: 'spoofed-reroll',
+      }),
+    /失效/,
+  );
+  assert.equal(campaign.view().coins, 200);
+  choose(campaign, '放弃本次奖励');
+  choose(campaign, '营地');
+  assert.deepEqual(
+    campaign.view().actions.map((action) => action.label),
+    ['锦囊妙计 · 奇袭'],
+  );
+
+  route.nodes[0]!.rewardGroups[0]!.rewards = ['4138', '4139', '4140', '4141'];
+  route.candidates = ['guanyu'];
+  route.heroChoices = [
+    { general: 'guanyu', group: 'shu', name: '关羽', description: '', hp: 4, maxHp: 4 },
+  ];
+  const color = new ShanhetuCampaign(route);
+  choose(color, '关羽');
+  const first = choose(color, '落单禁军').battle!;
+  color.bindMatch(first, 'color');
+  assert(
+    color.settle('color', {
+      ...victory(first),
+      hero: { general: 'guanyu', group: 'shu', hp: 4, maxHp: 4 },
+    }),
+  );
+  const distinct = color.view().actions.filter((action) => action.kind === 'reward');
+  assert.equal(distinct.length, 2);
+  assert(distinct.every((action) => /颜色相关/.test(action.effectDelta ?? '')));
+});
+
+test('战后每组仅能重随一次，保留合法新选项，扣费和组状态可幂等重读', () => {
+  const route = catalog();
+  route.nodes[0]!.rewardGroups = [
+    { count: 2, rewards: ['draw', 'cards', 'skill'] },
+    { count: 2, rewards: ['draw', 'cards', 'skill'] },
+  ];
+  const campaign = new ShanhetuCampaign(route);
+  firstWin(campaign);
+  const shown = campaign
+    .view()
+    .actions.filter(({ kind }) => kind === 'reward')
+    .map(({ label }) => label);
+  const draw = choose(campaign, '重随奖励');
+  const after = campaign.view();
+  assert.equal(after.rerollUsed, true);
+  assert.equal(after.coins, 120);
+  const redrawn = after.actions.filter(({ kind }) => kind === 'reward');
+  assert.equal(redrawn.length, 2);
+  assert(redrawn.some(({ label }) => !shown.includes(label)));
+  assert.equal(campaign.act(draw.input).duplicate, true);
+  assert.deepEqual(campaign.view(), after);
+  assert(!after.actions.some(({ kind }) => kind === 'reroll'));
+  choose(campaign, '放弃本次奖励');
+  assert.equal(campaign.view().rerollUsed, false);
+  choose(campaign, '重随奖励');
+  assert.equal(campaign.view().coins, 40);
+});
+
+test('锻造明确替换Ⅰ为Ⅱ，回收逐份结算、排除赠品、历史收入不含回收', () => {
+  const route = catalog();
+  route.recordEndings = true;
+  route.openingPackageId = 'burst';
+  route.nodes[0]!.coins = 1000;
+  route.nodes[0]!.rewardGroups = [{ count: 1, rewards: ['paid-carry'] }];
+  route.rewards.push(
+    {
+      id: 'paid-carry',
+      name: '战利品',
+      description: '',
+      effects: [
+        { kind: 'card', amount: 4062 },
+        { kind: 'card', amount: 4004 },
+      ],
+    },
+    { id: 'bow', name: '麒麟弓', description: '', effects: [{ kind: 'card', amount: 4008 }] },
+    {
+      id: 'burst2',
+      name: '当头一棒Ⅱ',
+      description: '',
+      effects: [{ kind: 'tactic', amount: 2037 }],
+    },
+  );
+  route.nodes[2]!.products = [
+    { rewardId: 'bow', price: 10 },
+    { rewardId: 'burst2', price: 99 },
+  ];
+  const campaign = new ShanhetuCampaign(route);
+  firstWin(campaign);
+  choose(campaign, '战利品');
+  choose(campaign, '集市');
+  const stack = campaign.view().actions.find(({ label }) => label === '当头一棒Ⅱ');
+  assert.match(stack?.stackFormula ?? '', /当头一棒（\+1）完全叠加 → 每轮首杀伤害 \+3/);
+  assert.match(stack?.resonance ?? '', /爆发首杀.*当头一棒/);
+  const forge = campaign.view().actions.find(({ kind }) => kind === 'forge');
+  assert.match(forge?.stackFormula ?? '', /替换.*\+1 → \+2/);
+  const forged = choose(campaign, '锻造 · 当头一棒Ⅱ');
+  assert.deepEqual(campaign.view().build.tactics, [2037]);
+  assert(campaign.act(forged.input).duplicate);
+  assert.equal(campaign.view().coins, 800);
+  const bow = campaign.view().actions.find(({ label }) => label === '麒麟弓');
+  assert.match(bow?.stackFormula ?? '', /替换青釭剑并回收 \+100/);
+  choose(campaign, '麒麟弓');
+  assert.equal(campaign.view().coins, 890);
+  const recycled = choose(campaign, '回收 · 杀');
+  assert(campaign.act(recycled.input).duplicate);
+  assert.equal(campaign.view().coins, 965);
+  assert.equal(campaign.view().build.cards?.filter((id) => id === 4062).length, 1);
+  assert(!campaign.view().actions.some(({ label }) => label === '回收 · 杀'));
+  choose(campaign, '回收 · 麒麟弓');
+  assert.equal(
+    campaign.view().coins,
+    970,
+    'Low-price item refunds only half the actual purchase price',
+  );
+  choose(campaign, '离开集市');
+  const final = choose(campaign, '暗夺天子').battle!;
+  assert.deepEqual(final.build?.cards, [4062]);
+  campaign.bindMatch(final, 'boss');
+  assert(campaign.settle('boss', victory(final)));
+  assert.equal(campaign.view().finalReport?.earnedCoins, 1000);
+});
+
+test('三个免费开局流派包叠加和光盟，牌和战法通过正式原生校验', () => {
+  for (const [pack, name, tacticId, cardId] of [
+    ['burst', '爆发首杀包', 2036, 4062],
+    ['draw', '过牌续航包', 2059, 4138],
+    ['defense', '铁壁防反包', 2069, 4070],
+  ] as const) {
+    const route = createShanhetuScenario(['caocao'], new Set(), 1, { tactic: 2219, package: pack });
+    const campaign = new ShanhetuCampaign(route);
+    assert.equal(campaign.view().openingPackage, name);
+    assert.equal(campaign.view().companions.length, 1);
+    const hero = campaign.view().actions[0]!;
+    choose(campaign, hero.label);
+    const start = choose(campaign, campaign.view().actions[0]!.label).battle!;
+    assert.deepEqual(start.build?.tactics, [tacticId]);
+    assert.deepEqual(start.build?.cards, [cardId]);
+    assert.equal(
+      prepareShanhetuBattle(
+        {
+          roomCode: 'ABCDEF',
+          ownerPlayerId: 'hero',
+          settings: {
+            mode: 'shanhetu',
+            playerCount: 1,
+            generalPreset: 'beginner',
+            allowGeneralSelection: false,
+            extensions: [],
+          },
+          seats: [{ id: 'hero', nickname: '真人', kind: 'human' }],
+          aiPolicy: 'strongest-native',
+          shanhetu: start,
+        },
+        ['caocao'],
+      ).shanhetu,
+      start,
+    );
+  }
+  assert.throws(
+    () => createShanhetuScenario(['caocao'], new Set(), 1, { tactic: null, package: 'fake' }),
+    /流派包/,
+  );
+  assert.throws(
+    () =>
+      createShanhetuScenario(['caocao'], new Set(), 1, {
+        tactic: null,
+        package: 'draw',
+        cardId: 9999,
+      }),
+    /流派包/,
+  );
 });

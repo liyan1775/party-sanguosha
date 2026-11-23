@@ -24,6 +24,12 @@ test('每种敌军、第二形态及队友都使用原表指定的独立本机�
     shanhetuBattleCompanions({ ...setup().shanhetu!, companionIds: [companion.id] }),
   );
   for (const actor of [...actors, ...allies]) {
+    if (
+      ['huanggai', 'xusheng', 'jiaxu', 'zhangxiu'].some(
+        (name) => actor.portrait === 'image/character/' + name + '.jpg',
+      )
+    )
+      continue;
     const entry = art.portraits.find(
       (p) => p.generalId === actor.generalId && p.names.includes(actor.name),
     );
@@ -88,7 +94,7 @@ test('山河图敌军由固定遭遇生成，不改变报名席位或允许客�
       value.shanhetu!.battleId = 99999;
     },
     (value: MatchSetup) => {
-      value.shanhetu!.difficulty = 21;
+      value.shanhetu!.difficulty = 26;
     },
     (value: MatchSetup) => {
       value.shanhetu!.candidates = ['unapproved'];

@@ -49,6 +49,8 @@ interface ShanhetuNpcBonus {
   draw?: number;
   maxHp?: number;
   startingCards?: number;
+  extraSha?: number;
+  armorRecovery?: number;
   skills?: string[];
   sourceSkills?: number[];
   removeSourceSkills?: number[];
@@ -59,6 +61,8 @@ interface ShanhetuNpcBonus {
 interface ShanhetuNpcForm {
   generalId: number;
   name: string;
+  nativePortrait?: string;
+  reinforcement?: 'dragon-guard' | 'spearman';
   group?: string;
   sex?: string;
   hp: number;
@@ -68,6 +72,7 @@ interface ShanhetuNpcForm {
   draw: number;
   startingCards: number;
   extraSha: number;
+  extraDamage?: number;
   skills: string[];
   sourceSkills: number[];
   fixedEquipment?: ShanhetuNpcEquipment[];
@@ -75,6 +80,7 @@ interface ShanhetuNpcForm {
   medium?: ShanhetuNpcBonus;
   hard?: ShanhetuNpcBonus;
   nightmare?: ShanhetuNpcBonus;
+  inferno?: ShanhetuNpcBonus;
 }
 interface ShanhetuEncounterRecipe {
   id: number;
@@ -87,16 +93,20 @@ interface ShanhetuEncounterRecipe {
     nextForm?: ShanhetuNpcForm & { sourceGroupId: number; difficulties: number[] };
   })[];
 }
-const recipes: ShanhetuEncounterRecipe[] = battles.battles;
+const recipes = battles.battles as ShanhetuEncounterRecipe[];
 const portraitPaths = new Map(
   portraitCatalog.portraits.flatMap(({ generalId, names, sha256 }) =>
     names.map((name) => [`${generalId}/${name}`, `image/shanhetu/${sha256}.png`] as const),
   ),
 );
 
-function withPortrait<T extends { generalId: number; name: string }>(actor: T) {
+function withPortrait<T extends { generalId: number; name: string; nativePortrait?: string }>(
+  actor: T,
+) {
   // OL reuses one general ID for several differently illustrated event NPCs.
-  const portrait = portraitPaths.get(`${actor.generalId}/${actor.name}`);
+  const portrait =
+    portraitPaths.get(`${actor.generalId}/${actor.name}`) ??
+    (actor.nativePortrait && `image/character/${actor.nativePortrait}.jpg`);
   if (!portrait) throw new Error(`缺少${actor.name}的山河图立绘`);
   return { ...actor, portrait };
 }
@@ -252,9 +262,15 @@ export function shanhetuRecipe(battleId: number, difficulty = 1, elapsedMonths =
       form.extraSha += enemySha!;
       form.armor += enemyArmor!;
       if (enemyArmorRecovery) form.armorRecovery = enemyArmorRecovery;
+      if (rules.tier === 5) {
+        form.extraDamage =
+          (rules.enemyDamage ?? 0) + (monthly?.[6] ?? 0) + (chapterStats?.[6] ?? 0);
+      }
       if (rules.tier >= 2 && form.medium) applyNpcBonus(form, form.medium);
       if (rules.tier >= 3 && form.hard) applyNpcBonus(form, form.hard);
       if (rules.tier >= 4 && form.nightmare) applyNpcBonus(form, form.nightmare);
+      if (rules.tier === 5 && form.inferno) applyNpcBonus(form, form.inferno);
+      delete form.inferno;
       delete form.nightmare;
       delete form.medium;
       delete form.hard;
@@ -274,6 +290,8 @@ function applyNpcBonus(form: ShanhetuNpcForm, bonus: ShanhetuNpcBonus) {
   form.draw += bonus.draw ?? 0;
   form.maxHp += bonus.maxHp ?? 0;
   form.startingCards += bonus.startingCards ?? 0;
+  form.extraSha += bonus.extraSha ?? 0;
+  if (bonus.armorRecovery) form.armorRecovery = (form.armorRecovery ?? 0) + bonus.armorRecovery;
   if (bonus.skills) form.skills.push(...bonus.skills);
   if (bonus.sourceSkills) form.sourceSkills.push(...bonus.sourceSkills);
   if (bonus.removeSourceSkills) {
@@ -300,19 +318,25 @@ export function shanhetuDefinitionPacks(): string[] {
 }
 export function shanhetuEquipmentPacks(recipe?: ShanhetuEncounterRecipe): string[] {
   const encounters = recipe ? [recipe] : recipes;
-  const hasBlackArmor = encounters.some((battle) =>
-    battle.enemies.some((enemy) =>
-      [enemy, enemy.nextForm].some((form) =>
-        [
-          ...(form?.fixedEquipment ?? []),
-          ...(form?.medium?.equipment ?? []),
-          ...(form?.hard?.equipment ?? []),
-          ...(form?.nightmare?.equipment ?? []),
-        ].some((card) => card.nativeId === 'heiguangkai'),
+  const equipment = new Set(
+    encounters.flatMap((battle) =>
+      battle.enemies.flatMap((enemy) =>
+        [enemy, enemy.nextForm].flatMap((form) =>
+          [
+            ...(form?.fixedEquipment ?? []),
+            ...(form?.medium?.equipment ?? []),
+            ...(form?.hard?.equipment ?? []),
+            ...(form?.nightmare?.equipment ?? []),
+            ...(form?.inferno?.equipment ?? []),
+          ].map((card) => card.nativeId),
+        ),
       ),
     ),
   );
-  return hasBlackArmor ? ['yingbian'] : [];
+  return [
+    ...(equipment.has('heiguangkai') ? ['yingbian'] : []),
+    ...(equipment.has('huxinjing') ? ['guozhan'] : []),
+  ];
 }
 export function shanhetuCards() {
   return structuredClone(carryCards.cards);

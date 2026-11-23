@@ -18,7 +18,7 @@ test('胜场自动解锁，败北和撤军记录已赢的战斗，重复结算�
   assert.equal(book.view(key).victories, 0);
   assert.deepEqual(
     book.view(key).difficulties.map((rule) => rule.unlocked),
-    [true, ...Array<boolean>(19).fill(false)],
+    [true, ...Array<boolean>(24).fill(false)],
   );
   const oldPool = createShanhetuScenario(['caocao'], book.unlockedForRun(key, 1));
   assert.equal(oldPool.rewards.filter((reward) => reward.id.startsWith('skill-')).length, 12);
@@ -313,4 +313,53 @@ test('第二版山河册从已证胜场补开新内容，未记录的征途不�
     { victories: 1, unlocked: ['淬血Ⅱ'] },
   );
   assert.equal(new ShanhetuBook(directory).view(key).recent[0]!.newUnlocks?.[0], '淬血Ⅱ');
+});
+
+test('schema 1–3 山河册沿用旧战绩并衔接噩梦到炼狱的逐档解锁', async (t) => {
+  const directory = await mkdtemp(join(tmpdir(), 'party-shanhetu-inferno-book-'));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  for (const schemaVersion of [1, 2, 3]) {
+    const key = ShanhetuBook.profileKey('inferno-legacy-' + schemaVersion);
+    const path = join(directory, key + '.json');
+    const old = {
+      runId: 'nightmare-clear',
+      hero: '刘备',
+      difficulty: 16,
+      outcome: 'victory',
+      finishedAt: 100,
+    };
+    const legacy =
+      schemaVersion === 1
+        ? { learned: [], slots: [], receipts: [{ ...old, albums: 20 }] }
+        : {
+            legacySkills: [],
+            receipts: [{ ...old, victories: 8, unlocked: [], ending: '功成不居' }],
+          };
+    await writeFile(
+      path,
+      JSON.stringify({ schemaVersion, scenarioId: 5, profile: { revision: 1, ...legacy } }),
+    );
+    const book = new ShanhetuBook(directory);
+    assert.equal(book.view(key).recent[0]?.difficulty, 16);
+    assert.equal(book.view(key).victories, schemaVersion === 1 ? 3 : 8);
+    assert(book.unlockedForRun(key, 21));
+    assert.throws(() => book.unlockedForRun(key, 22), /炼狱1/);
+    for (let difficulty = 21; difficulty <= 25; difficulty++) {
+      assert(book.unlockedForRun(key, difficulty));
+      if (difficulty < 25) assert.throws(() => book.unlockedForRun(key, difficulty + 1));
+      book.record(key, {
+        runId: 'inferno-' + difficulty,
+        hero: '刘备',
+        difficulty,
+        outcome: 'victory',
+        ending: '震古烁今',
+        victories: 10,
+      });
+    }
+    const restored = new ShanhetuBook(directory).view(key);
+    assert.equal(restored.victories, schemaVersion === 1 ? 53 : 58);
+    assert(restored.difficulties.filter(({ id }) => id >= 21).every(({ unlocked }) => unlocked));
+    assert.equal(restored.recent[0]?.ending, '震古烁今');
+    assert.equal(JSON.parse(await readFile(path, 'utf8')).schemaVersion, 3);
+  }
 });

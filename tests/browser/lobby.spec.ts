@@ -445,7 +445,12 @@ test('新版主页在手机与电脑可入座，筛选随房间更新，轮询�
         );
       }
       await home.emulateMedia({ reducedMotion: 'reduce' });
+      await expect(home.locator('html')).toHaveAttribute('data-motion', 'full');
+      await home.locator('#motion-toggle').click();
+      await expect(home.locator('html')).toHaveAttribute('data-motion', 'reduced');
       await expect(home.locator('#create-button')).toHaveCSS('transition-duration', '0s');
+      await home.locator('#motion-toggle').click();
+      await expect(home.locator('html')).toHaveAttribute('data-motion', 'full');
       await home.setViewportSize({ width: 390, height: 844 });
       await home.getByRole('button', { name: '可加入', exact: true }).click();
       await expect(home.locator('#room-list li')).toHaveCount(1);

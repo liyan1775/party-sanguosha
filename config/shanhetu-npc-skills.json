@@ -1357,6 +1357,139 @@
       "name": "卫戍",
       "description": "锁定技，你于摸牌阶段外非因本技能摸牌后，你令一名角色摸一张牌；你的牌于弃牌阶段外因弃置置入弃牌堆后，你弃置一名其他角色一张牌。",
       "implementation": "native-yingbian"
+    },
+    {
+      "id": 14109,
+      "nativeId": "party_shanhetu_ly_14109",
+      "name": "苦肉",
+      "description": "出牌阶段限三次，你可以失去1点体力，然后回复1点体力",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 14101,
+      "nativeId": "party_shanhetu_ly_14101",
+      "name": "龙卫",
+      "description": "出牌阶段限一次，召唤1个随从，若有随从已阵亡，则改为将其复活，并令其摸牌至5",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 14112,
+      "nativeId": "party_shanhetu_ly_14112",
+      "name": "破军",
+      "description": "当你使用【杀】指定目标后，你可以将其所有手牌移出游戏直到回合结束。你使用的【杀】对手牌区与装备区内牌数皆小于等于你的角色造成的伤害+1。",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 830,
+      "nativeId": "drlt_xiongluan",
+      "name": "雄乱",
+      "description": "限定技，出牌阶段，你可以指定一名其他角色并废除你的判定区和装备区，然后你本回合对其使用牌无距离和次数限制，其本回合不能使用和打出手牌。",
+      "implementation": "native-shenhua"
+    },
+    {
+      "id": 9019,
+      "nativeId": "rewansha",
+      "name": "完杀",
+      "description": "锁定技，在你的回合内：只有你和处于濒死状态的角色才能使用【桃】；任意角色的濒死结算中，除你和濒死角色外的其他角色的非锁定技失效。",
+      "implementation": "native-refresh"
+    },
+    {
+      "id": 3190,
+      "nativeId": "reluanwu",
+      "name": "乱武",
+      "description": "限定技，出牌阶段，你可以令所有其他角色依次选择一项：\n 1.对其距离最小的另一名角色使用一张【杀】；\n 2.失去1点体力。\n所有角色结算完毕后，你可以视为使用一张无距离限制的【杀】。",
+      "implementation": "native-refresh"
+    },
+    {
+      "id": 3189,
+      "nativeId": "reweimu",
+      "name": "帷幕",
+      "description": "锁定技，你不能成为黑色锦囊牌的目标。你防止回合内受到的伤害并摸所防止伤害值两倍数量的牌。",
+      "implementation": "native-refresh"
+    },
+    {
+      "id": 231,
+      "nativeId": "naman",
+      "name": "纳蛮",
+      "description": "当其他角色打出的【杀】置入弃牌堆后，你可以获得之。",
+      "implementation": "native-sp"
+    },
+    {
+      "id": 406,
+      "nativeId": "zhichi",
+      "name": "智迟",
+      "description": "锁定技，当你于回合外受到伤害后，本回合【杀】和普通锦囊牌对你无效。",
+      "implementation": "native-yijiang"
+    },
+    {
+      "id": 14131,
+      "nativeId": "party_shanhetu_ly_14131",
+      "name": "神戟",
+      "description": "你出牌阶段使用【杀】无次数限制，且可以多指定两个目标。",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 14132,
+      "nativeId": "party_shanhetu_ly_14132",
+      "name": "神躯",
+      "description": "每名角色的准备阶段，若你的手牌数小于等于体力上限，你可以摸X张牌。（X为你的当前体力上限）当你受到伤害后，你可以使用一张【桃】。",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 14071,
+      "nativeId": "party_shanhetu_ly_14071",
+      "name": "噬魂",
+      "description": "当你使用【杀】造成伤害后，你随机获得目标一个非锁定技能；",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 14052,
+      "nativeId": "party_shanhetu_ly_14052",
+      "name": "惶恐",
+      "description": "锁定技，摸牌阶段你的摸牌量翻倍，弃牌阶段你的弃牌量翻倍；",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 1238,
+      "nativeId": "xinfu_dianhu",
+      "name": "点虎",
+      "description": "锁定技，游戏开始时，你指定一名其他角色，在本局中，当你或队友对其造成1点伤害后，你摸一张牌。",
+      "implementation": "native-sp2"
+    },
+    {
+      "id": 354,
+      "nativeId": "party_shanhetu_ly_354",
+      "name": "神躯",
+      "description": "每名角色的准备阶段，若你的手牌数小于等于体力上限，你可以摸两张牌。当你受到伤害后，你可以使用一张【桃】。",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 3150,
+      "nativeId": "party_shanhetu_ly_3150",
+      "name": "膂力",
+      "description": "每回合限一次，当你造成伤害后，你可以将手牌摸至与体力值相同或将体力回复至与手牌数相同。",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 14062,
+      "nativeId": "party_shanhetu_ly_14062",
+      "name": "魍魉",
+      "description": "你拥有三种状态（初始为赤），发动此技能后切换至下一状态（循环）。赤：你造成伤害后，你令此伤害翻倍；黄：你受到伤害后，你回复等值体力；青：你成为其他角色使用牌的目标时，弃置其一半手牌",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 14057,
+      "nativeId": "party_shanhetu_ly_14057",
+      "name": "琼木",
+      "description": "锁定技，每名角色的回合开始时，你的下列属性之一获得+1（体力值、体力上限、手牌上限）",
+      "implementation": "scenario-specific"
+    },
+    {
+      "id": 3379,
+      "nativeId": "party_shanhetu_ly_3379",
+      "name": "蓄力",
+      "description": "锁定技，游戏每进行4轮，你造成的伤害+1（可无限增强）",
+      "implementation": "scenario-specific"
     }
   ]
 }

@@ -64,6 +64,7 @@ test('公开摘要维持三条动作、同序号去重和刷新恢复，不能�
   const state = {
     players: [],
     deckCount: 73,
+    cardTracker: { epoch: 2, deckCount: 73, shuffledCount: 1 },
     recent: [
       '甲使用了杀',
       '乙进入摸牌阶段',
@@ -81,6 +82,7 @@ test('公开摘要维持三条动作、同序号去重和刷新恢复，不能�
     [3, 4, 5],
   );
   assert.deepEqual(summary.identityCounts, { zhu: 1, zhong: 2, fan: 4, nei: 1 });
+  assert.deepEqual(summary.cardTracker, state.cardTracker);
   engine.publishPublicSummary(state);
   assert.equal(sent.length, 1);
   const client = { id: 'actor' };
@@ -89,6 +91,8 @@ test('公开摘要维持三条动作、同序号去重和刷新恢复，不能�
   player.ws = client;
   native.lib.message.server.reinited.call(client);
   assert.deepEqual(sent[1], summary);
+  engine.publishPublicSummary({ ...state, logStart: 7, recent: ['已洗牌（本局第 1 次）'] });
+  assert.equal((sent[2] as typeof summary).actions.at(-1).text, '已洗牌（本局第 1 次）');
 });
 
 test('观察者身份数字白名单不透传额外字段，非法数字拒绝，其他模式不接收身份分布', () => {

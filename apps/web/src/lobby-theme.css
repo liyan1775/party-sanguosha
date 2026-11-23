@@ -1624,13 +1624,11 @@ dialog .button[data-busy='true']::after {
     gap: 16px;
   }
 }
-@media (prefers-reduced-motion: reduce) {
-  #app:not(.in-match) .button[data-busy='true']::after,
-  dialog .button[data-busy='true']::after {
-    animation: none;
-  }
-  #app:not(.in-match) .button,
-  dialog .button {
-    transition: none;
-  }
+html[data-motion='reduced'] #app:not(.in-match) .button[data-busy='true']::after,
+html[data-motion='reduced'] dialog .button[data-busy='true']::after {
+  animation: none;
+}
+html[data-motion='reduced'] #app:not(.in-match) .button,
+html[data-motion='reduced'] dialog .button {
+  transition: none;
 }

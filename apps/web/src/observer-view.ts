@@ -163,6 +163,52 @@ export function renderObserver(
     heading.textContent += ` · 剩余身份：主 ${counts.zhu} 忠 ${counts.zhong} 反 ${counts.fan} 内 ${counts.nei}`;
     heading.title = '按开局身份人数减去已公开的阵亡身份，不显示在场玩家的隐藏身份';
   }
+  const spotlightText = [...state.recent]
+    .reverse()
+    .find((line) =>
+      /造成.*点.*伤害|阵亡|发动了|使用了【(南蛮入侵|万箭齐发|桃园结义|决斗|过河拆桥|顺手牵羊|火攻|杀|雷杀|火杀)】/.test(
+        line,
+      ),
+    );
+  let spotlight: HTMLElement | null = null;
+  if (spotlightText) {
+    spotlight = document.createElement('div');
+    spotlight.className = 'observer-spotlight';
+    const badge = document.createElement('span');
+    badge.className = 'observer-spotlight-tag';
+    badge.textContent = '实况高光';
+    const copy = document.createElement('strong');
+    copy.textContent = spotlightText;
+    spotlight.append(badge, copy);
+  }
+  let trackerBox: HTMLElement | null = null;
+  if (state.cardTracker) {
+    const ct = state.cardTracker;
+    trackerBox = document.createElement('section');
+    trackerBox.className = 'observer-tracker';
+    trackerBox.setAttribute('aria-label', '公开记牌统计');
+    const title = document.createElement('div');
+    title.className = 'observer-tracker-head';
+    const strong = document.createElement('strong');
+    strong.textContent = `公开记牌 · ${ct.pileName}`;
+    const meta = document.createElement('span');
+    meta.textContent = `牌堆余 ${ct.deckCount} 张 · 已公开 ${ct.knownPublicCount} 张${ct.shuffledCount > 0 ? ` · 已洗牌 ${ct.shuffledCount} 次` : ''}${ct.unknownDiscards > 0 ? ` · 暗弃 ${ct.unknownDiscards}` : ''}`;
+    title.append(strong, meta);
+    const grid = document.createElement('div');
+    grid.className = 'observer-tracker-grid';
+    for (const cat of ct.categories) {
+      const cell = document.createElement('div');
+      cell.className = 'observer-tracker-cell';
+      const label = document.createElement('span');
+      label.textContent = cat.label;
+      const count = document.createElement('b');
+      count.textContent =
+        cat.templateTotal > 0 ? `${cat.seen}/${cat.templateTotal}` : String(cat.seen);
+      cell.append(label, count);
+      grid.append(cell);
+    }
+    trackerBox.append(title, grid);
+  }
   const board = document.createElement('div');
   board.className = 'observer-board';
   for (const player of state.players) {
@@ -227,6 +273,11 @@ export function renderObserver(
       : document.createElement('section');
   log.className = 'observer-log';
   log.dataset.matchId = matchId ?? '';
-  target.append(heading, board, log);
+  const children: HTMLElement[] = [heading];
+  if (spotlight) children.push(spotlight);
+  children.push(board);
+  if (trackerBox) children.push(trackerBox);
+  children.push(log);
+  target.append(...children);
   renderLog(log, view, state.logStart === undefined ? undefined : load, false, scroll);
 }

@@ -1,6 +1,16 @@
 import { APP_VERSION, type ApiError } from '../../../packages/shared/src/contracts.js';
+import {
+  ZIBAI_ICONS,
+  getZibaiMotion,
+  getZibaiTheme,
+  initZibaiTheme,
+  onZibaiPreferenceChange,
+  toggleZibaiMotion,
+  toggleZibaiTheme,
+} from './zibai-theme.js';
 
 export const app = document.querySelector<HTMLElement>('#app')!;
+initZibaiTheme();
 
 function requestDeadline(parent: AbortSignal | undefined, milliseconds: number) {
   const controller = new AbortController();
@@ -51,6 +61,8 @@ export async function api<T>(
   }
 }
 
+let unsubscribeTheme: (() => void) | null = null;
+
 export function frame(
   layout: string,
   eyebrow: string,
@@ -59,16 +71,34 @@ export function frame(
   body: string,
   artwork = '',
 ): void {
+  unsubscribeTheme?.();
   app.className = layout;
   app.innerHTML = `
+    <div class="zibai-backdrop" aria-hidden="true"><div class="zibai-backdrop-art day"></div><div class="zibai-backdrop-art night"></div><div class="zibai-backdrop-veil"></div></div>
     <a class="skip-link" href="#lobby-content">跳到主要内容</a>
-    <header class="masthead"><a class="brand" href="/" aria-label="聚会三国杀首页"><span class="seal">杀</span><span>聚会三国杀<small>以牌会友 · 尽兴而归</small></span></a><nav class="masthead-nav" aria-label="大厅导航"><a href="/" ${layout.includes('home-layout') ? 'aria-current="page"' : ''}>聚会大厅</a>${layout.includes('home-layout') ? '<a href="#lobby-guide">玩法与武将</a>' : ''}</nav><span id="connection" class="connection" role="status">正在连接</span></header>
-    <section class="page-hero"><div class="intro"><p class="eyebrow">${eyebrow}</p><h1>${title}</h1><p>${subtitle}</p></div>${artwork}</section>
+    <header class="masthead"><a class="brand" href="/" aria-label="聚会三国杀首页"><span class="seal">杀</span><span>聚会三国杀<small>兹白双境 · 一码入席</small></span></a><nav class="masthead-nav" aria-label="大厅导航"><a href="/" ${layout.includes('home-layout') ? 'aria-current="page"' : ''}>聚会大厅</a>${layout.includes('home-layout') ? '<a href="#lobby-guide">玩法与武将</a>' : ''}</nav><div class="masthead-prefs" role="group" aria-label="显示偏好"><button id="theme-toggle" class="pref-token" type="button" title="切换白衣素绡明境 / 月魄玄泉暗境"></button><button id="motion-toggle" class="pref-token" type="button" title="切换满血光影动效 / 精简动效"></button></div><span id="connection" class="connection" role="status">正在连接</span></header>
+    <section class="page-hero"><div class="intro"><p class="eyebrow">${ZIBAI_ICONS.star}<span>${eyebrow}</span></p><h1>${title}</h1><p>${subtitle}</p></div>${artwork}</section>
     <div id="lobby-content" tabindex="-1">
     <div id="message" class="message" role="alert" hidden></div>
     ${body}
     </div>
     <footer><span>一桌朋友，一场好戏。</span><span>聚会三国杀 v${APP_VERSION} · 扫码开房 · AI 补位 · 手机对局</span></footer>`;
+  const themeBtn = element<HTMLButtonElement>('#theme-toggle');
+  const motionBtn = element<HTMLButtonElement>('#motion-toggle');
+  const paintPrefs = (theme = getZibaiTheme(), motion = getZibaiMotion()) => {
+    themeBtn.innerHTML = `${theme === 'day' ? ZIBAI_ICONS.sun : ZIBAI_ICONS.moon}<span>${theme === 'day' ? '素绡' : '玄泉'}</span>`;
+    themeBtn.setAttribute('aria-pressed', String(theme === 'night'));
+    motionBtn.innerHTML = `${ZIBAI_ICONS.spark}<span>${motion === 'full' ? '满血' : '精简'}</span>`;
+    motionBtn.setAttribute('aria-pressed', String(motion === 'reduced'));
+  };
+  paintPrefs();
+  themeBtn.addEventListener('click', () => {
+    toggleZibaiTheme();
+  });
+  motionBtn.addEventListener('click', () => {
+    toggleZibaiMotion();
+  });
+  unsubscribeTheme = onZibaiPreferenceChange(({ theme, motion }) => paintPrefs(theme, motion));
 }
 
 export function message(text: string, success = false): void {

@@ -21,6 +21,8 @@ import {
   type DoudizhuPrivateState,
   type CollegeSeriesView,
   type ResolvedCustomRoster,
+  type PublicMatchSummary,
+  type QUICK_PLAY_PRESETS,
 } from '../../../packages/shared/src/contracts.js';
 import { AppError } from './errors.js';
 import { ShanhetuCampaign } from './shanhetu-campaign.js';
@@ -75,9 +77,13 @@ export class RoomStore {
   private campaignAward: ShanhetuCampaignView['bookAward'];
   private campaignRestartAt: number | undefined;
   private readonly scoredMatches = new Set<string>();
+  private readonly returnedPlayerIds = new Set<string>();
+  private lastMatchSummary: PublicMatchSummary | undefined;
 
   constructor(
-    private readonly engine: EngineAdapter,
+    private readonly engine: EngineAdapter & {
+      completedSummary?(roomCode: string, matchId?: string): PublicMatchSummary | undefined;
+    },
     private readonly catalog: ExtensionInfo[] = [],
     private readonly resolveRoster?: (id: string, revision: number) => ResolvedCustomRoster,
   ) {}
@@ -105,6 +111,8 @@ export class RoomStore {
             this.phase = this.phase === 'playing' ? 'finished' : 'waiting';
             this.resetReady();
           } else {
+            const summary = this.engine.completedSummary?.(this.code, event.matchId);
+            this.lastMatchSummary = summary && structuredClone(summary);
             this.phase = 'finished';
             if (this.campaign) {
               const id = event.matchId ?? this.engine.matchId?.(this.code);
@@ -137,6 +145,10 @@ export class RoomStore {
       engine: this.engine.status(),
       ...(this.matchFailure ? { matchFailure: { ...this.matchFailure } } : {}),
       ...(this.matchRecovery ? { matchRecovery: { ...this.matchRecovery } } : {}),
+      ...(this.phase === 'finished' ? { returnedPlayerIds: [...this.returnedPlayerIds] } : {}),
+      ...(this.lastMatchSummary
+        ? { lastMatchSummary: structuredClone(this.lastMatchSummary) }
+        : {}),
       ...(this.preparation ? { doudizhu: this.preparation.publicState() } : {}),
       ...(this.series ? { series: structuredClone(this.series) } : {}),
       ...(this.campaign
@@ -203,6 +215,7 @@ export class RoomStore {
     const player = this.human(token);
     if (!player) throw new AppError(401, 'PLAYER_REQUIRED', '请先加入房间。');
     this.players.delete(player.id);
+    this.returnedPlayerIds.delete(player.id);
     if (player.id === this.ownerId) {
       // 显式离开才交接房主；短暂断线或刷新保留原房主身份。
       const humans = [...this.players.values()].filter((seat) => seat.kind === 'human');
@@ -266,7 +279,13 @@ export class RoomStore {
       throw new AppError(400, 'INVALID_BOT_COUNT', '请选择要添加的 AI 数量。');
     if (this.players.size + (count as number) > this.settings.playerCount)
       throw new AppError(409, 'ROOM_FULL', '空位不足，请减少 AI 数量或调整总人数。');
-    for (let index = 0; index < (count as number); index++) {
+    this.insertBots(count as number);
+    this.resetReady();
+    this.changed();
+  }
+
+  private insertBots(count: number): void {
+    for (let index = 0; index < count; index++) {
       const bot: Bot = {
         id: randomUUID(),
         nickname: `AI ${String(++this.botSequence).padStart(2, '0')}`,
@@ -276,6 +295,40 @@ export class RoomStore {
       };
       this.players.set(bot.id, bot);
     }
+  }
+
+  canSwitchPreset(token: string): boolean {
+    return (
+      this.phase === 'waiting' &&
+      (!this.campaign || ['won', 'lost'].includes(this.campaign.view().phase)) &&
+      (!this.series || this.series.finished) &&
+      this.human(token)?.id === this.ownerId &&
+      [...this.players.values()].filter((player) => player.kind === 'human').length === 1
+    );
+  }
+
+  applyPreset(
+    preset: (typeof QUICK_PLAY_PRESETS)[keyof typeof QUICK_PLAY_PRESETS],
+    nickname: string,
+    fillBots: boolean,
+    token: string,
+  ): void {
+    const owner = this.human(token);
+    if (!owner || !this.canSwitchPreset(token))
+      throw new AppError(409, 'ROOM_LOCKED', '当前房间不能切换快捷场景。');
+    if (preset.mode === 'shanhetu' && !this.engine.status().shanhetu)
+      throw new AppError(503, 'SHANHETU_NOT_SUPPORTED', '电脑服务尚未开放山河图。');
+    const { botCount, ...settings } = preset;
+    this.settings = { ...settings, extensions: [], allowGeneralSelection: false };
+    this.customRoster = undefined;
+    this.series = undefined;
+    this.campaign = undefined;
+    this.campaignBook = undefined;
+    this.campaignAward = undefined;
+    owner.nickname = nickname;
+    owner.general = null;
+    for (const [id, player] of this.players) if (player.kind === 'bot') this.players.delete(id);
+    this.insertBots(fillBots ? settings.playerCount - 1 : botCount);
     this.resetReady();
     this.changed();
   }
@@ -593,6 +646,8 @@ export class RoomStore {
       if (generation !== this.startGeneration)
         throw new AppError(409, 'MATCH_CANCELLED', '电脑控制台已结束这次开局。');
       if (this.phase === 'starting') {
+        this.lastMatchSummary = undefined;
+        this.returnedPlayerIds.clear();
         this.phase = 'playing';
         if (setup.shanhetu) this.campaignRestartAt = Date.now() + shanhetuRestartWaitMs;
       }
@@ -845,6 +900,8 @@ export class RoomStore {
     this.phase = 'closed';
     this.ownerId = null;
     this.players.clear();
+    this.returnedPlayerIds.clear();
+    this.lastMatchSummary = undefined;
     this.matchFailure = undefined;
     this.matchRecovery = undefined;
     this.engine.release?.(this.code);
@@ -856,6 +913,16 @@ export class RoomStore {
     if (this.phase !== 'finished')
       throw new AppError(409, 'MATCH_NOT_FINISHED', '请等这一局结束后再返回房间。');
     this.resetMatch(!!this.campaign);
+    this.changed();
+  }
+
+  confirmReturn(token?: string): void {
+    const player = this.human(token);
+    if (!player) throw new AppError(401, 'PLAYER_REQUIRED', '请先加入本房间。');
+    if (this.phase !== 'finished')
+      throw new AppError(409, 'MATCH_NOT_FINISHED', '请等这一局结束后再确认回房。');
+    if (this.returnedPlayerIds.has(player.id)) return;
+    this.returnedPlayerIds.add(player.id);
     this.changed();
   }
 
@@ -998,6 +1065,7 @@ export class RoomStore {
       this.campaignAward = undefined;
     }
     this.phase = 'waiting';
+    this.returnedPlayerIds.clear();
     this.betweenMatchesSince = Date.now();
     this.matchFailure = undefined;
     this.matchRecovery = undefined;

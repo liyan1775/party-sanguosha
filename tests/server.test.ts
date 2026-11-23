@@ -3,6 +3,13 @@ import assert from 'node:assert/strict';
 import { createPartyServer } from '../apps/server/src/server.js';
 import { fileURLToPath } from 'node:url';
 import type { TestContext } from 'node:test';
+import type {
+  EngineAdapter,
+  EngineEvent,
+  MatchSetup,
+} from '../packages/noname-adapter/src/index.js';
+import { completedPublicMatch, sanitizeObserver } from '../packages/noname-adapter/src/observer.js';
+import type { PublicMatchSummary } from '../packages/shared/src/contracts.js';
 
 test('HTTP：入座前建立浏览器会话，并发建房只占一间，离房后的迟到响应不清空新席位身份', async (t) => {
   const { party, base, request, create } = await fixture(t);
@@ -119,11 +126,12 @@ test('HTTP：转交和离线接任逐次验证本房会话，旧房主和过期�
   assert.equal(room.session(memberCookie.slice('party_player='.length))?.id, member.playerId);
 });
 
-async function fixture(t: TestContext) {
+async function fixture(t: TestContext, adapter?: EngineAdapter) {
   const party = createPartyServer({
     port: 0,
     webRoot: fileURLToPath(new URL('../apps/web/', import.meta.url)),
     publicUrl: 'http://192.168.1.100:3000',
+    ...(adapter ? { adapter } : {}),
   });
   await new Promise<void>((resolve) => party.server.listen(0, '127.0.0.1', resolve));
   t.after(async () => {
@@ -151,6 +159,245 @@ async function fixture(t: TestContext) {
   };
   return { party, base, request, create };
 }
+
+test('HTTP 快捷开桌只发布完整预设，原会话并发重试只建一次，复用与冲突保留原房号', async (t) => {
+  const adapter: EngineAdapter = {
+    status: () => ({ id: 'noname', ready: true, message: '', shanhetu: true }),
+    async start() {},
+  };
+  const { party, request } = await fixture(t, adapter);
+  const cookie = (await request('/api/me')).headers.get('set-cookie')!.split(';')[0]!;
+  const notices: ReturnType<typeof party.lobby.list>[] = [];
+  t.after(party.lobby.subscribe((rooms) => notices.push(rooms)));
+  const quick = (presetId: string, requestId: string, fillBots = false, session = cookie) =>
+    request(
+      '/api/rooms/preset',
+      'POST',
+      { nickname: '快捷房主', presetId, requestId, fillBots },
+      session,
+    );
+  const raced = await Promise.all([
+    quick('doudizhu-3', 'once', true),
+    quick('doudizhu-3', 'once', true),
+  ]);
+  assert.deepEqual(raced.map((response) => response.status).sort(), [200, 201]);
+  const [first, second] = await Promise.all(raced.map((response) => response.json()));
+  assert.equal(first.room.code, second.room.code);
+  assert.equal(first.playerId, second.playerId);
+  assert.deepEqual(notices, [
+    [
+      {
+        code: first.room.code,
+        ownerNickname: '快捷房主',
+        mode: 'doudizhu',
+        playerCount: 3,
+        humanCount: 1,
+        botCount: 2,
+        phase: 'waiting',
+      },
+    ],
+  ]);
+  assert.deepEqual(await (await request('/api/events?transport=poll')).json(), notices[0]);
+  const solo = await quick('shanhetu-solo', 'solo', true);
+  assert.equal(solo.status, 200);
+  const switched = await solo.json();
+  assert.equal(switched.room.code, first.room.code);
+  assert.equal(switched.playerId, first.playerId);
+  assert.equal(switched.room.settings.mode, 'shanhetu');
+  assert.equal(switched.room.players.length, 1);
+  const college = await (await quick('college-4', 'college')).json();
+  assert.equal(college.room.settings.collegeFormat, 'quick');
+  assert.equal(college.room.settings.generalPreset, 'ol-college-2026');
+  assert.equal((await quick('constructor', 'bad')).status, 400);
+  const retry = await (await quick('doudizhu-3', 'once', true)).json();
+  assert.equal(retry.room.settings.mode, 'college', '迟到重试不会重新应用之前的设置');
+  const path = `/api/rooms/${first.room.code}`;
+  const friend = await request(`${path}/players`, 'POST', { nickname: '朋友' });
+  assert.equal(friend.status, 201);
+  const friendCookie = friend.headers.get('set-cookie')!.split(';')[0]!;
+  for (const session of [cookie, friendCookie]) {
+    const conflict = await quick('identity-6', 'busy', true, session);
+    assert.equal(conflict.status, 409);
+    assert.equal((await conflict.json()).error.roomCode, first.room.code);
+  }
+  assert.equal(party.lobby.list()[0]!.humanCount, 2);
+  assert.equal(party.lobby.list()[0]!.mode, 'college');
+  assert.equal((await request('/api/rooms', 'POST', { nickname: '快捷房主' }, cookie)).status, 409);
+});
+
+test('HTTP 快捷山河图不可用时，大厅和原房间均保持原状', async (t) => {
+  const { party, request, create } = await fixture(t);
+  const body = { nickname: '旅人', presetId: 'shanhetu-solo', requestId: 'restricted' };
+  const notices: unknown[] = [];
+  t.after(party.lobby.subscribe((rooms) => notices.push(rooms)));
+  assert.equal((await request('/api/rooms/preset', 'POST', body)).status, 503);
+  assert.deepEqual(notices, []);
+  assert.deepEqual(party.lobby.list(), []);
+  const owner = await create('房主');
+  assert.equal((await request('/api/rooms/preset', 'POST', body, owner.cookie)).status, 503);
+  assert.equal(notices.length, 1);
+  assert.equal(party.lobby.list()[0]!.mode, 'identity');
+  assert.equal(party.lobby.list()[0]!.ownerNickname, '房主');
+});
+
+test('HTTP 回房确认严格按房间入座授权，公开摘要在回房后保留至下一局', async (t) => {
+  let setup: MatchSetup | undefined;
+  let matchId: string | null = null;
+  let summary: PublicMatchSummary | undefined;
+  let sequence = 0;
+  const listeners = new Set<(event: EngineEvent) => void>();
+  const adapter: EngineAdapter & { completedSummary(): PublicMatchSummary | undefined } = {
+    status: () => ({ id: 'noname', ready: true, message: '' }),
+    async start(value) {
+      setup = value;
+      matchId = `match-${++sequence}`;
+    },
+    matchId: () => matchId,
+    subscribe(listener) {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+    release() {
+      matchId = null;
+      summary = undefined;
+    },
+    completedSummary: () => summary,
+  };
+  const { party, request, create } = await fixture(t, adapter);
+  const owner = await create('甲');
+  const outsider = await create('外桌');
+  const path = `/api/rooms/${owner.data.room.code}`;
+  const configure = await request(
+    path,
+    'PUT',
+    {
+      mode: 'duel',
+      playerCount: 2,
+      generalPreset: 'beginner',
+      extensions: [],
+    },
+    owner.cookie,
+  );
+  assert.equal(configure.status, 200);
+  const joined = await request(`${path}/players`, 'POST', { nickname: '乙' });
+  const friendCookie = joined.headers.get('set-cookie')!.split(';')[0]!;
+  const friend = await joined.json();
+  const room = party.lobby.get(owner.data.room.code);
+  for (const cookie of [owner.cookie, friendCookie]) t.after(room.connect(cookie.split('=')[1]));
+  const start = async () => {
+    for (const cookie of [owner.cookie, friendCookie])
+      assert.equal((await request(`${path}/me/ready`, 'PUT', { ready: true }, cookie)).status, 200);
+    assert.equal((await request(`${path}/start`, 'POST', undefined, owner.cookie)).status, 200);
+  };
+  const confirm = (cookie: string) => request(`${path}/return-confirm`, 'POST', undefined, cookie);
+  assert.equal((await confirm(friendCookie)).status, 409);
+  await start();
+  const busy = await request(
+    '/api/rooms/preset',
+    'POST',
+    { nickname: '甲', presetId: 'versus-2v2' },
+    owner.cookie,
+  );
+  assert.equal(busy.status, 409);
+  assert.equal((await busy.json()).error.roomCode, room.code);
+  assert.equal((await confirm(friendCookie)).status, 409);
+  const observer = sanitizeObserver(
+    {
+      ended: true,
+      round: 3,
+      recent: ['SECRET_LOG'],
+      deck: 'SECRET_DECK',
+      players: [
+        {
+          id: owner.data.playerId,
+          general: '赵云',
+          identity: '身份未公开',
+          hand: 'SECRET_HAND',
+          hiddenIdentity: 'SECRET_ROLE',
+        },
+        { id: friend.playerId, general: '关羽', identity: '反贼', dead: true },
+      ],
+    },
+    setup!,
+  );
+  summary = completedPublicMatch(
+    observer,
+    {
+      wins: ['SECRET'],
+      winners: [owner.data.playerId],
+      firstKill: owner.data.playerId,
+      players: [
+        { playerId: owner.data.playerId, kills: 1, damageDealt: 2, invite: 'SECRET_INVITE' },
+      ],
+      highlights: [
+        {
+          kind: 'kill',
+          actor: owner.data.playerId,
+          target: friend.playerId,
+          amount: 1,
+          text: 'SECRET',
+        },
+      ],
+    },
+    setup!,
+    matchId!,
+    100,
+  );
+  for (const emit of listeners) emit({ type: 'ended', roomCode: room.code, matchId: matchId! });
+  assert.deepEqual(room.snapshot().returnedPlayerIds, []);
+  for (const cookie of ['', outsider.cookie]) assert.equal((await confirm(cookie)).status, 401);
+  assert.equal(
+    (
+      await request(
+        `/api/rooms/${outsider.data.room.code}/return-confirm`,
+        'POST',
+        undefined,
+        friendCookie,
+      )
+    ).status,
+    401,
+  );
+  const marked = await (await confirm(friendCookie)).json();
+  assert.deepEqual(marked.returnedPlayerIds, [friend.playerId]);
+  assert.equal((await (await confirm(friendCookie)).json()).revision, marked.revision);
+  assert.equal((await request(`${path}/rematch`, 'POST', undefined, friendCookie)).status, 403);
+  const consolePage = await request('/server');
+  const consoleCookie = consolePage.headers.get('set-cookie')!.split(';')[0]!;
+  const rematch = await request(`${path}/rematch`, 'POST', undefined, owner.cookie);
+  assert.equal(rematch.status, 200);
+  const waiting = await rematch.json();
+  assert.equal(waiting.phase, 'waiting');
+  assert.equal(waiting.returnedPlayerIds, undefined);
+  assert.equal(waiting.matchId, null);
+  assert.deepEqual(waiting.lastMatchSummary, marked.lastMatchSummary);
+  assert.deepEqual(waiting.lastMatchSummary.highlights, ['甲击杀乙']);
+  assert.equal(waiting.lastMatchSummary.players[0].identityLabel, undefined);
+  assert.equal(waiting.lastMatchSummary.players[1].identityLabel, '反贼');
+  assert(!/SECRET|https?:/.test(JSON.stringify(waiting.lastMatchSummary)));
+  const consoleResponse = await request('/api/console', 'GET', undefined, consoleCookie);
+  assert.equal(consoleResponse.status, 200);
+  const detail = (await consoleResponse.json()).rooms.find(
+    (entry: { room: { code: string } }) => entry.room.code === room.code,
+  );
+  assert.deepEqual(detail.room.lastMatchSummary, waiting.lastMatchSummary);
+  await start();
+  assert.equal(room.snapshot().lastMatchSummary, undefined);
+});
+
+test('HTTP 同源白名单提供两张兹白 WebP，不开放任意素材路径', async (t) => {
+  const { request } = await fixture(t);
+  for (const name of ['day', 'night']) {
+    const url = `/assets/zibai-${name}.webp`;
+    const head = await request(url, 'HEAD');
+    assert.equal(head.status, 200);
+    assert.equal(head.headers.get('content-type'), 'image/webp');
+    assert.equal(head.headers.get('cross-origin-resource-policy'), 'same-origin');
+    assert.equal(head.headers.get('cache-control'), 'public, max-age=3600');
+    const file = Buffer.from(await (await request(url)).arrayBuffer());
+    assert.equal(file.toString('ascii', 8, 12), 'WEBP');
+  }
+  assert.equal((await request('/assets/zibai-other.webp')).status, 404);
+});
 
 test('HTTP：玩家创建房间、房主参赛、跨房间权限隔离与 AI 管理', async (t) => {
   const { party, request, create } = await fixture(t);

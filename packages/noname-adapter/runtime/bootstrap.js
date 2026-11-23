@@ -363,8 +363,21 @@ try {
   clearInterval(progressTimer);
   resourceObserver.disconnect();
   loading.hidden = true;
-  if (role === 'player')
+  if (role === 'player') {
+    window.addEventListener('message', (event) => {
+      if (
+        event.origin !== location.origin ||
+        event.source !== parent ||
+        event.data?.matchId !== id ||
+        event.data?.type !== 'party-theme'
+      )
+        return;
+      document.documentElement.dataset.theme = event.data.theme === 'night' ? 'night' : 'day';
+      document.documentElement.dataset.motion =
+        event.data.motion === 'reduced' ? 'reduced' : 'full';
+    });
     parent.postMessage({ type: 'party-connected', matchId: id }, location.origin);
+  }
 } catch (error) {
   fail(error);
   console.error(error);

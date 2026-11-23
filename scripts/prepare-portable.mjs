@@ -26,7 +26,10 @@ try {
   const portraits = await readFile(resolve(root, 'dist/engine/portraits/manifest.json'), 'utf8')
     .then(JSON.parse)
     .catch(() => null);
-  if (manifest?.commit !== portable.commit || portraits?.commit !== portable.commit) {
+  const coreEntry = await readFile(resolve(root, 'dist/engine/core/noname.js'))
+    .then(() => true)
+    .catch(() => false);
+  if (!coreEntry || manifest?.commit !== portable.commit || portraits?.commit !== portable.commit) {
     console.log('资源已备齐，正在准备本机规则引擎和手机武将图……');
     await buildNativeEngine(root);
     await buildNativePortraits(root);

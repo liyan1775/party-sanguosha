@@ -12,11 +12,17 @@ import {
   type EngineStatus,
   type MatchFailureCode,
   type ObserverState,
+  type PublicMatchSummary,
   type PlayerNetwork,
   type SurrenderState,
   type ResolvedCustomRoster,
 } from '../../shared/src/contracts.js';
-import { ObserverJournal, sanitizeObserver } from './observer.js';
+import {
+  completedPublicMatch,
+  ObserverJournal,
+  publicCardTemplate,
+  sanitizeObserver,
+} from './observer.js';
 import { EngineAssets } from './assets.js';
 import { isLocalRequest, parseUpgradeUrl } from './access.js';
 import { PollChannel } from './poll-channel.js';
@@ -65,6 +71,8 @@ type Match = {
   }[];
   pendingPlayerBytes: number;
   observer: ObserverState | null;
+  cardTrackerTemplate: ReturnType<typeof publicCardTemplate>;
+  completedSummary?: PublicMatchSummary | undefined;
   journal: ObserverJournal;
   networks: Map<string, PlayerNetwork>;
   surrenderStates: Map<string, { state: SurrenderState; at: number }>;
@@ -559,6 +567,7 @@ export class NativeNonameService implements EngineAdapter {
         pendingPlayers: [],
         pendingPlayerBytes: 0,
         observer: null,
+        cardTrackerTemplate: publicCardTemplate(preset.cardPile),
         journal: new ObserverJournal(),
         networks: new Map(),
         surrenderStates: new Map(),
@@ -645,6 +654,13 @@ export class NativeNonameService implements EngineAdapter {
   observe(roomCode: string) {
     const match = [...this.matches.values()].find((item) => item.setup.roomCode === roomCode);
     return { observer: match?.observer ?? null, networks: [...(match?.networks.values() ?? [])] };
+  }
+  completedSummary(roomCode: string, matchId?: string) {
+    const id = matchId ?? this.matchId(roomCode);
+    const match = id ? this.matches.get(id) : undefined;
+    return match?.setup.roomCode === roomCode && match.state === 'ended'
+      ? match.completedSummary
+      : undefined;
   }
   observerLog(roomCode: string, matchId: string, before?: number) {
     const match = this.matches.get(matchId);
@@ -978,11 +994,20 @@ export class NativeNonameService implements EngineAdapter {
               } else if (message.type === 'close' && message.id)
                 match.players.get(message.id)?.close();
               else if (message.type === 'observer') {
-                match.observer = sanitizeObserver(
-                  (message as unknown as { state: unknown }).state,
-                  match.setup,
-                );
-                if (match.observer) match.journal.append(match.observer);
+                const { state } = message as unknown as { state: { settlement?: unknown } };
+                const observer = sanitizeObserver(state, match.setup, match.cardTrackerTemplate);
+                if (observer) {
+                  match.observer = observer;
+                  match.journal.append(observer);
+                  if (observer.ended && match.state === 'playing')
+                    match.completedSummary = completedPublicMatch(
+                      observer,
+                      state.settlement,
+                      match.setup,
+                      match.id,
+                      Date.now(),
+                    );
+                }
               } else if (message.type === 'surrender-state') {
                 const payload = message as unknown as { memberId: string; state: SurrenderState };
                 if (
@@ -1012,11 +1037,20 @@ export class NativeNonameService implements EngineAdapter {
                 }
                 match.state = 'ended';
                 const value = (message as unknown as { winner: unknown }).winner;
+                const winner = value === 'landlord' || value === 'farmers' ? value : null;
+                const summary = match.completedSummary;
+                if (summary && summary.winnerLabel !== '平局') {
+                  if (shanhetu)
+                    summary.winnerLabel =
+                      shanhetu.outcome === 'victory' ? '出征方获胜' : '守军获胜';
+                  else if (winner)
+                    summary.winnerLabel = winner === 'landlord' ? '地主获胜' : '农民获胜';
+                }
                 this.emit({
                   type: 'ended',
                   roomCode: match.setup.roomCode,
                   matchId: match.id,
-                  winner: value === 'landlord' || value === 'farmers' ? value : null,
+                  winner,
                   ...(shanhetu ? { shanhetu } : {}),
                 });
               } else if (message.type === 'failed') this.fail(match);
@@ -1864,6 +1898,7 @@ export class NativeNonameService implements EngineAdapter {
             choicePrompts: true,
             assetBase: `/engine/core/${this.assetVersion}/`,
             preset: match.preset,
+            ...(worker ? { cardTrackerTemplate: match.cardTrackerTemplate } : {}),
             portraitAliases: Object.fromEntries(
               Object.entries(assets.portraitAliases ?? {}).filter(([name]) =>
                 portraitNames.has(name),

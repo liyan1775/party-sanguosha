@@ -289,11 +289,11 @@ test('山河图HTTP只接受本房会话和当前席位；电脑／访客／跨�
   );
   const room = party.lobby.get(owner.data.room.code);
   room.connect(owner.cookie.slice('party_player='.length));
-  for (const invalid of [null, '2', 21])
+  for (const invalid of [null, '2', 26])
     assert.equal((await request('/start', { difficulty: invalid })).status, 400);
   for (const openingTactic of ['2219', 3225, [2219, 2138]])
     assert.equal((await request('/start', { openingTactic })).status, 400);
-  for (const difficulty of [2, 6, 11]) {
+  for (const difficulty of [2, 6, 11, 21, 25]) {
     const locked = await request('/start', { difficulty, outcome: 'victory' });
     assert.equal(locked.status, 409);
     assert.equal((await locked.json()).error.code, 'DIFFICULTY_LOCKED');

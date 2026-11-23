@@ -19,6 +19,9 @@ await build({
   sourcemap: false,
 });
 await copyFile(path.join(root, 'apps/web/index.html'), path.join(output, 'index.html'));
+await mkdir(path.join(output, 'assets'), { recursive: true });
+for (const name of ['zibai-day.webp', 'zibai-night.webp'])
+  await copyFile(path.join(root, 'apps/web/assets', name), path.join(output, 'assets', name));
 for (const name of ['pass', 'encounter', 'market', 'camp']) {
   await copyFile(
     path.join(root, `apps/web/assets/shanhetu/${name}.webp`),
@@ -26,11 +29,11 @@ for (const name of ['pass', 'encounter', 'market', 'camp']) {
   );
 }
 await build({
-  entryPoints: [path.join(root, 'apps/web/src/lobby-theme.css')],
+  entryPoints: [path.join(root, 'apps/web/src/zibai-v1.css')],
   outfile: path.join(output, 'style.css'),
   bundle: true,
   target: ['chrome91', 'safari16.4'],
-  external: ['/assets/shanhetu-*.webp'],
+  external: ['/assets/shanhetu-*.webp', '/assets/zibai-*.webp'],
 });
 await build({
   entryPoints: [path.join(root, 'apps/web/src/table-client.ts')],

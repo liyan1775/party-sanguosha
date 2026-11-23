@@ -123,26 +123,7 @@ export function installNightmareRoadSkills(recordUse) {
     firstDo: true,
     async content(event, trigger, player) {
       recordUse('party_shanhetu_nm_3382');
-      const use = trigger.getParent('useCard', true);
-      if (use) use.all_excluded = true;
-      const action = trigger.getParent('phaseUse', true);
-      if (action) action.skipped = true;
-      const phase = trigger.getParent('phase', true);
-      if (phase) {
-        // The pinned engine's phase tail performs phaseEnd/phaseAfter and drops temporary skills.
-        phase.num = phase.phaseList.length;
-        phase.goto(11);
-      }
-      const takeover = player.insertPhase('party_shanhetu_nm_3382', false);
-      const queue = phase?.parent?.next;
-      const currentIndex = queue?.indexOf(phase) ?? -1;
-      const insertedIndex = queue?.indexOf(takeover) ?? -1;
-      // waitNext shifts the still-queued current phase when it completes.
-      // Schedule the takeover immediately after that phase, before other queued turns.
-      if (currentIndex >= 0 && insertedIndex > currentIndex + 1) {
-        queue.splice(insertedIndex, 1);
-        queue.splice(currentIndex + 1, 0, takeover);
-      }
+      takeoverShanhetuTurn(trigger, player);
     },
   };
   lib.skill[chuanyun] = {
@@ -390,4 +371,27 @@ export function installNightmareRoadSkills(recordUse) {
     },
   };
   lib.translate[cannon] = '铁炮';
+}
+
+export function takeoverShanhetuTurn(trigger, player) {
+  const use = trigger.getParent('useCard', true);
+  if (use) use.all_excluded = true;
+  const action = trigger.getParent('phaseUse', true);
+  if (action) action.skipped = true;
+  const phase = trigger.getParent('phase', true);
+  if (phase) {
+    // The pinned engine's phase tail performs phaseEnd/phaseAfter and drops temporary skills.
+    phase.num = phase.phaseList.length;
+    phase.goto(11);
+  }
+  const takeover = player.insertPhase('party_shanhetu_nm_3382', false);
+  const queue = phase?.parent?.next;
+  const currentIndex = queue?.indexOf(phase) ?? -1;
+  const insertedIndex = queue?.indexOf(takeover) ?? -1;
+  // waitNext shifts the still-queued current phase when it completes.
+  // Schedule the takeover immediately after that phase, before other queued turns.
+  if (currentIndex >= 0 && insertedIndex > currentIndex + 1) {
+    queue.splice(insertedIndex, 1);
+    queue.splice(currentIndex + 1, 0, takeover);
+  }
 }

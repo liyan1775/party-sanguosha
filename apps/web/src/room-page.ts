@@ -32,6 +32,8 @@ import { bindGeneralGuide, guideButton } from './general-guide.js';
 import { createAssetPreloader } from './engine-preloader.js';
 import { createLanConnection } from './lan-client.js';
 import { modeIcon, roomArtwork } from './lobby-art.js';
+import { onZibaiPreferenceChange, syncThemeToFrame } from './zibai-theme.js';
+import { openPosterDialog } from './party-poster.js';
 import { renderRosterSource } from './roster-source.js';
 import { bindSurrenderDialog } from './surrender-dialog.js';
 import { bindMatchRecords } from './match-records.js';
@@ -139,6 +141,22 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
     <dialog id="share-dialog" aria-labelledby="share-title"><div class="panel-heading"><h2 id="share-title">扫码直接进入本房间</h2><button id="close-share" class="close-dialog" type="button" aria-label="关闭房间二维码">×</button></div><p class="room-code">房间 <strong>${room.code}</strong></p>${qrMarkup('本房间邀请二维码', '微信扫一扫 · 直接进入这张牌桌')}</dialog>`,
     roomArtwork,
   );
+  const unsubTheme = onZibaiPreferenceChange(() => {
+    syncThemeToFrame(document.querySelector<HTMLIFrameElement>('#game-frame'), matchId);
+  });
+  window.addEventListener('pagehide', unsubTheme, { once: true });
+
+  const lastPosterBtn = document.createElement('button');
+  lastPosterBtn.id = 'room-last-poster';
+  lastPosterBtn.type = 'button';
+  lastPosterBtn.className = 'button secondary full-width';
+  lastPosterBtn.textContent = '查看上局战绩海报';
+  lastPosterBtn.hidden = true;
+  lastPosterBtn.addEventListener('click', () => {
+    if (room.lastMatchSummary) openPosterDialog(room.lastMatchSummary, room.code);
+  });
+  element('#share-button').after(lastPosterBtn);
+
   const doudizhuPanel = bindDoudizhuPanel(roomPath, roomApi);
   const collegeEnd = document.createElement('button');
   collegeEnd.id = 'college-end';
@@ -362,6 +380,12 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
     element('#game-frame-mount').classList.remove('connection-blocked');
     const frame = document.querySelector<HTMLIFrameElement>('#game-frame');
     if (frame) frame.inert = false;
+    // Never keep the mid-screen "你正在托管" overlay blocking settlement once finished.
+    if (room.phase === 'finished') {
+      connectionNotice.hidden = true;
+      refresh();
+      return;
+    }
     if (auto)
       showConnectionNotice(
         '你正在托管',
@@ -610,10 +634,14 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
         element('#match-volume-value').textContent = event.data.volume + '%';
       }
     }
-    if (event.data.type === 'party-settlement-ready' && frame) notifyFinished(frame);
+    if (event.data.type === 'party-settlement-ready' && frame) {
+      notifyFinished(frame);
+      if (!connectionNotice.classList.contains('blocking')) connectionNotice.hidden = true;
+    }
     if (event.data.type === 'party-connected') {
       element('#match-loading').hidden = true;
       if (!room.engine.connectionRecovery) confirmConnection();
+      if (frame) syncThemeToFrame(frame, matchId);
       if (frame && room.settings.mode === 'shanhetu') notifyFinished(frame);
       refresh();
     }
@@ -874,6 +902,7 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
       clearTimeout(noticeTimer);
     }
     if (inMatch && room.phase === 'finished' && !room.matchFailure) {
+      if (!connectionNotice.classList.contains('blocking')) connectionNotice.hidden = true;
       const frame = document.querySelector<HTMLIFrameElement>('#game-frame');
       if (frame) notifyFinished(frame);
     }
@@ -1004,15 +1033,21 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
     element('#owner-status').textContent = roomOwner
       ? `房主：${roomOwner.nickname}${roomOwner.online ? '' : ' · 暂时离线，等待重新连接'}`
       : '房间已关闭';
+    const returnedIds = new Set(room.returnedPlayerIds ?? []);
+    const returnedHumans = humans.filter((player) => returnedIds.has(player.id));
+    const pendingHumans = humans.filter((player) => player.online && !player.ready);
     element('#waiting-text').textContent = waiting
       ? shanhetuMode
         ? '可独自出征。'
-        : `${readyHumans} / ${humans.length} 位真人已准备，${empty} 个空位；AI 自动准备。`
+        : `${readyHumans} / ${humans.length} 位真人已准备，${empty} 个空位；AI 自动准备。${pendingHumans.length > 0 && room.lastMatchSummary ? ` 待准备：${pendingHumans.map((p) => p.nickname).join('、')}。` : ''}`
       : room.phase === 'closed'
         ? '这张牌桌已散，返回主页可以另开一局。'
         : room.phase === 'finished'
-          ? '本局已结束，等待房主回房准备下一局。'
+          ? returnedHumans.length > 0
+            ? `本局已结束：${returnedHumans.map((p) => p.nickname).join('、')} 已回房，正等房主${roomOwner ? `（${roomOwner.nickname}）` : ''}点回房准备下一局。`
+            : `本局已结束，等待房主${roomOwner ? `（${roomOwner.nickname}）` : ''}回房准备下一局。`
           : '对局正在启动或进行中，房间设置已锁定。';
+    lastPosterBtn.hidden = Boolean(shanhetuMode || !room.lastMatchSummary || !me);
 
     element('#join-form').hidden =
       Boolean(me) || Boolean(session.roomCode && session.roomCode !== room.code) || !waiting;
@@ -1328,7 +1363,11 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
       else {
         returnedMatchId = room.matchId;
         if (returnedMatchId) sessionStorage.setItem(returnedMatchKey, returnedMatchId);
-        refresh();
+        try {
+          renderRoom(await roomApi<RoomView>(`${roomPath}/return-confirm`, 'POST', {}));
+        } catch {
+          refresh();
+        }
       }
     } finally {
       returning = false;

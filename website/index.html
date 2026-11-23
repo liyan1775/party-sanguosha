@@ -1,0 +1,1690 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: GPL-3.0-only -->
+<html lang="zh-CN" data-theme="day" data-motion="full">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>聚会三国杀 v1.0 · 一码入席，把三国搬进客厅</title>
+    <meta
+      name="description"
+      content="一台电脑双击秒开，手机扫码即玩六大三国杀完整玩法与重造肉鸽《山河图·诸侯伐董》。零安装、零注册、免费开源。"
+    />
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      :root {
+        --f-serif: 'Songti SC', 'Noto Serif SC', 'STSong', 'Source Han Serif SC', Georgia, serif;
+        --f-sans:
+          -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei UI', sans-serif;
+        --f-mono: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+        --ease: cubic-bezier(0.22, 1, 0.36, 1);
+        --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+      }
+
+      /* 兹白 · 白衣素绡（明境默认） */
+      html[data-theme='day'] {
+        --bg: #f1f5f4;
+        --bg-soft: #e6eeec;
+        --surface: rgba(255, 254, 249, 0.88);
+        --surface-strong: #fffefb;
+        --surface-jade: rgba(31, 116, 102, 0.08);
+        --ink: #132430;
+        --ink-2: #415968;
+        --ink-3: #6c818e;
+        --gold: #b88b35;
+        --gold-hi: #e2c276;
+        --gold-line: rgba(184, 139, 53, 0.48);
+        --gold-hair: rgba(184, 139, 53, 0.22);
+        --jade: #1f7d72;
+        --jade-deep: #114c45;
+        --jade-glow: rgba(42, 157, 144, 0.26);
+        --cinnabar: #c73c32;
+        --cinnabar-soft: rgba(199, 60, 50, 0.12);
+        --shade: rgba(16, 46, 56, 0.16);
+        --hero-veil: linear-gradient(
+          92deg,
+          rgba(245, 249, 249, 0.9) 0%,
+          rgba(245, 249, 249, 0.64) 44%,
+          rgba(245, 249, 249, 0.1) 74%,
+          rgba(241, 245, 244, 0.36) 100%
+        );
+        --table-surface: radial-gradient(ellipse at 50% 45%, #edf5f1 0%, #dae8e3 64%, #cbddd7 100%);
+      }
+
+      /* 兹白 · 月魄玄泉（暗境） */
+      html[data-theme='night'] {
+        --bg: #081017;
+        --bg-soft: #0e1a24;
+        --surface: rgba(15, 28, 38, 0.86);
+        --surface-strong: #12212d;
+        --surface-jade: rgba(102, 212, 198, 0.11);
+        --ink: #f0f6f7;
+        --ink-2: #aec4cf;
+        --ink-3: #718b9b;
+        --gold: #dfc078;
+        --gold-hi: #f5df9e;
+        --gold-line: rgba(223, 192, 120, 0.44);
+        --gold-hair: rgba(223, 192, 120, 0.2);
+        --jade: #5cc9bc;
+        --jade-deep: #196b63;
+        --jade-glow: rgba(92, 201, 188, 0.3);
+        --cinnabar: #e25347;
+        --cinnabar-soft: rgba(226, 83, 71, 0.18);
+        --shade: rgba(0, 6, 12, 0.62);
+        --hero-veil: linear-gradient(
+          92deg,
+          rgba(7, 14, 21, 0.9) 0%,
+          rgba(7, 14, 21, 0.6) 44%,
+          rgba(7, 14, 21, 0.14) 76%,
+          rgba(7, 14, 21, 0.44) 100%
+        );
+        --table-surface: radial-gradient(ellipse at 50% 45%, #19353c 0%, #0e2028 65%, #081319 100%);
+      }
+
+      html[data-motion='reduced'] *,
+      html[data-motion='reduced'] *::before,
+      html[data-motion='reduced'] *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        font-family: var(--f-sans);
+        background: var(--bg);
+        color: var(--ink);
+        line-height: 1.65;
+        overflow-x: hidden;
+        transition:
+          background 380ms var(--ease),
+          color 380ms var(--ease);
+      }
+
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      /* 八角玉金切角容器 */
+      .jade-frame {
+        position: relative;
+        background: var(--surface);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid var(--gold-line);
+        clip-path: polygon(
+          12px 0,
+          calc(100% - 12px) 0,
+          100% 12px,
+          100% calc(100% - 12px),
+          calc(100% - 12px) 100%,
+          12px 100%,
+          0 calc(100% - 12px),
+          0 12px
+        );
+        box-shadow: 0 18px 46px -14px var(--shade);
+      }
+
+      .jade-frame::after {
+        content: '';
+        position: absolute;
+        inset: 4px;
+        border: 1px solid var(--gold-hair);
+        clip-path: polygon(
+          9px 0,
+          calc(100% - 9px) 0,
+          100% 9px,
+          100% calc(100% - 9px),
+          calc(100% - 9px) 100%,
+          9px 100%,
+          0 calc(100% - 9px),
+          0 9px
+        );
+        pointer-events: none;
+      }
+
+      /* 顶部悬浮玉佩导航栏 */
+      .topbar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 80;
+        padding: 12px 28px;
+        background: linear-gradient(180deg, var(--surface) 0%, transparent 100%);
+        transition:
+          background 300ms var(--ease),
+          border-color 300ms;
+      }
+
+      .topbar.scrolled {
+        background: var(--surface);
+        backdrop-filter: blur(18px);
+        border-bottom: 1px solid var(--gold-hair);
+      }
+
+      .topbar-inner {
+        max-width: 1280px;
+        margin: 0 auto;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+      }
+
+      .brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 11px;
+      }
+
+      .seal-square {
+        width: 34px;
+        height: 34px;
+        background: var(--cinnabar);
+        color: #fff6ea;
+        font-family: var(--f-serif);
+        font-size: 18px;
+        font-weight: 900;
+        display: grid;
+        place-items: center;
+        border: 1.5px solid rgba(255, 232, 194, 0.65);
+        box-shadow: 0 6px 18px var(--cinnabar-soft);
+        position: relative;
+        flex-shrink: 0;
+      }
+
+      .seal-square::after {
+        content: '';
+        position: absolute;
+        inset: 3px;
+        border: 1px solid rgba(255, 240, 212, 0.45);
+      }
+
+      .brand-name {
+        font-family: var(--f-serif);
+        font-size: 18px;
+        font-weight: 900;
+        letter-spacing: 0.1em;
+      }
+
+      .nav-links {
+        display: flex;
+        align-items: center;
+        gap: 24px;
+        font-size: 13.5px;
+        font-weight: 600;
+        color: var(--ink-2);
+      }
+
+      .nav-links a:hover {
+        color: var(--jade);
+      }
+
+      .nav-tools {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .tool-pill {
+        appearance: none;
+        min-height: 38px;
+        padding: 0 14px;
+        border: 1px solid var(--gold-line);
+        background: var(--surface-strong);
+        color: var(--ink);
+        font: 600 12.5px/1 var(--f-sans);
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        clip-path: polygon(
+          7px 0,
+          calc(100% - 7px) 0,
+          100% 7px,
+          100% calc(100% - 7px),
+          calc(100% - 7px) 100%,
+          7px 100%,
+          0 calc(100% - 7px),
+          0 7px
+        );
+        transition: all 200ms var(--ease);
+      }
+
+      .tool-pill:hover {
+        border-color: var(--jade);
+        transform: translateY(-1px);
+      }
+
+      /* 按钮系统（桌面与手机触控友好，最低 46px 高） */
+      .btn-jade,
+      .btn-gold {
+        appearance: none;
+        min-height: 48px;
+        padding: 0 26px;
+        font-family: var(--f-serif);
+        font-size: 15.5px;
+        font-weight: 800;
+        letter-spacing: 0.12em;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 9px;
+        clip-path: polygon(
+          10px 0,
+          calc(100% - 10px) 0,
+          100% 10px,
+          100% calc(100% - 10px),
+          calc(100% - 10px) 100%,
+          10px 100%,
+          0 calc(100% - 10px),
+          0 10px
+        );
+        transition:
+          transform 220ms var(--spring),
+          box-shadow 220ms var(--ease),
+          filter 200ms;
+      }
+
+      .btn-jade {
+        background: linear-gradient(168deg, var(--jade) 0%, var(--jade-deep) 100%);
+        color: #fffaf0;
+        border: 1.5px solid var(--gold-hi);
+        box-shadow: 0 12px 28px -8px var(--jade-glow);
+      }
+
+      .btn-jade:hover {
+        transform: translateY(-2px);
+        filter: brightness(1.07);
+      }
+
+      .btn-gold {
+        background: var(--surface-strong);
+        color: var(--ink);
+        border: 1.5px solid var(--gold-line);
+      }
+
+      .btn-gold:hover {
+        border-color: var(--gold);
+        transform: translateY(-2px);
+      }
+
+      /* =========================================================================
+         1. 首屏：3 秒动态云海仙亭开屏大戏
+         ========================================================================= */
+      .hero {
+        position: relative;
+        min-height: 92vh;
+        display: flex;
+        align-items: center;
+        padding: 108px 28px 68px;
+        overflow: hidden;
+      }
+
+      .hero-bg {
+        position: absolute;
+        inset: 0;
+        background-size: cover;
+        background-position: 62% center;
+        transition:
+          opacity 520ms var(--ease),
+          transform 900ms var(--ease);
+        animation: heroDrift 18s ease-in-out infinite alternate;
+      }
+
+      .hero-bg.day-art {
+        background-image: url('./assets/zibai-day.webp');
+        opacity: 1;
+      }
+
+      .hero-bg.night-art {
+        background-image: url('./assets/zibai-night.webp');
+        opacity: 0;
+      }
+
+      html[data-theme='night'] .hero-bg.day-art {
+        opacity: 0;
+      }
+
+      html[data-theme='night'] .hero-bg.night-art {
+        opacity: 1;
+      }
+
+      @keyframes heroDrift {
+        from {
+          transform: scale(1.02) translate3d(0, 0, 0);
+        }
+        to {
+          transform: scale(1.07) translate3d(-1.4%, -0.8%, 0);
+        }
+      }
+
+      .hero-veil {
+        position: absolute;
+        inset: 0;
+        background: var(--hero-veil);
+      }
+
+      .hero-beam {
+        position: absolute;
+        inset: -20%;
+        background: radial-gradient(circle at 72% 28%, rgba(226, 194, 118, 0.22), transparent 48%);
+        animation: beamPulse 6s ease-in-out infinite alternate;
+        pointer-events: none;
+      }
+
+      @keyframes beamPulse {
+        from {
+          opacity: 0.45;
+          transform: scale(0.96);
+        }
+        to {
+          opacity: 0.9;
+          transform: scale(1.06);
+        }
+      }
+
+      .mote-layer {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        overflow: hidden;
+      }
+
+      .mote {
+        position: absolute;
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        background: var(--gold-hi);
+        box-shadow: 0 0 12px var(--gold-hi);
+        opacity: 0;
+        animation: floatMote var(--dur, 10s) linear infinite;
+        animation-delay: var(--delay, 0s);
+      }
+
+      @keyframes floatMote {
+        0% {
+          transform: translateY(88vh) translateX(0) scale(0.5);
+          opacity: 0;
+        }
+        20% {
+          opacity: 0.78;
+        }
+        80% {
+          opacity: 0.45;
+        }
+        100% {
+          transform: translateY(-6vh) translateX(28px) scale(1.1);
+          opacity: 0;
+        }
+      }
+
+      .hero-inner {
+        position: relative;
+        z-index: 4;
+        max-width: 1280px;
+        width: 100%;
+        margin: 0 auto;
+        display: grid;
+        grid-template-columns: minmax(0, 600px) 1fr;
+        gap: 36px;
+        align-items: end;
+      }
+
+      .hero-kicker {
+        display: inline-flex;
+        align-items: center;
+        gap: 9px;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.24em;
+        color: var(--jade);
+        margin-bottom: 16px;
+        animation: riseIn 700ms var(--ease) both;
+      }
+
+      .hero-title {
+        font-family: var(--f-serif);
+        font-size: clamp(42px, 5.4vw, 68px);
+        font-weight: 900;
+        line-height: 1.08;
+        letter-spacing: 0.06em;
+        margin-bottom: 18px;
+        animation: riseIn 850ms var(--ease) 100ms both;
+      }
+
+      .hero-title em {
+        font-style: normal;
+        color: var(--jade);
+      }
+
+      .hero-lead {
+        font-size: 16px;
+        color: var(--ink-2);
+        max-width: 46ch;
+        margin-bottom: 28px;
+        animation: riseIn 950ms var(--ease) 200ms both;
+      }
+
+      .hero-cta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-bottom: 34px;
+        animation: riseIn 1050ms var(--ease) 300ms both;
+      }
+
+      .hero-stats {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
+        padding-top: 22px;
+        border-top: 1px solid var(--gold-hair);
+        animation: riseIn 1150ms var(--ease) 400ms both;
+      }
+
+      .hero-stats strong {
+        display: block;
+        font-family: var(--f-serif);
+        font-size: 24px;
+        color: var(--ink);
+      }
+
+      .hero-stats span {
+        font-size: 12px;
+        color: var(--ink-3);
+      }
+
+      /* 右侧悬浮玉符实况铭牌 */
+      .hero-callout {
+        justify-self: end;
+        width: min(100%, 360px);
+        padding: 18px 20px;
+        animation: riseIn 1200ms var(--ease) 480ms both;
+      }
+
+      .callout-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 11.5px;
+        color: var(--jade);
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        margin-bottom: 10px;
+      }
+
+      .callout-body strong {
+        display: block;
+        font-family: var(--f-serif);
+        font-size: 18px;
+        margin-bottom: 5px;
+      }
+
+      .callout-body p {
+        font-size: 13px;
+        color: var(--ink-2);
+      }
+
+      @keyframes riseIn {
+        from {
+          opacity: 0;
+          transform: translateY(22px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      /* =========================================================================
+         通用章节与双向滚屏动效
+         ========================================================================= */
+      .section {
+        max-width: 1280px;
+        margin: 0 auto;
+        padding: 84px 28px;
+      }
+
+      .section-head {
+        text-align: center;
+        margin-bottom: 42px;
+      }
+
+      .section-kicker {
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.28em;
+        color: var(--gold);
+        display: block;
+        margin-bottom: 8px;
+      }
+
+      .section-title {
+        font-family: var(--f-serif);
+        font-size: clamp(28px, 3.4vw, 42px);
+        font-weight: 900;
+        letter-spacing: 0.08em;
+        margin-bottom: 10px;
+      }
+
+      .section-sub {
+        color: var(--ink-2);
+        max-width: 58ch;
+        margin: 0 auto;
+        font-size: 15px;
+      }
+
+      .reveal {
+        opacity: 0;
+        transform: translateY(34px) scale(0.985);
+        transition:
+          opacity 620ms var(--ease),
+          transform 680ms var(--ease);
+      }
+
+      .reveal.in-view {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+
+      /* =========================================================================
+         2. 互动把玩舞台（多人客厅 / 山河图肉鸽 / 局内公开记牌器）
+         ========================================================================= */
+      .stage-tabs {
+        display: flex;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-bottom: 24px;
+      }
+
+      .stage-tab {
+        appearance: none;
+        min-height: 44px;
+        padding: 0 20px;
+        background: var(--surface-strong);
+        color: var(--ink-2);
+        border: 1px solid var(--gold-hair);
+        font-family: var(--f-serif);
+        font-size: 15px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        cursor: pointer;
+        clip-path: polygon(
+          8px 0,
+          calc(100% - 8px) 0,
+          100% 8px,
+          100% calc(100% - 8px),
+          calc(100% - 8px) 100%,
+          8px 100%,
+          0 calc(100% - 8px),
+          0 8px
+        );
+        transition: all 220ms var(--ease);
+      }
+
+      .stage-tab[aria-selected='true'] {
+        background: linear-gradient(168deg, var(--jade), var(--jade-deep));
+        color: #fffaf0;
+        border-color: var(--gold-hi);
+      }
+
+      .interactive-stage {
+        padding: 28px;
+        min-height: 470px;
+      }
+
+      .stage-pane {
+        display: none;
+      }
+
+      .stage-pane.active {
+        display: block;
+        animation: riseIn 380ms var(--ease);
+      }
+
+      /* 舞台 1：客厅大屏 + MVP 海报 */
+      .party-stage-grid {
+        display: grid;
+        grid-template-columns: 1.2fr 0.8fr;
+        gap: 24px;
+        align-items: stretch;
+      }
+
+      .oval-table {
+        border-radius: 200px / 130px;
+        background: var(--table-surface);
+        border: 2px solid var(--gold-line);
+        padding: 26px 28px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        gap: 18px;
+        min-height: 360px;
+        position: relative;
+        box-shadow:
+          inset 0 0 0 6px var(--surface),
+          inset 0 0 0 7px var(--gold-hair);
+      }
+
+      .seat-trio {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+      }
+
+      .seat-box {
+        background: var(--surface-strong);
+        border: 1px solid var(--gold-hair);
+        padding: 12px;
+        text-align: center;
+        transition: all 240ms var(--spring);
+      }
+
+      .seat-box.active {
+        border-color: var(--gold);
+        transform: translateY(-4px);
+        box-shadow: 0 12px 24px -10px var(--jade-glow);
+      }
+
+      .seat-box small {
+        display: block;
+        font-size: 11px;
+        color: var(--jade);
+        font-weight: 700;
+      }
+
+      .seat-box strong {
+        display: block;
+        font-family: var(--f-serif);
+        font-size: 18px;
+        margin: 4px 0 6px;
+      }
+
+      .hp-dots {
+        display: flex;
+        justify-content: center;
+        gap: 5px;
+      }
+
+      .hp-dots i {
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        background: var(--jade);
+      }
+
+      .hp-dots i.lost {
+        background: var(--gold-hair);
+      }
+
+      .highlight-strip {
+        padding: 12px 16px;
+        background: var(--surface-strong);
+        border-left: 3.5px solid var(--cinnabar);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        font-size: 13.5px;
+      }
+
+      .mvp-panel {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        gap: 14px;
+        padding: 20px;
+        background: var(--surface-jade);
+        border: 1px solid var(--gold-hair);
+      }
+
+      .award-item {
+        padding: 12px 14px;
+        background: var(--surface-strong);
+        border-left: 3px solid var(--gold);
+      }
+
+      .award-item strong {
+        display: block;
+        font-family: var(--f-serif);
+        font-size: 15px;
+        color: var(--gold);
+      }
+
+      .award-item span {
+        font-size: 12.5px;
+        color: var(--ink-2);
+      }
+
+      /* 舞台 2：山河图肉鸽三选一 + 集市预警 + 重随 */
+      .rogue-grid {
+        display: grid;
+        grid-template-columns: 320px 1fr;
+        gap: 24px;
+        align-items: stretch;
+      }
+
+      .scroll-preview {
+        position: relative;
+        overflow: hidden;
+        padding: 18px;
+        background:
+          linear-gradient(180deg, rgba(16, 26, 30, 0.7), rgba(16, 26, 30, 0.86)),
+          url('./assets/pass.webp') center / cover;
+        color: #f4efe4;
+        border: 1.5px solid var(--gold-line);
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        gap: 14px;
+      }
+
+      .scroll-warn {
+        padding: 10px 12px;
+        background: rgba(199, 60, 50, 0.24);
+        border-left: 3px solid #ef6c5d;
+        font-size: 12.5px;
+      }
+
+      .relic-row {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 14px;
+        margin-bottom: 16px;
+      }
+
+      .relic-card {
+        padding: 16px;
+        background: var(--surface-strong);
+        border: 1.5px solid var(--gold-hair);
+        cursor: pointer;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        transition: all 240ms var(--spring);
+        position: relative;
+      }
+
+      .relic-card:hover,
+      .relic-card.picked {
+        border-color: var(--gold);
+        transform: translateY(-5px);
+        box-shadow: 0 16px 32px -12px var(--shade);
+      }
+
+      .synergy-badge {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        padding: 2px 7px;
+        background: var(--cinnabar);
+        color: #fff6ea;
+        font-family: var(--f-serif);
+        font-size: 11px;
+        font-weight: 800;
+      }
+
+      .relic-card h4 {
+        font-family: var(--f-serif);
+        font-size: 19px;
+      }
+
+      .relic-card p {
+        font-size: 12.5px;
+        color: var(--ink-2);
+        flex: 1;
+      }
+
+      .formula-pill {
+        padding: 7px 9px;
+        font-size: 12px;
+        background: var(--surface-jade);
+        border-left: 2.5px solid var(--jade);
+      }
+
+      /* 舞台 3：局内 Party HUD + 公开记牌器 + 真实点击出牌 */
+      .hud-demo-grid {
+        display: grid;
+        grid-template-columns: 1fr 290px;
+        gap: 20px;
+        align-items: center;
+      }
+
+      .hud-hand-area {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 18px;
+        padding: 24px 18px;
+        background: var(--table-surface);
+        border: 1.5px solid var(--gold-line);
+      }
+
+      .confirm-bar {
+        display: inline-flex;
+        align-items: center;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 12px;
+        padding: 8px 16px;
+        background: var(--surface-strong);
+        border: 1px solid var(--gold);
+        font-size: 13.5px;
+      }
+
+      .demo-cards {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 10px;
+      }
+
+      .demo-card {
+        width: 82px;
+        height: 112px;
+        background: linear-gradient(180deg, #fffdf7, #ebe3d0);
+        color: #19242c;
+        border: 1.5px solid #b89854;
+        padding: 8px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        cursor: pointer;
+        box-shadow: 0 10px 20px -8px rgba(0, 0, 0, 0.35);
+        transition: transform 220ms var(--spring);
+      }
+
+      .demo-card.red {
+        color: #be2f27;
+      }
+
+      .demo-card.selected {
+        transform: translateY(-14px);
+        border-color: var(--jade);
+        box-shadow: 0 18px 28px -8px var(--jade-glow);
+      }
+
+      .demo-card strong {
+        font-family: var(--f-serif);
+        font-size: 17px;
+        text-align: center;
+      }
+
+      .tracker-scroll {
+        padding: 16px;
+        background: var(--surface-strong);
+        border: 1.5px solid var(--gold-line);
+        border-top: 6px solid var(--gold);
+        border-bottom: 6px solid var(--gold);
+      }
+
+      .tracker-list {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin: 12px 0;
+      }
+
+      .tracker-cell {
+        padding: 6px 8px;
+        background: var(--surface-jade);
+        border-left: 2px solid var(--jade);
+        display: flex;
+        justify-content: space-between;
+        font-size: 12.5px;
+      }
+
+      .tracker-cell b {
+        font-family: var(--f-mono);
+        color: var(--gold);
+      }
+
+      /* =========================================================================
+         3. 六大玩法与四大原画画卷
+         ========================================================================= */
+      .feature-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 18px;
+      }
+
+      .feature-tile {
+        padding: 24px 22px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .feature-icon {
+        width: 44px;
+        height: 44px;
+        display: grid;
+        place-items: center;
+        background: var(--surface-jade);
+        border: 1px solid var(--gold-line);
+        color: var(--jade);
+      }
+
+      .feature-tile h3 {
+        font-family: var(--f-serif);
+        font-size: 20px;
+        letter-spacing: 0.06em;
+      }
+
+      .feature-tile p {
+        font-size: 13.5px;
+        color: var(--ink-2);
+      }
+
+      .gallery-row {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 14px;
+        margin-top: 26px;
+      }
+
+      .gallery-card {
+        position: relative;
+        height: 196px;
+        overflow: hidden;
+        border: 1px solid var(--gold-line);
+      }
+
+      .gallery-card img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 520ms var(--ease);
+      }
+
+      .gallery-card:hover img {
+        transform: scale(1.07);
+      }
+
+      .gallery-cap {
+        position: absolute;
+        inset: auto 0 0 0;
+        padding: 18px 14px 12px;
+        background: linear-gradient(180deg, transparent, rgba(8, 16, 22, 0.88));
+        color: #f6f2e8;
+        font-family: var(--f-serif);
+        font-size: 15px;
+        letter-spacing: 0.1em;
+      }
+
+      /* =========================================================================
+         4. 三步开局指南与页脚
+         ========================================================================= */
+      .steps-row {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 18px;
+      }
+
+      .step-box {
+        padding: 24px 22px;
+      }
+
+      .step-num {
+        font-family: var(--f-serif);
+        font-size: 32px;
+        font-weight: 900;
+        color: var(--gold);
+        line-height: 1;
+        margin-bottom: 10px;
+      }
+
+      .step-box h3 {
+        font-family: var(--f-serif);
+        font-size: 19px;
+        margin-bottom: 6px;
+      }
+
+      .step-box p {
+        font-size: 13.5px;
+        color: var(--ink-2);
+      }
+
+      .footer {
+        border-top: 1px solid var(--gold-hair);
+        padding: 36px 28px 54px;
+        text-align: center;
+        color: var(--ink-3);
+        font-size: 13px;
+      }
+
+      .footer a {
+        color: var(--jade);
+        font-weight: 600;
+      }
+
+      @media (max-width: 960px) {
+        .nav-links {
+          display: none;
+        }
+        .hero-inner,
+        .party-stage-grid,
+        .rogue-grid,
+        .hud-demo-grid,
+        .feature-grid,
+        .steps-row {
+          grid-template-columns: 1fr;
+        }
+        .hero-callout {
+          justify-self: stretch;
+        }
+        .relic-row {
+          grid-template-columns: 1fr;
+        }
+        .gallery-row {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="topbar" id="topbar">
+      <div class="topbar-inner">
+        <a class="brand" href="#top">
+          <span class="seal-square" aria-hidden="true">杀</span>
+          <span class="brand-name">聚会三国杀</span>
+        </a>
+        <nav class="nav-links" aria-label="页面导航">
+          <a href="#stage">互动舞台</a>
+          <a href="#features">核心特性</a>
+          <a href="#quickstart">三步开桌</a>
+          <a href="https://github.com/liyan1775/party-sanguosha" target="_blank" rel="noreferrer"
+            >GitHub</a
+          >
+        </nav>
+        <div class="nav-tools">
+          <button class="tool-pill" id="theme-toggle" type="button">
+            <svg
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+            >
+              <circle cx="12" cy="12" r="5" />
+              <path d="M12 2v3M12 19v3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M2 12h3M19 12h3" />
+            </svg>
+            <span id="theme-label">白衣素绡 · 切暗境</span>
+          </button>
+          <button class="tool-pill" id="motion-toggle" type="button">
+            <span id="motion-label">动效：满血</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main id="top">
+      <!-- 首屏开场大戏 -->
+      <section class="hero">
+        <div class="hero-bg day-art" aria-hidden="true"></div>
+        <div class="hero-bg night-art" aria-hidden="true"></div>
+        <div class="hero-veil" aria-hidden="true"></div>
+        <div class="hero-beam" aria-hidden="true"></div>
+        <div class="mote-layer" aria-hidden="true">
+          <i class="mote" style="left: 16%; --dur: 11s; --delay: -2s"></i>
+          <i class="mote" style="left: 34%; --dur: 9s; --delay: -5s"></i>
+          <i class="mote" style="left: 55%; --dur: 12s; --delay: -1s"></i>
+          <i class="mote" style="left: 72%; --dur: 10s; --delay: -6s"></i>
+          <i class="mote" style="left: 86%; --dur: 13s; --delay: -3s"></i>
+        </div>
+
+        <div class="hero-inner">
+          <div>
+            <div class="hero-kicker">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M8 0l2 6 6 2-6 2-2 6-2-6-6-2 6-2z" />
+              </svg>
+              <span>V1.0.0 正式发布 · GPL-3.0 开源免费</span>
+            </div>
+            <h1 class="hero-title">一码入席，<br /><em>把三国搬进客厅。</em></h1>
+            <p class="hero-lead">
+              一台 Windows
+              电脑双击秒开可视化启动页，朋友用微信或手机浏览器扫码即玩六大完整玩法与重造肉鸽《山河图·诸侯伐董》。无内购、免装手机软件，同
+              Wi-Fi 与异地网络同坐一桌。
+            </p>
+            <div class="hero-cta">
+              <a
+                class="btn-jade"
+                href="https://github.com/liyan1775/party-sanguosha/releases/latest"
+                target="_blank"
+                rel="noreferrer"
+              >
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path d="M12 3v12m0 0l-5-5m5 5l5-5M4 19h16" />
+                </svg>
+                下载 Windows v1.0.0
+              </a>
+              <a class="btn-gold" href="#stage">立刻把玩互动舞台</a>
+            </div>
+            <div class="hero-stats">
+              <div>
+                <strong>6 大完整玩法</strong><span>身份 · 斗地主 · 2v2 · 高校 · 山河图</span>
+              </div>
+              <div><strong>666+ 原生武将</strong><span>自由自定义将池 + 完整原生技能 AI</span></div>
+              <div><strong>0 秒装机扫码</strong><span>局域网直连 + 跨网双码混合同桌</span></div>
+            </div>
+          </div>
+
+          <aside class="jade-frame hero-callout">
+            <div class="callout-head">
+              <span>兹白双境 · 客厅大屏主舞台</span>
+              <span>LAN 1ms</span>
+            </div>
+            <div class="callout-body">
+              <strong>白衣素绡 ⇄ 月魄玄泉</strong>
+              <p>
+                桌面、手机大厅、山河图卷轴与原生实战牌桌全面同源升级；点右上角可立刻切换明暗双境感受全站光影。
+              </p>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <!-- 互动体验舞台 -->
+      <section class="section reveal" id="stage">
+        <div class="section-head">
+          <span class="section-kicker">INTERACTIVE STAGE · 直接点击体验</span>
+          <h2 class="section-title">三大王牌升级，现在就能上手点一点</h2>
+          <p class="section-sub">
+            这不是静态宣传图——切换下方三个标签，亲手点一下客厅大屏高光、山河图流派重随和局内公开记牌器。
+          </p>
+        </div>
+
+        <div class="stage-tabs" role="tablist" aria-label="互动舞台切换">
+          <button class="stage-tab" role="tab" data-tab="party" aria-selected="true" type="button">
+            一 · 客厅大屏与聚会 MVP 海报
+          </button>
+          <button class="stage-tab" role="tab" data-tab="rogue" aria-selected="false" type="button">
+            二 · 《山河图》肉鸽重造与炼狱挑战
+          </button>
+          <button class="stage-tab" role="tab" data-tab="hud" aria-selected="false" type="button">
+            三 · 局内重铸 HUD 与公开记牌器
+          </button>
+        </div>
+
+        <div class="jade-frame interactive-stage">
+          <!-- 舞台一 -->
+          <div class="stage-pane active" data-pane="party">
+            <div class="party-stage-grid">
+              <div class="oval-table">
+                <div
+                  style="
+                    display: flex;
+                    justify-content: space-between;
+                    font-size: 12.5px;
+                    color: var(--ink-2);
+                  "
+                >
+                  <span><strong>房间 9F4A10</strong> · 3人快打斗地主 · 第 5 轮</span>
+                  <span>暗手牌与未亮身份严格保密</span>
+                </div>
+                <div class="seat-trio" id="party-seats">
+                  <div class="seat-box active">
+                    <small>1号位 · 地主</small>
+                    <strong>界张飞</strong>
+                    <div class="hp-dots"><i></i><i></i><i></i><i></i><i></i></div>
+                  </div>
+                  <div class="seat-box">
+                    <small>2号位 · 农民</small>
+                    <strong>诸葛亮</strong>
+                    <div class="hp-dots"><i></i><i></i><i></i><i class="lost"></i></div>
+                  </div>
+                  <div class="seat-box">
+                    <small>3号位 · 农民</small>
+                    <strong>华佗 · AI</strong>
+                    <div class="hp-dots"><i></i><i></i><i></i></div>
+                  </div>
+                </div>
+                <div class="highlight-strip">
+                  <span id="party-event-text"
+                    ><strong>高光播报：</strong>界张飞发动「咆哮」，连出 3 张杀压制全场！</span
+                  >
+                  <button class="tool-pill" id="party-next-btn" type="button">切换下一幕</button>
+                </div>
+              </div>
+
+              <div class="mvp-panel">
+                <div>
+                  <div
+                    style="
+                      font-size: 11.5px;
+                      color: var(--jade);
+                      font-weight: 700;
+                      letter-spacing: 0.16em;
+                    "
+                  >
+                    局后自动冻结公开摘要 · 一键存图发群
+                  </div>
+                  <h3 style="font-family: var(--f-serif); font-size: 22px; margin: 6px 0 12px">
+                    聚会名场面 MVP 颁奖
+                  </h3>
+                  <div style="display: flex; flex-direction: column; gap: 10px">
+                    <div class="award-item">
+                      <strong>全场输出王 · 阿青（界张飞）</strong>
+                      <span>单局累计公开造成 9 点伤害，连杀带走节奏</span>
+                    </div>
+                    <div class="award-item">
+                      <strong>一血奇迹 · 小舟（诸葛亮）</strong>
+                      <span>残血连守 3 轮，靠无懈与空城稳住翻盘</span>
+                    </div>
+                    <div class="award-item">
+                      <strong>拆迁大队长 · 华佗 AI</strong>
+                      <span>全场精准拆顺 5 次，次次命中关键防具</span>
+                    </div>
+                  </div>
+                </div>
+                <p style="font-size: 12px; color: var(--ink-3)">
+                  房主快速回房准备下一局后，客厅大屏仍保留本局公开战绩与海报导出，不丢精彩瞬间。
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- 舞台二 -->
+          <div class="stage-pane" data-pane="rogue">
+            <div class="rogue-grid">
+              <div class="scroll-preview">
+                <div>
+                  <span style="font-size: 11px; letter-spacing: 0.2em; color: #e2c276"
+                    >第三章 · 洛阳城下</span
+                  >
+                  <h3 style="font-family: var(--f-serif); font-size: 24px; margin: 4px 0 8px">
+                    行军第 6 / 7 日
+                  </h3>
+                  <p style="font-size: 13px; opacity: 0.88">
+                    普通至炼狱 25 档完整推进；补齐大谷关「英武壮志」、洛阳「智勇双杰」与专属结局。
+                  </p>
+                </div>
+                <div class="scroll-warn">
+                  <strong>集市将关预警：</strong>再推 1
+                  日首领现身后，未逛的官道集市将自动关闭。建议先去锻造升级战法或回收闲置随身牌。
+                </div>
+              </div>
+
+              <div>
+                <div class="relic-row" id="relic-row">
+                  <div class="relic-card picked" data-relic="当头一棒 Ⅱ">
+                    <span class="synergy-badge">流派共振</span>
+                    <small style="color: var(--gold); font-weight: 700">战法 · 稀有</small>
+                    <h4>当头一棒 Ⅱ</h4>
+                    <p>每轮你使用的首张【杀】造成伤害 +2。</p>
+                    <div class="formula-pill">
+                      <strong>叠加直显：</strong>Ⅰ(+1) + Ⅱ(+2) = 每轮首杀 +3
+                    </div>
+                  </div>
+                  <div class="relic-card" data-relic="丈八蛇矛">
+                    <small style="color: var(--jade); font-weight: 700">随身装备 · 稀有</small>
+                    <h4>丈八蛇矛</h4>
+                    <p>攻击范围 3，你可以将两张手牌当【杀】使用或打出。</p>
+                    <div class="formula-pill">
+                      <strong>替换提示：</strong>替换青釭剑，回收折算 +100 铜币
+                    </div>
+                  </div>
+                  <div class="relic-card" data-relic="闭月">
+                    <small style="color: var(--ink-3); font-weight: 700">额外技能 · 稀有</small>
+                    <h4>闭月</h4>
+                    <p>结束阶段，你可以摸一张牌，配合多摸流派强化续航。</p>
+                    <div class="formula-pill">
+                      <strong>槽位说明：</strong>装入第 2 / 3 技能槽，保留已有技能
+                    </div>
+                  </div>
+                </div>
+                <div
+                  style="
+                    display: flex;
+                    flex-wrap: wrap;
+                    justify-content: space-between;
+                    align-items: center;
+                    gap: 12px;
+                  "
+                >
+                  <button class="tool-pill" id="web-reroll" type="button">
+                    重随战利品（80 铜币 · 剩 1 次）
+                  </button>
+                  <span style="font-size: 13px; color: var(--ink-2)" id="relic-picked-note"
+                    >当前已选：<strong>当头一棒 Ⅱ</strong>（已自动过滤同效重复项）</span
+                  >
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 舞台三 -->
+          <div class="stage-pane" data-pane="hud">
+            <div class="hud-demo-grid">
+              <div class="hud-hand-area">
+                <div class="confirm-bar">
+                  <span
+                    >已选中：<strong id="hud-card-label" style="color: var(--jade)"
+                      >♠9 雷杀</strong
+                    ></span
+                  >
+                  <button class="tool-pill" id="hud-play-btn" type="button">
+                    点击即出牌（遵循原版手感）
+                  </button>
+                </div>
+                <div class="demo-cards" id="hud-cards">
+                  <div class="demo-card selected" data-name="♠9 雷杀">
+                    <span>♠9</span><strong>雷杀</strong><span>基本</span>
+                  </div>
+                  <div class="demo-card red" data-name="♥6 桃">
+                    <span>♥6</span><strong>桃</strong><span>基本</span>
+                  </div>
+                  <div class="demo-card" data-name="♣A 决斗">
+                    <span>♣A</span><strong>决斗</strong><span>锦囊</span>
+                  </div>
+                  <div class="demo-card red" data-name="♦Q 无中生有">
+                    <span>♦Q</span><strong>无中生有</strong><span>锦囊</span>
+                  </div>
+                  <div class="demo-card" data-name="♠J 无懈可击">
+                    <span>♠J</span><strong>无懈可击</strong><span>锦囊</span>
+                  </div>
+                </div>
+                <p style="font-size: 12.5px; color: var(--ink-2); text-align: center">
+                  严守原生点击出牌速度与微信锁竖屏自动横握设计；全面重铸顶栏浮岛、队友微缩手牌、手气卡与结算退托管遮罩。
+                </p>
+              </div>
+
+              <aside class="tracker-scroll">
+                <div style="display: flex; justify-content: space-between; align-items: baseline">
+                  <strong style="font-family: var(--f-serif); font-size: 17px; color: var(--gold)"
+                    >公开记牌器</strong
+                  >
+                  <span style="font-size: 11px; color: var(--ink-3)">军争 160 · 余 38 张</span>
+                </div>
+                <div class="tracker-list">
+                  <div class="tracker-cell"><span>杀</span><b>14/44</b></div>
+                  <div class="tracker-cell"><span>闪</span><b>9/24</b></div>
+                  <div class="tracker-cell"><span>桃</span><b>5/12</b></div>
+                  <div class="tracker-cell"><span>酒</span><b>2/5</b></div>
+                  <div class="tracker-cell"><span>无懈</span><b>3/7</b></div>
+                  <div class="tracker-cell"><span>群攻</span><b>2/4</b></div>
+                  <div class="tracker-cell"><span>顺/拆</span><b>4/11</b></div>
+                  <div class="tracker-cell"><span>乐/兵</span><b>2/5</b></div>
+                </div>
+                <p style="font-size: 11.5px; color: var(--ink-3)">
+                  权威服务端仅统计已公开弃置与亮出展示的实体牌，严守暗手牌与牌堆顺序隐私。
+                </p>
+              </aside>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 核心亮点与水墨画廊 -->
+      <section class="section reveal" id="features">
+        <div class="section-head">
+          <span class="section-kicker">CRAFTED FOR TABLETOP · 专为真实聚会打磨</span>
+          <h2 class="section-title">为什么这一桌，朋友扫完码就不想放下手机</h2>
+        </div>
+
+        <div class="feature-grid">
+          <article class="jade-frame feature-tile">
+            <div class="feature-icon" aria-hidden="true">
+              <svg
+                width="22"
+                height="22"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+              >
+                <rect x="4" y="4" width="6" height="6" />
+                <rect x="14" y="4" width="6" height="6" />
+                <rect x="4" y="14" width="6" height="6" />
+                <path d="M14 14h6v6h-6z" />
+              </svg>
+            </div>
+            <h3>局域网 + 跨网双码同桌</h3>
+            <p>
+              同 Wi-Fi
+              朋友直连主机毫秒响应，外地朋友扫跨网码也能无缝坐进同一张桌，断公网绝不影响局域网。
+            </p>
+          </article>
+
+          <article class="jade-frame feature-tile">
+            <div class="feature-icon" aria-hidden="true">
+              <svg
+                width="22"
+                height="22"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+              >
+                <path d="M12 3l3 6 6 1-4.5 4.2 1.2 6.3L12 17.5 6.3 20.5l1.2-6.3L3 10l6-1z" />
+              </svg>
+            </div>
+            <h3>《山河图》单人肉鸽满配</h3>
+            <p>
+              手机大厅一键直达出征。从普通到炼狱 25
+              档梯度，含流派共振、铜币重随、集市锻造回收与征程高光卡。
+            </p>
+          </article>
+
+          <article class="jade-frame feature-tile">
+            <div class="feature-icon" aria-hidden="true">
+              <svg
+                width="22"
+                height="22"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+              >
+                <path d="M4 6h16v12H4z" />
+                <path d="M8 10h8M8 14h5" />
+              </svg>
+            </div>
+            <h3>666+ 武将与永久自定义将池</h3>
+            <p>
+              内置标准、经典进阶、蚀心入魔与九档官方活动将池；房主可在手机上自由跨池组名单并本地持久保存。
+            </p>
+          </article>
+        </div>
+
+        <div class="gallery-row reveal">
+          <div class="gallery-card">
+            <img src="./assets/pass.webp" alt="山河图关城场景" loading="lazy" />
+            <div class="gallery-cap">虎牢关城 · 攻守交锋</div>
+          </div>
+          <div class="gallery-card">
+            <img src="./assets/encounter.webp" alt="山河图河畔奇遇" loading="lazy" />
+            <div class="gallery-cap">暮色渡口 · 奇遇抉择</div>
+          </div>
+          <div class="gallery-card">
+            <img src="./assets/market.webp" alt="山河图官道集市" loading="lazy" />
+            <div class="gallery-cap">官道集市 · 锻造回收</div>
+          </div>
+          <div class="gallery-card">
+            <img src="./assets/camp.webp" alt="山河图湖畔营地" loading="lazy" />
+            <div class="gallery-cap">湖畔营地 · 休整成长</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 三步上手 -->
+      <section class="section reveal" id="quickstart">
+        <div class="section-head">
+          <span class="section-kicker">ZERO FRICTION · 小白零配置</span>
+          <h2 class="section-title">3 步把一桌三国杀支起来</h2>
+        </div>
+        <div class="steps-row">
+          <div class="jade-frame step-box">
+            <div class="step-num">01</div>
+            <h3>解压并双击启动</h3>
+            <p>
+              下载 Windows
+              启动包，完整解压后双击启动入口，秒开可视化启动进度页，首次自动备齐游戏资源。
+            </p>
+          </div>
+          <div class="jade-frame step-box">
+            <div class="step-num">02</div>
+            <h3>手机扫码一键开桌</h3>
+            <p>
+              扫客厅大屏二维码，直接选「单人山河图」或「3人斗地主 / 4人2v2 / 6人身份 /
+              高校赛」秒配建房。
+            </p>
+          </div>
+          <div class="jade-frame step-box">
+            <div class="step-num">03</div>
+            <h3>爽打结算，回房再来</h3>
+            <p>
+              微信锁竖屏自动横握开战，随时滑出公开记牌器；结算后大屏自动颁聚会 MVP
+              海报，全员一键回房续局。
+            </p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <p>
+        聚会三国杀 v1.0.0 · 项目自有代码采用 <strong>GPL-3.0-only</strong> 开源 · 对局内核致谢
+        <a href="https://github.com/libnoname/noname" target="_blank" rel="noreferrer"
+          >无名杀（v1.11.6）</a
+        >
+      </p>
+      <p style="margin-top: 8px">
+        <a href="https://github.com/liyan1775/party-sanguosha" target="_blank" rel="noreferrer"
+          >源码仓库</a
+        >
+        ·
+        <a
+          href="https://github.com/liyan1775/party-sanguosha/releases/latest"
+          target="_blank"
+          rel="noreferrer"
+          >Windows 发行包下载</a
+        >
+      </p>
+    </footer>
+
+    <script>
+      const root = document.documentElement;
+      const topbar = document.getElementById('topbar');
+      const themeLabel = document.getElementById('theme-label');
+      const motionLabel = document.getElementById('motion-label');
+
+      window.addEventListener('scroll', () => {
+        topbar.classList.toggle('scrolled', window.scrollY > 24);
+      });
+
+      document.getElementById('theme-toggle').addEventListener('click', () => {
+        const next = root.dataset.theme === 'day' ? 'night' : 'day';
+        root.dataset.theme = next;
+        themeLabel.textContent = next === 'day' ? '白衣素绡 · 切暗境' : '月魄玄泉 · 切明境';
+      });
+
+      document.getElementById('motion-toggle').addEventListener('click', () => {
+        const next = root.dataset.motion === 'full' ? 'reduced' : 'full';
+        root.dataset.motion = next;
+        motionLabel.textContent = next === 'full' ? '动效：满血' : '动效：精简';
+      });
+
+      // 上下双向滚屏反复触发
+      const observer = new IntersectionObserver(
+        (entries) => {
+          for (const entry of entries) {
+            entry.target.classList.toggle('in-view', entry.isIntersecting);
+          }
+        },
+        { threshold: 0.14 },
+      );
+      document.querySelectorAll('.reveal').forEach((el) => observer.observe(el));
+
+      // 互动舞台标签切换
+      document.querySelectorAll('[data-tab]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const id = btn.dataset.tab;
+          document
+            .querySelectorAll('[data-tab]')
+            .forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === id)));
+          document
+            .querySelectorAll('[data-pane]')
+            .forEach((p) => p.classList.toggle('active', p.dataset.pane === id));
+        });
+      });
+
+      // 舞台一：客厅实况切幕
+      const partyScenes = [
+        '<strong>高光播报：</strong>界张飞发动「咆哮」，连出 3 张杀压制全场！',
+        '<strong>精准协作：</strong>诸葛亮查看华佗手牌确认有桃，果断打出决斗破局！',
+        '<strong>聚会终局：</strong>农民翻盘获胜，客厅大屏已冻结公开数据并生成 MVP 海报！',
+      ];
+      let partyIndex = 0;
+      document.getElementById('party-next-btn').addEventListener('click', () => {
+        partyIndex = (partyIndex + 1) % partyScenes.length;
+        document.getElementById('party-event-text').innerHTML = partyScenes[partyIndex];
+        document
+          .querySelectorAll('#party-seats .seat-box')
+          .forEach((seat, idx) => seat.classList.toggle('active', idx === partyIndex));
+      });
+
+      // 舞台二：山河图选奖励 & 铜币重随
+      document.querySelectorAll('#relic-row .relic-card').forEach((card) => {
+        card.addEventListener('click', () => {
+          document
+            .querySelectorAll('#relic-row .relic-card')
+            .forEach((c) => c.classList.remove('picked'));
+          card.classList.add('picked');
+          document.getElementById('relic-picked-note').innerHTML =
+            `当前已选：<strong>${card.dataset.relic}</strong>（已自动过滤同效重复项）`;
+        });
+      });
+
+      const rerollBtn = document.getElementById('web-reroll');
+      rerollBtn.addEventListener('click', () => {
+        rerollBtn.textContent = '已消耗 80 铜币刷新本批战利品（限 1 次）';
+        rerollBtn.disabled = true;
+        rerollBtn.style.opacity = '0.6';
+      });
+
+      // 舞台三：局内点击选牌与出牌反馈
+      document.querySelectorAll('#hud-cards .demo-card').forEach((card) => {
+        card.addEventListener('click', () => {
+          document
+            .querySelectorAll('#hud-cards .demo-card')
+            .forEach((c) => c.classList.remove('selected'));
+          card.classList.add('selected');
+          document.getElementById('hud-card-label').textContent = card.dataset.name;
+        });
+      });
+
+      document.getElementById('hud-play-btn').addEventListener('click', () => {
+        const current = document.getElementById('hud-card-label').textContent;
+        document.getElementById('hud-play-btn').textContent = `已确认打出 ${current}`;
+        setTimeout(() => {
+          document.getElementById('hud-play-btn').textContent = '点击即出牌（遵循原版手感）';
+        }, 1200);
+      });
+    </script>
+  </body>
+</html>

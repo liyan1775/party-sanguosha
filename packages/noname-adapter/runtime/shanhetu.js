@@ -8,6 +8,7 @@ import {
 import {
   collectNightmareRoadState,
   restoreNightmareRoadState,
+  takeoverShanhetuTurn,
 } from './shanhetu-nightmare-roads.js';
 import { collectNightmarePassState, restoreNightmarePassState } from './shanhetu-nightmare-pass.js';
 import { collectNightmareGearState, restoreNightmareGearState } from './shanhetu-nightmare-gear.js';
@@ -24,6 +25,103 @@ const identityLabels = {
 const publicBossSkills = ['party_shanhetu_poison', 'party_shanhetu_xingtian_ban', 'repojun2'];
 const roarCharge = 'party_shanhetu_paoxiao939_charge';
 
+const dragonGuardSkill = 'party_shanhetu_ly_14101';
+
+function setReserveState(player, reserve) {
+  if (reserve) {
+    player.dataset.shanhetuReserve = '1';
+    player.classList.add('out');
+    player.style.visibility = 'hidden';
+  } else if (player.dataset.shanhetuReserve) {
+    delete player.dataset.shanhetuReserve;
+    player.classList.remove('out');
+    player.style.removeProperty('visibility');
+  }
+}
+
+async function admitReinforcement(player, boss, kind, handSize) {
+  const form = actorFor(player);
+  const revived = player.isDead();
+  game.broadcastAll(setReserveState, player, false);
+  if (revived) {
+    game.broadcastAll(
+      function (target, hp, armor) {
+        target.revive(hp, false);
+        target.hujia = armor;
+        target.update();
+      },
+      player,
+      form.hp,
+      form.armor,
+    );
+  }
+  game.log(boss, revived ? '复活了' : '召入', player);
+  await equipFixedEquipment(player, form);
+  if (player.countCards('h') < handSize) await player.drawTo(handSize);
+  const proof = globalThis.partyEngine?.proof;
+  if (proof) {
+    const entries = (proof.shanhetuReinforcements ??= []);
+    if (entries.length < 40)
+      entries.push({ kind, id: player.playerid, revived, handSize: player.countCards('h') });
+  }
+}
+
+function dragonReserve(player) {
+  if (
+    player.name1 !==
+    actors.find((actor) => actor.generalId === 458 && actor.id === player.playerid)?.character
+  )
+    return;
+  const guards = actors
+    .filter((actor) => actor.reinforcement === 'dragon-guard')
+    .map((actor) => lib.playerOL[actor.id]);
+  return (
+    guards.find((guard) => guard.isDead()) ?? guards.find((guard) => guard.dataset.shanhetuReserve)
+  );
+}
+
+function spearReserve() {
+  const actor = actors.find((actor) => actor.reinforcement === 'spearman');
+  const reserve = actor && lib.playerOL[actor.id];
+  return reserve?.dataset.shanhetuReserve ? reserve : undefined;
+}
+
+function installReinforcements() {
+  // 聚会版龙卫：两名随从各占一个预留敌席。每个出牌阶段限一次，
+  // 阵亡随从优先复活；否则叫出一名未登场随从。入场后补至五张牌。
+  lib.skill[dragonGuardSkill] = {
+    enable: 'phaseUse',
+    usable: 1,
+    filter(event, player) {
+      return !!dragonReserve(player);
+    },
+    async content(event, trigger, player) {
+      const reserve = dragonReserve(player);
+      if (reserve) await admitReinforcement(reserve, player, 'dragon-guard', 5);
+    },
+    ai: { order: 14, result: { player: 4 } },
+  };
+  // 聚会版智勇双杰：贾诩开始首个准备阶段时召入枪王。若在行动前濒死，
+  // 援军会提前入场。预留位一经启用便永不重置或重复触发动荡。
+  lib.skill.party_shanhetu_spearman_entry = {
+    charlotte: true,
+    forced: true,
+    popup: false,
+    firstDo: true,
+    trigger: { player: ['phaseZhunbeiBegin', 'dyingBefore'] },
+    filter() {
+      return !!spearReserve();
+    },
+    async content(event, trigger, player) {
+      const reserve = spearReserve();
+      if (!reserve) return;
+      await admitReinforcement(reserve, player, 'spearman', actorFor(reserve).startingCards);
+      reserve.logSkill('party_shanhetu_nm_3382');
+      takeoverShanhetuTurn(trigger, reserve);
+    },
+  };
+}
+
 function actorFor(player) {
   const actor = actors.find((actor) => actor.id === player.playerid);
   return actor?.nextForm && actor.nextForm.character === player.name1 ? actor.nextForm : actor;
@@ -32,6 +130,9 @@ function actorFor(player) {
 function npcRules(actor) {
   const rules = ['party_shanhetu_npc_rule'];
   if (actor.nextForm) rules.push('party_shanhetu_stage');
+  if (actor.extraDamage || actor.nextForm?.extraDamage) rules.push('party_shanhetu_inferno_damage');
+  if (actor.generalId === 484 && actors.some((other) => other.reinforcement === 'spearman'))
+    rules.push('party_shanhetu_spearman_entry');
   if (actor.armorRecovery || actor.nextForm?.armorRecovery)
     rules.push('party_shanhetu_armor_recovery');
   return rules;
@@ -78,6 +179,7 @@ export async function installShanhetu(setup) {
         }
       : {}),
   }));
+  installReinforcements();
   const forms = actors.flatMap((actor) => (actor.nextForm ? [actor, actor.nextForm] : [actor]));
   for (const actor of forms) {
     if (actor.skills.some((skill) => !lib.skill[skill]))
@@ -123,6 +225,24 @@ export async function installShanhetu(setup) {
       cardUsable(card, player, num) {
         if (card.name === 'sha') return num + (actorFor(player)?.extraSha ?? 0);
       },
+    },
+  };
+  lib.skill.party_shanhetu_inferno_damage = {
+    charlotte: true,
+    forced: true,
+    popup: false,
+    trigger: { source: 'damageBegin1' },
+    filter(event, player) {
+      return event.num > 0 && actorFor(player)?.extraDamage > 0;
+    },
+    async content(event, trigger, player) {
+      const bonus = actorFor(player).extraDamage;
+      trigger.num += bonus;
+      const proof = globalThis.partyEngine?.proof;
+      if (proof) {
+        const hits = (proof.shanhetuInfernoHits ??= []);
+        if (hits.length < 40) hits.push({ id: player.playerid, bonus });
+      }
     },
   };
   lib.skill.party_shanhetu_armor_recovery = {
@@ -251,6 +371,9 @@ export async function installShanhetu(setup) {
         const hero = lib.playerOL[setup.ownerPlayerId];
         const saved = {
           growthRule: hero.skills.includes('party_shanhetu_growth_rule'),
+          reserves: actors
+            .filter(({ id }) => lib.playerOL[id]?.dataset.shanhetuReserve)
+            .map(({ id }) => id),
           skills: setup.shanhetuGrowth.skills
             .filter((skill) => hero.skills.includes(skill.nativeId))
             .map((skill) => skill.nativeId),
@@ -313,6 +436,7 @@ export function restoreShanhetuGrowth(id, saved) {
     npc.side = actor.ally;
     npc.setIdentity(actor.ally ? 'zhong' : 'fan');
     npc.additionalSkills.partyShanhetuStats = npcRules(actor);
+    if (actor.reinforcement) setReserveState(npc, saved.reserves?.includes(actor.id));
   }
   const allowedSkills = setup.shanhetuGrowth.skills.map((skill) => skill.nativeId);
   const allowedTactics = setup.shanhetuGrowth.tactics.map((tactic) => tactic.nativeId);
@@ -386,6 +510,9 @@ export async function selectShanhetuGenerals(setup, initialize) {
   for (const actor of actors) {
     const npc = lib.playerOL[actor.id];
     await initialize(npc, actor.character);
+    if (actor.reinforcement) {
+      game.broadcastAll(setReserveState, npc, true);
+    }
     // Host stats are not printed general skills and must never affect skill
     // order/count effects such as 穿屋 or be extracted as an NPC ability.
     game.broadcastAll(
@@ -438,12 +565,17 @@ export async function selectShanhetuGenerals(setup, initialize) {
 }
 
 export function shanhetuStartingCards(player, setup) {
+  if (player.dataset.shanhetuReserve) return 0;
   return actorFor(player)?.startingCards ?? 4 + (setup.shanhetu.build?.initialCards ?? 0);
 }
 
 export function setShanhetuStartingHands(draw) {
   draw.otherPile = {};
   for (const actor of actors) {
+    if (actor.reinforcement) {
+      draw.otherPile[actor.id] = { getCards: () => [] };
+      continue;
+    }
     if (!actor.fixedHand?.length) continue;
     draw.otherPile[actor.id] = {
       getCards(num) {
@@ -460,7 +592,8 @@ export function setShanhetuStartingHands(draw) {
 }
 
 export async function equipShanhetuOpeningGear() {
-  for (const actor of actors) await equipFixedEquipment(lib.playerOL[actor.id], actor);
+  for (const actor of actors)
+    if (!actor.reinforcement) await equipFixedEquipment(lib.playerOL[actor.id], actor);
 }
 
 async function equipFixedEquipment(player, actor) {
@@ -493,8 +626,10 @@ export function shanhetuOutcome() {
   if (!hero) return null;
   const dead = hero.isDead();
   const enemies = actors.filter((actor) => !actor.ally);
-  const defeatedEnemies = enemies.filter((seat) => lib.playerOL[seat.id]?.isDead()).length;
-  if (!dead && defeatedEnemies !== enemies.length) return null;
+  const defeated = enemies.filter((seat) => lib.playerOL[seat.id]?.isDead()).length;
+  const reserves = enemies.filter(({ id }) => lib.playerOL[id]?.dataset.shanhetuReserve).length;
+  if (!dead && defeated + reserves !== enemies.length) return null;
+  const defeatedEnemies = dead ? defeated : enemies.length;
   return {
     runId: setup.shanhetu.runId,
     nodeId: setup.shanhetu.nodeId,

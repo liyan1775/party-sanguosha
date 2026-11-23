@@ -1,6 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-only
 import { lib, game, ui, get, _status } from 'noname';
-import { markPublicLogCards, publicCardVisible } from './privacy.js';
+import {
+  isConcealedDiscard,
+  markPublicLogCards,
+  publicCardVisible,
+  rememberDiscardVisibility,
+} from './privacy.js';
 
 /** Only cards already disclosed to everyone, never private ordering/skill data. */
 export function observerCardVisible(card) {
@@ -60,7 +65,7 @@ export function publicObserverState(recent = []) {
         ? '未亮将'
         : get.translation(player.name1 || player.name || '未选将'),
       identity:
-        _status.over || player.identityShown || player.isZhu || player.isDead()
+        player.identityShown || player.isZhu
           ? get.translation(`${player.identity}2`)
           : '身份未公开',
       hp: player.hp,
@@ -78,12 +83,226 @@ export function publicObserverState(recent = []) {
   };
 }
 
+export function createPublicCardTracker(template) {
+  const { cardKeys, ...pile } = template;
+  const seen = new WeakSet();
+  const counts = new Map();
+  const recent = [];
+  let knownPublicCount = 0;
+  let unknownDiscards = 0;
+  let epoch = 0;
+  let latest;
+  let previous;
+  function reveal(card, action, player) {
+    if (
+      get.itemtype(card) !== 'card' ||
+      card.isViewAsCard ||
+      seen.has(card) ||
+      !publicCardVisible(card) ||
+      card.name === 'party_unknown'
+    )
+      return;
+    seen.add(card);
+    const key = Object.hasOwn(cardKeys, card.name) ? cardKeys[card.name] : null;
+    if (key) counts.set(key, (counts.get(key) ?? 0) + 1);
+    recent.push({
+      seq: ++knownPublicCount,
+      cardName: [...get.translation(card.name).replace(/<[^>]*>/g, '')].slice(0, 10).join(''),
+      suit: ['spade', 'heart', 'club', 'diamond'].includes(card.suit) ? card.suit : 'none',
+      number:
+        Number.isInteger(card.number) && card.number >= 1 && card.number <= 13 ? card.number : null,
+      actor: [...(player?.nickname ?? '')].slice(0, 16).join(''),
+      action,
+    });
+    if (recent.length > 12) recent.shift();
+  }
+  function discarded(card, player, concealed) {
+    if (get.itemtype(card) !== 'card' || card.isViewAsCard) return;
+    rememberDiscardVisibility(card, concealed);
+    if (concealed) unknownDiscards++;
+    else reveal(card, 'discard', player);
+  }
+  function snapshot(deckCount, shuffledCount) {
+    const key = [deckCount, shuffledCount, knownPublicCount, unknownDiscards].join('/');
+    if (previous !== key) {
+      previous = key;
+      latest = {
+        epoch: ++epoch,
+        ...pile,
+        deckCount,
+        shuffledCount,
+        knownPublicCount,
+        unknownDiscards,
+        categories: pile.categories.map((category) => ({
+          ...category,
+          seen: counts.get(category.key) ?? 0,
+        })),
+        recentRevealed: recent.slice(),
+      };
+      // Shorten display text only if needed, keeping the latest twelve
+      // sequence numbers and card faces within the public snapshot budget.
+      const encoder = new TextEncoder();
+      for (const limit of [6, 3, 1]) {
+        if (encoder.encode(JSON.stringify(latest)).length < 2048) break;
+        latest.recentRevealed = latest.recentRevealed.map((entry) => ({
+          ...entry,
+          actor: [...entry.actor].slice(0, limit).join(''),
+          cardName: [...entry.cardName].slice(0, Math.max(limit, 3)).join(''),
+        }));
+      }
+    }
+    return latest;
+  }
+  return { reveal, discarded, snapshot };
+}
+
+function trackPublicLogCards(tracker, args, event) {
+  const [actor, verb, detail] = args;
+  const player = event?.player ?? (get.itemtype(actor) === 'player' ? actor : undefined);
+  if (!event) return;
+  if (['useCard', 'respond'].includes(event.name)) {
+    const index = args.indexOf(event.name === 'useCard' ? '使用了' : '打出了');
+    if (index >= 1 && args[index + 1] === event.card) {
+      const declared = args[index + 3];
+      const action = event.name === 'useCard' ? 'use' : 'respond';
+      for (const card of event.cards ?? []) {
+        if (
+          card === event.card ||
+          (Array.isArray(declared) && declared.includes(card)) ||
+          (event.cards.length === 1 && event.card?.isCard === true)
+        )
+          tracker.reveal(card, action, player);
+      }
+      return;
+    }
+  }
+  if (event.name === 'judge' && verb === '的判定结果为' && detail === event.result?.card)
+    tracker.reveal(detail, 'judge', player);
+  if (['亮出了', '展示了', '明置了'].includes(verb) && Array.isArray(detail)) {
+    for (const card of detail) {
+      if (event.hiddencards?.includes(card) || event.hiddenCards?.includes(card)) continue;
+      tracker.reveal(card, 'show', player);
+    }
+  }
+}
+
+function installDiscardTracking(tracker) {
+  const pile = ui?.discardPile;
+  if (!pile) return;
+  for (const method of ['appendChild', 'insertBefore']) {
+    const original = pile[method];
+    pile[method] = function (card, ...args) {
+      const moved = card.parentNode !== this;
+      const concealed = moved && isConcealedDiscard(card);
+      const result = original.call(this, card, ...args);
+      if (moved && card.parentNode === this)
+        tracker.discarded(card, get.event()?.player, concealed);
+      return result;
+    };
+  }
+}
+
+function publicMatchStats() {
+  const totals = new Map();
+  const highlights = [];
+  let firstKill;
+  function stats(player) {
+    const id = player?.playerid;
+    if (!id) return null;
+    if (!totals.has(id))
+      totals.set(id, {
+        playerId: id,
+        damageDealt: 0,
+        damageTaken: 0,
+        kills: 0,
+        cardsUsed: 0,
+        skillsTriggered: 0,
+        disruptCount: 0,
+      });
+    return totals.get(id);
+  }
+  function highlight(kind, actor, target, amount) {
+    highlights.push({ kind, actor: actor?.playerid, target: target.playerid, amount });
+    const priority = (entry) => (entry.kind === 'kill' ? 100 + entry.amount : entry.amount);
+    highlights.sort((a, b) => priority(b) - priority(a));
+    if (highlights.length > 4) highlights.pop();
+  }
+  function record(args, event) {
+    const [player, verb, source, suffix] = args;
+    if (get.itemtype(player) !== 'player') return;
+    const targetStats = stats(player);
+    if (!targetStats) return;
+    if (
+      event?.name === 'damage' &&
+      event.player === player &&
+      typeof verb === 'string' &&
+      verb.startsWith('受到了') &&
+      verb.endsWith('伤害') &&
+      Number.isSafeInteger(event.num) &&
+      event.num > 0
+    ) {
+      targetStats.damageTaken += event.num;
+      const sourceStats = stats(event.source);
+      if (sourceStats) sourceStats.damageDealt += event.num;
+      if (event.num >= 2) highlight('damage', event.source, player, event.num);
+    } else if (
+      event?.name === 'die' &&
+      event.player === player &&
+      verb === '被' &&
+      suffix === '杀害'
+    ) {
+      const killer = stats(source);
+      if (killer) {
+        firstKill ??= killer.playerId;
+        highlight('kill', source, player, ++killer.kills);
+      }
+    } else if (
+      event?.name === 'useCard' &&
+      args.includes('使用了') &&
+      args[args.indexOf('使用了') + 1] === event.card
+    ) {
+      targetStats.cardsUsed++;
+      if (['guohe', 'shunshou'].includes(event.card?.name)) targetStats.disruptCount++;
+    } else if (
+      args
+        .slice(1)
+        .some(
+          (arg, index) =>
+            typeof arg === 'string' &&
+            arg.endsWith('发动了') &&
+            typeof args[index + 2] === 'string' &&
+            args[index + 2].startsWith('【'),
+        )
+    ) {
+      targetStats.skillsTriggered++;
+    }
+  }
+  return {
+    record,
+    snapshot: () => ({ players: [...totals.values()], highlights: highlights.slice(), firstKill }),
+  };
+}
+
 export function installObserver(publish) {
   const recent = [],
     controls = new Map();
   let total = 0,
     last = '',
     ended = false;
+  let announcedShuffles = 0;
+  let drawn = false;
+  const template = globalThis.partyEngine.setup.cardTrackerTemplate;
+  const tracker = template && createPublicCardTracker(template);
+  if (tracker) installDiscardTracking(tracker);
+  const statistics = publicMatchStats();
+  // Native game.over sends itself to players. Leave that function intact
+  // and observe only the exact public title of the rule host's result dialog.
+  const dialog = ui?.create?.dialog;
+  if (dialog)
+    ui.create.dialog = function (...args) {
+      if (_status.over && ['平局', '游戏平局', '战斗平局'].includes(args[0])) drawn = true;
+      return dialog.apply(this, args);
+    };
   function record(text) {
     if (!text) return;
     recent.push(text);
@@ -118,6 +337,11 @@ export function installObserver(publish) {
   function update() {
     controlChanges();
     if (!lib.configOL.gameStarted) return;
+    const shuffledCount = game.shuffleNumber ?? 0;
+    if (shuffledCount > announcedShuffles) {
+      announcedShuffles = shuffledCount;
+      record(`已洗牌（本局第 ${shuffledCount} 次）`);
+    }
     if (_status.over && !ended) {
       ended = true;
       record('本局结束');
@@ -127,14 +351,34 @@ export function installObserver(publish) {
       logStart: total - recent.length + 1,
       logTotal: total,
     };
+    if (tracker && Number.isSafeInteger(state.deckCount))
+      state.cardTracker = tracker.snapshot(state.deckCount, shuffledCount);
+    if (state.ended) {
+      const mode = globalThis.partyEngine.setup.settings?.mode;
+      const winners =
+        drawn || mode === 'shanhetu'
+          ? []
+          : [...game.players, ...game.dead]
+              .filter((player) =>
+                mode === 'duel' ? !player.isDead() : game.checkOnlineResult?.(player) === true,
+              )
+              .map((player) => player.playerid);
+      state.settlement = { ...statistics.snapshot(), drawn, winners };
+    }
     const key = JSON.stringify(state);
     if (key === last) return;
-    last = key;
+    if (!globalThis.partyEngine.ruleSocket || globalThis.partyEngine.ruleSocket.readyState === 1)
+      last = key;
     publish(state);
   }
   const log = game.log;
   game.log = function (...args) {
     const text = publicLogText(args);
+    if (lib.configOL.gameStarted && !_status.over) {
+      const event = get.event();
+      if (tracker) trackPublicLogCards(tracker, args, event);
+      statistics.record(args, event);
+    }
     const result = log.apply(this, args);
     record(text);
     return result;

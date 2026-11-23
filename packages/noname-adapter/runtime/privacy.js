@@ -15,6 +15,31 @@ let discloseChoice = (_event, send) => send();
 let publicRendering;
 const publicExpansions = new WeakMap();
 const publicDialogs = new Map();
+const concealedDiscards = new WeakSet();
+
+/** Native face-down moves take precedence over the destination's usual visibility. */
+export function isConcealedDiscard(card) {
+  for (
+    let event = get.event(), depth = 0;
+    event && depth < 32;
+    event = event.getParent?.(), depth++
+  ) {
+    if (
+      ((Array.isArray(event.cards) && event.cards.includes(card)) ||
+        (Array.isArray(event.lose_list) &&
+          event.lose_list.some((entry) => Array.isArray(entry?.[1]) && entry[1].includes(card)))) &&
+      (event.blank === true ||
+        (event.visible === false && ['lose', 'loseAsync', 'cardsDiscard'].includes(event.name)))
+    )
+      return true;
+  }
+  return false;
+}
+
+export function rememberDiscardVisibility(card, concealed) {
+  if (concealed) concealedDiscards.add(card);
+  else concealedDiscards.delete(card);
+}
 
 /** Card arguments are declarations; opaque parents/storage are not materials. */
 function declaredCards(values) {
@@ -107,6 +132,8 @@ export function replayPublicDialogs(player) {
 /** One public-card policy for player serialization, journals and observers. */
 function publicCardDisclosure(card) {
   const position = get.position(card, true);
+  if (isConcealedDiscard(card)) return false;
+  if (position === 'd' && concealedDiscards.has(card)) return false;
   if (['e', 'j', 'd'].includes(position)) return true;
   if (card._knowers?.includes('everyone') || get.is?.shownCard?.(card)) return true;
   if (publicRendering?.disclosed.has(card)) return true;
@@ -134,6 +161,11 @@ function publicCardDisclosure(card) {
   const seen = new Set();
   for (let event = get.event(), depth = 0; event && depth < 32 && !seen.has(event); depth++) {
     seen.add(event);
+    if (
+      event.name === 'showCards' &&
+      (event.hiddencards?.includes(card) || event.hiddenCards?.includes(card))
+    )
+      return false;
     if (event.partyShownCompareCards?.includes(card)) return true;
     if (event.name === 'yanxi' && event.partyShownYanxiCards?.includes(card)) return true;
     if (event.partyShownGuhuoCards?.includes(card)) return true;

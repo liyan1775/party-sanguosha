@@ -782,8 +782,50 @@ export function installControls() {
     feedback.setAttribute('role', 'status');
     feedback.hidden = true;
     feedback.style.cssText =
-      'position:fixed;top:8px;left:50%;transform:translateX(-50%);z-index:100;pointer-events:none;background:#172723dd;color:#fff;padding:6px 12px;border-radius:8px;font:14px system-ui';
+      'position:fixed;top:8px;left:50%;transform:translateX(-50%);z-index:100;pointer-events:none;background:var(--zt-panel-dark,#12242c);color:#fffaf0;border:1px solid var(--zt-gold,#e0be75);padding:6px 14px;border-radius:4px;font:600 13px system-ui';
     document.body.appendChild(feedback);
+
+    // Anti-misclick read-only badge: shows currently selected cards without altering native click-to-play.
+    const selectedPreview = document.createElement('div');
+    selectedPreview.id = 'party-selected-preview';
+    selectedPreview.setAttribute('aria-live', 'polite');
+    selectedPreview.hidden = true;
+    document.body.appendChild(selectedPreview);
+    const suitMap = { spade: '♠', heart: '♥', club: '♣', diamond: '♦' };
+    const rankMap = { 1: 'A', 11: 'J', 12: 'Q', 13: 'K' };
+    const syncSelectedPreview = () => {
+      if (_status.over || !ui.selected?.cards?.length) {
+        selectedPreview.hidden = true;
+        return;
+      }
+      const zoom = game.documentZoom || 1;
+      selectedPreview.style.zoom = String(1 / zoom);
+      const names = ui.selected.cards.slice(0, 4).map((card) => {
+        const suit = suitMap[card.suit] ?? '';
+        const num = rankMap[card.number] ?? (card.number ? String(card.number) : '');
+        const nat = card.nature ? get.translation(card.nature) : '';
+        return `${suit}${num} ${nat}${get.translation(card.name)}`;
+      });
+      const extra = ui.selected.cards.length > 4 ? ` 等 ${ui.selected.cards.length} 张` : '';
+      const targets = (ui.selected.targets ?? [])
+        .slice(0, 2)
+        .map((t) => get.translation(t.name) || t.nickname || '')
+        .filter(Boolean);
+      const targetPart = targets.length
+        ? ` → ${targets.join('、')}${ui.selected.targets.length > 2 ? '等' : ''}`
+        : '';
+      selectedPreview.textContent = `已选：${names.join('、')}${extra}${targetPart}`;
+      selectedPreview.hidden = false;
+    };
+    const previewTimer = setInterval(syncSelectedPreview, 180);
+    window.addEventListener(
+      'pagehide',
+      () => {
+        clearInterval(previewTimer);
+        selectedPreview.remove();
+      },
+      { once: true },
+    );
     let timer;
     let showTimer;
     const clearFeedback = () => {

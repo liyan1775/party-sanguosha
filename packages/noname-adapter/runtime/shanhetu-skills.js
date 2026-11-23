@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Scenario-only variants: never replace the selectable native generals' skills.
-import { lib, game, get, ui } from 'noname';
+import { _status, lib, game, get, ui } from 'noname';
 import { installShanhetuHardSkills, installHardGear } from './shanhetu-hard.js';
 import { installNightmarePassSkills } from './shanhetu-nightmare-pass.js';
 import { installNightmareRoadSkills } from './shanhetu-nightmare-roads.js';
@@ -514,6 +514,7 @@ export function installShanhetuNpcSkills(definitions) {
   installNightmarePassSkills(recordUse);
   installNightmareRoadSkills(recordUse);
   installNightmareFinalSkills(recordUse);
+  installShanhetuInfernoSkills(recordUse);
   lib.skill.party_shanhetu_baonue = {
     inherit: 'olbaonue',
     zhuSkill: false,
@@ -907,4 +908,212 @@ export function installShanhetuCompanionSkills(companions) {
       },
     };
   }
+}
+
+const sway = 'party_shanhetu_ly_14062';
+const growth = 'party_shanhetu_ly_14057';
+const moods = ['赤', '黄', '青'];
+const moodOf = (player) => player.storage[sway] ?? 0;
+
+function spiritBody(index, draw) {
+  const name = 'party_shanhetu_ly_' + index;
+  return {
+    trigger: { global: 'phaseZhunbeiBegin' },
+    filter(event, player) {
+      return player.isIn() && player.countCards('h') <= player.maxHp;
+    },
+    async content(event, trigger, player) {
+      await player.draw(draw(player));
+    },
+    group: name + '_peach',
+    subSkill: {
+      peach: {
+        trigger: { player: 'damageEnd' },
+        direct: true,
+        async content(event, trigger, player) {
+          await player.chooseToUse({
+            filterCard(card, actor) {
+              return get.name(card, actor) === 'tao' && lib.filter.filterCard(card, actor);
+            },
+            filterTarget: (card, player, target) => player === target,
+            prompt: '神躯：你可以对自己使用一张【桃】',
+          });
+        },
+      },
+    },
+  };
+}
+
+function installShanhetuInfernoSkills(recordUse) {
+  lib.skill.party_shanhetu_ly_354 = spiritBody(354, () => 2);
+  lib.skill.party_shanhetu_ly_14132 = spiritBody(14132, (player) => player.maxHp);
+  lib.skill.party_shanhetu_ly_3150 = {
+    trigger: { source: 'damageEnd' },
+    usable: 1,
+    filter(event, player) {
+      const hand = player.countCards('h');
+      return hand < player.hp || (hand > player.hp && player.isDamaged());
+    },
+    async content(event, trigger, player) {
+      const hand = player.countCards('h');
+      if (hand < player.hp) await player.drawTo(player.hp);
+      else await player.recover(Math.min(hand, player.maxHp) - player.hp);
+    },
+  };
+  lib.skill.party_shanhetu_ly_3379 = {
+    forced: true,
+    trigger: { source: 'damageBegin1' },
+    filter() {
+      return game.roundNumber >= 4;
+    },
+    async content(event, trigger) {
+      trigger.num += Math.floor(game.roundNumber / 4);
+    },
+  };
+  lib.skill.party_shanhetu_ly_14052 = {
+    forced: true,
+    trigger: { player: ['phaseDrawBegin2', 'phaseDiscard'] },
+    priority: -20,
+    filter(event) {
+      return !event.numFixed && event.num > 0;
+    },
+    async content(event, trigger) {
+      trigger.num *= 2;
+    },
+  };
+  lib.skill[growth] = {
+    forced: true,
+    trigger: { global: 'phaseBegin' },
+    async content(event, trigger, player) {
+      switch (get.rand(0, 2)) {
+        case 0:
+          await player.recover();
+          break;
+        case 1:
+          await player.gainMaxHp();
+          break;
+        case 2:
+          player.addMark(growth, 1, false);
+          break;
+      }
+    },
+    intro: { content: '手牌上限 +#' },
+    mod: {
+      maxHandcard(player, num) {
+        return num + player.countMark(growth);
+      },
+    },
+  };
+  lib.skill[sway] = {
+    forced: true,
+    mark: true,
+    marktext: '魍',
+    intro: { content: (storage, player) => '当前状态：' + moods[moodOf(player)] },
+    trigger: { source: 'damageBegin2', player: 'damageEnd', target: 'useCardToTargeted' },
+    filter(event, player, name) {
+      switch (moodOf(player)) {
+        case 0:
+          return name === 'damageBegin2' && event.num > 0;
+        case 1:
+          return name === 'damageEnd' && event.num > 0;
+        case 2:
+          return (
+            name === 'useCardToTargeted' &&
+            event.player !== player &&
+            event.player.countCards('h') >= 2
+          );
+      }
+    },
+    async content(event, trigger, player) {
+      const mood = moodOf(player);
+      player.storage[sway] = (mood + 1) % moods.length;
+      player.syncStorage(sway);
+      player.markSkill(sway);
+      if (mood === 0) trigger.num *= 2;
+      else if (mood === 1) await player.recover(trigger.num);
+      else {
+        const count = Math.floor(trigger.player.countCards('h') / 2);
+        await player.discardPlayerCard(trigger.player, 'h', count, true);
+      }
+    },
+  };
+  lib.skill.party_shanhetu_ly_14071 = {
+    trigger: { source: 'damageEnd' },
+    usable: 1,
+    filter(event, player) {
+      return event.card?.name === 'sha' && stealableSkills(event.player, player).length > 0;
+    },
+    async content(event, trigger, player) {
+      const skill = stealableSkills(trigger.player, player).randomGet();
+      if (skill) await player.addSkill(skill);
+    },
+  };
+  lib.skill.party_shanhetu_ly_14109 = {
+    enable: 'phaseUse',
+    usable: 3,
+    filter(event, player) {
+      return player.hp > 1;
+    },
+    async content(event, trigger, player) {
+      await player.loseHp();
+      if (player.isIn()) await player.recover();
+    },
+    ai: { order: 10, result: { player: (player) => (player.hasSkill('zhaxiang') ? 2 : 0) } },
+  };
+  lib.skill.party_shanhetu_ly_14112 = {
+    trigger: { player: 'useCardToPlayered' },
+    filter(event) {
+      return event.card.name === 'sha' && event.target.countCards('h') > 0;
+    },
+    check(event, player) {
+      return get.attitude(player, event.target) < 0;
+    },
+    async content(event, trigger) {
+      const target = trigger.target;
+      target.addSkill('repojun2');
+      const move = target.addToExpansion('giveAuto', target.getCards('h'), target);
+      move.gaintag.add('repojun2');
+      await move;
+      recordUse('party_shanhetu_ly_14112');
+    },
+    group: 'party_shanhetu_ly_14112_damage',
+    subSkill: {
+      damage: {
+        trigger: { source: 'damageBegin1' },
+        forced: true,
+        filter(event, player) {
+          const target = event.player;
+          return (
+            event.card?.name === 'sha' &&
+            player.countCards('h') >= target.countCards('h') &&
+            player.countCards('e') >= target.countCards('e')
+          );
+        },
+        async content(event, trigger) {
+          trigger.num++;
+        },
+      },
+    },
+  };
+  lib.skill.party_shanhetu_ly_14131 = {
+    mod: {
+      cardUsable(card, player) {
+        if (card.name === 'sha' && _status.currentPhase === player) return Infinity;
+      },
+      selectTarget(card, player, range) {
+        if (card.name === 'sha' && range[1] >= 0 && _status.currentPhase === player) range[1] += 2;
+      },
+    },
+  };
+}
+
+function stealableSkills(target, thief) {
+  return (get.character(target.name1)?.skills ?? []).filter(
+    (skill) =>
+      lib.skill[skill] &&
+      !lib.skill[skill].charlotte &&
+      !lib.skill[skill].zhuSkill &&
+      !get.is.locked(skill, target) &&
+      !thief.hasSkill(skill),
+  );
 }

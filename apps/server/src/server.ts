@@ -19,7 +19,7 @@ import { NativeNonameService } from '../../../packages/noname-adapter/src/servic
 import { isLocalRequest, parseUpgradeUrl } from '../../../packages/noname-adapter/src/access.js';
 import { AppError } from './errors.js';
 import { findHomeUrls } from './network.js';
-import { LobbyStore } from './lobby.js';
+import { LobbyStore, PresetRoomConflict } from './lobby.js';
 import { RosterLibrary } from './roster-library.js';
 import { ShanhetuBook } from './shanhetu-book.js';
 
@@ -121,7 +121,13 @@ export function createPartyServer(options: ServerOptions) {
           ? error
           : new AppError(500, 'INTERNAL_ERROR', '服务遇到问题，请查看电脑上的服务日志。');
       if (!(error instanceof AppError)) console.error(error);
-      json(response, known.status, { error: { code: known.code, message: known.message } });
+      json(response, known.status, {
+        error: {
+          code: known.code,
+          message: known.message,
+          ...(known instanceof PresetRoomConflict ? { roomCode: known.roomCode } : {}),
+        },
+      });
     });
   });
   server.requestTimeout = 15000;
@@ -422,6 +428,15 @@ export function createPartyServer(options: ServerOptions) {
       json(response, 201, { ...roomInfo(created.room.code), playerId: created.playerId });
       return;
     }
+    if (route === 'POST /api/rooms/preset') {
+      const created = lobby.createPreset(await readBody(request), playerToken);
+      response.setHeader('Set-Cookie', playerCookie(request, created.token));
+      json(response, created.reused ? 200 : 201, {
+        ...roomInfo(created.room.code),
+        playerId: created.playerId,
+      });
+      return;
+    }
     if (route === 'GET /api/events') {
       if (url.searchParams.get('transport') === 'poll') {
         json(response, 200, lobby.list());
@@ -437,7 +452,7 @@ export function createPartyServer(options: ServerOptions) {
     }
 
     const roomRoute =
-      /^\/api\/rooms\/([A-F0-9]{6})(?:\/(players(?:\/[\w-]+)?|me(?:\/(?:ready|general|doudizhu))?|owner(?:\/claim)?|start|rematch|bots|events|team|series\/end|shanhetu\/(?:action|end|book|restart)))?$/.exec(
+      /^\/api\/rooms\/([A-F0-9]{6})(?:\/(players(?:\/[\w-]+)?|me(?:\/(?:ready|general|doudizhu))?|owner(?:\/claim)?|start|rematch|return-confirm|bots|events|team|series\/end|shanhetu\/(?:action|end|book|restart)))?$/.exec(
         url.pathname,
       );
     if (roomRoute) {
@@ -543,6 +558,10 @@ export function createPartyServer(options: ServerOptions) {
           json(response, 200, room.snapshot());
           return;
         }
+        case 'POST return-confirm':
+          room.confirmReturn(playerToken);
+          json(response, 200, room.snapshot());
+          return;
         case 'POST rematch':
           room.returnToWaiting(playerToken);
           json(response, 200, room.snapshot());
@@ -627,13 +646,23 @@ export function createPartyServer(options: ServerOptions) {
         'Set-Cookie',
         `party_console=${consoleToken}; Path=/api/console; HttpOnly; SameSite=Strict`,
       );
-    const assets: Record<string, { file: string; mime: string }> = {
+    const assets: Record<string, { file: string; mime: string; cache?: string }> = {
       '/assets/app.js': { file: 'app.js', mime: 'text/javascript; charset=utf-8' },
       '/assets/style.css': { file: 'style.css', mime: 'text/css; charset=utf-8' },
       '/assets/shanhetu-pass.webp': { file: 'shanhetu-pass.webp', mime: 'image/webp' },
       '/assets/shanhetu-encounter.webp': { file: 'shanhetu-encounter.webp', mime: 'image/webp' },
       '/assets/shanhetu-market.webp': { file: 'shanhetu-market.webp', mime: 'image/webp' },
       '/assets/shanhetu-camp.webp': { file: 'shanhetu-camp.webp', mime: 'image/webp' },
+      '/assets/zibai-day.webp': {
+        file: 'assets/zibai-day.webp',
+        mime: 'image/webp',
+        cache: 'public, max-age=3600',
+      },
+      '/assets/zibai-night.webp': {
+        file: 'assets/zibai-night.webp',
+        mime: 'image/webp',
+        cache: 'public, max-age=3600',
+      },
       '/assets/generals.json': { file: 'generals.json', mime: 'application/json; charset=utf-8' },
       '/assets/table.js': { file: 'table.js', mime: 'text/javascript; charset=utf-8' },
       '/assets/table.css': { file: 'table.css', mime: 'text/css; charset=utf-8' },
@@ -650,7 +679,11 @@ export function createPartyServer(options: ServerOptions) {
         : undefined);
     if (asset && ['GET', 'HEAD'].includes(request.method ?? '')) {
       const content = await readFile(path.join(options.webRoot, asset.file));
-      response.writeHead(200, { 'Content-Type': asset.mime, 'Cache-Control': 'no-store' });
+      response.writeHead(200, {
+        'Content-Type': asset.mime,
+        'Cache-Control': asset.cache ?? 'no-store',
+        ...(asset.cache ? { 'Cross-Origin-Resource-Policy': 'same-origin' } : {}),
+      });
       response.end(request.method === 'HEAD' ? undefined : content);
       return;
     }

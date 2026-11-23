@@ -11,7 +11,7 @@ import type { CustomRosterRef, CustomRosterSummary } from './rosters.js';
 import type { ShanhetuCampaignView } from './shanhetu.js';
 
 export const APP_ID = 'party-sanguosha';
-export const APP_VERSION = '0.12.0';
+export const APP_VERSION = '1.0.0';
 export const OWNER_OFFLINE_GRACE_MS = 60000;
 export const ROOM_IDLE_GRACE_MS = 10 * 60000;
 
@@ -77,6 +77,33 @@ export interface RoomSettings {
   extensions: string[];
   collegeFormat?: 'standard' | 'quick';
   customRoster?: CustomRosterRef;
+}
+
+export const QUICK_PLAY_PRESETS = {
+  'shanhetu-solo': { mode: 'shanhetu', playerCount: 1, generalPreset: 'advanced', botCount: 0 },
+  'doudizhu-3': { mode: 'doudizhu', playerCount: 3, generalPreset: 'advanced', botCount: 0 },
+  'versus-2v2': { mode: 'versus', playerCount: 4, generalPreset: 'advanced', botCount: 0 },
+  'identity-6': { mode: 'identity', playerCount: 6, generalPreset: 'advanced', botCount: 0 },
+  'college-4': {
+    mode: 'college',
+    playerCount: 4,
+    generalPreset: 'ol-college-2026',
+    collegeFormat: 'quick',
+    botCount: 0,
+  },
+} as const satisfies Record<
+  string,
+  Pick<RoomSettings, 'mode' | 'playerCount' | 'generalPreset' | 'collegeFormat'> & {
+    botCount: number;
+  }
+>;
+
+export type QuickPlayPresetId = keyof typeof QUICK_PLAY_PRESETS;
+export interface QuickPlayRequest {
+  nickname: string;
+  presetId: QuickPlayPresetId;
+  fillBots?: boolean;
+  requestId?: string;
 }
 
 export interface DoudizhuPublicState {
@@ -202,7 +229,11 @@ export interface RoomView {
   doudizhu?: DoudizhuPublicState;
   series?: CollegeSeriesView;
   shanhetu?: ShanhetuCampaignView;
+  returnedPlayerIds?: string[];
+  lastMatchSummary?: PublicMatchSummary;
 }
+
+export type RoomSnapshot = RoomView;
 
 export type MatchFailureCode =
   | 'worker-disconnected'
@@ -261,7 +292,7 @@ export interface MembershipResult extends RoomInfo {
 }
 
 export interface ApiError {
-  error: { code: string; message: string };
+  error: { code: string; message: string; roomCode?: string };
 }
 
 export interface IdentityCounts {
@@ -271,6 +302,62 @@ export interface IdentityCounts {
   nei: number;
 }
 
+export interface PublicMatchAward {
+  title: string;
+  holderNickname: string;
+  generalName: string;
+  detail: string;
+}
+
+export interface PublicMatchPlayerStats {
+  damageDealt: number;
+  damageTaken: number;
+  kills: number;
+  cardsUsed: number;
+  skillsTriggered: number;
+  disruptCount: number;
+}
+
+export interface PublicMatchSummary {
+  matchId: string;
+  mode: ModeId;
+  finishedAt: number;
+  rounds: number;
+  winnerLabel: string;
+  players: (PublicMatchPlayerStats & {
+    playerId: string;
+    nickname: string;
+    generalName: string;
+    identityLabel?: string;
+    alive: boolean;
+  })[];
+  highlights: string[];
+  awards: PublicMatchAward[];
+}
+
+export type PublicCardCategory =
+  'sha' | 'shan' | 'tao' | 'jiu' | 'wuxie' | 'aoe' | 'control' | 'delay' | 'juedou' | 'wuzhong';
+
+export interface PublicCardTrackerSnapshot {
+  epoch: number;
+  pileId: 'standard108' | 'military160' | 'shanhetu135' | 'unknown';
+  pileName: string;
+  totalCards: number;
+  deckCount: number;
+  shuffledCount: number;
+  knownPublicCount: number;
+  unknownDiscards: number;
+  categories: { key: PublicCardCategory; label: string; seen: number; templateTotal: number }[];
+  recentRevealed: {
+    seq: number;
+    cardName: string;
+    suit: 'spade' | 'heart' | 'club' | 'diamond' | 'none';
+    number: number | null;
+    action: 'use' | 'respond' | 'discard' | 'judge' | 'show';
+    actor: string;
+  }[];
+}
+
 /** Explicit public projection for an observer; never native serialized state. */
 export interface ObserverState {
   updatedAt: number;
@@ -278,6 +365,7 @@ export interface ObserverState {
   currentPlayerId: string | null;
   ended: boolean;
   deckCount?: number;
+  cardTracker?: PublicCardTrackerSnapshot;
   identityCounts?: IdentityCounts | null;
   players: {
     id: string;

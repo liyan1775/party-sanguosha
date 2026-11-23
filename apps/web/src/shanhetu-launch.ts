@@ -1,8 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-only
-import type { ShanhetuBookView } from '../../../packages/shared/src/shanhetu.js';
+import {
+  shanhetuOpeningPackages,
+  type ShanhetuBookView,
+} from '../../../packages/shared/src/shanhetu.js';
 import rules from '../../../config/shanhetu-book.json' with { type: 'json' };
 import { app, element } from './ui.js';
 import { make, button, plain } from './shanhetu-ui.js';
+import { shanhetuIcon } from './shanhetu-map.js';
 
 const openings = [
   { id: null, name: '自行出征', description: '从选将与第一场遭遇开始。' },
@@ -41,7 +45,38 @@ export function bindShanhetuLaunch(request: () => Promise<ShanhetuBookView>) {
   const choices = make('div', 'shanhetu-opening');
   choices.setAttribute('role', 'group');
   choices.setAttribute('aria-label', '初始战法');
-  body.append(challenges, make('h3', '', '初始战法 · 选一项'), choices, operations);
+  const packages = make('div', 'shanhetu-opening shanhetu-packages');
+  packages.setAttribute('role', 'group');
+  packages.setAttribute('aria-label', '免费开局流派包');
+  const packageOptions = [
+    { id: null, name: '自由构筑', description: '保留所选初始战法和出征传承。' },
+    ...shanhetuOpeningPackages,
+  ] as const;
+  let selectedPackage: (typeof packageOptions)[number]['id'] = null;
+  for (const option of packageOptions) {
+    const tile = button('', 'shanhetu-opening-choice');
+    tile.dataset.openingPackage = option.id ?? '';
+    tile.setAttribute('aria-pressed', String(option.id === selectedPackage));
+    tile.append(
+      shanhetuIcon(option.id ?? 'camp'),
+      make('strong', '', option.name),
+      make('span', '', plain(option.description)),
+    );
+    tile.onclick = () => {
+      selectedPackage = option.id;
+      for (const child of packages.children)
+        child.setAttribute('aria-pressed', String(child === tile));
+    };
+    packages.append(tile);
+  }
+  body.append(
+    challenges,
+    make('h3', '', '初始战法 · 选一项'),
+    choices,
+    make('h3', '', '免费开局流派包'),
+    packages,
+    operations,
+  );
   launch.append(hero, body);
   lobby.before(launch);
 
@@ -93,16 +128,21 @@ export function bindShanhetuLaunch(request: () => Promise<ShanhetuBookView>) {
   function render() {
     const previous = difficulty.value;
     const available = view?.difficulties ?? [{ id: 1, name: '普通1', unlocked: true }];
-    difficulty.replaceChildren(
-      ...available.map((rule) => {
-        const option = new Option(
-          rule.unlocked ? rule.name : `${rule.name} · 未解锁`,
-          String(rule.id),
-        );
-        option.disabled = !rule.unlocked;
-        return option;
-      }),
-    );
+    const groups = new Map<string, HTMLOptGroupElement>();
+    for (const rule of available) {
+      const name = rule.name.replace(/\s*\d+$/, '');
+      const group = groups.get(name) ?? make('optgroup');
+      group.label = name;
+      const option = new Option(
+        rule.unlocked ? rule.name : `${rule.name} · 未解锁`,
+        String(rule.id),
+      );
+      option.disabled = !rule.unlocked;
+      if ('unlockText' in rule && !rule.unlocked) option.title = rule.unlockText;
+      group.append(option);
+      groups.set(name, group);
+    }
+    difficulty.replaceChildren(...groups.values());
     if (available.some((rule) => rule.unlocked && String(rule.id) === previous))
       difficulty.value = previous;
     difficultyHint();
@@ -277,7 +317,12 @@ export function bindShanhetuLaunch(request: () => Promise<ShanhetuBookView>) {
       } else if (book.open) book.close();
     },
     startOptions() {
-      return { difficulty: Number(difficulty.value) || 1, openingTactic: selectedOpening };
+      return {
+        difficulty: Number(difficulty.value) || 1,
+        openingTactic: selectedPackage
+          ? { tactic: selectedOpening, package: selectedPackage }
+          : selectedOpening,
+      };
     },
   };
 }

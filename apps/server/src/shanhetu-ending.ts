@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 import type { ShanhetuFinalReport } from '../../../packages/shared/src/shanhetu.js';
 
-export type JourneyStats = Omit<ShanhetuFinalReport, 'title'>;
+export type JourneyStats = Omit<ShanhetuFinalReport, 'title' | 'battleSeconds' | 'victories'>;
 
 // S5 observations matched by decision ID, not the displayed label. Elite
 // recruitment and refusing a recruit can have different effects on reputation.
@@ -53,6 +53,8 @@ export function finalJourneyReport(
   difficulty: number,
   victory: boolean,
   stats: JourneyStats,
+  battleMs?: number,
+  victories?: number,
 ): ShanhetuFinalReport {
   let title = victory ? '大获全胜' : '折戟沉沙';
   if (victory && stats.reputation >= 0) {
@@ -60,6 +62,21 @@ export function finalJourneyReport(
     if (difficulty === 6 && stats.merit > 15) title = '从龙之功';
     // A recorded clear at exactly 4,000 establishes the inclusive money bound.
     if (difficulty === 11 && stats.trade > 60 && stats.earnedCoins >= 4000) title = '居功至伟';
+    if (
+      difficulty >= 16 &&
+      difficulty <= 20 &&
+      battleMs !== undefined &&
+      battleMs <= 1_200_000 &&
+      stats.strategy >= 30
+    )
+      title = '功成不居';
+    if (difficulty >= 21 && difficulty <= 25 && stats.merit >= 20 && (victories ?? 0) >= 10)
+      title = '震古烁今';
   }
-  return { title, ...stats };
+  return {
+    title,
+    ...stats,
+    ...(battleMs === undefined ? {} : { battleSeconds: Math.ceil(battleMs / 1000) }),
+    ...(victories === undefined ? {} : { victories }),
+  };
 }

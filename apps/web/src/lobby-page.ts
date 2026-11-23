@@ -1,7 +1,9 @@
+// SPDX-License-Identifier: GPL-3.0-only
 import {
   MODES,
   findMode,
   type MembershipResult,
+  type QuickPlayPresetId,
   type RoomSummary,
   type ServerInfo,
   type SessionView,
@@ -10,9 +12,49 @@ import { api, app, element, frame, perform, watchEvents } from './ui.js';
 import { bindGeneralGuide, guideButton } from './general-guide.js';
 import { createAssetPreloader } from './engine-preloader.js';
 import { arrowIcon, heroArtwork, modeIcon } from './lobby-art.js';
+import { ZIBAI_ICONS } from './zibai-theme.js';
+
+const NICKNAME_KEY = 'party_last_nickname';
 
 const joinable = (room: RoomSummary) =>
   room.phase === 'waiting' && room.humanCount + room.botCount < room.playerCount;
+
+const QUICK_SCENES: {
+  id: QuickPlayPresetId;
+  mode: 'doudizhu' | 'versus' | 'identity' | 'college';
+  title: string;
+  desc: string;
+  tag: string;
+}[] = [
+  {
+    id: 'doudizhu-3',
+    mode: 'doudizhu',
+    title: '3人快打斗地主',
+    desc: '经典进阶96将 · 农民互看手牌',
+    tag: '3 席',
+  },
+  {
+    id: 'versus-2v2',
+    mode: 'versus',
+    title: '4人开黑 2v2',
+    desc: '同队共享10将池 · 配合拉满',
+    tag: '4 席',
+  },
+  {
+    id: 'identity-6',
+    mode: 'identity',
+    title: '6人经典身份',
+    desc: '主忠反内 · 缺位随时补 AI',
+    tag: '6 席',
+  },
+  {
+    id: 'college-4',
+    mode: 'college',
+    title: '高校联赛练习',
+    desc: '快速6局/抢10分 · 赛事名册',
+    tag: '4 席',
+  },
+];
 
 function createRoomList() {
   const list = element('#room-list');
@@ -73,15 +115,57 @@ function createRoomList() {
 }
 
 export function showHomePage(info: ServerInfo, session: SessionView): void {
+  const shanhetuReady = Boolean(info.engine.shanhetu);
+  const savedNick = localStorage.getItem(NICKNAME_KEY) ?? '';
+
   frame(
     'player-layout home-layout',
-    '朋友的聚会大厅',
+    '兹白双境 · 朋友的聚会大厅',
     '一桌朋友，<br /><span>一场好戏。</span>',
-    '把三国的风云，带到朋友之间。<br class="desktop-break" />无需安装，填个昵称就能入席。',
+    '把三国的风云，带到朋友之间。<br class="desktop-break" />无需安装，填个昵称就能入席，或一键直征《山河图》。',
     `
+    ${
+      shanhetuReady
+        ? `<section class="panel shanhetu-direct-banner" id="shanhetu-direct">
+            <div class="shanhetu-direct-copy">
+              <p class="section-index">${ZIBAI_ICONS.shanhetu}<span>单人肉鸽 · 一键直达</span></p>
+              <h2>山河图 · 诸侯伐董</h2>
+              <p class="hint">三章十四城、普通至炼狱 25 档梯次、流派共振构筑与集市锻造，不用先建房改模式。</p>
+            </div>
+            <div class="shanhetu-direct-action">
+              <button id="quick-shanhetu-btn" class="button primary shanhetu-go-btn" type="button">${ZIBAI_ICONS.shanhetu}<span>单人一键出征</span>${arrowIcon}</button>
+            </div>
+          </section>`
+        : ''
+    }
     <div class="home-main" id="lobby-actions">
       <section id="current-room" class="panel current-room" hidden><p class="section-index">继续这一局</p><h2>你的座位还在。</h2><p class="hint">朋友和牌桌都在原房间，随时可以回来。</p><a id="return-room" class="button primary full-width" href="/">返回我的房间${arrowIcon}</a></section>
-      <section class="panel create-panel" id="create-panel"><div class="panel-heading"><div><p class="section-index">从你开始</p><h2>我来开一桌</h2></div><span class="mini-seal" aria-hidden="true">邀</span></div><form id="create-form"><label for="nickname">怎么称呼你</label><input id="nickname" name="nickname" placeholder="取个朋友认得的昵称" autocomplete="nickname" maxlength="32" aria-describedby="nickname-hint" required /><p class="hint" id="nickname-hint">昵称 1–16 个字。创建后自动入座，成为房主。</p><button id="create-button" class="button primary full-width" type="submit">创建房间并入座${arrowIcon}</button><p class="create-note">玩法、武将和 AI，入座后由你安排。</p></form></section>
+      <section class="panel create-panel" id="create-panel">
+        <div class="panel-heading"><div><p class="section-index">从你开始</p><h2>我来开一桌</h2></div><span class="mini-seal" aria-hidden="true">邀</span></div>
+        <form id="create-form">
+          <label for="nickname">怎么称呼你</label>
+          <input id="nickname" name="nickname" placeholder="取个朋友认得的昵称" autocomplete="nickname" maxlength="32" aria-describedby="nickname-hint" required />
+          <p class="hint" id="nickname-hint">昵称 1–16 个字。创建后自动入座，成为房主。</p>
+          <button id="create-button" class="button primary full-width" type="submit">创建房间并入座${arrowIcon}</button>
+          <p class="create-note">玩法、武将和 AI，入座后由你安排；或直接点下方场景秒开。</p>
+        </form>
+        <div class="quick-scenes" id="quick-scenes">
+          <div class="quick-scenes-head">
+            <span class="quick-scenes-title">一键场景开桌</span>
+            <label class="quick-fill-toggle"><input id="quick-fill-bots" type="checkbox" /><span>空位自动补 AI</span></label>
+          </div>
+          <div class="quick-scenes-grid">
+            ${QUICK_SCENES.map(
+              (scene) =>
+                `<button class="quick-scene-tile" type="button" data-quick-preset="${scene.id}">
+                  <span class="quick-scene-icon">${modeIcon(scene.mode)}</span>
+                  <span class="quick-scene-text"><strong>${scene.title}</strong><small>${scene.desc}</small></span>
+                  <span class="quick-scene-tag">${scene.tag}</span>
+                </button>`,
+            ).join('')}
+          </div>
+        </div>
+      </section>
       <section class="panel rooms-panel" id="friends-rooms"><div class="panel-heading"><div><p class="section-index">好戏正在发生</p><h2>朋友的房间</h2></div><span id="room-total" class="room-total">0 间</span></div><div class="room-filters" aria-label="筛选房间"><button type="button" data-room-filter="all" aria-pressed="true" aria-controls="room-list">全部房间</button><button type="button" data-room-filter="joinable" aria-pressed="false" aria-controls="room-list">可加入</button><span class="live-note">实时更新</span></div><ul id="room-list" class="room-list"></ul><div id="empty-rooms" class="empty-rooms"><span class="empty-symbol" aria-hidden="true">${modeIcon('identity')}</span><h3 id="empty-room-title">第一桌，等你来开。</h3><p id="empty-room-hint">填个昵称，邀上朋友。人少也可以用 AI 补位。</p></div></section>
     </div>
     <section class="lobby-discover" id="lobby-guide"><div class="discover-heading"><p class="section-index">随人数，选好戏</p><h2>各有玩法，同样尽兴。</h2><p class="hint">两个人也能开场，八个人正好热闹。</p></div><ul class="lobby-modes" aria-label="支持的玩法">${MODES.filter(
@@ -101,18 +185,31 @@ export function showHomePage(info: ServerInfo, session: SessionView): void {
     element('#engine-preload'),
     sessionStorage.getItem('party_lightweight_verification') === '1',
   ).update(Boolean(info.engine.preload));
+
+  const nicknameInput = element<HTMLInputElement>('#nickname');
+  if (savedNick && !nicknameInput.value) nicknameInput.value = savedNick;
+
+  const rememberNickname = (value: string) => {
+    const trimmed = value.trim().slice(0, 16);
+    if (trimmed) localStorage.setItem(NICKNAME_KEY, trimmed);
+  };
+
   const renderSession = () => {
     element('#current-room').hidden = !session.roomCode;
     element('#create-panel').hidden = Boolean(session.roomCode);
+    const shanhetuDirect = app.querySelector<HTMLElement>('#shanhetu-direct');
+    if (shanhetuDirect) shanhetuDirect.hidden = Boolean(session.roomCode);
     if (session.roomCode)
       element<HTMLAnchorElement>('#return-room').href = `/join/${session.roomCode}`;
   };
   renderSession();
+
   let rooms = info.rooms;
   let onlyJoinable = false;
   const roomList = createRoomList();
   const renderList = () => roomList(rooms, onlyJoinable);
   renderList();
+
   app.querySelectorAll<HTMLButtonElement>('[data-room-filter]').forEach((button) => {
     button.addEventListener('click', () => {
       onlyJoinable = button.dataset.roomFilter === 'joinable';
@@ -127,15 +224,53 @@ export function showHomePage(info: ServerInfo, session: SessionView): void {
       renderList();
     });
   });
+
+  const launchPreset = async (
+    button: HTMLButtonElement,
+    presetId: QuickPlayPresetId,
+    fillBots: boolean,
+    fallbackNick: string,
+  ) => {
+    await perform(button, async () => {
+      const nick = nicknameInput.value.trim() || localStorage.getItem(NICKNAME_KEY) || fallbackNick;
+      rememberNickname(nick);
+      const requestId = `qp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const created = await api<MembershipResult>('/api/rooms/preset', 'POST', {
+        nickname: nick,
+        presetId,
+        fillBots,
+        requestId,
+      });
+      location.assign(`/join/${created.room.code}`);
+    });
+  };
+
+  const shanhetuDirectBtn = app.querySelector<HTMLButtonElement>('#quick-shanhetu-btn');
+  if (shanhetuDirectBtn) {
+    shanhetuDirectBtn.addEventListener('click', () => {
+      void launchPreset(shanhetuDirectBtn, 'shanhetu-solo', false, '山河行者');
+    });
+  }
+
+  app.querySelectorAll<HTMLButtonElement>('[data-quick-preset]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const presetId = button.dataset.quickPreset as QuickPlayPresetId;
+      const fillBots = element<HTMLInputElement>('#quick-fill-bots').checked;
+      void launchPreset(button, presetId, fillBots, '聚会房主');
+    });
+  });
+
   element<HTMLFormElement>('#create-form').addEventListener('submit', (event) => {
     event.preventDefault();
     void perform(element('#create-button'), async () => {
+      rememberNickname(nicknameInput.value);
       const created = await api<MembershipResult>('/api/rooms', 'POST', {
-        nickname: element<HTMLInputElement>('#nickname').value,
+        nickname: nicknameInput.value,
       });
       location.assign(`/join/${created.room.code}`);
     });
   });
+
   watchEvents(
     '/api/events',
     'lobby',

@@ -15,16 +15,16 @@ export function installFarmerHandView() {
   let disposed = false;
   const style = document.createElement('style');
   style.textContent = `
-    .party-farmer-toggle{position:absolute;left:50%;bottom:-27px;transform:translateX(-50%);min-width:94px;max-width:180px;height:25px;padding:2px 7px;border:1px solid #d5bb80;border-radius:4px;background:#1a3229f2;color:#f3e3bb;font:12px/20px system-ui;white-space:nowrap;cursor:pointer;z-index:8}
-    .party-farmer-toggle[aria-expanded=true]{background:#546043}
-    #party-farmer-hand{position:fixed;z-index:48;box-sizing:border-box;padding:5px 8px;border:1px solid #a8b28a;border-radius:5px;background:#172e26f7;color:#f2e9cc;box-shadow:0 3px 10px #0006;font:12px/1.3 system-ui;pointer-events:auto}
+    .party-farmer-toggle{position:absolute;left:50%;bottom:-27px;transform:translateX(-50%);min-width:96px;max-width:184px;height:26px;padding:2px 9px;border:1px solid var(--zt-gold,#c59a42);border-radius:3px;background:var(--zt-panel,#fffefb);color:var(--zt-ink,#132430);font:700 12px/20px system-ui;white-space:nowrap;cursor:pointer;z-index:8;box-shadow:0 4px 12px rgba(0,0,0,.22)}
+    .party-farmer-toggle[aria-expanded=true]{background:linear-gradient(168deg,var(--zt-jade,#1f7d72),#114c45);color:#fffaf0;border-color:var(--zt-gold-hi,#e2c276)}
+    #party-farmer-hand{position:fixed;z-index:48;box-sizing:border-box;padding:6px 10px 8px;border:1.5px solid var(--zt-gold,#c59a42);border-radius:4px;background:var(--zt-panel,#fffefb);color:var(--zt-ink,#132430);box-shadow:0 12px 28px rgba(0,0,0,.28);font:12px/1.3 system-ui;pointer-events:auto}
     #party-farmer-hand[hidden]{display:none}
-    #party-farmer-hand header{display:flex;align-items:center;gap:10px;height:19px;margin-bottom:4px}
-    #party-farmer-hand strong{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;font-weight:400}
-    #party-farmer-hand button{background:none;border:0;color:#f2e9cc;padding:0 3px;font:12px system-ui;cursor:pointer}
-    .party-farmer-cards{position:relative;box-sizing:border-box;width:100%;min-width:0;display:flex;gap:5px;overflow-x:auto;overflow-y:hidden;height:calc(100% - 23px);scrollbar-width:thin;overscroll-behavior:contain;touch-action:pan-x}
-    .party-farmer-card{box-sizing:border-box;display:flex;align-items:center;justify-content:center;gap:3px;flex-shrink:0;min-width:56px;max-width:96px;height:100%;padding:3px 6px;background:#f3ead4;border:1px solid #cfbb8c;border-radius:3px;color:#273529;font-size:12px;white-space:normal;overflow-wrap:anywhere;text-align:center;pointer-events:none}
-    .party-farmer-card.is-red{color:#9b332d}
+    #party-farmer-hand header{display:flex;align-items:center;gap:10px;height:20px;margin-bottom:5px;border-bottom:1px solid rgba(184,139,53,.28);padding-bottom:3px}
+    #party-farmer-hand strong{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11.5px;font-weight:700;color:var(--zt-gold,#b88b35)}
+    #party-farmer-hand button{background:none;border:1px solid rgba(184,139,53,.35);border-radius:3px;color:var(--zt-ink,#132430);padding:0 6px;font:600 11px/18px system-ui;cursor:pointer}
+    .party-farmer-cards{position:relative;box-sizing:border-box;width:100%;min-width:0;display:flex;gap:6px;overflow-x:auto;overflow-y:hidden;height:calc(100% - 25px);scrollbar-width:thin;overscroll-behavior:contain;touch-action:pan-x}
+    .party-farmer-card{box-sizing:border-box;display:flex;align-items:center;justify-content:center;gap:3px;flex-shrink:0;min-width:58px;max-width:98px;height:100%;padding:4px 7px;background:linear-gradient(180deg,#fffdf7,#eee6d3);border:1px solid #c9b07a;border-top:3px solid #2b6e6d;border-radius:3px;color:#1a252e;font-size:12px;font-weight:700;white-space:normal;overflow-wrap:anywhere;text-align:center;box-shadow:0 2px 6px rgba(0,0,0,.16);pointer-events:none}
+    .party-farmer-card.is-red{color:#be2f27;border-top-color:#be2f27}
   `;
   document.head.append(style);
   function stop(event) {
