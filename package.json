@@ -43,7 +43,7 @@
     "release:check": "node scripts/check-publication.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "check": "npm run typecheck && npm test && npm run build && npm run format:check",
+    "check": "npm run typecheck && npm run build && npm test && npm run format:check",
     "engine:verify:table": "npm run build && node --import tsx scripts/verify-native-table-feedback.mjs",
     "engine:verify:jiedao-zonghu": "npm run build && node --import tsx scripts/verify-native-jiedao-zonghu.mjs",
     "engine:verify:college": "npm run build && npm run engine:check-definitions && node --import tsx scripts/verify-college-runtime.mjs",
