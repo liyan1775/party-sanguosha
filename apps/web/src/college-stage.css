@@ -115,322 +115,97 @@
 .practice-stage .doudizhu-panel {
   position: absolute;
   inset: 0;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: auto auto auto minmax(0, 1fr) auto;
-  gap: 8px;
-  padding: 12px 18px;
-  margin: 0;
-  overflow: hidden;
-  background: radial-gradient(ellipse at 35% 20%, #365447 0, #223e33 50%, #172e26 100%);
 }
-.practice-stage .draft-heading {
+.doudizhu-panel .draft-pool-heading {
   display: flex;
   justify-content: space-between;
-  gap: 12px;
-  align-items: center;
-}
-.practice-stage .draft-heading h2 {
-  margin: 0;
-  font-size: 20px;
-  font-weight: 650;
-  color: #f7edcf;
-  letter-spacing: 0.04em;
-}
-.practice-stage .draft-heading p {
-  margin: 3px 0 0;
-  font-size: 12px;
-  color: #c5d3c8;
-}
-.practice-stage .draft-clock {
-  flex-shrink: 0;
-  padding: 5px 12px;
-  border: 1px solid #91a28b;
-  border-radius: 5px;
-  color: #f5e8b9;
-  font-size: 19px;
-  font-variant-numeric: tabular-nums;
-}
-.practice-stage .draft-clock.is-urgent {
-  border-color: #d4aa72;
-  color: #ffd094;
-}
-.practice-stage .draft-progress {
-  min-width: 0;
-  display: flex;
-  gap: 8px;
-}
-.practice-stage .draft-seat-progress {
-  flex: 1;
-  min-width: 0;
-  border: 1px solid #60776b;
-  border-radius: 5px;
-  padding: 5px 9px;
-  display: flex;
-  gap: 6px;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 12px;
-  background: #152b2380;
-}
-.practice-stage .draft-seat-progress strong {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-weight: 500;
-}
-.practice-stage .draft-seat-progress span {
-  flex-shrink: 0;
-  color: #b6c7b6;
-}
-.practice-stage [data-team='a'] {
-  border-left: 3px solid #7bbccf;
-}
-.practice-stage [data-team='b'] {
-  border-left: 3px solid #e9ae68;
-}
-.practice-stage .draft-seat-progress.is-current {
-  background: #49604a;
-  border-color: #d4be8c;
-  box-shadow: inset 0 0 0 1px #d4be8c;
-}
-.practice-stage .draft-seat-progress.is-current span {
-  color: #f4dfac;
-}
-.practice-stage .draft-tasks {
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 30px;
-  overflow-x: auto;
-  scrollbar-width: thin;
-}
-.practice-stage .draft-task {
-  flex-shrink: 0;
-  max-width: min(350px, 70vw);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  padding: 5px 12px;
-  border: 1px solid #748373;
-  border-radius: 5px;
-  background: #1a3328;
-  color: #ccd8c7;
-  min-height: 32px;
-  font: inherit;
-  font-size: 12px;
-  cursor: pointer;
-}
-.practice-stage .draft-task[aria-pressed='true'] {
-  border-color: #e2c68e;
-  background: #435641;
-  color: #ffedbd;
-}
-.practice-stage .draft-workspace {
-  min-height: 0;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(220px, 28%);
-  gap: 14px;
-}
-.practice-stage .draft-pool {
-  min-width: 0;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-}
-.practice-stage .draft-pool-heading {
-  display: flex;
-  gap: 12px;
   align-items: baseline;
-  justify-content: space-between;
-  padding: 0 2px 8px;
-}
-.practice-stage .draft-pool-heading h3 {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  margin: 0;
-  font-size: 14px;
-  color: #e5e8d2;
-  font-weight: 500;
-}
-.practice-stage #doudizhu-quota {
-  font-size: 11px;
-  color: #c6d2be;
-  white-space: nowrap;
-}
-.practice-stage #doudizhu-seats {
-  min-height: 0;
-  flex: 1;
-  overflow: auto;
-  scrollbar-width: thin;
-}
-.practice-stage .doudizhu-seat {
-  height: 100%;
-}
-.practice-stage .doudizhu-candidates {
-  display: grid;
-  grid-template-columns: repeat(var(--draft-columns, 4), minmax(0, 1fr));
-  grid-auto-rows: minmax(112px, 1fr);
-  gap: 8px;
-  height: 100%;
-  padding: 3px;
-}
-.practice-stage .draft-general {
-  display: grid;
-  grid-template-rows: minmax(0, 1fr) 28px;
-  min-width: 0;
-  min-height: 112px;
-  max-height: 255px;
-  padding: 3px;
-  overflow: hidden;
-  border: 1px solid #a7976b;
-  border-radius: 5px;
-  background: #182a20;
-  color: #f5dfab;
-  cursor: pointer;
-  box-shadow: 0 3px 8px #0005;
-}
-.practice-stage .draft-general img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  min-height: 0;
-  object-fit: cover;
-  object-position: center 22%;
-  border-radius: 2px;
-}
-.practice-stage .draft-general strong {
-  align-self: center;
-  font-size: 13px;
-  font-weight: 500;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.practice-stage .draft-general[aria-pressed='true'] {
-  outline: 2px solid #ffe1a2;
-  outline-offset: 0;
-  background: #6e6139;
-  color: #fff7d6;
-}
-.practice-stage .draft-general:hover:not(:disabled) {
-  border-color: #f7dda1;
-}
-.practice-stage .draft-general:focus-visible,
-.practice-stage .draft-task:focus-visible {
-  outline: 3px solid #f4dfac;
-  outline-offset: 1px;
-}
-.practice-stage .draft-detail {
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  padding: 12px;
-  border: 1px solid #657b62;
-  border-radius: 5px;
-  background: #15291fbd;
-}
-.practice-stage .draft-detail-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  border-bottom: 1px solid #64725a;
-  padding-bottom: 8px;
-}
-.practice-stage .draft-detail-heading h3 {
-  margin: 0;
-  color: #f4d694;
-  font-size: 18px;
-}
-.practice-stage #doudizhu-close-detail,
-.practice-stage #doudizhu-show-detail {
-  display: none;
-}
-.practice-stage #doudizhu-detail-skills {
-  overflow: auto;
-  min-height: 0;
-  padding: 8px 2px 0;
-  scrollbar-width: thin;
-}
-.practice-stage .draft-detail h4 {
-  color: #e8c47c;
-  margin: 0 0 5px;
-  font-size: 14px;
-}
-.practice-stage .draft-detail p {
-  margin: 0 0 14px;
-  color: #e1e6d8;
-  line-height: 1.7;
-  font-size: 13px;
-  overflow-wrap: anywhere;
-}
-.practice-stage .draft-actions {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 12px;
-  min-height: 52px;
-  border-top: 1px solid #68785a;
-  margin: 0;
-  padding: 8px 0 0;
-  min-width: 0;
-  text-align: left;
-}
-.practice-stage .draft-feedback {
-  flex: 1;
-  min-width: 0;
-}
-.practice-stage .draft-feedback p {
-  margin: 0;
-  color: #baccb6;
+  flex-wrap: wrap;
+  gap: 2px 10px;
+  padding: 0 4px 5px;
+  color: var(--hd-muted);
   font-size: 12px;
-  line-height: 1.5;
 }
-.practice-stage #doudizhu-error {
+.doudizhu-panel .draft-pool-heading h3 {
+  color: var(--hd-ink);
+  font-size: 13px;
+}
+.doudizhu-panel .draft-task {
+  flex: 0 0 auto;
+  min-height: 29px;
+}
+.doudizhu-panel #doudizhu-show-detail {
+  flex: 0 0 auto;
+}
+.doudizhu-panel .hd-actions > .hd-buttons,
+.doudizhu-panel #doudizhu-choose-actions {
+  justify-content: flex-end;
+}
+.doudizhu-panel #doudizhu-confirm {
+  flex: 0 0 214px;
+  inline-size: 214px;
+}
+.doudizhu-panel .hd-error {
   color: #ffce92;
 }
-.practice-stage .doudizhu-bids,
-.practice-stage #doudizhu-choose-actions {
-  display: flex;
-  gap: 8px;
-  flex-shrink: 0;
+.doudizhu-panel #doudizhu-detail-meta {
+  color: #fff2cc;
+  display: table;
+  padding: 1px 5px;
+  border: 1px solid var(--hd-line);
+  border-radius: 4px;
+  background: var(--hd-group-bg, #153f35);
 }
-.practice-stage .draft-actions .button {
-  min-height: 42px;
-  padding: 8px 16px;
-  font-size: 14px;
-  border-radius: 5px;
+.doudizhu-panel #doudizhu-detail-meta:empty {
+  display: none;
 }
-.practice-stage .draft-actions .button.primary {
-  background: #e1bd75;
-  border-color: #eed095;
-  color: #24351f;
+/* Fit rows to the space left after the heading, seat chips, tabs and footer.
+   The seat is a size container, so cards cannot change the measured height. */
+@container hero-draft (min-width: 501px) {
+  .doudizhu-panel .hd-pool {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+  }
+  .doudizhu-panel .doudizhu-seat {
+    height: 100%;
+    container-type: size;
+  }
+  .doudizhu-panel .hd-grid {
+    --dd-card-width: max(
+      0px,
+      calc((100cqh - 8px - (var(--hd-rows) - 1) * var(--hd-card-gap, 9px)) / var(--hd-rows) * 2 / 3)
+    );
+    grid-template-columns: repeat(
+      var(--hd-columns),
+      minmax(
+        0,
+        min(
+          190px,
+          var(--dd-card-width),
+          calc((100% - (var(--hd-columns) - 1) * var(--hd-card-gap, 9px)) / var(--hd-columns))
+        )
+      )
+    );
+    justify-content: center;
+  }
 }
-.practice-stage .draft-actions .button.secondary {
-  background: #243d30;
-  border: 1px solid #9cad89;
-  color: #ebedce;
+
+.doudizhu-panel #doudizhu-wait {
+  margin: 12px 4px;
+  color: var(--hd-muted);
 }
-.practice-stage #doudizhu-confirm {
-  width: 228px;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-.practice-stage #doudizhu-wait {
-  margin: auto;
-  color: #d7dfc9;
-  font-size: 15px;
+@media (max-width: 500px) and (orientation: portrait) {
+  .practice-stage:not(.rotated-table) #doudizhu-confirm {
+    flex: 0 1 auto;
+    inline-size: auto;
+  }
 }
 .practice-stage #college-rest {
   position: absolute;
   inset: 0;
   overflow: auto;
   padding: 20px;
-  background: radial-gradient(ellipse at center, #365344, #162e25);
+  background: radial-gradient(ellipse at top, #205449, #081c19 78%);
 }
 .practice-stage .college-rest-card {
   width: min(640px, 100%);
@@ -505,7 +280,7 @@
   overflow: auto;
   border: 0;
   border-radius: 0;
-  background: #223e31;
+  background: linear-gradient(145deg, #143d34, #081c19);
   color: #e2eadb;
   box-shadow: none;
 }
@@ -539,8 +314,8 @@
   margin-top: 12px;
 }
 .practice-stage .college-spectator .observer-seat {
-  border: 1px solid #789173;
-  background: #1a3027;
+  border: 1px solid #9f7d47;
+  background: #102e27;
   color: #e3ebd7;
   padding: 12px;
 }
@@ -554,7 +329,7 @@
 }
 .practice-stage .college-spectator .observer-seat.is-active {
   border-color: #e3be79;
-  background: #364b35;
+  background: #254e3d;
 }
 .practice-stage .college-spectator .observer-general {
   color: #ecd4a0;
@@ -569,33 +344,14 @@
   background: #172f26;
 }
 .practice-stage.stage-short .doudizhu-panel {
-  padding: 8px 12px;
-  gap: 6px;
+  --hd-gap: 5px;
+  padding: 6px 9px;
 }
-.practice-stage.stage-short .draft-heading h2 {
-  font-size: 17px;
+.practice-stage.stage-short .doudizhu-panel .hd-card {
+  max-width: 106px;
 }
-.practice-stage.stage-short .draft-heading p {
-  margin-top: 1px;
-}
-.practice-stage.stage-short .draft-heading .draft-clock {
-  padding: 3px 10px;
-  font-size: 17px;
-}
-.practice-stage.stage-short .draft-actions {
-  min-height: 46px;
-  padding-top: 6px;
-}
-.practice-stage.stage-short .draft-actions .button {
-  min-height: 38px;
-  padding: 6px 13px;
-  font-size: 13px;
-}
-.practice-stage.stage-short .draft-progress .draft-seat-progress {
-  padding: 4px 7px;
-}
-.practice-stage.stage-short .draft-pool-heading {
-  padding-bottom: 4px;
+.practice-stage.stage-short .doudizhu-panel .hd-button {
+  min-height: 30px;
 }
 .practice-stage.stage-short #college-rest {
   padding: 10px 18px;
@@ -630,76 +386,11 @@
   padding: 6px 8px;
   font-size: 11px;
 }
+.practice-stage.stage-portrait.stage-drafting #stage-role {
+  display: none;
+}
 .practice-stage.stage-portrait.stage-finished #stage-role {
   display: none;
-}
-.practice-stage.stage-portrait .draft-progress {
-  gap: 5px;
-}
-.practice-stage.stage-portrait .draft-seat-progress {
-  display: block;
-  padding: 6px;
-}
-.practice-stage.stage-portrait .draft-seat-progress strong,
-.practice-stage.stage-portrait .draft-seat-progress span {
-  display: block;
-  font-size: 11px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.practice-stage.stage-portrait .draft-workspace {
-  display: block;
-  position: relative;
-}
-.practice-stage.stage-portrait .draft-pool {
-  height: 100%;
-}
-.practice-stage.stage-portrait .doudizhu-panel {
-  padding: 12px;
-}
-.practice-stage.stage-portrait .doudizhu-candidates {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  grid-auto-rows: 170px;
-}
-.practice-stage.stage-portrait .draft-actions {
-  flex-wrap: wrap;
-  gap: 6px;
-}
-.practice-stage.stage-portrait .draft-feedback {
-  flex-basis: 100%;
-}
-.practice-stage.stage-portrait #doudizhu-choose-actions {
-  width: 100%;
-}
-.practice-stage.stage-portrait #doudizhu-confirm {
-  flex: 1;
-  width: auto;
-  min-width: 0;
-  padding-inline: 8px;
-}
-.practice-stage.stage-portrait .doudizhu-bids {
-  width: 100%;
-  min-width: 0;
-}
-.practice-stage.stage-portrait .doudizhu-bids button {
-  flex: 1;
-  min-width: 0;
-  padding-inline: 4px;
-}
-.practice-stage.stage-portrait #doudizhu-show-detail,
-.practice-stage.stage-portrait #doudizhu-close-detail {
-  display: inline-flex;
-}
-.practice-stage.stage-portrait .draft-detail {
-  display: none;
-  position: absolute;
-  inset: 0;
-  background: #172d24;
-  z-index: 2;
-}
-.practice-stage.stage-portrait .detail-open .draft-detail {
-  display: flex;
 }
 .practice-stage.stage-portrait .college-spectator .observer-board {
   grid-template-columns: 1fr;

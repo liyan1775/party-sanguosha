@@ -1,6 +1,271 @@
 // SPDX-License-Identifier: GPL-3.0-only
 import { lib, game, ui, get, _status } from 'noname';
 import { sharesHandWith } from './privacy.js';
+import { confirmationLift, landlordRole, selectionSummary } from './control-presentation.js';
+
+function visibleRect(node) {
+  if (!node?.isConnected) return null;
+  const visible =
+    node.checkVisibility?.({ opacityProperty: true, visibilityProperty: true }) ??
+    (getComputedStyle(node).visibility === 'visible' && !node.closest('[hidden], .hidden'));
+  if (!visible) return null;
+  const rect = node.getBoundingClientRect();
+  return rect.width > 0 && rect.height > 0 ? rect : null;
+}
+
+const rectangles = (nodes) => Array.from(nodes, visibleRect).filter(Boolean);
+const overlaps = (a, b, gap = 0) =>
+  a.left < b.right + gap &&
+  a.right > b.left - gap &&
+  a.top < b.bottom + gap &&
+  a.bottom > b.top - gap;
+const boxAt = (left, top, width, height) => ({
+  left,
+  top,
+  right: left + width,
+  bottom: top + height,
+});
+const clamp = (value, low, high) => Math.max(low, Math.min(value, high));
+const inViewport = (box, inset) =>
+  box.left >= inset &&
+  box.top >= inset &&
+  box.right <= innerWidth - inset &&
+  box.bottom <= innerHeight - inset;
+const nativeControls = () =>
+  rectangles([
+    ui.control,
+    ui.confirm,
+    ...document.querySelectorAll('#control, .control:not(.removing)'),
+  ]);
+const popups = () =>
+  rectangles(
+    document.querySelectorAll(
+      '#window :is(.dialog, .popped, .tip, .prompt, .popup-container, .menubg, .party-basket-menu)',
+    ),
+  );
+
+// Native controls can be inserted, hidden or animated without a new game
+// selection. Follow those geometry changes without measuring a settled table.
+function watchTableGeometry(update, { active = () => true, badge = false } = {}) {
+  const landmarks =
+    '#window, #arena, #me, #handcards1, #handcards2, #system > *, #control, .control, .control > *, .player, .card.selected, .dialog, .popped, .tip, .prompt, .popup-container, .menubg, .party-basket-menu';
+  const seatDetails =
+    '.player > :is(.avatar, .avatar2, .name, .name2, .nameol, .nickname, .group, .identity, .hp, .equips, .count, .party-basket)';
+  const relevant = (node) => node?.matches?.(landmarks) || (badge && node?.matches?.(seatDetails));
+  const moving = new Map();
+  let frame;
+  let disposed = false;
+  const observed = new Set();
+  const ro = new ResizeObserver(schedule);
+  function measure() {
+    frame = undefined;
+    for (const node of [ui.window, ui.arena, ui.control, document.getElementById('me')]) {
+      if (node && !observed.has(node)) {
+        ro.observe(node);
+        observed.add(node);
+      }
+    }
+    for (const node of observed) {
+      if (node.isConnected) continue;
+      ro.unobserve(node);
+      observed.delete(node);
+    }
+    update();
+    const now = performance.now();
+    for (const [node, motions] of moving) {
+      for (const [key, deadline] of motions) if (now >= deadline) motions.delete(key);
+      if (!node.isConnected || !motions.size) moving.delete(node);
+    }
+    if (moving.size && active()) schedule();
+  }
+  function schedule() {
+    if (!disposed && frame === undefined && !document.hidden)
+      frame = requestAnimationFrame(measure);
+  }
+  const observer = new MutationObserver((records) => {
+    if (!active()) return;
+    for (const { target, type, attributeName, oldValue, addedNodes, removedNodes } of records) {
+      if (
+        target.nodeType !== Node.ELEMENT_NODE ||
+        target.closest('#party-selection-layer, .party-seat-status')
+      )
+        continue;
+      if (type === 'attributes') {
+        if (attributeName === 'aria-hidden' && !relevant(target)) continue;
+        if (oldValue === target.getAttribute(attributeName)) continue;
+        if (
+          relevant(target) ||
+          ui.selected.cards.includes(target) ||
+          (attributeName === 'class' &&
+            target.matches('.card') &&
+            /(?:^|\s)selected(?:\s|$)/.test(oldValue ?? ''))
+        ) {
+          schedule();
+          return;
+        }
+      } else if (
+        (relevant(target) && target !== ui.window && target !== ui.arena) ||
+        [...addedNodes, ...removedNodes].some(relevant)
+      ) {
+        schedule();
+        return;
+      }
+    }
+  });
+  observer.observe(document.body, {
+    subtree: true,
+    childList: true,
+    attributes: true,
+    attributeOldValue: true,
+    attributeFilter: ['class', 'style', 'hidden', 'aria-hidden', 'data-position', 'data-number'],
+  });
+  const transitions = ['transitionrun', 'transitionend', 'transitioncancel'];
+  function motion(event) {
+    if (!relevant(event.target)) return;
+    const key = event.propertyName;
+    if (event.type === 'transitionrun') {
+      if (
+        !/^(transform|translate|scale|opacity|visibility|top|left|right|bottom|width|height|margin|padding|inset|zoom)/.test(
+          key,
+        )
+      )
+        return;
+      if (!moving.has(event.target)) moving.set(event.target, new Map());
+      moving.get(event.target).set(key, performance.now() + 3000);
+    } else moving.get(event.target)?.delete(key);
+    if (active()) schedule();
+  }
+  for (const type of transitions) document.addEventListener(type, motion, true);
+  window.addEventListener('resize', schedule);
+  document.addEventListener('visibilitychange', schedule);
+  lib.hooks.checkEnd.push(schedule);
+  lib.hooks.uncheckEnd.push(schedule);
+  window.addEventListener(
+    'pagehide',
+    () => {
+      disposed = true;
+      cancelAnimationFrame(frame);
+      observer.disconnect();
+      ro.disconnect();
+      for (const type of transitions) document.removeEventListener(type, motion, true);
+      document.removeEventListener('visibilitychange', schedule);
+      window.removeEventListener('resize', schedule);
+    },
+    { once: true },
+  );
+  schedule();
+}
+
+function installSeatBadges() {
+  const { settings, shanhetu } = globalThis.partyEngine.setup;
+  const landmarkSelector =
+    ':scope > :is(.avatar, .avatar2, .name, .name2, .nameol, .nickname, .group, .identity, .hp, .equips, .count, .party-basket)';
+  function sync() {
+    if (document.hidden || !ui.arena || !lib.configOL.gameStarted) return;
+    const players = [...game.players, ...game.dead];
+    const obstacles = [
+      ...rectangles(players),
+      ...players.flatMap((player) => rectangles(player.querySelectorAll(landmarkSelector))),
+      ...nativeControls(),
+      ...rectangles(
+        document.querySelectorAll('#system > *, #me .card.selected, #party-selected-preview'),
+      ),
+    ];
+    for (const player of players) {
+      if (!player.isConnected) continue;
+      const identity = player.node?.identity;
+      const label = landlordRole(settings.mode, player.identity);
+      if (label && identity?.firstElementChild) {
+        identity.dataset.partyLandlordRole = player.identity;
+        if (identity.firstElementChild.textContent !== label)
+          identity.firstElementChild.textContent = label;
+      }
+      let bar = player.querySelector(':scope > .party-seat-status');
+      if (!bar) {
+        bar = document.createElement('div');
+        bar.className = 'party-seat-status';
+        const turn = document.createElement('span');
+        turn.className = 'party-turn-badge';
+        turn.textContent = '回合中';
+        bar.append(turn);
+        player.append(bar);
+      }
+      if (!shanhetu && Number.isInteger(player.seatNum)) {
+        let seat = bar.querySelector('.party-seat-number');
+        if (!seat) {
+          seat = document.createElement('span');
+          seat.className = 'party-seat-number';
+          bar.prepend(seat);
+        }
+        const text = `${player.seatNum}号位`;
+        if (seat.textContent !== text) seat.textContent = text;
+      }
+      const face = visibleRect(player);
+      const { left, top, width, height } = bar.getBoundingClientRect();
+      const safe = (x, y) => {
+        const area = boxAt(x, y, width, height);
+        return inViewport(area, 4) && !obstacles.some((other) => overlaps(area, other, 2));
+      };
+      let dock;
+      if (face && width && height) {
+        const cx = clamp(face.left + (face.width - width) / 2, 4, innerWidth - width - 4);
+        const cy = face.top + (face.height - height) / 2;
+        // Prefer the outside top edge. Seats against the screen edge use the
+        // outside bottom edge or a side, never painted over the portrait.
+        dock = [
+          [cx, face.top - height - 6],
+          [cx, face.bottom + 6],
+          [face.right + 6, face.top + 6],
+          [face.left - width - 6, face.top + 6],
+          [face.right + 6, cy],
+          [face.left - width - 6, cy],
+          [cx, face.top - height - 21],
+          [cx, face.bottom + 21],
+        ].find(([x, y]) => safe(x, y));
+      }
+      bar.toggleAttribute('data-docked', Boolean(dock));
+      if (!dock) continue;
+      const [x, y] = dock;
+      // Move by the viewport delta in the player's own scaled coordinate system.
+      if (Math.abs(x - left) > 0.35)
+        bar.style.left = `${(parseFloat(bar.style.left) || 0) + (x - left) / (width / bar.offsetWidth)}px`;
+      if (Math.abs(y - top) > 0.35)
+        bar.style.top = `${(parseFloat(bar.style.top) || 0) + (y - top) / (height / bar.offsetHeight)}px`;
+      obstacles.push(boxAt(x, y, width, height));
+    }
+  }
+  watchTableGeometry(sync, { badge: true });
+}
+
+function installTrackerDismissal(matchId) {
+  const close = () =>
+    parent.postMessage({ type: 'party-tracker-dismiss', matchId }, location.origin);
+  let wasChoosing = false;
+  const observer = new MutationObserver(() => {
+    if (!ui.arena) return;
+    const choosing = Boolean(ui.arena.querySelector('.player:is(.selectable, .selected)'));
+    if (choosing && !wasChoosing) close();
+    wasChoosing = choosing;
+  });
+  observer.observe(document.body, {
+    childList: true,
+    subtree: true,
+    attributes: true,
+    attributeFilter: ['class'],
+  });
+  document.addEventListener(
+    'pointerdown',
+    (event) => {
+      if (
+        event.target?.closest?.('#arena .player:is(.selectable,.selected)') ||
+        event.target?.matches?.('#window, #window > .background, #arena, #arena > .background')
+      )
+        close();
+    },
+    { capture: true },
+  );
+  window.addEventListener('pagehide', () => observer.disconnect(), { once: true });
+}
 
 /** Restore native declarative filter data without treating JSON as function text. */
 export function installNativeFilterDecoding() {
@@ -245,15 +510,16 @@ export function installDialogFocus() {
 
 /** Separate native OK/Cancel touch targets, including reused confirm controls. */
 export function installTouchConfirmation() {
-  if (
-    globalThis.partyEngine.setup.role !== 'player' ||
-    globalThis.partyEngine.setup.tableView ||
-    !matchMedia('(pointer: coarse)').matches
-  )
+  if (globalThis.partyEngine.setup.role !== 'player' || globalThis.partyEngine.setup.tableView)
     return;
+  const touch = matchMedia('(pointer: coarse)').matches;
   const style = document.createElement('style');
   style.id = 'party-touch-confirm-style';
   style.textContent = `
+    #control[data-party-confirm-dock] {
+      translate: 0 var(--party-confirm-lift, 0px);
+      transition: none !important;
+    }
     #control > .party-touch-confirm {
       display: inline-flex; padding: 0; overflow: visible;
       height: auto; min-height: var(--party-confirm-height, 48px);
@@ -277,9 +543,48 @@ export function installTouchConfirmation() {
     }
   `;
   document.head.append(style);
+  let frame;
+  let dock;
+  let lift = 0;
+  const clearDock = () => {
+    dock?.removeAttribute('data-party-confirm-dock');
+    dock?.style.removeProperty('--party-confirm-lift');
+    dock = undefined;
+    lift = 0;
+  };
+  const place = () => {
+    const parent = ui.control;
+    const confirm = ui.confirm;
+    if (dock && dock !== parent) clearDock();
+    if (!parent?.isConnected || !confirm?.isConnected || confirm.classList.contains('removing')) {
+      clearDock();
+      return false;
+    }
+    const hand = rectangles(document.querySelectorAll('#me .handcards, #me .handcards .card'));
+    const bounds = parent.getBoundingClientRect();
+    const scale = bounds.width / parent.offsetWidth || game.documentZoom || 1;
+    // A freshly created confirm initially has zero opacity but already has a
+    // hit box. Measure its entire group and its children before first paint.
+    const bottom = Math.max(
+      bounds.bottom,
+      confirm.getBoundingClientRect().bottom,
+      ...Array.from(confirm.children, (button) => button.getBoundingClientRect().bottom),
+    );
+    const next = confirmationLift(bottom, Math.min(...hand.map((rect) => rect.top)), lift, scale);
+    if (next !== lift || dock !== parent) {
+      dock = parent;
+      dock.setAttribute('data-party-confirm-dock', '');
+      dock.style.setProperty('--party-confirm-lift', `${-next}px`);
+      lift = next;
+    }
+    return true;
+  };
+  const track = () => {
+    frame = place() ? requestAnimationFrame(track) : undefined;
+  };
   const size = () => {
     const control = ui.confirm;
-    if (!control) return;
+    if (!touch || !control) return;
     control.classList.add('party-touch-confirm');
     // Native replace() sums child widths without their margins. Clear that
     // cached width so native updatec() positions the full separated group.
@@ -299,7 +604,10 @@ export function installTouchConfirmation() {
   const update = ui.updatec;
   ui.updatec = function (...args) {
     size();
-    return update.apply(this, args);
+    const result = update.apply(this, args);
+    if (frame === undefined) track();
+    else place();
+    return result;
   };
   const zoom = ui.updatez;
   ui.updatez = function (...args) {
@@ -318,6 +626,14 @@ export function installTouchConfirmation() {
       if (ui.control) ui.updatec();
     });
   });
+  window.addEventListener(
+    'pagehide',
+    () => {
+      cancelAnimationFrame(frame);
+      clearDock();
+    },
+    { once: true },
+  );
 }
 
 export function installHumanConfirmation() {
@@ -655,17 +971,7 @@ export function installControls() {
     };
   }
   if (globalThis.partyEngine.setup.role !== 'worker') {
-    const init = lib.element.Player.prototype.init;
-    lib.element.Player.prototype.init = function (...args) {
-      const result = init.apply(this, args);
-      if (!this.querySelector('.party-turn-badge')) {
-        const badge = document.createElement('div');
-        badge.className = 'party-turn-badge';
-        badge.textContent = '回合中';
-        this.append(badge);
-      }
-      return result;
-    };
+    installSeatBadges();
   }
   // The scaled native canvas is a fixed viewport. overflow:hidden still lets
   // focus/scrollIntoView move #window and crop the arena after choosing a general.
@@ -697,19 +1003,6 @@ export function installControls() {
   });
   ui.click.cardPile = () => {};
   const hideMenus = () => {
-    if (['doudizhu', 'college'].includes(globalThis.partyEngine.setup.settings.mode)) {
-      for (const player of [...game.players, ...game.dead]) {
-        if (!player.isConnected || !Number.isInteger(player.seatNum)) continue;
-        let badge = player.querySelector('.party-seat-number');
-        if (!badge) {
-          badge = document.createElement('span');
-          badge.className = 'party-seat-number';
-          player.append(badge);
-        }
-        const text = `${player.seatNum}号位`;
-        if (badge.textContent !== text) badge.textContent = text;
-      }
-    }
     for (const key of [
       'config',
       'config2',
@@ -735,8 +1028,10 @@ export function installControls() {
   if (globalThis.partyEngine.setup.role === 'player') {
     if (!globalThis.partyEngine.setup.tableView) {
       const setup = globalThis.partyEngine.setup;
+      installTrackerDismissal(setup.id);
       let returnLabel = setup.shanhetu ? '继续征程' : '回到房间';
       let journeySettled = false;
+      let notifiedEnded = false;
       const returnFromTable = () => {
         parent.postMessage({ type: 'party-return-room', matchId: setup.id }, location.origin);
       };
@@ -745,6 +1040,11 @@ export function installControls() {
       // game.over/lib.onover; neither intercepts all native ending paths.
       updateSettlement = () => {
         const nativeSettlement = _status.over && ui.dialog?.isConnected;
+        if (_status.over && !notifiedEnded) {
+          notifiedEnded = true;
+          document.documentElement.setAttribute('data-party-settled', '');
+          parent.postMessage({ type: 'party-native-ended', matchId: setup.id }, location.origin);
+        }
         if (
           (nativeSettlement || journeySettled) &&
           ui.control?.isConnected &&
@@ -755,27 +1055,26 @@ export function installControls() {
           ui.partyReturnRoom.id = 'party-return-room';
         }
       };
-      if (setup.shanhetu) {
-        window.addEventListener('message', (event) => {
-          if (
-            event.source !== parent ||
-            event.origin !== location.origin ||
-            event.data?.type !== 'party-finished' ||
-            event.data.matchId !== setup.id ||
-            !['ending', 'continue'].includes(event.data.shanhetuReturn)
-          )
-            return;
-          // An ended native reinit may rebuild the seats without replaying the result dialog.
-          journeySettled = true;
-          const label = event.data.shanhetuReturn === 'ending' ? '查看结局' : '继续征程';
-          if (label !== returnLabel) {
-            returnLabel = label;
-            if (ui.partyReturnRoom?.isConnected) ui.partyReturnRoom.replace(label, returnFromTable);
-          }
-          updateSettlement();
-        });
-        parent.postMessage({ type: 'party-settlement-ready', matchId: setup.id }, location.origin);
-      }
+      window.addEventListener('message', (event) => {
+        if (
+          event.source !== parent ||
+          event.origin !== location.origin ||
+          event.data?.type !== 'party-finished' ||
+          event.data.matchId !== setup.id
+        )
+          return;
+        document.documentElement.setAttribute('data-party-settled', '');
+        if (!setup.shanhetu || !['ending', 'continue'].includes(event.data.shanhetuReturn)) return;
+        // An ended native reinit may rebuild the seats without replaying the result dialog.
+        journeySettled = true;
+        const label = event.data.shanhetuReturn === 'ending' ? '查看结局' : '继续征程';
+        if (label !== returnLabel) {
+          returnLabel = label;
+          if (ui.partyReturnRoom?.isConnected) ui.partyReturnRoom.replace(label, returnFromTable);
+        }
+        updateSettlement();
+      });
+      parent.postMessage({ type: 'party-settlement-ready', matchId: setup.id }, location.origin);
     }
     const feedback = document.createElement('div');
     feedback.id = 'party-action-status';
@@ -790,7 +1089,10 @@ export function installControls() {
     selectedPreview.id = 'party-selected-preview';
     selectedPreview.setAttribute('aria-live', 'polite');
     selectedPreview.hidden = true;
-    document.body.appendChild(selectedPreview);
+    const selectionLayer = document.createElement('div');
+    selectionLayer.id = 'party-selection-layer';
+    selectionLayer.append(selectedPreview);
+    document.body.appendChild(selectionLayer);
     const suitMap = { spade: '♠', heart: '♥', club: '♣', diamond: '♦' };
     const rankMap = { 1: 'A', 11: 'J', 12: 'Q', 13: 'K' };
     const syncSelectedPreview = () => {
@@ -798,8 +1100,6 @@ export function installControls() {
         selectedPreview.hidden = true;
         return;
       }
-      const zoom = game.documentZoom || 1;
-      selectedPreview.style.zoom = String(1 / zoom);
       const names = ui.selected.cards.slice(0, 4).map((card) => {
         const suit = suitMap[card.suit] ?? '';
         const num = rankMap[card.number] ?? (card.number ? String(card.number) : '');
@@ -811,21 +1111,108 @@ export function installControls() {
         .slice(0, 2)
         .map((t) => get.translation(t.name) || t.nickname || '')
         .filter(Boolean);
-      const targetPart = targets.length
-        ? ` → ${targets.join('、')}${ui.selected.targets.length > 2 ? '等' : ''}`
-        : '';
-      selectedPreview.textContent = `已选：${names.join('、')}${extra}${targetPart}`;
+      const event = _status.event;
+      const info = event?.skill && get.info(event.skill);
+      const converted = info?.viewAs && get.card();
+      const text = selectionSummary(
+        names,
+        extra,
+        targets,
+        ui.selected.targets.length > 2,
+        converted && get.translation(info.sourceSkill || event.skill),
+        converted &&
+          `${converted.nature ? get.translation(converted.nature) : ''}${get.translation(converted.name)}`,
+      );
+      if (selectedPreview.textContent !== text) selectedPreview.textContent = text;
       selectedPreview.hidden = false;
+      const layer = selectionLayer.getBoundingClientRect();
+      const scaleX = layer.width / selectionLayer.offsetWidth;
+      const scaleY = layer.height / selectionLayer.offsetHeight;
+      const density = String(clamp(1 / scaleY, 0.75, 2.2));
+      if (selectedPreview.style.getPropertyValue('--party-preview-density') !== density)
+        selectedPreview.style.setProperty('--party-preview-density', density);
+      const { width, height } = selectedPreview.getBoundingClientRect();
+      const controls = nativeControls();
+      const hand = visibleRect(document.getElementById('me'));
+      const raised = rectangles(ui.selected.cards);
+      const boardObstacles = [
+        ...raised,
+        ...popups(),
+        ...rectangles(
+          document.querySelectorAll('#arena .player, .party-seat-status[data-docked], #system > *'),
+        ),
+        ...(hand ? [hand] : []),
+      ];
+      const obstacles = [...controls, ...boardObstacles];
+      const top = Math.min(
+        ...controls.map((rect) => rect.top),
+        hand?.top ?? Infinity,
+        ...raised.map((rect) => rect.top),
+      );
+      const left = (innerWidth - width) / 2;
+      const safetyBand = Math.min(96, innerHeight / 4);
+      // Try the top edge, then the first free line beneath any overlay in
+      // the top band. This also follows native toolbar wrapping on resize.
+      const topDocks = [
+        8,
+        ...obstacles
+          .filter((obstacle) => obstacle.left < left + width && obstacle.right > left)
+          .map((obstacle) => obstacle.bottom + (controls.includes(obstacle) ? 15 : 4))
+          .filter((candidate) => candidate >= 8 && candidate + height <= safetyBand)
+          .sort((a, b) => a - b),
+      ];
+      const candidates = [top - height - 15, ...topDocks];
+      let y = candidates.find((candidate) => {
+        const area = boxAt(left, candidate, width, height);
+        return (
+          inViewport(area, 6) &&
+          controls.every(
+            (control) => area.bottom + 14 <= control.top || area.top >= control.bottom + 14,
+          ) &&
+          obstacles.every((obstacle) => !overlaps(area, obstacle, 3))
+        );
+      });
+      let x = left;
+      if (y === undefined) {
+        // On a short eight-seat table the top row is full, and safe confirm
+        // docking can leave no line above the buttons. Use the side of the
+        // real controls rather than the empty, pointer-transparent #control row.
+        const buttons = rectangles(document.querySelectorAll('#control > .control:not(.removing)'));
+        const lanes = [
+          left,
+          innerWidth - width - 9,
+          9,
+          ...buttons.flatMap((control) => [control.right + 15, control.left - width - 15]),
+        ];
+        const rows = [
+          (hand?.top ?? innerHeight) - height - 6,
+          ...buttons.map((control) => control.top + (control.height - height) / 2),
+          ...boardObstacles.map((obstacle) => obstacle.bottom + 4),
+        ];
+        for (const row of rows) {
+          const lane = lanes.find((lane) => {
+            const area = boxAt(lane, row, width, height);
+            return (
+              inViewport(area, 6) &&
+              buttons.every((control) => !overlaps(area, control, 14)) &&
+              boardObstacles.every((obstacle) => !overlaps(area, obstacle, 3))
+            );
+          });
+          if (lane !== undefined) {
+            x = lane;
+            y = row;
+            break;
+          }
+        }
+      }
+      selectedPreview.style.visibility = y === undefined ? 'hidden' : '';
+      if (y === undefined) return;
+      selectedPreview.style.left = `${(x - layer.left) / scaleX}px`;
+      selectedPreview.style.top = `${(y - layer.top) / scaleY}px`;
     };
-    const previewTimer = setInterval(syncSelectedPreview, 180);
-    window.addEventListener(
-      'pagehide',
-      () => {
-        clearInterval(previewTimer);
-        selectedPreview.remove();
-      },
-      { once: true },
-    );
+    watchTableGeometry(syncSelectedPreview, {
+      active: () => !selectedPreview.hidden || Boolean(ui.selected?.cards?.length),
+    });
     let timer;
     let showTimer;
     const clearFeedback = () => {

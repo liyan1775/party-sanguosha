@@ -32,6 +32,14 @@ export class LobbyStore {
     private readonly resolveRoster?: (id: string, revision: number) => ResolvedCustomRoster,
   ) {}
 
+  shutdownBlocker(): string | undefined {
+    for (const room of this.rooms.values()) {
+      const reason = room.shutdownBlocker();
+      if (reason) return reason;
+    }
+    return undefined;
+  }
+
   list(): RoomSummary[] {
     return [...this.rooms.values()].map((store) => {
       const room = store.snapshot();
@@ -39,6 +47,8 @@ export class LobbyStore {
         code: room.code,
         ownerNickname: room.players.find((player) => player.id === room.ownerId)?.nickname ?? '',
         mode: room.settings.mode,
+        generalPreset: room.settings.generalPreset,
+        ...(room.roster ? { rosterName: room.roster.name } : {}),
         playerCount: room.settings.playerCount,
         humanCount: room.players.filter((player) => player.kind === 'human').length,
         botCount: room.players.filter((player) => player.kind === 'bot').length,
@@ -97,11 +107,13 @@ export class LobbyStore {
   }
 
   createPreset(body: Record<string, unknown>, token?: string) {
-    const { presetId, fillBots = false, requestId } = body;
+    const { presetId, fillBots = false, requestId, requireUnseated = false } = body;
     if (typeof presetId !== 'string' || !Object.hasOwn(QUICK_PLAY_PRESETS, presetId))
       throw new AppError(400, 'INVALID_QUICK_PRESET', '请选择可用的快捷场景。');
     if (typeof fillBots !== 'boolean')
       throw new AppError(400, 'INVALID_FILL_BOTS', '请选择是否用 AI 补齐空位。');
+    if (typeof requireUnseated !== 'boolean')
+      throw new AppError(400, 'INVALID_SEAT_REQUIREMENT', '开桌的座位条件无效。');
     if (
       requestId !== undefined &&
       (typeof requestId !== 'string' || !/^[\w-]{1,128}$/.test(requestId))
@@ -119,7 +131,7 @@ export class LobbyStore {
     }
     const current = this.session(token);
     const room = current.roomCode ? this.get(current.roomCode) : this.newRoom();
-    if (current.roomCode && !room.canSwitchPreset(token))
+    if (current.roomCode && (requireUnseated || !room.canSwitchPreset(token)))
       throw new PresetRoomConflict(current.roomCode);
     const playerId = current.playerId ?? room.join(nickname, token).playerId;
     room.applyPreset(QUICK_PLAY_PRESETS[presetId as QuickPlayPresetId], nickname, fillBots, token);

@@ -1,0 +1,262 @@
+/* SPDX-License-Identifier: GPL-3.0-only */
+
+/* The native arena uses absolute positioning for every div. Keep that policy
+   on the table and use normal layout only inside the startup draft dialog. */
+#arena > .dialog.party-native-draft {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 70 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  max-width: none !important;
+  max-height: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  transform: scale(var(--party-draft-scale, 1)) !important;
+  transform-origin: top left !important;
+  transition: none !important;
+  opacity: 1 !important;
+  overflow: hidden !important;
+}
+
+.party-native-draft > :is(.content-container, .bar),
+.control.party-native-draft-original-confirm {
+  display: none !important;
+}
+
+.party-native-draft-shell {
+  width: 100%;
+  height: 100%;
+}
+
+.party-native-draft-shell div {
+  position: relative;
+  display: block;
+  transition: none;
+}
+
+.party-native-draft-shell :is(.hd-seats, .hd-grid, .hd-workspace) {
+  display: grid;
+}
+
+.party-native-draft-shell :is(.hd-metrics, .hd-scroll-heading, .hd-buttons) {
+  display: flex;
+}
+
+.party-native-draft-shell .hd-seats {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.party-native-draft-shell .hd-seat .hd-flag {
+  font-weight: 700;
+}
+
+.party-native-draft-shell .hd-seat {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  align-content: center;
+  align-items: center;
+  gap: 1px 5px;
+  text-align: start;
+}
+
+.party-native-draft-shell .hd-seat-flags {
+  display: flex;
+  flex-wrap: wrap;
+  grid-column: 1 / -1;
+  gap: 0 4px;
+}
+
+.party-native-draft-shell .hd-seat-nickname {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.party-native-draft-shell .hd-seats:is([data-count='7'], [data-count='8']) {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.party-native-draft-shell .party-draft-self-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+.party-native-draft-shell .party-draft-lord-summary:empty {
+  display: none;
+}
+
+.party-native-draft-shell.inspection-open .hd-scroll {
+  grid-template-rows: auto auto minmax(0, 1fr);
+}
+
+.party-native-draft-shell.inspection-open .hd-close-skills {
+  display: inline-flex;
+  justify-self: start;
+}
+
+/* Native document zoom changes CSS container widths independently of the
+   iframe viewport. Use the actual viewport to switch the touch layout. */
+@media (max-width: 500px) and (orientation: portrait) {
+  .party-native-draft-shell .hd-header {
+    grid-template-columns: minmax(0, 1fr) max-content;
+    gap: 5px;
+  }
+
+  .party-native-draft-shell .hd-seats {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    grid-template-columns: repeat(var(--hd-compact-seats, 4), minmax(0, 1fr));
+  }
+
+  .party-native-draft-shell .hd-metrics {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .party-native-draft-shell .hd-workspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .party-native-draft-shell .hd-scroll {
+    display: none;
+  }
+
+  .party-native-draft-shell.detail-open .hd-pool,
+  .party-native-draft-shell.detail-open .hd-show-skills,
+  .party-native-draft-shell:not(.detail-open) .hd-close-skills {
+    display: none;
+  }
+
+  .party-native-draft-shell.detail-open .hd-scroll {
+    display: grid;
+    grid-template-rows: auto auto minmax(0, 1fr);
+  }
+
+  .party-native-draft-shell:not(.detail-open) .hd-show-skills,
+  .party-native-draft-shell.detail-open .hd-close-skills {
+    display: inline-flex;
+    justify-self: start;
+  }
+
+  .party-native-draft-shell .hd-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .party-native-draft-shell .hd-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+#arena .party-native-draft-shell .hd-card.button:is(.unselectable, .selectable) {
+  opacity: 1 !important;
+}
+
+.party-native-draft-shell .hd-skills {
+  text-align: start;
+}
+
+.party-native-draft-shell .hd-skills p {
+  white-space: pre-line;
+}
+
+.party-native-draft-shell .hd-scroll-heading > .hd-flag {
+  border: 1px solid var(--hd-tone, var(--hd-line));
+  border-radius: 20px;
+  padding: 2px 8px;
+  background: #0b2c24;
+  color: var(--hd-tone, var(--hd-gold));
+  font-weight: 700;
+}
+
+#arena .party-native-draft .hd-card.button {
+  position: relative !important;
+  display: block !important;
+  width: 100% !important;
+  height: auto !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  background-image: radial-gradient(ellipse at top, #286654, #0a241f) !important;
+  transform: none !important;
+  transition: none !important;
+  pointer-events: auto;
+}
+
+.party-native-draft-shell
+  .hd-card.button
+  > :not(.hd-portrait, .hd-card-meta, .hd-card-name, .hd-card-mark),
+.party-native-draft-shell .hd-card.button::after,
+.party-native-draft-shell .hd-card-mark:empty {
+  display: none !important;
+}
+
+.party-native-draft-shell .hd-card[data-taken='true'] {
+  cursor: pointer;
+  filter: none !important;
+  border-color: #73ac8f;
+}
+
+.party-native-draft-shell .hd-card[data-taken='true'] .hd-portrait {
+  filter: saturate(0.65) brightness(0.82);
+}
+
+.party-native-draft-shell .hd-card[data-taken='true'] .hd-card-mark {
+  background: #155746;
+}
+
+@media (max-height: 480px) and (orientation: landscape) {
+  .party-native-draft-shell .hd-seat {
+    padding-block: 3px;
+  }
+
+  .party-native-draft-shell .hd-card-mark {
+    max-width: calc(100% - 6px);
+    top: auto;
+    bottom: 28px;
+  }
+}
+
+.party-native-draft-shell .hd-card-name {
+  color: #fff1c8;
+}
+
+.party-native-draft-shell .hd-button.party-draft-lord {
+  gap: 4px;
+  min-height: 29px;
+  padding: 2px 4px;
+  color: var(--hd-gold);
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
+.party-draft-lord img {
+  flex: none;
+  width: 16px;
+  height: 23px;
+  border-radius: 3px;
+  object-fit: cover;
+  object-position: center 18%;
+}
+
+.party-draft-viewing {
+  color: var(--hd-gold);
+  font-size: 12px;
+}
+
+.party-native-draft-shell .party-draft-factions .hd-card-name {
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 8px;
+  background: transparent;
+  color: var(--hd-tone, var(--hd-gold));
+  font-size: clamp(22px, 4cqw, 42px);
+}

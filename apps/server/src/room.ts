@@ -129,6 +129,19 @@ export class RoomStore {
     });
   }
 
+  shutdownBlocker(): string | undefined {
+    if (this.campaign && !this.campaign.isFinished())
+      return `房间 ${this.code} 的山河图征程尚未结束。`;
+    if (this.series && !this.series.finished)
+      return `房间 ${this.code} 的高校联赛整场练习尚未结束。`;
+    if (![...this.players.values()].some((player) => player.kind === 'human')) return undefined;
+    if (this.phase === 'starting' || this.phase === 'playing')
+      return `房间 ${this.code} 正在${this.phase === 'starting' ? '叫分、选将或载入' : '对局'}。`;
+    if (this.phase === 'waiting' && this.settings.allowGeneralSelection)
+      return `房间 ${this.code} 已开放点将且仍有真人入座。`;
+    return undefined;
+  }
+
   snapshot(): RoomView {
     return {
       code: this.code,

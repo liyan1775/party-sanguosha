@@ -52,7 +52,7 @@
         --zt-load-sub: #a9c2ce;
       }
 
-      /* 零额外下载体积的兹白双境青玉牌案底光（只作用于底层背景，绝不遮盖或重复叠涂 #arena） */
+      /* 零额外下载体积的日夜青玉牌案底光（只作用于底层背景，绝不遮盖或重复叠涂 #arena） */
       body,
       #window,
       #window > .background {
@@ -245,22 +245,35 @@
         color: #be2f27;
         border-top-color: #be2f27;
       }
-      #arena .party-seat-number {
+      #arena .party-seat-status {
         position: absolute;
-        top: 3px;
-        left: 3px;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        inset: 0 auto auto 0;
         z-index: 6;
-        width: auto;
-        height: auto;
-        padding: 2px 6px;
-        border-radius: 3px;
-        border: 1px solid var(--zt-gold-hi);
-        background: var(--zt-panel-dark);
-        color: #f7e6bd;
-        font: 700 13px/1.35 system-ui;
+        visibility: hidden;
         pointer-events: none;
+        transition: none !important;
+        white-space: nowrap;
       }
-      #arena .player.glow_phase {
+      #arena .party-seat-status[data-docked] {
+        visibility: visible;
+      }
+      #arena .party-seat-status > span {
+        position: static;
+        padding: 1px 5px;
+        border: 1px solid #b9975e;
+        border-radius: 99px;
+        background: #28261c;
+        color: #f5dfad;
+        font:
+          700 11px/1.35 system-ui,
+          sans-serif;
+        text-shadow: none;
+        box-shadow: 0 2px 5px #0007;
+      }
+      html:not([data-party-settled]) #arena .player.glow_phase {
         outline: 3px solid var(--zt-gold-hi);
         outline-offset: 2px;
         box-shadow: 0 0 22px rgba(224, 190, 117, 0.42);
@@ -271,49 +284,44 @@
         border-radius: 8px;
         box-shadow: 0 12px 34px rgba(0, 0, 0, 0.52);
       }
-      #arena .player > .party-turn-badge {
+      #arena .party-seat-status > .party-turn-badge {
         display: none;
-        width: auto;
-        height: auto;
-        opacity: 1;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
-        position: absolute;
-        top: -15px;
-        left: 6px;
-        z-index: 6;
-        padding: 2px 8px;
-        border: 1px solid var(--zt-gold-hi);
-        border-radius: 3px;
-        background: linear-gradient(168deg, #1f7d72, #114c45);
-        color: #fffaf0;
-        font:
-          700 12.5px/1.3 system-ui,
-          sans-serif;
-        text-shadow: none;
-        pointer-events: none;
+        background: #114c45;
+        color: #fff2ce;
       }
-      #arena .player.glow_phase > .party-turn-badge {
+      html:not([data-party-settled])
+        #arena
+        .player.glow_phase
+        > .party-seat-status
+        > .party-turn-badge {
         display: block;
       }
       /* 防手滑只读已选牌名浮标（绝不阻挡任何点击） */
-      #party-selected-preview {
+      #party-selection-layer {
         position: fixed;
-        left: 50%;
-        bottom: 162px;
-        transform: translateX(-50%);
+        inset: 0;
         z-index: 62;
         pointer-events: none;
-        padding: 5px 14px;
+        transition: none !important;
+      }
+      #party-selected-preview {
+        position: absolute;
+        inset: 0 auto auto 0;
+        transition: none !important;
+        pointer-events: none;
+        box-sizing: border-box;
+        padding: calc(5px * var(--party-preview-density, 1))
+          calc(14px * var(--party-preview-density, 1));
         border: 1px solid var(--zt-gold);
-        border-radius: 4px;
-        background: var(--zt-panel);
-        color: var(--zt-ink);
+        border-radius: 999px;
+        background: linear-gradient(155deg, #21423c, #102a2a 72%);
+        color: #fff1cb;
         font:
-          700 13px/1.4 system-ui,
+          700 calc(13px * var(--party-preview-density, 1)) / 1.4 system-ui,
           'Microsoft YaHei UI',
           sans-serif;
         box-shadow: 0 8px 22px rgba(0, 0, 0, 0.25);
-        max-width: 82vw;
+        max-width: 82%;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -322,6 +330,8 @@
         display: none;
       }
     </style>
+    <link rel="stylesheet" href="/engine/runtime/table-art.css" />
+    <!-- PARTY_PLAYER_DRAFT_STYLES -->
     <script type="importmap">
       {
         "imports": {

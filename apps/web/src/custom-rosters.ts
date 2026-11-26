@@ -85,6 +85,39 @@ function node<K extends keyof HTMLElementTagNameMap>(tag: K, text = '', classNam
   return target;
 }
 
+export function bindLobbyRosters() {
+  const entry = document.querySelector<HTMLButtonElement>('#lobby-rosters')!;
+  const dialog = node('dialog', '', 'custom-rosters');
+  dialog.setAttribute('aria-labelledby', 'lobby-rosters-title');
+  dialog.innerHTML = `<div class="custom-rosters-heading"><div><h2 id="lobby-rosters-title">自定义将池</h2><p class="hint">开房后，房主可以在房间设置中创建、复制或选择将池。</p></div><button class="close-dialog" type="button" aria-label="关闭自定义将池">×</button></div><p id="lobby-rosters-status" class="hint" role="status"></p><div class="custom-rosters-list"></div>`;
+  app.append(dialog);
+  dialog.querySelector('button')!.onclick = () => dialog.close();
+  entry.onclick = async () => {
+    const status = dialog.querySelector('#lobby-rosters-status')!;
+    const list = dialog.querySelector('.custom-rosters-list')!;
+    status.textContent = '正在读取本机将池…';
+    list.replaceChildren();
+    dialog.showModal();
+    try {
+      const index = await api<RosterIndex>('/api/rosters');
+      const rosters = index.rosters.filter((roster) => !roster.archived);
+      status.textContent = rosters.length ? '' : '还没有自定义将池。';
+      list.replaceChildren(
+        ...rosters.map((roster) => {
+          const card = node('article', '', 'custom-roster-card');
+          card.append(
+            node('strong', roster.name),
+            node('p', `${roster.characterCount} 将 · 第 ${roster.revision} 版`, 'hint'),
+          );
+          return card;
+        }),
+      );
+    } catch {
+      status.textContent = '暂时无法读取将池，请稍后重试。';
+    }
+  };
+}
+
 /** Public character definitions only; never store cards, sessions or roster drafts in localStorage. */
 export function bindCustomRosters(options: {
   anchor: HTMLElement;

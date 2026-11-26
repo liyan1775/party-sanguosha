@@ -17,7 +17,8 @@
   gap: 10px;
 }
 .custom-rosters-heading {
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: flex-start;
   border-bottom: 1px solid var(--line);
   margin-bottom: 12px;
@@ -61,7 +62,8 @@
   border: 1px solid var(--line);
   border-radius: 7px;
   padding: 12px;
-  background: #fffef8;
+  background: var(--z-dialog-card);
+  color: var(--z-dialog-ink);
   overflow-wrap: anywhere;
 }
 .custom-roster-card .custom-rosters-actions {

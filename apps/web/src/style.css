@@ -688,9 +688,6 @@ footer {
   margin: 12px 0 24px;
   overflow-wrap: anywhere;
 }
-.is-ready {
-  background: var(--green) !important;
-}
 .error-page,
 .loading {
   text-align: center;

@@ -149,8 +149,27 @@ export function sanitizeObserver(
     template && deckCount !== undefined
       ? sanitizeCardTracker(data.cardTracker, template, deckCount)
       : undefined;
+  const updatedAt = Date.now();
+  const giftCombos =
+    !data.ended && Array.isArray(data.giftCombos) && data.giftCombos.length <= 8
+      ? data.giftCombos.flatMap((gift) => {
+          if (
+            !gift ||
+            !setup.seats.some((seat) => seat.id === gift.targetId) ||
+            !Number.isSafeInteger(gift.count) ||
+            gift.count < 2 ||
+            gift.count > 99 ||
+            !Number.isSafeInteger(gift.at) ||
+            gift.at <= updatedAt - 3500 ||
+            gift.at > updatedAt
+          )
+            return [];
+          const { targetId, count, at } = gift;
+          return [{ targetId, count, at }];
+        })
+      : [];
   return {
-    updatedAt: Date.now(),
+    updatedAt,
     round: count(data.round),
     ended: data.ended === true,
     ...(setup.settings.mode === 'identity' &&
@@ -174,9 +193,11 @@ export function sanitizeObserver(
       : {}),
     ...(deckCount !== undefined ? { deckCount } : {}),
     ...(cardTracker ? { cardTracker } : {}),
-    currentPlayerId: setup.seats.some((seat) => seat.id === data.currentPlayerId)
-      ? data.currentPlayerId
-      : null,
+    ...(giftCombos.length ? { giftCombos } : {}),
+    currentPlayerId:
+      data.ended !== true && setup.seats.some((seat) => seat.id === data.currentPlayerId)
+        ? data.currentPlayerId
+        : null,
     players: data.players.flatMap((player) => {
       const seat = setup.seats.find((seat) => seat.id === player?.id);
       if (!seat) return [];

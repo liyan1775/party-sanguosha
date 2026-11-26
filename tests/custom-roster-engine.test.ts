@@ -214,7 +214,8 @@ test('preload无需重启即可解析登记池并加载跨池依赖，拒绝引�
   const manifest = await response.json();
   assert(manifest.assets.some((path: string) => path.endsWith('/character/tw.js')));
   assert(manifest.assets.some((path: string) => path.endsWith('/card/zhulu.js')));
-  assert(manifest.assets.some((path: string) => path.endsWith('/audio/skill/re_zhangliao.mp3')));
+  assert(!manifest.assets.some((path: string) => path.includes('/audio/skill/')));
+  assert(manifest.assets.some((path: string) => path.endsWith('/audio/card/male/sha.mp3')));
   for (const suffix of [
     `preset=advanced&${query}`,
     `preset=beginner&mode=college&${query}`,

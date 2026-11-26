@@ -52,9 +52,8 @@ async function fixture(
 async function create(page: Page, base: string, nickname: string) {
   await page.goto(base);
   await page.locator('#nickname').fill(nickname);
-  await page.locator('#create-button').click();
+  await page.locator('[data-quick-preset="duel-2"]').click();
   await expect(page.locator('#my-role')).toContainText('你是房主');
-  await page.locator('[data-mode="duel"]').click();
   await expect(page.locator('#summary-mode')).toContainText('单挑');
   await expect(page.locator('#custom-rosters-open')).toBeEnabled();
   return page.url().split('/').at(-1)!;
@@ -216,7 +215,7 @@ test('自定义将池：他人名单只能复制、旧服务404不显示入口�
     );
     await legacy.goto(base);
     await legacy.locator('#nickname').fill('旧服务');
-    await legacy.locator('#create-button').click();
+    await legacy.locator('[data-quick-preset="identity-6"]').click();
     await expect(legacy.locator('#my-role')).toContainText('你是房主');
     await expect(legacy.locator('#custom-rosters-open')).toBeHidden();
   });

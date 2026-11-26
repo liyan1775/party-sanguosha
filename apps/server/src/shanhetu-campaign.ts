@@ -108,7 +108,12 @@ export interface ShanhetuCampaignCatalog {
   initialCoins: number;
   initialSkillSlots: number;
   restartLimit?: number;
-  heroChoices?: (ShanhetuHeroState & { name: string; description: string; portrait?: string })[];
+  heroChoices?: (ShanhetuHeroState & {
+    name: string;
+    description: string;
+    portrait?: string;
+    skills?: ShanhetuCampaignView['actions'][number]['skills'];
+  })[];
   openingCompanions?: number[];
   openingTactics?: string[];
   openingBattleTactic?: number;
@@ -228,12 +233,17 @@ export class ShanhetuCampaign {
         general: hero.general,
         group: hero.group,
         ...(hero.portrait ? { portrait: hero.portrait } : {}),
+        ...(hero.skills?.length ? { skills: hero.skills } : {}),
       }));
     } else this.beginRoute();
   }
 
+  isFinished(): boolean {
+    return this.state.phase === 'won' || this.state.phase === 'lost';
+  }
+
   view(): ShanhetuCampaignView {
-    const terminal = this.state.phase === 'won' || this.state.phase === 'lost';
+    const terminal = this.isFinished();
     return structuredClone({
       ...this.state,
       ...(terminal && this.catalog.recordEndings

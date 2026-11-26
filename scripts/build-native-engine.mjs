@@ -4,7 +4,7 @@ import { createHash } from 'node:crypto';
 import { resolve, relative } from 'node:path';
 
 /** Bundle the pinned browser singleton; dynamic packs still use the import map. */
-export async function buildNativeEngine(root) {
+export async function buildNativeEngine(root, buildDir = resolve(root, 'dist')) {
   const candidate = JSON.parse(await readFile(resolve(root, 'config/noname-candidate.json')));
   const enginePath = resolve(root, `.local/noname/${candidate.tag}`);
   const info = await readFile(resolve(enginePath, 'game/build-info.json')).catch(() => null);
@@ -12,7 +12,7 @@ export async function buildNativeEngine(root) {
   // esbuild resolves source paths through junctions before calling onLoad.
   const engine = await realpath(enginePath);
   if (JSON.parse(info).commit !== candidate.commit) throw new Error('Pinned engine mismatch');
-  const output = resolve(root, 'dist/engine');
+  const output = resolve(buildDir, 'engine');
   const coreBase = '(globalThis.partyAssetBase ?? "/engine/core/")';
   const compatibility = resolve(
     root,

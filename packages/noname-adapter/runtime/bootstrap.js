@@ -112,6 +112,7 @@ try {
   );
   if (!response.ok) throw new Error('你的对局座位已失效，请返回房间。');
   const setup = await response.json();
+  if (role !== 'worker') (await import('./table-art.js')).installTableArt(setup.settings.mode, id);
   if (role === 'worker' && setup.serverVersion && parent !== window) {
     const pageVersion = parent.document
       .querySelector('footer')
@@ -325,6 +326,8 @@ try {
   lib.buildInfo = await loadBuildInfo();
   installPrivacy();
   installControls();
+  if (role === 'player' && setup.heroDraft)
+    (await import('./hero-draft.js')).installHeroDraft(setup);
   installAudio();
   if (setup.experience) (await import('./public-summary.js')).installPublicSummary();
   if (setup.emotions) (await import('./emotions.js')).installEmotions();

@@ -2,6 +2,7 @@ import type { TableItem, TablePlayer, TableState } from '../../../packages/share
 import { PlayerTransport } from '../../../packages/noname-adapter/runtime/player-transport.js';
 import { createTableAudio } from './table-audio.js';
 import { createTableMotion } from './table-motion.js';
+import { initZibaiTheme, onZibaiPreferenceChange, toggleZibaiMotion } from './zibai-theme.js';
 
 const matchId = location.pathname.split('/')[3]!;
 const element = <T extends HTMLElement = HTMLElement>(id: string) =>
@@ -21,17 +22,18 @@ let feedbackTimer: ReturnType<typeof setTimeout> | undefined;
 let busyTimer: ReturnType<typeof setTimeout> | undefined;
 let lobbyFinished = false;
 let cardHelp = false;
+initZibaiTheme();
 const motion = createTableMotion(element('table'));
 const motionButton = element<HTMLButtonElement>('motion-button');
 const motionPreference = () => {
   motionButton.setAttribute('aria-pressed', String(motion.reduced));
   motionButton.textContent = motion.reduced ? '恢复动画' : '精简动画';
-  element('table').classList.toggle('reduced-motion', motion.reduced);
 };
-motionButton.onclick = () => {
-  motion.toggle();
+onZibaiPreferenceChange(() => {
+  motion.reset();
   motionPreference();
-};
+});
+motionButton.onclick = toggleZibaiMotion;
 motionPreference();
 const itemData = new WeakMap<HTMLElement, { item: TableItem; passive: boolean }>();
 const playerData = new WeakMap<HTMLElement, TablePlayer>();

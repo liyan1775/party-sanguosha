@@ -10,13 +10,11 @@ export function createTableMotion(table: HTMLElement) {
     cursor = 0,
     generation = 0,
     running = false;
-  let reduced = localStorage.getItem('party_reduced_motion') === 'true';
-  const preference = matchMedia('(prefers-reduced-motion: reduce)');
   const queue: TablePresentation[] = [];
   const animations = new Set<Animation>();
   const timers = new Set<ReturnType<typeof setTimeout>>();
   let latest: TableState;
-  const compact = () => reduced || preference.matches;
+  const compact = () => document.documentElement.dataset.motion === 'reduced';
   function reset() {
     generation++;
     queue.length = 0;
@@ -273,18 +271,11 @@ export function createTableMotion(table: HTMLElement) {
     void drain();
   }
   document.addEventListener('visibilitychange', reset);
-  preference.addEventListener('change', reset);
   return {
     update,
     reset,
     get reduced() {
-      return reduced;
-    },
-    toggle() {
-      reduced = !reduced;
-      localStorage.setItem('party_reduced_motion', String(reduced));
-      reset();
-      return reduced;
+      return compact();
     },
   };
 }

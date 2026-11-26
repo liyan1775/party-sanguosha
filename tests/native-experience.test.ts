@@ -30,7 +30,7 @@ test('触摸确认控件在原生画布建立前不重排，缩放完成后沿�
   assert.equal(updates, 1);
 });
 
-test('触摸控件不改变规则宿主、轻量研究视图或鼠标玩家的确认函数', async (t) => {
+test('安全确认热区不改变规则宿主或轻量研究视图的确认函数', async (t) => {
   const ui = { updatec() {}, updatez() {}, create: { confirm() {} } };
   const original = { ...ui, confirm: ui.create.confirm };
   const engine: any = { setup: { role: 'worker' } };
@@ -41,11 +41,7 @@ test('触摸控件不改变规则宿主、轻量研究视图或鼠标玩家的�
     document: { createElement: () => assert.fail('unexpected touch styling') },
   });
   const { installTouchConfirmation } = await runtime('controls');
-  for (const setup of [
-    { role: 'worker' },
-    { role: 'player', tableView: true },
-    { role: 'player' },
-  ]) {
+  for (const setup of [{ role: 'worker' }, { role: 'player', tableView: true }]) {
     engine.setup = setup;
     installTouchConfirmation();
     assert.equal(ui.updatec, original.updatec);
@@ -72,6 +68,12 @@ async function runtime(name: string) {
     )
   )
     .replace(/import \{([^}]+)\} from 'noname';/, 'const {$1} = globalThis.nativeFixture;')
+    .replace(
+      "'./control-presentation.js'",
+      JSON.stringify(
+        new URL('../packages/noname-adapter/runtime/control-presentation.js', import.meta.url).href,
+      ),
+    )
     .replace(
       "import { withChoiceDisclosure, replayPublicDialogs } from './privacy.js';",
       'const { withChoiceDisclosure, replayPublicDialogs = () => {} } = globalThis.nativeFixture;',

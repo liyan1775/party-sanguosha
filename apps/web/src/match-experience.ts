@@ -78,7 +78,8 @@ export function bindMatchExperience() {
       <p class="tracker-privacy-note">仅统计本局已公开弃置与亮出展示的牌面，严守暗手牌与牌堆顺序隐私。</p>
     </div>
     <div class="tracker-rod bottom" aria-hidden="true"></div>`;
-  element('#game-frame-container').append(drawer);
+  const board = element('#game-frame-container');
+  board.append(drawer);
 
   const counts = strip.querySelector<HTMLElement>('#match-identities')!;
   const actions = strip.querySelector<HTMLOListElement>('ol')!;
@@ -95,9 +96,52 @@ export function bindMatchExperience() {
     active = false,
     automatic = false,
     pending = false,
+    ended = false,
     trackerOpen = false;
   let latestTracker: PublicCardTrackerSnapshot | null = null;
   let timer: ReturnType<typeof setTimeout> | undefined;
+
+  function dockTracker(): void {
+    drawer.style.removeProperty('top');
+    drawer.style.removeProperty('max-height');
+    const native = board.querySelector('iframe')?.contentDocument;
+    if (!native || drawer.hidden) return;
+    const width = drawer.offsetWidth;
+    // Use the inner frame's coordinates. They stay unrotated even when the
+    // outer WeChat table is rotated as a single surface.
+    const left = (board.clientWidth - width) / 2 - 6;
+    const right = left + width + 12;
+    const blocking = Array.from(
+      native.querySelectorAll(
+        '#arena > .player, .party-seat-status[data-docked], #me .handcards .card, #control > .control:not(.removing)',
+      ),
+    )
+      .flatMap((node) => {
+        const visible =
+          node.checkVisibility?.({ visibilityProperty: true, opacityProperty: true }) ??
+          native.defaultView?.getComputedStyle(node).visibility === 'visible';
+        if (!visible) return [];
+        const box = node.getBoundingClientRect();
+        return box.right > left && box.left < right && box.width && box.height ? [box] : [];
+      })
+      .sort((a, b) => a.top - b.top);
+    let start = 8;
+    const gaps: { top: number; height: number }[] = [];
+    for (const box of blocking) {
+      if (box.top - 5 > start) gaps.push({ top: start, height: box.top - 5 - start });
+      start = Math.max(start, box.bottom + 5);
+    }
+    gaps.push({ top: start, height: board.clientHeight - 8 - start });
+    const limit = board.clientHeight * (board.clientHeight <= 440 ? 0.55 : 0.52);
+    const gap =
+      gaps.find((item) => item.height >= limit) ?? gaps.sort((a, b) => b.height - a.height)[0];
+    if (gap && gap.height >= 56) {
+      drawer.style.top = `${gap.top}px`;
+      drawer.style.maxHeight = `${Math.min(gap.height, limit)}px`;
+    }
+  }
+  const trackerLayout = new ResizeObserver(dockTracker);
+  trackerLayout.observe(board);
 
   function renderTracker(): void {
     const hasTracker = Boolean(matchId && available && latestTracker);
@@ -164,8 +208,8 @@ export function bindMatchExperience() {
 
   function render(): void {
     strip.hidden = !matchId || !available;
-    button.hidden = !matchId || !available;
-    button.disabled = !active || pending;
+    button.hidden = !matchId || !available || ended;
+    button.disabled = !active || pending || ended;
     button.textContent = pending ? '正在切换…' : automatic ? '恢复手动操作' : '主动托管';
     button.setAttribute('aria-pressed', String(automatic));
     button.setAttribute('aria-busy', String(pending));
@@ -175,7 +219,13 @@ export function bindMatchExperience() {
   trackerToggle.onclick = () => {
     trackerOpen = !trackerOpen;
     renderTracker();
+    dockTracker();
   };
+  function closeTracker() {
+    if (!trackerOpen) return;
+    trackerOpen = false;
+    renderTracker();
+  }
   drawer.querySelector<HTMLButtonElement>('#tracker-close')!.onclick = () => {
     trackerOpen = false;
     renderTracker();
@@ -183,7 +233,7 @@ export function bindMatchExperience() {
 
   button.onclick = () => {
     const frame = document.querySelector<HTMLIFrameElement>('#game-frame');
-    if (!active || pending || !frame?.contentWindow) return;
+    if (!active || ended || pending || !frame?.contentWindow) return;
     pending = true;
     status.textContent = '正在确认操作状态…';
     render();
@@ -209,8 +259,13 @@ export function bindMatchExperience() {
       event.data?.matchId !== matchId
     )
       return;
+    if (event.data.type === 'party-native-ended') {
+      clearControl();
+      render();
+    }
+    if (event.data.type === 'party-tracker-dismiss') closeTracker();
     if (event.data.type === 'party-control') {
-      automatic = event.data.auto === true;
+      automatic = !ended && event.data.auto === true;
       pending = false;
       clearTimeout(timer);
       status.textContent = automatic && active ? '原生 AI 正在替你操作' : '';
@@ -249,11 +304,26 @@ export function bindMatchExperience() {
     }
   });
 
-  window.addEventListener('pagehide', () => clearTimeout(timer), { once: true });
+  function clearControl() {
+    ended = true;
+    automatic = pending = false;
+    clearTimeout(timer);
+    status.textContent = '';
+    status.hidden = true;
+  }
+  window.addEventListener(
+    'pagehide',
+    () => {
+      clearTimeout(timer);
+      trackerLayout.disconnect();
+    },
+    { once: true },
+  );
   return {
-    context(id: string | null, playable: boolean, supported: boolean) {
+    context(id: string | null, playable: boolean, supported: boolean, finished: boolean) {
       if (id !== matchId) {
-        automatic = false;
+        ended = automatic = false;
+        status.hidden = false;
         pending = false;
         trackerOpen = false;
         latestTracker = null;
@@ -266,10 +336,11 @@ export function bindMatchExperience() {
       matchId = id;
       active = playable;
       available = supported;
+      if (finished) clearControl();
       if (!active) {
         pending = false;
         clearTimeout(timer);
-        if (!automatic) status.textContent = '';
+        status.textContent = '';
       }
       render();
     },

@@ -3,66 +3,81 @@ import http from 'node:http';
 import { mkdir, rename, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
-function renderHtml(version, entryMode) {
-  const modeLabel = entryMode === 'lan' ? '局域网同 Wi-Fi 模式' : '局域网 + 跨网双码模式';
+function renderHtml(entryMode) {
+  const modeLabel = entryMode === 'lan' ? '局域网联机' : '局域网与公网联机';
   return `<!doctype html>
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>正在启动 · 聚会三国杀 v${version}</title>
+  <title>正在启动 · 聚会三国杀</title>
+  <meta name="color-scheme" content="light dark" />
   <style>
-    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    *,*::before,*::after{box-sizing:border-box}
     :root{
-      --bg:#edf4f2;--card:#fffefb;--ink:#132430;--ink2:#47606f;--gold:#b88b35;
-      --jade:#1f7d72;--jade2:#114c45;--red:#c73c32;--line:rgba(184,139,53,.42);
+      --bg:#eef4f3;--paper:#fffefb;--ink:#132430;--muted:#415a69;
+      --jade:#1f7d72;--jade-ink:#17645c;--wash:#eaf3ef;--gold:#b88b35;
+      --gold-ink:#76551c;--line:#d8c69f;--seal:#a8332c;--error:#8b2923;
+      --error-bg:#fff1eb;--shade:#102e5626;--heading:"Songti SC",STSong,SimSun,serif;
+      background:var(--bg);color:var(--ink);
     }
     @media (prefers-color-scheme:dark){
-      :root{--bg:#09121a;--card:#11202c;--ink:#f0f6f7;--ink2:#a9c2ce;--gold:#e0be75;--jade:#5cc9bc;--jade2:#196b63;--red:#e25347;--line:rgba(224,190,117,.38)}
+      :root{
+        --bg:#081017;--paper:#11202c;--ink:#eff6f7;--muted:#adc4cf;
+        --jade:#5cc9bc;--jade-ink:#80d7ca;--wash:#18343c;--gold:#e0be75;
+        --gold-ink:#f5df9e;--line:#626048;--error:#ffbcb1;
+        --error-bg:#402725;--shade:#00060c99;
+      }
     }
     body{
-      min-height:100vh;display:grid;place-items:center;padding:24px;
+      margin:0;padding:clamp(24px,9vw,96px) clamp(12px,4vw,32px);
       font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei UI",sans-serif;
-      background:radial-gradient(circle at 75% 20%,rgba(31,125,114,.16),transparent 46%),radial-gradient(circle at 20% 85%,rgba(184,139,53,.14),transparent 48%),var(--bg);
-      color:var(--ink);
     }
     .panel{
-      width:min(680px,96vw);padding:32px 34px;background:var(--card);
-      border:1.5px solid var(--line);position:relative;
-      clip-path:polygon(14px 0,calc(100% - 14px) 0,100% 14px,100% calc(100% - 14px),calc(100% - 14px) 100%,14px 100%,0 calc(100% - 14px),0 14px);
-      box-shadow:0 24px 60px -18px rgba(10,36,44,.28);
+      max-width:42rem;margin-inline:auto;padding:clamp(16px,5vw,36px);
+      background:linear-gradient(150deg,var(--wash),transparent 35%),var(--paper);
+      border:1px solid var(--gold);border-radius:4px;
+      box-shadow:0 16px 44px var(--shade),inset 0 0 0 4px var(--paper),inset 0 0 0 5px var(--line);
     }
-    .head{display:flex;align-items:center;gap:14px;margin-bottom:20px}
+    p,h1,h2{margin:0}
+    .head{display:flex;align-items:center;gap:14px;padding-bottom:20px;border-bottom:1px solid var(--line)}
     .seal{
-      width:44px;height:44px;background:var(--red);color:#fff8ec;flex:none;
-      display:grid;place-items:center;font-family:"Songti SC",STSong,SimSun,serif;font-size:24px;font-weight:900;
-      border:1.5px solid rgba(255,235,200,.65);
+      width:48px;height:48px;background:var(--seal);color:#fff8ec;flex:none;
+      display:grid;place-items:center;font:900 28px/1 var(--heading);
+      border:1px solid var(--seal);border-radius:3px;box-shadow:inset 0 0 0 2px #fff8ec8c;
     }
-    h1{font-family:"Songti SC",STSong,SimSun,serif;font-size:26px;letter-spacing:.08em}
-    .sub{font-size:12.5px;color:var(--ink2);margin-top:3px}
-    .stage-title{font-family:"Songti SC",STSong,SimSun,serif;font-size:19px;font-weight:800;margin-bottom:6px;color:var(--jade)}
-    .detail{font-size:13.5px;color:var(--ink2);margin-bottom:16px;min-height:22px}
-    .track{height:10px;background:rgba(184,139,53,.18);overflow:hidden;border:1px solid var(--line);margin-bottom:10px}
-    .fill{height:100%;width:12%;background:linear-gradient(90deg,var(--jade),var(--gold));transition:width 320ms ease}
-    .meta{display:flex;justify-content:space-between;font-size:12px;color:var(--ink2);margin-bottom:18px}
-    .steps{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:18px}
-    .step{padding:8px 10px;border:1px solid var(--line);font-size:12px;color:var(--ink2);text-align:center}
-    .step.on{border-color:var(--jade);background:rgba(31,125,114,.1);color:var(--ink);font-weight:700}
-    .step.done{border-color:var(--gold);color:var(--gold)}
+    h1{font:700 clamp(24px,5vw,34px)/1.2 var(--heading);letter-spacing:.06em}
+    .sub{font-size:.82rem;color:var(--gold-ink);margin-top:5px}
+    .stage-title{font:700 1.25rem/1.45 var(--heading);margin:20px 0 5px;color:var(--jade-ink)}
+    .detail{font-size:.875rem;line-height:1.55;color:var(--muted);margin-bottom:16px;overflow-wrap:anywhere}
+    progress{display:block;appearance:none;width:100%;height:9px;border:0;border-radius:9px;background:var(--wash);accent-color:var(--jade)}
+    progress::-webkit-progress-bar{background:var(--wash);border-radius:9px}
+    progress::-webkit-progress-value{background:linear-gradient(90deg,var(--jade),var(--gold));border-radius:9px}
+    progress::-moz-progress-bar{background:linear-gradient(90deg,var(--jade),var(--gold));border-radius:9px}
+    .meta{display:flex;justify-content:space-between;font-size:.78rem;color:var(--muted);margin-top:8px;font-variant-numeric:tabular-nums}
+    .steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:18px 0;padding:0;list-style:none}
+    .step{padding:8px 5px;border:1px solid var(--line);border-radius:3px;font-size:.78rem;color:var(--muted);text-align:center}
+    .step[aria-current]{border-color:var(--jade);background:var(--wash);color:var(--jade-ink);font-weight:700}
+    .step.done{color:var(--gold-ink)}
+    details{border-top:1px solid var(--line);padding-top:12px;color:var(--muted);font-size:.82rem}
+    summary{width:fit-content;cursor:pointer;padding:4px 0}
+    :focus-visible{outline:2px solid var(--jade);outline-offset:3px}
     .logs{
-      max-height:132px;overflow-y:auto;padding:10px 12px;font:12px/1.55 ui-monospace,Consolas,monospace;
-      background:rgba(16,36,44,.06);border:1px solid var(--line);color:var(--ink2);white-space:pre-wrap;word-break:break-word;
+      max-height:9rem;overflow-y:auto;margin-top:8px;padding:10px 12px;font:12px/1.55 ui-monospace,Consolas,monospace;
+      background:var(--wash);color:var(--ink);white-space:pre-wrap;overflow-wrap:anywhere;
     }
     .err-box{
-      margin-top:14px;padding:12px 14px;background:rgba(199,60,50,.11);border-left:3.5px solid var(--red);
-      color:var(--red);font-size:13px;line-height:1.6;display:none;
+      margin-top:14px;padding:12px 14px;background:var(--error-bg);border-left:3px solid var(--error);
+      color:var(--error);font-size:.85rem;line-height:1.65;overflow-wrap:anywhere;
     }
-    .safe-note{margin-top:16px;font-size:12px;color:var(--ink2);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+    .err-box p+p{margin-top:6px}
+    .safe-note{margin-top:14px;font-size:.78rem;color:var(--muted);line-height:1.6}
     .go-btn{
-      display:none;margin-top:16px;padding:11px 22px;background:linear-gradient(168deg,var(--jade),var(--jade2));
-      color:#fffaf0;border:1px solid var(--gold);font-weight:700;text-decoration:none;text-align:center;
+      display:inline-block;margin-top:16px;padding:11px 18px;background:#114c45;
+      color:#fffaf0;border:1px solid var(--gold);border-radius:3px;font-weight:700;text-decoration:none;
     }
-    @media(max-width:560px){.steps{grid-template-columns:repeat(2,1fr)}.panel{padding:22px 18px}}
+    [hidden]{display:none}
+    @media(max-width:520px){.steps{grid-template-columns:repeat(2,minmax(0,1fr))}}
   </style>
 </head>
 <body>
@@ -70,37 +85,42 @@ function renderHtml(version, entryMode) {
     <div class="head">
       <div class="seal" aria-hidden="true">杀</div>
       <div>
-        <h1>聚会三国杀 v${version}</h1>
-        <p class="sub">${modeLabel} · 首次准备自动断点续传，升级不覆盖山河册与将池存档</p>
+        <h1>聚会三国杀</h1>
+        <p class="sub">本机启动 · ${modeLabel}</p>
       </div>
     </div>
-    <div class="stage-title" id="stage">正在唤醒本机引擎…</div>
-    <p class="detail" id="detail">正在检查运行环境与本地资源，就绪后自动进入客厅大屏。</p>
-    <div class="track"><div class="fill" id="fill"></div></div>
-    <div class="meta"><span id="pct">准备中…</span><span id="elapsed">已等待 0 秒</span></div>
-    <div class="steps">
-      <div class="step" data-s="1">1. 环境核对</div>
-      <div class="step" data-s="2">2. 资源与立绘</div>
-      <div class="step" data-s="3">3. 引擎就绪</div>
-      <div class="step" data-s="4">4. 打开客厅大屏</div>
+    <h2 class="stage-title" id="stage" aria-live="polite">正在连接本机服务…</h2>
+    <p class="detail" id="detail">正在检查运行环境与本地资源，就绪后自动打开联机与观战页。</p>
+    <progress id="progress" max="100" aria-label="启动进度"></progress>
+    <div class="meta"><span id="pct" aria-hidden="true">准备中…</span><span id="elapsed">已等待 0 秒</span></div>
+    <ol class="steps" aria-label="启动步骤">
+      <li class="step" data-s="1">1. 核对环境</li>
+      <li class="step" data-s="2">2. 准备资源</li>
+      <li class="step" data-s="3">3. 启动引擎</li>
+      <li class="step" data-s="4">4. 联机与观战</li>
+    </ol>
+    <details>
+      <summary>启动日志</summary>
+      <div class="logs" id="logs" tabindex="0">正在等待启动日志…</div>
+    </details>
+    <div class="err-box" id="err" role="alert" hidden>
+      <p id="error-message"></p>
+      <p>请检查网络或系统代理，再双击原启动入口重试。已校验的资源会继续复用，下载可断点续传。</p>
+      <p>完整错误日志：<code>.runtime/server-error.log</code></p>
     </div>
-    <div class="logs" id="logs">正在连接启动进度…</div>
-    <div class="err-box" id="err"></div>
-    <a class="go-btn" id="go" href="#">立即进入客厅大屏 →</a>
-    <div class="safe-note">
-      <span>存档受保护：data/shanhetu 与 data/rosters 绝不覆写</span>
-      <span>日志位于 .runtime 目录</span>
-    </div>
+    <a class="go-btn" id="go" hidden>进入联机与观战 →</a>
+    <p class="safe-note">准备资源不会覆盖山河册与自定义将池。</p>
   </main>
   <script>
     const started = Date.now();
     const stageEl = document.getElementById('stage');
     const detailEl = document.getElementById('detail');
-    const fillEl = document.getElementById('fill');
+    const progressEl = document.getElementById('progress');
     const pctEl = document.getElementById('pct');
     const elapsedEl = document.getElementById('elapsed');
     const logsEl = document.getElementById('logs');
     const errEl = document.getElementById('err');
+    const errorMessageEl = document.getElementById('error-message');
     const goEl = document.getElementById('go');
     let stopped = false;
 
@@ -111,33 +131,36 @@ function renderHtml(version, entryMode) {
         const res = await fetch('/api/status', { cache: 'no-store' });
         if (!res.ok) throw new Error('status');
         const data = await res.json();
-        stageEl.textContent = data.stageTitle || '正在准备…';
+        const title = data.stageTitle || '正在准备…';
+        if (stageEl.textContent !== title) stageEl.textContent = title;
         detailEl.textContent = data.detail || '';
-        fillEl.style.width = Math.max(8, Math.min(100, data.percent || 10)) + '%';
-        pctEl.textContent = (data.percent || 0) + '%';
+        progressEl.value = data.percent || 0;
+        pctEl.textContent = progressEl.value + '%';
         document.querySelectorAll('.step').forEach((node) => {
-          const n = Number(node.dataset.s);
-          node.classList.toggle('done', n < data.step);
-          node.classList.toggle('on', n === data.step);
+          const step = Number(node.dataset.s);
+          node.classList.toggle('done', step < data.step || data.state === 'ready');
+          if (step === data.step && data.state === 'running') node.setAttribute('aria-current', 'step');
+          else node.removeAttribute('aria-current');
         });
         if (Array.isArray(data.logs) && data.logs.length) {
-          logsEl.textContent = data.logs.join('\\n');
-          logsEl.scrollTop = logsEl.scrollHeight;
+          const logs = data.logs.join('\\n');
+          if (logsEl.textContent !== logs) {
+            const atEnd = logsEl.scrollHeight - logsEl.clientHeight - logsEl.scrollTop <= 2;
+            logsEl.textContent = logs;
+            if (atEnd) logsEl.scrollTop = logsEl.scrollHeight;
+          }
         }
         if (data.state === 'ready' && data.redirectUrl) {
           stopped = true;
           goEl.href = data.redirectUrl;
-          goEl.style.display = 'inline-block';
-          stageEl.textContent = '准备完成，正在进入客厅大屏…';
-          setTimeout(() => location.replace(data.redirectUrl), 450);
+          goEl.hidden = false;
+          setTimeout(() => location.replace(data.redirectUrl), data.redirectDelayMs ?? 450);
           return;
         }
         if (data.state === 'failed') {
           stopped = true;
-          errEl.style.display = 'block';
-          errEl.textContent =
-            '启动未完成：' + (data.error || '未知错误') +
-            '\\n排查建议：1) 首次使用需联网下载约 441 MiB 无名杀固定资源，中断后再次双击可断点补齐；2) 若网络受限请检查系统代理；3) 完整日志见 .runtime/server-error.log。';
+          errorMessageEl.textContent = '启动未完成：' + (data.error || '未知错误');
+          errEl.hidden = false;
           return;
         }
       } catch {
@@ -151,7 +174,7 @@ function renderHtml(version, entryMode) {
 </html>`;
 }
 
-export async function startProgressServer({ runtimeDir, version, entryMode }) {
+export async function startProgressServer({ runtimeDir, entryMode }) {
   const state = {
     state: 'running',
     step: 1,
@@ -160,10 +183,11 @@ export async function startProgressServer({ runtimeDir, version, entryMode }) {
     detail: '首次打开将自动校验并补齐固定游戏资源，已校验文件会自动复用。',
     logs: [],
     redirectUrl: null,
+    redirectDelayMs: null,
     error: null,
   };
   let port = 0;
-  const html = renderHtml(version, entryMode);
+  const html = renderHtml(entryMode);
   const progressFile = path.join(runtimeDir, 'launcher-progress.json');
   const tempFile = path.join(runtimeDir, `launcher-progress.${process.pid}.tmp`);
 
@@ -233,13 +257,14 @@ export async function startProgressServer({ runtimeDir, version, entryMode }) {
       Object.assign(state, patch);
     },
     pushLog,
-    setReady(redirectUrl) {
+    setReady(redirectUrl, notice) {
       state.state = 'ready';
       state.step = 4;
       state.percent = 100;
-      state.stageTitle = '本机服务已就绪，正在进入客厅大屏…';
-      state.detail = redirectUrl;
+      state.stageTitle = notice ? '保留正在运行的服务' : '本机服务已就绪，正在打开联机与观战页…';
+      state.detail = notice ?? redirectUrl;
       state.redirectUrl = redirectUrl;
+      state.redirectDelayMs = notice ? 7000 : null;
     },
     setFailed(errorMessage) {
       state.state = 'failed';

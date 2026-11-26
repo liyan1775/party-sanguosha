@@ -8,6 +8,15 @@ export function installSelectionRecovery() {
   const dialogs = new Map();
   const closing = new Set();
   const selecting = () => !globalThis.partyEngine.proof.started;
+  const stampDraftClock = (args) => {
+    const draft =
+      args[1]?.[0]?.partyDraft ??
+      (args[1] === 'chooseButton' ? args[3]?.find(([key]) => key === 'partyDraft')?.[1] : null);
+    // Each phone may have a different wall clock. Retain the original
+    // worker deadline, and send only its remaining duration on every replay.
+    if (Number.isFinite(draft?.deadline))
+      draft.remainingMs = Math.max(0, draft.deadline - Date.now());
+  };
   let sendingChoice;
   const choiceSend = lib.element.GameEvent.prototype.send;
   lib.element.GameEvent.prototype.send = function (...args) {
@@ -74,12 +83,14 @@ export function installSelectionRecovery() {
         // Native startup and 蛊惑 challenges send chooseButtonOL directly.
         // Other dialog updates must not replace an outstanding choice.
         (selecting() && event?.name === 'chooseButtonOL' && Array.isArray(args[1])))
-    )
+    ) {
+      if (selecting()) stampDraftClock(args);
       pending.set(this.playerid, {
         args,
         event: ownChoice ? sendingChoice : undefined,
         wuxie: directWuxie ? event : undefined,
       });
+    }
     return playerSend.apply(this, args);
   };
   const unwait = lib.element.Player.prototype.unwait;
@@ -187,6 +198,7 @@ export function installSelectionRecovery() {
           parent.cards2,
           parent.videoId,
         );
+      if (selecting()) stampDraftClock(request.args);
       playerSend.apply(player, request.args);
     };
     if (request.event) withChoiceDisclosure(request.event, send);

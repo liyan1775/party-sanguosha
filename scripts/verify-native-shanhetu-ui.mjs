@@ -15,6 +15,10 @@ import source from '../config/shanhetu-scenario.json' with { type: 'json' };
 import rosters from '../config/roster-presets.json' with { type: 'json' };
 
 const root = fileURLToPath(new URL('../', import.meta.url));
+const polishEvidence =
+  process.env.PLAYTEST_POLISH_EVIDENCE === '1'
+    ? `${root}/.runtime/playtest-fixes-evidence-20261125`
+    : null;
 const nightmareBook = process.env.SHANHETU_VERIFY_NIGHTMARE_BOOK;
 const preferredSecondRegion = process.env.SHANHETU_VERIFY_NIGHTMARE_SECOND_REGION;
 assert(
@@ -108,8 +112,130 @@ const wait = async (condition, message, timeout = 120000) => {
     await new Promise((resolve) => setTimeout(resolve, 100));
   }
 };
-const shot = async (name) => phone.screenshot({ path: `${output}/${name}.png` });
+const shot = async (name) =>
+  phone.screenshot({ path: `${output}/${name}.png`, fullPage: name.startsWith('00-launch') });
+async function polishShot(name) {
+  if (polishEvidence) {
+    await mkdir(polishEvidence, { recursive: true });
+    await phone.screenshot({ path: `${polishEvidence}/${name}.png` });
+  }
+}
+async function assertAtlas() {
+  const icons = phone.locator('#shanhetu-panel .shanhetu-prize-icon');
+  await expect(icons.first()).toBeVisible();
+  const tiles = await icons.evaluateAll((nodes) =>
+    nodes.map((node) => {
+      const style = getComputedStyle(node);
+      return {
+        image: style.backgroundImage,
+        size: style.backgroundSize,
+        position: style.backgroundPosition,
+      };
+    }),
+  );
+  for (const tile of tiles) {
+    assert.match(tile.image, /shanhetu-icons-atlas/);
+    assert.equal(tile.size, '500% 400%');
+    assert.match(tile.position, /%/);
+  }
+  assert(
+    await icons.first().evaluate(async (icon) => {
+      const url = getComputedStyle(icon).backgroundImage.match(/url\("([^"]+)"\)/)?.[1];
+      if (!url) return false;
+      const image = new Image();
+      image.src = url;
+      await image.decode();
+      return image.naturalWidth / image.naturalHeight === 5 / 4;
+    }),
+    'The rendered atlas must decode as a full 5 by 4 grid',
+  );
+}
 const journey = () => room.snapshot().shanhetu;
+const draftEvidence = `${root}/.runtime/unified-draft-evidence-20261125`;
+const draft = phone.locator('.shanhetu-draft');
+async function focusDraftHero(action) {
+  await draft.locator(`.hd-card[data-general="${action.general}"]`).tap();
+  const faction = draft.locator(`.shanhetu-draft-factions [data-action-id="${action.id}"]`);
+  if (await faction.count()) await faction.tap();
+}
+async function captureDraft(action) {
+  await mkdir(draftEvidence, { recursive: true });
+  const confirm = draft.locator('#shanhetu-confirm');
+  await expect(confirm).toBeDisabled();
+  await focusDraftHero(action);
+  await expect(confirm).toHaveText(`确认出战：${action.label}`);
+  assert.equal(journey().phase, 'selection');
+  await draft
+    .locator('.hd-card img')
+    .evaluateAll((images) => Promise.all(images.map((image) => image.decode())));
+  checks.draftLayouts = [];
+  for (const [name, width, height] of [
+    ['desktop', 1280, 800],
+    ['landscape', 844, 390],
+    ['portrait', 390, 844],
+  ]) {
+    await phone.setViewportSize({ width, height });
+    if (name === 'portrait') {
+      const tactic = draft.getByRole('button', { name: /^初始战法 · / });
+      await tactic.tap();
+      const popup = draft.getByRole('dialog', { name: '初始战法' });
+      await expect(popup.locator('.hd-skills p').first()).not.toHaveText('暂无战法说明。');
+      await expect(popup.locator('.hd-skills p').first()).toBeVisible();
+      if (journey().initialTactics?.includes('勤勉'))
+        await expect(popup).toContainText('你始终跳过你的判定阶段');
+      await phone.screenshot({ path: `${draftEvidence}/shanhetu-selection-tactics-portrait.png` });
+      await popup.getByRole('button', { name: '返回候选', exact: true }).tap();
+      await expect(confirm).toHaveText(`确认出战：${action.label}`);
+      await phone.screenshot({ path: `${draftEvidence}/shanhetu-selection-portrait-cards.png` });
+      const show = draft.getByRole('button', { name: '查看技能', exact: true });
+      await show.tap();
+      await expect(show).toBeHidden();
+      await expect(draft.getByRole('button', { name: '返回候选', exact: true })).toHaveCount(1);
+      await expect(draft.locator('.hd-detail-selection')).toHaveText(`待确认：${action.label}`);
+    }
+    await expect(draft.locator('.hd-scroll')).toBeVisible();
+    await expect(draft.locator('.hd-scroll .hd-skills h4').first()).toBeVisible();
+    assert(
+      await draft.evaluate((root) => {
+        const box = (selector) => root.querySelector(selector).getBoundingClientRect();
+        const header = box('.hd-header');
+        const pool = box('.hd-pool');
+        const scroll = box('.hd-scroll');
+        const footer = box('.hd-actions');
+        const card = box('.hd-card');
+        const buttons = [...root.querySelectorAll('.hd-actions button')].filter(
+          (button) => button.getClientRects().length,
+        );
+        const drawer = root.classList.contains('detail-open');
+        return (
+          scroll.bottom <= footer.top &&
+          (drawer
+            ? header.bottom <= scroll.top
+            : header.bottom <= pool.top && pool.right <= scroll.left && pool.height >= 100) &&
+          scroll.height >= 100 &&
+          footer.bottom <= innerHeight + 1 &&
+          (drawer || Math.abs(card.width / card.height - 2 / 3) < 0.035) &&
+          document.documentElement.scrollWidth <= innerWidth + 1 &&
+          buttons.every((button) => {
+            const control = button.getBoundingClientRect();
+            return (
+              control.left >= footer.left - 1 &&
+              control.right <= footer.right + 1 &&
+              control.top >= footer.top &&
+              control.bottom <= innerHeight + 1
+            );
+          })
+        );
+      }),
+      `Draft geometry failed at ${width}×${height}`,
+    );
+    const file = `shanhetu-selection-${name}.png`;
+    await phone.screenshot({ path: `${draftEvidence}/${file}` });
+    checks.draftLayouts.push({ file, width, height });
+  }
+  await draft.getByRole('button', { name: '返回候选', exact: true }).tap();
+  await expect(draft.locator(`.hd-card[data-general="${action.general}"]`)).toBeFocused();
+}
 const preferredNightmareHero = process.env.SHANHETU_VERIFY_NIGHTMARE_HERO;
 const nightmareHeroes = preferredNightmareHero
   ? [preferredNightmareHero]
@@ -357,7 +483,7 @@ async function battle(general, restart = false) {
     }),
   );
   await concealed();
-  if (journey().initialTactics.includes('博闻Ⅰ')) {
+  if (journey().initialTactics?.includes('博闻Ⅰ')) {
     const marked = () =>
       playerFrame().evaluate(() => {
         const { game } = partyEngine;
@@ -488,7 +614,7 @@ async function battle(general, restart = false) {
   const { outcome, defeatedEnemies } = ended.shanhetu;
   if (exploreBook && outcome === 'victory' && chapter === 2 && node.kind === 'boss')
     exploredCities.add(map.name);
-  if (journey().initialTactics.includes('博闻Ⅰ')) {
+  if (journey().initialTactics?.includes('博闻Ⅰ')) {
     const gains = await worker.evaluate(() => {
       const { game, get, lib } = partyEngine;
       const skill = lib.zhanfa.getSkill('zf_bowen');
@@ -553,6 +679,16 @@ async function battle(general, restart = false) {
   );
   const returnLabel = ['won', 'lost'].includes(journey().phase) ? '查看结局' : '继续征程';
   await expect(phone.locator('#rematch-button')).toHaveText(returnLabel);
+  await expect(phone.locator('#match-auto')).toBeHidden();
+  await expect(phone.locator('#match-control-state')).toBeHidden();
+  await expect(phone.frameLocator('#game-frame').locator('.party-turn-badge:visible')).toHaveCount(
+    0,
+  );
+  if (polishEvidence && checks.battles.length === 1) {
+    await phone.setViewportSize({ width: 844, height: 390 });
+    await polishShot('shanhetu-native-settlement');
+    await phone.setViewportSize({ width: 390, height: 844 });
+  }
   const nativeReturn = phone.frameLocator('#game-frame').locator('#party-return-room');
   await expect(nativeReturn).toHaveText(returnLabel);
   if (returnLabel === '查看结局' && !checks.endingReturnRestored) {
@@ -771,7 +907,11 @@ async function playRemainingRoute(
 
 async function chooseNextHero() {
   const general = preferredHero(journey().actions.map((action) => action.general));
-  await select(journey().actions.find((action) => action.general === general));
+  const action = journey().actions.find((action) => action.general === general);
+  const { revision } = journey();
+  await focusDraftHero(action);
+  await phone.locator('#shanhetu-confirm').tap();
+  await wait(() => journey().revision > revision, `Hero choice not applied: ${general}`);
   if (journey().initialTactics?.includes('传承')) {
     assert.equal(journey().phase, 'reward');
     assert.equal(journey().actions.length, 3);
@@ -779,7 +919,7 @@ async function chooseNextHero() {
     assert.equal(journey().build.skills.length, 1);
     checks.book.startingSkill = journey().build.skills[0];
   }
-  if (journey().initialTactics.includes('和光盟')) assert.equal(journey().companions.length, 1);
+  if (journey().initialTactics?.includes('和光盟')) assert.equal(journey().companions.length, 1);
   return general;
 }
 
@@ -981,6 +1121,8 @@ async function verifyJourneys() {
   };
   if (nightmareBook) return playNightmareJourneys(difficulty, chooseOpening, startJourney);
   await expect(difficulty).toHaveValue('1');
+  await expect(phone.locator('#shanhetu-difficulty-hint')).toContainText('当前已开放');
+  await expect(phone.locator('#shanhetu-difficulty-hint')).toContainText('解锁普通2');
   await expect(normal2).toBeDisabled();
   await expect(medium1).toBeDisabled();
   await expect(hard1).toBeDisabled();
@@ -989,6 +1131,20 @@ async function verifyJourneys() {
   await shot('00-launch-desktop');
   await phone.setViewportSize({ width: 390, height: 844 });
   await openBook();
+  const openGoal = book.locator('[data-open]');
+  await expect(openGoal).toContainText('已开放');
+  assert.equal(
+    await openGoal
+      .locator('span')
+      .first()
+      .evaluate((node) => {
+        const range = document.createRange();
+        range.selectNodeContents(node);
+        return range.getClientRects().length;
+      }),
+    1,
+  );
+  await polishShot('shanhetu-book-portrait');
   if (exploreBook) {
     await expect(bowen).toBeDisabled();
     await expect(bowenGoal).toContainText('0/2');
@@ -999,10 +1155,29 @@ async function verifyJourneys() {
   );
   await expect(book).toContainText('再胜 3 场，连营加入奖励池。');
   await closeBook();
+  const packages = phone.locator('.shanhetu-opening-choice[data-opening-package]');
+  await expect(packages).toHaveCount(4);
+  assert(
+    await packages.evaluateAll((nodes) =>
+      nodes.every((node) => {
+        const [icon, title, description] = Array.from(node.children, (el) =>
+          el.getBoundingClientRect(),
+        );
+        return (
+          icon.right < title.left &&
+          title.left === description.left &&
+          title.bottom <= description.top
+        );
+      }),
+    ),
+  );
+  await polishShot('shanhetu-opening-packages-portrait');
   await phone.getByRole('button', { name: '房间设置', exact: true }).tap();
   await expect(phone.locator('#settings-panel')).toBeVisible();
   await phone.getByRole('button', { name: '返回出征', exact: true }).tap();
   if (full) await chooseOpening(2219);
+  else await chooseOpening(2360);
+  await phone.locator('[data-opening-package="draw"]').tap();
   await startJourney();
   await expect(phone.locator('#shanhetu-panel')).toBeVisible();
   await expect(phone.locator('#shanhetu-options [data-general]')).toHaveCount(5);
@@ -1013,7 +1188,21 @@ async function verifyJourneys() {
     .locator('#shanhetu-options [data-general]')
     .evaluateAll((buttons) => buttons.map((button) => button.dataset.general));
   const general = preferredHero(picks);
-  await phone.locator(`#shanhetu-options [data-general="${general}"]`).first().tap();
+  assert.equal(initial.openingPackage, '过牌续航包');
+  assert.deepEqual(initial.initialTactics, [full ? '和光盟' : '勤勉']);
+  const draftErrors = [];
+  const consoleDuringDraft = (message) => {
+    if (message.type() === 'error') draftErrors.push(message.text());
+  };
+  const missingDuringDraft = (response) => {
+    if (response.status() === 404) draftErrors.push(new URL(response.url()).pathname);
+  };
+  phone.on('console', consoleDuringDraft);
+  phone.on('response', missingDuringDraft);
+  await captureDraft(initial.actions.find((action) => action.general === general));
+  phone.off('console', consoleDuringDraft);
+  phone.off('response', missingDuringDraft);
+  assert.deepEqual(draftErrors, []);
   await shot('02-selection-detail');
   await phone.locator('#shanhetu-confirm').tap();
   await wait(() => room.snapshot().shanhetu.phase === 'map', 'Hero choice not applied');
@@ -1066,7 +1255,14 @@ async function verifyJourneys() {
     'First encounter ended in a natural defeat',
   );
   assert.equal(journey().phase, 'reward');
+  await assertAtlas();
   await shot('06-reward');
+  await polishShot('shanhetu-reward-portrait');
+  if (polishEvidence) {
+    await phone.setViewportSize({ width: 1280, height: 800 });
+    await polishShot('shanhetu-reward-desktop');
+    await phone.setViewportSize({ width: 390, height: 844 });
+  }
   await select(journey().actions[0]);
   await wait(() => room.snapshot().shanhetu.phase === 'map', 'Reward did not return to map');
   const saved = room.snapshot().shanhetu;
@@ -1081,6 +1277,37 @@ async function verifyJourneys() {
   if (full) {
     await playRemainingRoute(general);
     checks.fullJourney = true;
+  }
+  if (polishEvidence && !full) {
+    // Continue the real first chapter just far enough to open and buy from
+    // the market. No synthetic room snapshot or book seeding.
+    for (let i = 0; i < 4 && !locationAction('shop'); i++) {
+      const next = locationAction('event') ?? locationAction('camp');
+      assert(next, 'No non-combat route to the market');
+      await select(next);
+      const decisions = journey().actions;
+      await select(
+        decisions.find((action) => /^获得\d+铜币$/.test(action.description)) ??
+          decisions.find((action) => action.label === '体力上限+1') ??
+          decisions.find((action) => action.cost === 0),
+      );
+      assert.equal(journey().phase, 'map');
+    }
+    await select(locationAction('shop'));
+    await assertAtlas();
+    await polishShot('shanhetu-market-portrait');
+    await phone.setViewportSize({ width: 1280, height: 800 });
+    await polishShot('shanhetu-market-desktop');
+    await phone.setViewportSize({ width: 390, height: 844 });
+    const before = journey();
+    const purchase = before.actions.find(
+      (action) => action.kind === 'buy' && action.cost <= before.coins,
+    );
+    assert(purchase, 'No affordable real market item');
+    await select(purchase);
+    assert.equal(journey().coins, before.coins - purchase.cost);
+    checks.purchases.push({ label: purchase.label, cost: purchase.cost });
+    await select(journey().actions.find((action) => action.label === '离开集市'));
   }
   await phone.locator('#shanhetu-end').tap();
   if (!full) {

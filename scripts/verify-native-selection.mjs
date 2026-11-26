@@ -437,11 +437,7 @@ try {
         .locator('.dialog:not(.removing) .button.character')
         .nth(conflictIndex)
         .tap();
-      await friendFrame
-        .locator('.control > div')
-        .filter({ hasText: /^确定$/ })
-        .first()
-        .tap();
+      await friendFrame.locator('.hero-draft .hd-primary').tap();
     }
     if (process.env.ENGINE_VERIFY_SELECTION_TIMEOUT === '1') {
       // Exercise the exact native timeout actions without waiting 65 seconds;
@@ -467,11 +463,7 @@ try {
           .tap();
         assert.equal(await ownerFrame.evaluate(() => partyEngine.ui.selected.buttons.length), 2);
       }
-      await ownerFrame
-        .locator('.control > div')
-        .filter({ hasText: /^确定$/ })
-        .first()
-        .tap();
+      await ownerFrame.locator('.hero-draft .hd-primary').tap();
     }
     await worker.waitForFunction((id) => {
       const value = partyEngine.lib.node.torespond[id];
@@ -593,11 +585,7 @@ try {
         .locator('.dialog:not(.removing) .button.character.selectable:not(.selected)')
         .first()
         .tap();
-    await friendFrame
-      .locator('.control > div')
-      .filter({ hasText: /^确定$/ })
-      .first()
-      .tap();
+    await friendFrame.locator('.hero-draft .hd-primary').tap();
     for (const [index, frame] of opponentFrames.entries()) {
       if (index > 0)
         await frame.waitForFunction(
@@ -606,11 +594,7 @@ try {
               .length === 9,
         );
       await frame.locator('.dialog:not(.removing) .button.character.selectable').first().tap();
-      await frame
-        .locator('.control > div')
-        .filter({ hasText: /^确定$/ })
-        .first()
-        .tap();
+      await frame.locator('.hero-draft .hd-primary').tap();
     }
     let groupRecovered = false;
     for (
@@ -756,11 +740,7 @@ try {
             );
             throw error;
           });
-        await groupFrame
-          .locator('.control > div')
-          .filter({ hasText: /^确定$/ })
-          .first()
-          .tap();
+        await groupFrame.locator('.hero-draft .hd-primary').tap();
       }
       await new Promise((resolve) => setTimeout(resolve, 100));
     }

@@ -1,6 +1,5 @@
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
-import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import QRCode from 'qrcode';
 import { WebSocketServer } from 'ws';
@@ -17,6 +16,8 @@ import type { EngineAdapter } from '../../../packages/noname-adapter/src/index.j
 import { NonameAdapter } from '../../../packages/noname-adapter/src/index.js';
 import { NativeNonameService } from '../../../packages/noname-adapter/src/service.js';
 import { isLocalRequest, parseUpgradeUrl } from '../../../packages/noname-adapter/src/access.js';
+import { EngineAssets } from '../../../packages/noname-adapter/src/assets.js';
+import { clientArt } from '../../../scripts/client-art.mjs';
 import { AppError } from './errors.js';
 import { findHomeUrls } from './network.js';
 import { LobbyStore, PresetRoomConflict } from './lobby.js';
@@ -32,6 +33,7 @@ interface ServerOptions {
   entryMode?: EntryInfo['mode'];
   rosterDirectory?: string;
   shanhetuDirectory?: string;
+  buildId?: string | null;
 }
 
 function cookies(request: IncomingMessage): Record<string, string> {
@@ -81,7 +83,14 @@ async function readBody(
 }
 
 export function createPartyServer(options: ServerOptions) {
+  const webAssets = new EngineAssets(16 * 1024 * 1024);
   const instanceId = randomBytes(16).toString('hex');
+  const buildId = options.buildId ?? null;
+  let shutdownLocked = false;
+  let stopped = false;
+  const requireRunning = () => {
+    if (shutdownLocked) throw new AppError(503, 'SHUTTING_DOWN', '本机服务正在重启，请稍候返回。');
+  };
   // 仅供本机双击停止脚本使用，不赋予任何玩家房主权限，也不进入公开 API。
   const controlToken = randomBytes(32).toString('base64url');
   const consoleToken = randomBytes(32).toString('base64url');
@@ -184,6 +193,9 @@ export function createPartyServer(options: ServerOptions) {
     for (const stream of eventStreams) stream.end();
   };
   const stop = () => {
+    if (stopped) return;
+    stopped = true;
+    shutdownLocked = true;
     clearInterval(pollExpiry);
     for (const socket of realtime.clients) socket.terminate();
     realtime.close();
@@ -390,20 +402,51 @@ export function createPartyServer(options: ServerOptions) {
       json(response, 200, {
         app: APP_ID,
         version: APP_VERSION,
+        buildId,
+        conditionalShutdown: true,
+        shutdownPolicy: 2,
+        stopping: shutdownLocked,
         instanceId,
         ok: true,
         engineReady: engine.status().ready,
+        engineAssetsReady: engine.status().preload === true,
       });
       return;
     }
-    if (route === 'POST /api/shutdown' || route === 'POST /api/internet/retry') {
+    if (
+      route === 'POST /api/shutdown' ||
+      route === 'POST /api/shutdown-if-idle' ||
+      route === 'POST /api/internet/retry'
+    ) {
       if (!isLocalRequest(request) || !matches(request.headers['x-party-control'], controlToken))
         throw new AppError(403, 'LOCAL_CONTROL_REQUIRED', '请在服务器电脑上双击停止脚本。');
-      if (route === 'POST /api/shutdown') response.once('finish', stop);
-      else retryInternet();
+      if (route === 'POST /api/internet/retry') {
+        requireRunning();
+        retryInternet();
+      } else {
+        const alreadyStopping = shutdownLocked;
+        shutdownLocked = true;
+        if (route === 'POST /api/shutdown-if-idle' && !alreadyStopping) {
+          // No await between taking this lock, checking activity and accepting shutdown.
+          let reason: string | undefined;
+          try {
+            reason = lobby.shutdownBlocker();
+          } catch (error) {
+            shutdownLocked = false;
+            throw error;
+          }
+          if (reason) {
+            shutdownLocked = false;
+            throw new AppError(409, 'ACTIVE_PLAY', reason);
+          }
+        }
+        response.once('finish', stop);
+        response.once('close', stop);
+      }
       json(response, 200, { ok: true });
       return;
     }
+    requireRunning();
     if (route === 'GET /api/info') {
       const info: ServerInfo = {
         version: APP_VERSION,
@@ -423,13 +466,17 @@ export function createPartyServer(options: ServerOptions) {
       return;
     }
     if (route === 'POST /api/rooms') {
-      const created = lobby.create((await readBody(request)).nickname, playerToken);
+      const { nickname } = await readBody(request);
+      requireRunning();
+      const created = lobby.create(nickname, playerToken);
       response.setHeader('Set-Cookie', playerCookie(request, created.token));
       json(response, 201, { ...roomInfo(created.room.code), playerId: created.playerId });
       return;
     }
     if (route === 'POST /api/rooms/preset') {
-      const created = lobby.createPreset(await readBody(request), playerToken);
+      const body = await readBody(request);
+      requireRunning();
+      const created = lobby.createPreset(body, playerToken);
       response.setHeader('Set-Cookie', playerCookie(request, created.token));
       json(response, created.reused ? 200 : 201, {
         ...roomInfo(created.room.code),
@@ -475,6 +522,7 @@ export function createPartyServer(options: ServerOptions) {
       ].includes(operation)
         ? await readBody(request)
         : undefined;
+      requireRunning();
       const expectedPlayer = request.headers['x-party-player'];
       if (
         expectedPlayer !== undefined &&
@@ -552,6 +600,7 @@ export function createPartyServer(options: ServerOptions) {
           if (room.snapshot().settings.mode === 'shanhetu') {
             room.requireShanhetuBookOwner(playerToken);
             ({ difficulty, openingTactic } = await readBody(request, 4096, true));
+            requireRunning();
             book = { library: shanhetuBook, key: shanhetuBookKey() };
           }
           await room.start(playerToken, book, difficulty, openingTactic);
@@ -646,7 +695,7 @@ export function createPartyServer(options: ServerOptions) {
         'Set-Cookie',
         `party_console=${consoleToken}; Path=/api/console; HttpOnly; SameSite=Strict`,
       );
-    const assets: Record<string, { file: string; mime: string; cache?: string }> = {
+    const assets: Record<string, { file: string; mime: string }> = {
       '/assets/app.js': { file: 'app.js', mime: 'text/javascript; charset=utf-8' },
       '/assets/style.css': { file: 'style.css', mime: 'text/css; charset=utf-8' },
       '/assets/shanhetu-pass.webp': { file: 'shanhetu-pass.webp', mime: 'image/webp' },
@@ -656,12 +705,10 @@ export function createPartyServer(options: ServerOptions) {
       '/assets/zibai-day.webp': {
         file: 'assets/zibai-day.webp',
         mime: 'image/webp',
-        cache: 'public, max-age=3600',
       },
       '/assets/zibai-night.webp': {
         file: 'assets/zibai-night.webp',
         mime: 'image/webp',
-        cache: 'public, max-age=3600',
       },
       '/assets/generals.json': { file: 'generals.json', mime: 'application/json; charset=utf-8' },
       '/assets/table.js': { file: 'table.js', mime: 'text/javascript; charset=utf-8' },
@@ -672,19 +719,18 @@ export function createPartyServer(options: ServerOptions) {
         file: `generals-${preset.id}.json`,
         mime: 'application/json; charset=utf-8',
       };
+    for (const file of clientArt)
+      assets[`/assets/${file}`] = { file: `assets/${file}`, mime: 'image/webp' };
     const asset =
       assets[url.pathname] ??
       (/^\/(server|join\/[A-F0-9]{6})?$/.test(url.pathname)
         ? { file: 'index.html', mime: 'text/html; charset=utf-8' }
         : undefined);
     if (asset && ['GET', 'HEAD'].includes(request.method ?? '')) {
-      const content = await readFile(path.join(options.webRoot, asset.file));
-      response.writeHead(200, {
-        'Content-Type': asset.mime,
-        'Cache-Control': asset.cache ?? 'no-store',
-        ...(asset.cache ? { 'Cross-Origin-Resource-Policy': 'same-origin' } : {}),
+      await webAssets.send(request, response, path.join(options.webRoot, asset.file), asset.mime, {
+        fingerprint: asset.file === 'index.html' ? null : url.searchParams.get('v'),
+        cacheControl: url.pathname === '/server' ? 'no-store' : 'no-cache',
       });
-      response.end(request.method === 'HEAD' ? undefined : content);
       return;
     }
     throw new AppError(404, 'NOT_FOUND', '页面不存在。');

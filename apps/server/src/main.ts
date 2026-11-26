@@ -6,8 +6,18 @@ import { createPartyServer } from './server.js';
 import { findHomeUrls, isLoopbackPortOccupied } from './network.js';
 import { NativeNonameService } from '../../../packages/noname-adapter/src/service.js';
 import { managePublicEntry } from './public-tunnel.js';
+import { createBuildSnapshot, verifyBuildManifest } from '../../../scripts/build-manifest.mjs';
 
 const root = process.env.PARTY_PROJECT_ROOT ?? fileURLToPath(new URL('../../../', import.meta.url));
+const buildDir = process.env.PARTY_BUILD_DIR
+  ? path.resolve(root, process.env.PARTY_BUILD_DIR)
+  : await createBuildSnapshot(root);
+const fromSnapshots = path.relative(path.join(root, '.runtime/builds'), buildDir);
+if (!fromSnapshots || fromSnapshots.startsWith('..') || path.isAbsolute(fromSnapshots))
+  throw new Error('运行实例必须使用项目 .runtime/builds 中的独立构建。');
+const manifest = await verifyBuildManifest(root, buildDir);
+if (!manifest) throw new Error('构建未通过启动校验，请重新准备。');
+const buildId = manifest.buildId;
 const preferredPort = Number(process.env.PORT ?? 3000);
 if (!Number.isInteger(preferredPort) || preferredPort < 1 || preferredPort > 65535)
   throw new Error('PORT 需要是 1–65535 之间的端口。');
@@ -25,12 +35,16 @@ if (!Array.isArray(extensions) || extensions.length !== 0)
 findHomeUrls(preferredPort, publicUrl);
 console.log('正在校验固定游戏资源，首次运行可能较慢……');
 const validationStarted = performance.now();
-const adapter = new NativeNonameService(root);
+const proofToken = process.env.PARTY_STARTUP_PROOF;
+delete process.env.PARTY_STARTUP_PROOF;
+const adapter = new NativeNonameService(root, proofToken, buildDir);
 console.log(
-  `${adapter.status().preload ? '固定游戏资源校验通过' : '固定游戏资源未准备完整，请重新运行资源准备'}（耗时${((performance.now() - validationStarted) / 1000).toFixed(1)}秒）。`,
+  `${adapter.status().preload ? '固定游戏资源校验通过' : '固定游戏资源未准备完整，请重新运行资源准备'}（${adapter.startupAssetsReused ? '本次启动元数据核对' : '逐文件全量校验'}，耗时${((performance.now() - validationStarted) / 1000).toFixed(1)}秒）。`,
 );
+if (proofToken && !adapter.status().preload)
+  throw new Error('启动准备后发现固定游戏资源缺失或损坏，请重新启动以修复资源。');
 const party = createPartyServer({
-  webRoot: path.join(root, 'dist/web'),
+  webRoot: path.join(buildDir, 'web'),
   port: preferredPort,
   ...(publicUrl ? { publicUrl } : {}),
   extensions,
@@ -38,6 +52,7 @@ const party = createPartyServer({
   rosterDirectory: path.join(root, 'data/rosters'),
   shanhetuDirectory: path.join(root, 'data/shanhetu'),
   entryMode: entryMode as 'internet' | 'lan',
+  buildId,
 });
 let port = preferredPort;
 while (true) {
@@ -84,6 +99,9 @@ await writeFile(
     {
       app: APP_ID,
       version: APP_VERSION,
+      buildId,
+      buildDir,
+      conditionalShutdown: true,
       instanceId: party.instanceId,
       controlToken: party.controlToken,
       pid: process.pid,

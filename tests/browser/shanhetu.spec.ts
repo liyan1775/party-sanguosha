@@ -1,7 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-only
 import { test, expect } from '@playwright/test';
 import { fileURLToPath } from 'node:url';
-import { readFile } from 'node:fs/promises';
+import { mkdir, readFile } from 'node:fs/promises';
+
+const evidence = fileURLToPath(
+  new URL('../../.runtime/batch1b-evidence-20261125/', import.meta.url),
+);
 import { createPartyServer } from '../../apps/server/src/server.js';
 import type { MembershipResult, RoomInfo } from '../../packages/shared/src/contracts.js';
 import type { ShanhetuCampaignView } from '../../packages/shared/src/shanhetu.js';
@@ -9,7 +13,8 @@ import type { ShanhetuCampaignView } from '../../packages/shared/src/shanhetu.js
 test('狭屏卷轴切换双境、查看行军风险并在闭市前二次确认（界面夹具）', async ({ browser }) => {
   const party = createPartyServer({
     port: 0,
-    webRoot: fileURLToPath(new URL('../../dist/web/', import.meta.url)),
+    webRoot:
+      process.env.ROUND2_CITY_WEB ?? fileURLToPath(new URL('../../dist/web/', import.meta.url)),
   });
   await new Promise<void>((resolve) => party.server.listen(0, '127.0.0.1', resolve));
   const address = party.server.address();
@@ -32,7 +37,7 @@ test('狭屏卷轴切换双境、查看行军风险并在闭市前二次确认�
       scenario: '诸侯伐董',
       difficulty: 21,
       phase: 'map',
-      chapter: 2,
+      chapter: 1,
       days: 5,
       coins: 420,
       skillSlots: 2,
@@ -63,11 +68,11 @@ test('狭屏卷轴切换双境、查看行军风险并在闭市前二次确认�
         },
       ],
       map: {
-        regionId: 'dagu',
-        name: '大谷关',
+        regionId: 'region-4',
+        name: '虎牢关',
         bossAt: 6,
         marketClosing: true,
-        regions: [{ id: 'dagu', name: '大谷关', chapter: 2, next: [], completed: false }],
+        regions: [{ id: 'region-4', name: '虎牢关', chapter: 1, next: [], completed: false }],
         locations: [
           {
             id: 'fort',
@@ -117,13 +122,34 @@ test('狭屏卷轴切换双境、查看行军风险并在闭市前二次确认�
         ],
       },
     };
-    const room = {
+    let room = {
       ...initial.room,
       settings: { ...initial.room.settings, mode: 'shanhetu' as const },
       shanhetu: journey,
     };
     const page = await context.newPage();
     const submitted: unknown[] = [];
+    const artRequests: string[] = [];
+    const failures: string[] = [];
+    page.on('response', (response) => {
+      if (response.status() === 404) failures.push(response.url());
+      if (response.url().includes('/assets/shanhetu/')) {
+        expect(response.status()).toBe(200);
+        expect(response.url()).toMatch(/\.webp\?v=[a-f0-9]{64}$/);
+        artRequests.push(response.url());
+      }
+    });
+    page.on('pageerror', (error) => failures.push(error.message));
+    page.on('console', (message) => {
+      if (message.type() === 'error') failures.push(message.text());
+    });
+    let releaseOldCity!: () => void;
+    const holdOldCity = new Promise<void>((resolve) => (releaseOldCity = resolve));
+    await page.route('**/scene-beiping.webp?*', async (route) => {
+      await holdOldCity;
+      // The stale request may already have been cancelled by the current city.
+      await route.continue().catch(() => undefined);
+    });
     await page.route(infoUrl, (route) => route.fulfill({ json: { ...initial, room } }));
     await page.route(`${infoUrl}/events*`, (route) =>
       route.fulfill({
@@ -137,11 +163,41 @@ test('狭屏卷轴切换双境、查看行军风险并在闭市前二次确认�
     );
     await page.route(`${infoUrl}/shanhetu/action`, (route) => {
       submitted.push(route.request().postDataJSON());
+      const [id, name] = submitted.length === 1 ? ['region-1', '大谷关'] : ['region-10', '洛阳'];
+      room = {
+        ...room,
+        shanhetu: {
+          ...journey,
+          revision: journey.revision + submitted.length,
+          chapter: submitted.length === 1 ? 2 : 3,
+          map: { ...journey.map!, regionId: id!, name: name! },
+        },
+      };
       return route.fulfill({ json: room });
     });
+    if (process.env.ROUND2_CITY_WEB)
+      await page.addInitScript(() => {
+        const tasks: { start: number; ms: number }[] = [];
+        Object.assign(window, { round2CityTasks: tasks });
+        new PerformanceObserver((list) => {
+          for (const task of list.getEntries())
+            tasks.push({ start: task.startTime, ms: task.duration });
+        }).observe({ type: 'longtask', buffered: true });
+      });
     await page.goto(`${base}/join/${membership.room.code}`);
     const panel = page.locator('#shanhetu-panel');
     await expect(panel).toBeVisible();
+    const scene = panel.locator('.shanhetu-scene');
+    await expect(scene).toHaveAttribute('data-painting', 'hulao');
+    await expect.poll(() => artRequests.filter((url) => url.includes('/scenes/')).length).toBe(1);
+    await expect
+      .poll(() => artRequests.filter((url) => url.includes('icons-atlas')).length)
+      .toBe(1);
+    await expect(panel.locator('[data-icon="hp"]')).toBeVisible();
+    await expect(panel.locator('[data-icon="coin"]')).toBeVisible();
+    await expect(panel.locator('[data-icon="build"]')).toBeVisible();
+    await mkdir(evidence, { recursive: true });
+    await page.screenshot({ path: evidence + 'shanhetu-hulao-map.png' });
     await expect(panel.locator('.shanhetu-market-warning')).toHaveText(
       '再推 1 日首领现身，未逛集市将自动关闭！',
     );
@@ -173,10 +229,48 @@ test('狭屏卷轴切换双境、查看行军风险并在闭市前二次确认�
     await expect(warning).toBeHidden();
     expect(submitted).toHaveLength(0);
     await panel.locator('#shanhetu-confirm').tap();
+    const cityStart = await page.evaluate(() => performance.now());
+    const oldRequest = page.waitForRequest((request) =>
+      request.url().includes('scene-beiping.webp'),
+    );
     await warning.getByRole('button', { name: '继续行军' }).tap();
+    await oldRequest;
     await expect
       .poll(() => submitted)
       .toEqual([{ runId: journey.id, revision: 4, actionId: 'enter-fight' }]);
+    await expect(scene.getByRole('heading')).toHaveText('大谷关');
+    await panel.getByRole('button', { name: /西凉军/ }).tap();
+    await panel.locator('#shanhetu-confirm').tap();
+    await warning.getByRole('button', { name: '继续行军' }).tap();
+    await expect(scene).toHaveAttribute('data-painting', 'luoyang');
+    releaseOldCity();
+    await page.waitForLoadState('networkidle').catch(() => undefined);
+    await expect(scene.locator('img')).toHaveCount(1);
+    await expect(scene.locator('img')).toHaveAttribute('src', /scene-luoyang\.webp/);
+    expect(artRequests.filter((url) => url.includes('icons-atlas'))).toHaveLength(1);
+    expect(artRequests.filter((url) => /scene-(?!hulao|beiping|luoyang)/.test(url))).toEqual([]);
+    if (process.env.ROUND2_CITY_WEB) {
+      console.log(
+        'round2-city',
+        await page.evaluate(
+          (start) => ({
+            art: (performance.getEntriesByType('resource') as PerformanceResourceTiming[])
+              .filter((entry) => entry.name.includes('/assets/shanhetu/'))
+              .map((entry) => ({
+                name: new URL(entry.name).pathname,
+                bytes: entry.transferSize,
+                duringSwitch: entry.startTime >= start,
+              })),
+            longTasks: (
+              window as Window & { round2CityTasks?: { start: number; ms: number }[] }
+            ).round2CityTasks?.filter((task) => task.start >= start),
+          }),
+          cityStart,
+        ),
+      );
+    }
+    expect(failures).toEqual([]);
+    await page.screenshot({ path: evidence + 'shanhetu-luoyang-map.png' });
     expect(await panel.evaluate((node) => node.scrollWidth <= node.clientWidth + 1)).toBe(true);
   } finally {
     await context.close();
@@ -248,6 +342,14 @@ test('山河图手机开局流派、战利品、招募全文和 PNG 高光卡（
           resonance: '已有当头一棒Ⅰ，强化每轮首杀。',
           stackFormula: '当头一棒Ⅰ(+1) + 当头一棒Ⅱ(+2) → 每轮首杀 +3',
         },
+        ...(['card', 'skill', 'equipment'] as const).map((kind) => ({
+          id: `atlas-${kind}`,
+          kind: 'reward' as const,
+          cost: 0,
+          label: `奖励图集：${kind}`,
+          description: '显示相应的图集切片。',
+          offer: { kind, rarity: 1 as const },
+        })),
         { id: 'reroll', kind: 'reroll', label: '重随奖励', description: '限重随一次。', cost: 80 },
       ],
     };
@@ -314,6 +416,29 @@ test('山河图手机开局流派、战利品、招募全文和 PNG 高光卡（
     const url = `${base}/join/${membershipRoom.code}`;
     await page.goto(url);
     await expect(page.locator('#shanhetu-difficulty')).toHaveValue('21');
+    await expect(page.locator('.shanhetu-launch-cover')).toHaveAttribute(
+      'data-painting',
+      'luoyang',
+    );
+    await expect(
+      page.getByRole('button', { name: '山河册' }).locator('[data-icon="book"]'),
+    ).toBeVisible();
+    const packageIcons = page.locator('.shanhetu-packages .shanhetu-icon');
+    await expect(packageIcons).toHaveCount(4);
+    expect(
+      await packageIcons.evaluateAll((nodes) =>
+        nodes.every((node) => node.getBoundingClientRect().width > 20),
+      ),
+    ).toBe(true);
+    expect(
+      new Set(
+        await packageIcons.evaluateAll((nodes) =>
+          nodes.map((node) => getComputedStyle(node).backgroundPosition),
+        ),
+      ).size,
+    ).toBe(4);
+    await mkdir(evidence, { recursive: true });
+    await page.screenshot({ path: evidence + 'shanhetu-cover-mobile.png', fullPage: true });
     await expect(page.locator('#shanhetu-difficulty option[value="22"]')).toBeDisabled();
     await page.getByRole('button', { name: /爆发首杀包/ }).tap();
     await expect(page.getByRole('button', { name: /爆发首杀包/ })).toHaveAttribute(
@@ -324,6 +449,13 @@ test('山河图手机开局流派、战利品、招募全文和 PNG 高光卡（
     await page.locator('#start-button').tap();
     const panel = page.locator('#shanhetu-panel');
     const confirm = panel.locator('#shanhetu-confirm');
+    const tiles = panel.locator('.shanhetu-prize-icon');
+    await expect(tiles).toHaveCount(4);
+    for (const kind of ['card', 'skill', 'tactic', 'equipment']) {
+      const icon = tiles.and(panel.locator(`[data-icon="${kind}"]`));
+      await expect(icon).toHaveCSS('background-image', /shanhetu-icons-atlas/);
+      await expect(icon).toHaveCSS('background-size', '500% 400%');
+    }
     await expect(panel.getByText('流派共振')).toBeVisible();
     await expect(panel.getByText(/每轮首杀 \+3/)).toBeVisible();
     await panel.getByRole('button', { name: '重随奖励 · 80 铜币' }).tap();
@@ -353,6 +485,10 @@ test('山河图手机开局流派、战利品、招募全文和 PNG 高光卡（
       ],
     };
     await page.reload();
+    await expect(panel.locator('.shanhetu-prize-icon[data-icon="recruit"]')).toHaveCSS(
+      'background-image',
+      /shanhetu-icons-atlas/,
+    );
     await panel.getByText('查看全部技能（2）').tap();
     await expect(panel.getByText(/当一名角色成为【杀】的目标后/)).toBeVisible();
     await expect(panel.getByText(/锁定技，你于摸牌阶段外/)).toBeVisible();
@@ -507,6 +643,10 @@ test('山河图手机集市及构筑显示实际得失、余额和重复随身�
     const panel = page.locator('#shanhetu-panel');
     await expect(panel).toBeVisible();
     const replace = panel.getByRole('button', { name: /购入青龙偃月刀/ });
+    await expect(replace.locator('[data-icon="equipment"]')).toHaveCSS(
+      'background-image',
+      /shanhetu-icons-atlas/,
+    );
     await expect(replace).toContainText('可以再使用一张【杀】');
     await expect(replace).toContainText('将失去 · 青釭剑');
     await expect(replace).toContainText('无视目标的防具');

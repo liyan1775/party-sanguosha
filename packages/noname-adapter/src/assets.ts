@@ -10,27 +10,41 @@ type Asset = {
   gzip?: Buffer;
   br?: Buffer;
   etag: string;
+  digest: string;
   compressing: Partial<Record<'br' | 'gzip', Promise<Buffer>>>;
 };
 const compressGzip = promisify(gzip);
 const compressBrotli = promisify(brotliCompress);
-function accepts(request: IncomingMessage, encoding: string) {
-  return (request.headers['accept-encoding'] ?? '').split(',').some((value) => {
-    const [name, ...parameters] = value.trim().split(';');
-    return (
-      name === encoding &&
-      !parameters.some((parameter) => /^q\s*=\s*0(?:\.0*)?\s*$/.test(parameter.trim()))
-    );
-  });
+function negotiate(request: IncomingMessage, compressible: boolean) {
+  const qualities = new Map<string, number>();
+  for (const value of (request.headers['accept-encoding'] ?? '').split(',')) {
+    const [name, ...parameters] = value
+      .toLowerCase()
+      .split(';')
+      .map((part) => part.trim());
+    if (!name) continue;
+    const weight = parameters.find((part) => /^q\s*=/.test(part));
+    const quality = weight ? Number(weight.split('=')[1]) : 1;
+    qualities.set(name, quality >= 0 && quality <= 1 ? quality : 0);
+  }
+  const wildcard = qualities.get('*');
+  const choices = compressible ? (['br', 'gzip', 'identity'] as const) : (['identity'] as const);
+  const quality = (name: string) =>
+    qualities.get(name) ?? (name === 'identity' ? (wildcard === 0 ? 0 : 0.001) : (wildcard ?? 0));
+  const best = [...choices].sort((left, right) => quality(right) - quality(left))[0]!;
+  if (!quality(best)) return null;
+  return best === 'identity' ? undefined : best;
 }
 
 /** Static bytes only. Match setup, cookies and private state never enter this cache. */
 export class EngineAssets {
+  constructor(private readonly byteLimit = 64 * 1024 * 1024) {}
+
   private readonly cache = new Map<string, Asset>();
   private readonly loading = new Map<string, Promise<Asset>>();
   private size = 0;
   private trim() {
-    while (this.size > 64 * 1024 * 1024 && this.cache.size > 1) {
+    while (this.size > this.byteLimit && this.cache.size > 1) {
       const [key, oldest] = this.cache.entries().next().value!;
       this.cache.delete(key);
       this.size -= oldest.bytes.length + (oldest.gzip?.length ?? 0) + (oldest.br?.length ?? 0);
@@ -42,10 +56,15 @@ export class EngineAssets {
     response: ServerResponse,
     file: string,
     mime: string,
-    options: { immutable?: boolean; transform?: ((content: string) => string) | undefined } = {},
+    options: {
+      immutable?: boolean;
+      fingerprint?: string | null;
+      cacheControl?: string;
+      transform?: ((content: string) => string) | undefined;
+    } = {},
   ) {
-    const info = await stat(file);
-    const stamp = `${info.mtimeMs}:${info.size}`;
+    const info = await stat(file, { bigint: true });
+    const stamp = `${info.dev}:${info.ino}:${info.ctimeNs}:${info.mtimeNs}:${info.size}`;
     let asset = this.cache.get(file);
     if (!asset || asset.stamp !== stamp) {
       const key = `${file}:${stamp}`;
@@ -60,10 +79,12 @@ export class EngineAssets {
           if (previous)
             this.size -=
               previous.bytes.length + (previous.gzip?.length ?? 0) + (previous.br?.length ?? 0);
+          const digest = createHash('sha256').update(bytes).digest('hex');
           const prepared: Asset = {
             stamp,
             bytes,
-            etag: `W/"${createHash('sha256').update(bytes).digest('hex')}"`,
+            etag: `W/"${digest}"`,
+            digest,
             compressing: {},
           };
           this.cache.set(file, prepared);
@@ -78,30 +99,29 @@ export class EngineAssets {
     response.setHeader('Content-Type', mime);
     response.setHeader(
       'Cache-Control',
-      options.immutable
+      options.immutable || options.fingerprint === asset.digest
         ? 'public, max-age=31536000, immutable'
-        : 'public, max-age=0, must-revalidate',
+        : (options.cacheControl ?? 'public, max-age=0, must-revalidate'),
     );
     response.setHeader('ETag', asset.etag);
     response.setHeader('Vary', 'Accept-Encoding');
+    const encoding = negotiate(request, /javascript|text\/|json|svg/.test(mime));
+    if (encoding === null) {
+      response.setHeader('Cache-Control', 'no-store');
+      response.writeHead(406);
+      response.end();
+      return;
+    }
     if (
-      (request.headers['if-none-match'] ?? '')
-        .split(',')
-        .map((value) => value.trim())
-        .includes(asset.etag)
+      (request.headers['if-none-match'] ?? '').split(',').some((value) => {
+        const tag = value.trim();
+        return tag === '*' || tag.replace(/^W\//, '') === asset.etag.slice(2);
+      })
     ) {
       response.writeHead(304);
       response.end();
       return;
     }
-    const encoding =
-      /javascript|text\/|json|svg/.test(mime) && asset.bytes.length > 1024
-        ? accepts(request, 'br')
-          ? 'br'
-          : accepts(request, 'gzip')
-            ? 'gzip'
-            : undefined
-        : undefined;
     if (encoding && !asset[encoding]) {
       // Compress off the request thread so a cold eight-seat load cannot stall
       // rule messages while large definitions are being compressed.

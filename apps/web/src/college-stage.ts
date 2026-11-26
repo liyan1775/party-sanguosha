@@ -20,6 +20,8 @@ export function bindCollegeStage(end: HTMLButtonElement, vote: HTMLButtonElement
   more.className = 'button secondary';
   more.textContent = '更多';
   more.hidden = true;
+  more.setAttribute('aria-haspopup', 'dialog');
+  more.setAttribute('aria-controls', 'stage-tools');
   toolbar.append(more);
   const dialog = document.createElement('dialog');
   dialog.id = 'stage-tools';
@@ -33,6 +35,10 @@ export function bindCollegeStage(end: HTMLButtonElement, vote: HTMLButtonElement
   for (const selector of [
     '#match-sound',
     '.match-volume',
+    '#match-table-skin',
+    '#match-emotions',
+    '#match-motion',
+    '#match-auto',
     '#match-share',
     '#match-records',
     '#match-restore',
@@ -71,7 +77,12 @@ export function bindCollegeStage(end: HTMLButtonElement, vote: HTMLButtonElement
   more.onclick = () => dialog.showModal();
   dialog.querySelector('button')!.addEventListener('click', () => dialog.close());
   tools.addEventListener('click', (event) => {
-    if ((event.target as Element).closest('button')) dialog.close();
+    if (
+      (event.target as Element).closest(
+        'button:not(#match-sound, #match-emotions, #match-motion, #match-auto)',
+      )
+    )
+      dialog.close();
   });
   dialog.addEventListener('click', (event) => {
     if (event.target === dialog) dialog.close();
@@ -88,18 +99,58 @@ export function bindCollegeStage(end: HTMLButtonElement, vote: HTMLButtonElement
   ready.onclick = () => element<HTMLButtonElement>('#ready-button').click();
   start.onclick = () => element<HTMLButtonElement>('#start-button').click();
   back.onclick = () => end.click();
-  let compact = false,
+  const preferences = new Set([
+    'match-sound',
+    'match-table-skin',
+    'match-emotions',
+    'match-motion',
+  ]);
+  const extraDraftTools = new Set(['match-records', 'match-restore']);
+  const compactPlayTools = new Set([
+    'match-sound',
+    'match-auto',
+    'match-emotions',
+    'match-motion',
+    'match-records',
+    'match-restore',
+    'match-surrender',
+    'match-network',
+    'owner-transfer-row',
+    'owner-claim-row',
+  ]);
+  let practice = false,
+    stageActive = false,
+    draft = false,
+    compact = false,
     rosterKey = '',
     resultsKey = '';
-  function move(enabled: boolean) {
-    if (enabled === compact) return;
-    compact = enabled;
-    for (const { node, home, target } of relocated)
-      if (enabled) target.append(node);
-      else home.after(node);
-    if (!enabled) dialog.close();
+  function updateTools() {
+    dialog.classList.add('draft-tools');
+    for (const { node, home, target } of relocated) {
+      const volume = node.classList.contains('match-volume');
+      const inDialog =
+        stageActive &&
+        (draft
+          ? (compact && (preferences.has(node.id) || volume || extraDraftTools.has(node.id))) ||
+            (practice && !preferences.has(node.id) && !volume && node.id !== 'match-share')
+          : (compact && (compactPlayTools.has(node.id) || volume)) ||
+            (practice &&
+              !['match-table-skin', 'match-share', 'match-auto', 'match-emotions'].includes(
+                node.id,
+              )));
+      if (inDialog && node.parentElement !== target) target.append(node);
+      else if (!inDialog && home.nextSibling !== node) home.after(node);
+    }
+    more.hidden = !stageActive || (!practice && !compact);
+    if (more.hidden && dialog.open) dialog.close();
   }
   return {
+    layout(drafting: boolean, compactTools: boolean) {
+      if (draft === drafting && compact === compactTools) return;
+      draft = drafting;
+      compact = compactTools;
+      updateTools();
+    },
     context(
       room: RoomView,
       memberId: string | null,
@@ -109,11 +160,13 @@ export function bindCollegeStage(end: HTMLButtonElement, vote: HTMLButtonElement
     ) {
       const college = room.settings.mode === 'college';
       const enabled = active && (college || (!!room.doudizhu && !room.matchId));
-      move(enabled);
+      stageActive = active;
+      practice = enabled;
+      updateTools();
       panel.classList.toggle('practice-stage', enabled);
       panel.classList.toggle('college-stage', enabled && college);
       panel.classList.toggle('stage-finished', enabled && room.phase === 'finished');
-      heading.hidden = role.hidden = more.hidden = !enabled;
+      heading.hidden = role.hidden = !enabled;
       element('#match-label').hidden = enabled;
       element('#orientation-hint').classList.toggle('stage-secondary', enabled);
       const s = room.series,
@@ -129,8 +182,8 @@ export function bindCollegeStage(end: HTMLButtonElement, vote: HTMLButtonElement
       end.hidden =
         !enabled || !college || !owner || !s || !['waiting', 'finished'].includes(room.phase);
       element('#game-frame-mount').hidden = enabled && !native;
-      element('#match-sound').hidden = enabled && !native;
-      element('.match-volume').hidden = enabled && !native;
+      element('#match-sound').hidden = enabled && !native && !draft;
+      element('.match-volume').hidden = enabled && !native && !draft;
       network.hidden = enabled && !native;
       if (enabled && !native) {
         element('#match-restore').hidden = true;

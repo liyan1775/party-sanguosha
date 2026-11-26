@@ -55,7 +55,7 @@ export function publicObserverState(recent = []) {
   const players = [...game.players, ...game.dead];
   return {
     round: game.roundNumber || 0,
-    currentPlayerId: _status.currentPhase?.playerid ?? null,
+    currentPlayerId: _status.over ? null : (_status.currentPhase?.playerid ?? null),
     ended: !!_status.over,
     ...(ui?.cardPile ? { deckCount: ui.cardPile.childElementCount } : {}),
     players: players.map((player) => ({
@@ -284,6 +284,15 @@ function publicMatchStats() {
 }
 
 export function installObserver(publish) {
+  const giftStreaks = new Map();
+  globalThis.partyEngine.observeGift = (sender, target) => {
+    if (_status.over || !sender?.playerid || !target?.playerid) return;
+    const targetId = target.playerid;
+    const at = Date.now();
+    const last = giftStreaks.get(targetId);
+    const count = last?.sender === sender && at - last.at < 2500 ? last.count + 1 : 1;
+    giftStreaks.set(targetId, { sender, count: Math.min(count, 99), at });
+  };
   const recent = [],
     controls = new Map();
   let total = 0,
@@ -351,6 +360,13 @@ export function installObserver(publish) {
       logStart: total - recent.length + 1,
       logTotal: total,
     };
+    const now = Date.now();
+    const giftCombos = [];
+    for (const [targetId, gift] of giftStreaks) {
+      if (now - gift.at >= 3500 || state.ended) giftStreaks.delete(targetId);
+      else if (gift.count > 1) giftCombos.push({ targetId, count: gift.count, at: gift.at });
+    }
+    if (giftCombos.length) state.giftCombos = giftCombos;
     if (tracker && Number.isSafeInteger(state.deckCount))
       state.cardTracker = tracker.snapshot(state.deckCount, shuffledCount);
     if (state.ended) {

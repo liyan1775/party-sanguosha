@@ -24,6 +24,7 @@ async function fixture(t: TestContext, count = 8, preset: GeneralPresetId = 'beg
   const status = { connectMode: true };
   const lib = {
     character,
+    configOL: { choose_timeout: '60' },
     sort: { character: (a: string, b: string) => a.localeCompare(b) },
     node: { torespond: {} as Record<string, unknown> },
   };
@@ -445,11 +446,12 @@ test('身份局先展示主公才发其余候选，未选主公候选可再分�
     forResult: async () => {
       if (batches.length) assert.deepEqual(initialized, ['general-0']);
       batches.push(batch.map(([player]) => player.playerid));
-      allOffers.push(...batch.map((choice) => choice[1][1][0]));
+      allOffers.push(...batch.map((choice) => choice[1].createDialog[1][0]));
+      assert(batch.every(([, choice]) => choice.partyDraft.kind === 'general'));
       return Object.fromEntries(
-        batch.map(([player, dialog]) => [
+        batch.map(([player, choice]) => [
           player.playerid,
-          player === f.game.zhu ? { links: [dialog[1][0][0]] } : 'ai',
+          player === f.game.zhu ? { links: [choice.createDialog[1][0][0]] } : 'ai',
         ]),
       );
     },
@@ -472,6 +474,47 @@ test('身份局先展示主公才发其余候选，未选主公候选可再分�
   assert.equal(batches[1]!.length, 7);
   assert(allOffers.slice(1).flat().includes('general-1'), 'unused lord candidates return');
   assert.equal(new Set(initialized).size, 8);
+});
+
+test('选将情报按真实位次、队伍及个人身份投影，其他暗身份不进入可见情报', async () => {
+  const source = (
+    await readFile(
+      new URL('../packages/noname-adapter/runtime/hero-draft.js', import.meta.url),
+      'utf8',
+    )
+  ).replace("import { lib, game, ui, get, _status } from 'noname';", '');
+  const { draftSeats } = await import(
+    `data:text/javascript;base64,${Buffer.from(source).toString('base64')}`
+  );
+  const lord = { seatNum: 1, nickname: '曹军', identity: 'zhu', identityShown: true, side: true };
+  const loyalist = { seatNum: 2, nickname: '近卫', identity: 'zhong', side: false };
+  const rebel = { seatNum: 3, nickname: '远客', identity: 'fan', side: false };
+  const hidden = { seatNum: 4, nickname: '同行', identity: 'nei', side: true };
+  const rotated = [rebel, hidden, lord, loyalist];
+  const identity = draftSeats('identity', rotated, rebel);
+  assert.deepEqual(
+    identity.map((seat: any) => seat.number),
+    [1, 2, 3, 4],
+  );
+  assert.deepEqual(
+    identity.map((seat: any) => seat.badge),
+    [['主公', 'red'], null, ['反贼', 'jade'], null],
+  );
+  assert.equal(identity.filter((seat: any) => seat.own).length, 1);
+  const versus = draftSeats('versus', rotated, lord);
+  assert.deepEqual(
+    versus.map((seat: any) => seat.badge[1]),
+    ['blue', 'red', 'red', 'blue'],
+  );
+  assert.deepEqual(
+    versus.map((seat: any) => seat.teammate),
+    [false, false, false, true],
+  );
+  const duel = draftSeats('duel', [loyalist, lord], loyalist);
+  assert.deepEqual(
+    duel.map((seat: any) => seat.badge[0]),
+    ['先手', '后手'],
+  );
 });
 
 test('选将启动上限容纳两段身份选择、八个神将势力与30秒手气卡期限', () => {

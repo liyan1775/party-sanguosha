@@ -484,18 +484,20 @@ async function flowers(mode) {
       Math.hypot(before.x - during.x, before.y - during.y) > 10,
       'flower actually travels across the seated Edge table',
     );
-    assert(during.time > 0 && during.frames === 3);
+    assert(during.time > 0 && during.frames === 9);
     await wait(700);
     const arrived = await frame.evaluate(() => {
       const node = [...document.querySelectorAll('.party-emotion')].at(-1).getBoundingClientRect();
-      const target = partyEngine.game.players
-        .find((player) => player !== partyEngine.game.me)
-        .getBoundingClientRect();
+      const seat = partyEngine.game.players.find((player) => player !== partyEngine.game.me);
+      const avatar = seat.node.avatar;
+      const target = (
+        avatar?.offsetWidth && avatar.offsetHeight && avatar.checkVisibility() ? avatar : seat
+      ).getBoundingClientRect();
       return (
         Math.hypot(
           node.x + node.width / 2 - target.x - target.width / 2,
           node.y + node.height / 2 - target.y - target.height / 2,
-        ) < 5
+        ) < 18
       );
     });
     assert(arrived);
@@ -506,14 +508,19 @@ async function flowers(mode) {
   );
   await phones[0].emulateMedia({ reducedMotion: 'reduce' });
   await send();
-  const fade = await frame.evaluate(() =>
-    [...document.querySelectorAll('.party-emotion')]
-      .at(-1)
-      .getAnimations()[0]
-      ?.effect.getKeyframes()
-      .map((frame) => frame.opacity),
-  );
-  assert.deepEqual(fade, ['0', '1'], 'reduced motion retains a fade transition');
+  const fullFlight = await frame.evaluate(() => {
+    const node = document.querySelector(
+      '.party-emotion[data-phase="flight"]:not([data-table-gift-previous])',
+    );
+    const animation = node?.getAnimations()[0];
+    return {
+      systemReduced: matchMedia('(prefers-reduced-motion: reduce)').matches,
+      client: document.documentElement.dataset.motion,
+      frames: animation?.effect.getKeyframes().length,
+      duration: animation?.effect.getTiming().duration,
+    };
+  });
+  assert.deepEqual(fullFlight, { systemReduced: true, client: 'full', frames: 9, duration: 480 });
   await phones[0].emulateMedia({ reducedMotion: 'no-preference' });
   await phones[0].screenshot({ path: `${output}/${mode}.png` });
   await frame.evaluate(() => partyEngine._status.removePop?.());
@@ -523,7 +530,7 @@ async function flowers(mode) {
     arrivesAtTarget: true,
     repeatedGift: true,
     receiverNotice: true,
-    reducedMotionFade: true,
+    osReducedMotionKeepsFullFlight: true,
   });
 }
 

@@ -1,0 +1,451 @@
+﻿#theater {
+  isolation: isolate;
+  position: relative;
+  contain: paint;
+  transform: translateZ(0);
+  color: #f4ebd7;
+  background:
+    radial-gradient(ellipse at 28% 58%, #23372b 0, transparent 43%),
+    radial-gradient(ellipse at 90% 62%, #36291a 0, transparent 34%), #091211;
+  overflow: clip;
+  padding: clamp(90px, 10vh, 128px) max(5vw, 22px) clamp(62px, 9vh, 110px);
+}
+#theater .th-wrap {
+  max-width: 1340px;
+  margin: 0 auto;
+}
+#theater .th-header {
+  text-align: left;
+  display: block;
+}
+#theater .th-kicker {
+  font:
+    600 0.85rem/1.3 system-ui,
+    sans-serif;
+  letter-spacing: 0.19em;
+  color: #e5c27b;
+  margin: 0 0 16px;
+}
+#theater h2 {
+  font:
+    600 clamp(2.6rem, 5.2vw, 6rem)/1.12 'Songti SC',
+    'STSong',
+    'SimSun',
+    serif;
+  letter-spacing: -0.045em;
+  color: #f3eddf;
+  margin: 0;
+}
+#theater h2 em {
+  font: inherit;
+  color: #ddbc80;
+}
+.th-stage {
+  display: grid;
+  grid-template-columns: 1.45fr 1fr;
+  align-items: end;
+  gap: 4vw;
+  margin-top: clamp(38px, 5vw, 75px);
+}
+.th-deck,
+.th-range {
+  position: relative;
+  min-width: 0;
+}
+.th-deck {
+  padding: 2.5% 0 0;
+}
+.th-fan {
+  position: relative;
+  isolation: isolate;
+  perspective: 950px;
+  width: 95%;
+  margin: auto;
+  aspect-ratio: 1.77;
+}
+.th-fan button {
+  appearance: none;
+  position: absolute;
+  top: 6%;
+  left: 33%;
+  width: 34%;
+  aspect-ratio: 5/7;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  transform-origin: center 90%;
+  border-radius: 6.4%/4.6%;
+  touch-action: manipulation;
+  color: #fff4d9;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.th-fan button[data-card='sha'] {
+  transform: translate3d(-87%, 7%, 0) rotate(-12deg);
+}
+.th-fan button[data-card='guohe'] {
+  z-index: 2;
+  transform: translate3d(0, -3%, 0);
+}
+.th-fan button[data-card='nanman'] {
+  transform: translate3d(87%, 7%, 0) rotate(12deg);
+}
+.th-fan button:focus-visible,
+.th-ammo button:focus-visible {
+  outline: 3px solid #fff4c4;
+  outline-offset: 5px;
+}
+.th-face {
+  position: absolute;
+  inset: 0;
+  display: block;
+  overflow: hidden;
+  border-radius: inherit;
+  box-shadow:
+    0 10px 22px #0008,
+    0 2px 3px #0009,
+    inset 0 0 0 1px #e4c489;
+  background: #27291d;
+  border: 2px solid #ac8b54;
+  will-change: transform;
+}
+.th-face::before,
+.th-face::after,
+.th-face img,
+.th-foil,
+.th-face span,
+.th-face small,
+.th-face b {
+  pointer-events: none;
+}
+.th-face img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.th-face::before,
+.th-face::after {
+  content: '';
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+}
+.th-face::before {
+  background:
+    linear-gradient(130deg, #060a08a3, transparent 29%),
+    linear-gradient(0deg, #080b09f7 0%, #080d09a6 17%, transparent 45%);
+}
+.th-face::after {
+  inset: 4px;
+  border: 1px solid #d9bb7d99;
+  border-radius: inherit;
+}
+.th-foil {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  will-change: transform;
+  opacity: 0.48;
+  transition: opacity 280ms ease-out;
+  background: linear-gradient(
+    114deg,
+    transparent 13%,
+    #ffd9a013 27%,
+    #dbf4db27 40%,
+    #fff0c65c 48%,
+    #ffe1aa28 57%,
+    #fcdf9e12 65%,
+    transparent 75%
+  );
+}
+@media (hover: hover) and (pointer: fine) {
+  .th-fan button:hover .th-foil {
+    opacity: 1;
+  }
+}
+.th-rank {
+  position: absolute;
+  top: 5%;
+  left: 8%;
+  z-index: 3;
+  display: grid;
+  text-align: center;
+  font:
+    500 clamp(18px, 2.2vw, 39px)/0.95 Georgia,
+    serif;
+  text-shadow: 0 2px 5px #000;
+}
+.th-rank small {
+  font:
+    0.65em Georgia,
+    serif;
+}
+.th-title {
+  position: absolute;
+  bottom: 7%;
+  left: 9%;
+  right: 8%;
+  z-index: 3;
+  display: flex;
+  gap: 0.35em;
+  align-items: baseline;
+  justify-content: center;
+  white-space: nowrap;
+  font-size: clamp(20px, 2.05vw, 35px);
+}
+.th-title small {
+  font:
+    500 0.34em/1.3 system-ui,
+    sans-serif;
+  letter-spacing: 0.1em;
+  color: #e6c790;
+  writing-mode: vertical-rl;
+}
+.th-title b {
+  font:
+    600 1em/1.2 'Songti SC',
+    'STSong',
+    'SimSun',
+    serif;
+  letter-spacing: 0.04em;
+}
+.th-range {
+  border-left: 1px solid #d4ad6f36;
+  padding-left: 4vw;
+}
+.th-range-head {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+.th-range-head img {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+}
+#theater .th-range h3 {
+  margin: 0;
+  font:
+    500 clamp(21px, 2.2vw, 36px)/1.3 'Songti SC',
+    'STSong',
+    'SimSun',
+    serif;
+  letter-spacing: 0.08em;
+}
+.th-arena {
+  position: relative;
+  width: 100%;
+  height: clamp(120px, 13vw, 205px);
+  isolation: isolate;
+}
+.th-plinth {
+  position: absolute;
+  left: 20%;
+  bottom: 14%;
+  width: 60%;
+  height: 15%;
+  border-radius: 50%;
+  border: 1px solid #d7b97d4d;
+  box-shadow:
+    0 5px 0 #2f3228,
+    0 6px 0 #8d784649,
+    0 15px 16px #0006;
+  background: radial-gradient(ellipse, #9f946444, #19352b);
+}
+.th-target,
+.th-splat {
+  position: absolute;
+  top: 8%;
+  left: 50%;
+  width: auto;
+  height: 73%;
+  aspect-ratio: 1;
+  margin-left: 0;
+  translate: -50% 0;
+  will-change: transform;
+}
+.th-target img,
+.th-splat img,
+.th-flight img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.th-splat {
+  height: 46%;
+  top: 32%;
+  opacity: 0;
+  will-change: transform, opacity;
+}
+.th-combo {
+  position: absolute;
+  top: 18%;
+  left: 64%;
+  color: #ffe2a3;
+  text-shadow: 1px 2px #9c402c;
+  font:
+    italic 700 clamp(24px, 3vw, 46px)/1 Georgia,
+    serif;
+  opacity: 0;
+  will-change: transform, opacity;
+}
+.th-ammo {
+  position: relative;
+  display: flex;
+  gap: 3%;
+  justify-content: center;
+}
+.th-ammo button {
+  appearance: none;
+  -webkit-tap-highlight-color: transparent;
+  display: grid;
+  place-items: center;
+  width: 19%;
+  max-width: 75px;
+  min-height: 52px;
+  aspect-ratio: 1/1.04;
+  border: 1px solid #d9b97965;
+  background: radial-gradient(ellipse at top, #4b4d3999, transparent 78%), #15241f;
+  color: #e8d9b9;
+  border-radius: 12px;
+  padding: 2%;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+@media (hover: hover) and (pointer: fine) {
+  .th-ammo button:hover {
+    transform: translate3d(0, -2px, 0);
+  }
+}
+.th-ammo img {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1.5;
+  object-fit: contain;
+  pointer-events: none;
+}
+.th-ammo span {
+  font:
+    500 0.78rem/1.1 system-ui,
+    sans-serif;
+  letter-spacing: 0.05em;
+}
+#theater .th-hint {
+  font:
+    400 0.875rem/1.4 system-ui,
+    sans-serif;
+  letter-spacing: 0.09em;
+  color: #c1b9a3;
+  text-align: center;
+  margin: 22px 0 0;
+}
+.th-fan [data-impact] {
+  position: absolute;
+  z-index: 4;
+  left: 50%;
+  top: 45%;
+  width: 184%;
+  height: auto;
+  translate: -50% -50%;
+  pointer-events: none;
+  opacity: 0;
+  will-change: transform, opacity;
+}
+.th-fan [data-impact='sha'] {
+  left: 55%;
+  top: 40%;
+}
+.th-fan [data-impact='nanman'] {
+  width: 222%;
+}
+.th-debris {
+  position: absolute;
+  width: 72%;
+  height: 95%;
+  left: 14%;
+  top: -3%;
+  pointer-events: none;
+  opacity: 0;
+  will-change: transform, opacity;
+}
+.th-flight {
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  width: clamp(42px, 4.7vw, 72px);
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  opacity: 0;
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+@media (max-width: 760px) {
+  #theater {
+    padding: 78px 6vw 58px;
+  }
+  #theater h2 {
+    font-size: clamp(2.25rem, 7.6vw, 3.4rem);
+  }
+  #theater h2 em {
+    display: block;
+  }
+  .th-stage {
+    display: block;
+    margin-top: 32px;
+  }
+  .th-deck {
+    width: 96%;
+    max-width: 490px;
+    margin: 0 auto;
+  }
+  .th-range {
+    border: 0;
+    border-top: 1px solid #d4ad6f36;
+    margin: 23px auto 0;
+    padding: 16px 0 0;
+    max-width: 410px;
+  }
+  .th-range-head {
+    gap: 5px;
+  }
+  .th-range-head img {
+    width: 37px;
+    height: 37px;
+  }
+  .th-arena {
+    height: 112px;
+  }
+  .th-ammo button {
+    width: 20%;
+    max-width: 62px;
+    min-height: 50px;
+    padding: 3px 6px;
+    aspect-ratio: 1.2;
+  }
+  #theater .th-hint {
+    margin-top: 12px;
+    font-size: 0.8rem;
+  }
+  .th-rank {
+    font-size: clamp(16px, 5vw, 26px);
+  }
+  .th-title {
+    font-size: clamp(15px, 4.5vw, 26px);
+  }
+}
+@media (min-width: 761px) and (max-height: 760px) {
+  #theater {
+    padding-block: 50px 52px;
+  }
+  .th-stage {
+    margin-top: clamp(25px, 5vh, 40px);
+  }
+  #theater .th-hint {
+    margin-top: 17px;
+  }
+}

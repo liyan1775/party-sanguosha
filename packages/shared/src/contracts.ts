@@ -11,7 +11,7 @@ import type { CustomRosterRef, CustomRosterSummary } from './rosters.js';
 import type { ShanhetuCampaignView } from './shanhetu.js';
 
 export const APP_ID = 'party-sanguosha';
-export const APP_VERSION = '1.0.0';
+export const APP_VERSION = '1.1.0';
 export const OWNER_OFFLINE_GRACE_MS = 60000;
 export const ROOM_IDLE_GRACE_MS = 10 * 60000;
 
@@ -84,6 +84,7 @@ export const QUICK_PLAY_PRESETS = {
   'doudizhu-3': { mode: 'doudizhu', playerCount: 3, generalPreset: 'advanced', botCount: 0 },
   'versus-2v2': { mode: 'versus', playerCount: 4, generalPreset: 'advanced', botCount: 0 },
   'identity-6': { mode: 'identity', playerCount: 6, generalPreset: 'advanced', botCount: 0 },
+  'duel-2': { mode: 'duel', playerCount: 2, generalPreset: 'advanced', botCount: 0 },
   'college-4': {
     mode: 'college',
     playerCount: 4,
@@ -103,6 +104,7 @@ export interface QuickPlayRequest {
   nickname: string;
   presetId: QuickPlayPresetId;
   fillBots?: boolean;
+  requireUnseated?: boolean;
   requestId?: string;
 }
 
@@ -128,6 +130,8 @@ export interface DoudizhuPrivateState {
     role: 'candidate' | 'landlord' | 'farmer';
     revision: number;
     candidates: string[];
+    /** Shown only to the player who reserved this candidate. */
+    pointed?: string;
     replacementsLeft: number;
     selected: string | null;
     locked: boolean;
@@ -253,6 +257,8 @@ export interface RoomSummary {
   code: string;
   ownerNickname: string;
   mode: ModeId;
+  generalPreset?: GeneralPresetId;
+  rosterName?: string;
   playerCount: number;
   humanCount: number;
   botCount: number;
@@ -366,6 +372,7 @@ export interface ObserverState {
   ended: boolean;
   deckCount?: number;
   cardTracker?: PublicCardTrackerSnapshot;
+  giftCombos?: { targetId: string; count: number; at: number }[];
   identityCounts?: IdentityCounts | null;
   players: {
     id: string;

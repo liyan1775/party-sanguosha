@@ -332,11 +332,7 @@ try {
               );
               assert(index >= 0, 'cross-preset native character remains selectable');
               await buttons.nth(index).tap();
-              await client
-                .locator('.control:not(.removing) > div')
-                .filter({ hasText: /^确定$/ })
-                .first()
-                .tap();
+              await client.locator('.hero-draft .hd-primary').tap();
             }
           }
           await chooseGeneral(client, worker);

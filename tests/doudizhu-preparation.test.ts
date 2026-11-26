@@ -62,6 +62,8 @@ test('普通斗地主先各6将，竞价后仅地主补4；点将不改变身份
   assert.equal(initial.length, 18);
   assert.equal(new Set(initial).size, 18);
   assert(prep.privateState('p1').seats[0]!.candidates.includes('caocao'));
+  assert.equal(prep.privateState('p1').seats[0]!.pointed, 'caocao');
+  assert.equal(prep.privateState('p0').seats[0]!.pointed, undefined);
   prep.action('p0', operation(prep, 'p0', 'p0', 'bid', 3));
   assert.equal(prep.privateState('p0').seats[0]!.candidates.length, 10);
   assert.equal(prep.privateState('p1').seats[0]!.candidates.length, 6);
@@ -262,6 +264,9 @@ test('高校整场自然结果幂等计分、轮换先叫位，回房保留规�
   for (const cb of callbacks)
     cb({ type: 'ended', roomCode: room.code, matchId: 'match-1', winner: 'landlord' });
   const series = room.snapshot().series!;
+  assert.equal(room.snapshot().phase, 'finished', '仍停留在高校小局结算');
+  assert.equal(series.finished, false);
+  assert.match(room.shutdownBlocker()!, /高校联赛整场练习尚未结束/);
   assert.equal(series.completedGames, 1);
   assert.equal(series.scores[0] + series.scores[1], 4);
   assert.equal(series.firstBidIndex, (previous + 1) % 4);
@@ -277,11 +282,14 @@ test('高校整场自然结果幂等计分、轮换先叫位，回房保留规�
   assert.equal(room.snapshot().series!.completedGames, 1);
   assert.deepEqual(room.snapshot().series!.results, series.results);
   room.returnToWaiting(users[0]!.token);
+  assert.equal(room.snapshot().phase, 'waiting', '已回到房间等待下一小局');
   assert.deepEqual(room.snapshot().series, series);
+  assert.match(room.shutdownBlocker()!, /高校联赛整场练习尚未结束/);
   assert.throws(() => room.addBots(1, users[0]!.token));
   assert.throws(() => room.setCollegeSeat(users[1]!.playerId, 0, users[0]!.token));
   room.endSeries(users[0]!.token);
   assert.equal(room.snapshot().series, undefined);
+  assert.equal(room.shutdownBlocker(), undefined);
   room.consoleClose();
 });
 

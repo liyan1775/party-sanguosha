@@ -33,8 +33,13 @@ test('启动可视化进度页：仅允许本机 Host、实时汇报阶段与百
   assert.equal(page.status, 200);
   assert.equal(page.headers.get('set-cookie'), null);
   const html = await page.text();
-  assert.match(html, /聚会三国杀 v1\.0\.0/);
-  assert.match(html, /data\/shanhetu/);
+  assert.match(html, /<h1>聚会三国杀<\/h1>/);
+  assert.match(html, /正在连接本机服务…/);
+  assert.match(html, /prefers-color-scheme:dark/);
+  assert.match(html, /<progress[^>]+aria-label="启动进度"/);
+  assert.match(html, /<summary>启动日志<\/summary>/);
+  assert.match(html, /准备资源不会覆盖山河册与自定义将池/);
+  assert.doesNotMatch(html, /兹白|客厅大屏|客厅剧场|客厅迎宾|素绡|玄泉|玉魁|v1\.0\.0/);
 
   const hostileStatus = await new Promise<number | undefined>((resolve, reject) => {
     const req = request(
@@ -57,10 +62,15 @@ test('启动可视化进度页：仅允许本机 Host、实时汇报阶段与百
   assert.ok(mid.percent >= 49 && mid.percent <= 82);
   assert.equal(mid.logs.at(-1), '校验固定资源 50 / 100');
 
+  progress.update({ step: 3, detail: '首次资源校验可能需要几十秒，就绪后自动打开联机与观战页。' });
+  const starting = await (await fetch(`${progress.url}api/status`)).json();
+  assert.equal(starting.detail, '首次资源校验可能需要几十秒，就绪后自动打开联机与观战页。');
+
   progress.setReady('http://127.0.0.1:43210/server');
   const ready = await (await fetch(`${progress.url}api/status`)).json();
   assert.equal(ready.state, 'ready');
   assert.equal(ready.percent, 100);
+  assert.match(ready.stageTitle, /联机与观战/);
   assert.equal(ready.redirectUrl, 'http://127.0.0.1:43210/server');
 
   progress.setFailed('模拟网络中断');

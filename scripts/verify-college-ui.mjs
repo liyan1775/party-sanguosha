@@ -7,12 +7,15 @@ import { NativeNonameService } from '../packages/noname-adapter/src/service.ts';
 import { chooseGeneral } from './native-ui-actions.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
+const buildDir = process.env.COLLEGE_UI_BUILD_DIR ?? `${root}/dist`;
 const output = `${root}/.runtime/college-ui/${new Date().toISOString().replace(/[:.]/g, '-')}`;
 await mkdir(output, { recursive: true });
 const party = createPartyServer({
   port: 0,
-  webRoot: `${root}/dist/web`,
-  adapter: new NativeNonameService(root),
+  webRoot: `${buildDir}/web`,
+  adapter: new NativeNonameService(root, undefined, buildDir),
+  rosterDirectory: `${output}/rosters`,
+  shanhetuDirectory: `${output}/book`,
 });
 await new Promise((resolve) => party.server.listen(0, '127.0.0.1', resolve));
 const base = `http://127.0.0.1:${party.server.address().port}`;
@@ -141,7 +144,9 @@ try {
   await owner.page.locator('#doudizhu-confirm').waitFor();
   const reader = users[2],
     mate = users[1];
-  await reader.page.locator(`.draft-task[data-seat="${mate.id}"]`).tap();
+  const teammateTab = reader.page.locator(`.draft-task[data-seat="${mate.id}"]`);
+  if (await teammateTab.isVisible()) await teammateTab.tap();
+  else assert.equal(await teammateTab.getAttribute('aria-pressed'), 'true');
   await reader.page.locator('.doudizhu-seat:not([hidden]) [data-general]').last().tap();
   const readTitle = await reader.page.locator('#doudizhu-detail-name').textContent();
   assert.equal(await reader.page.locator('#doudizhu-confirm').isVisible(), false);
@@ -171,6 +176,9 @@ try {
   await bounded(reader, '#doudizhu-panel');
   await owner.page.locator('.doudizhu-seat:not([hidden]) [data-general]').first().tap();
   await bounded(owner, '#doudizhu-confirm');
+  await owner.page.setViewportSize({ width: 390, height: 844 });
+  if (await owner.page.locator('#match-panel.rotated-table').isVisible())
+    await owner.page.locator('#match-orientation').tap();
   await capture(owner, '04-choosing-portrait-upright', 390, 844);
   await owner.page.locator('#doudizhu-show-detail').tap();
   await capture(owner, '05-skills-portrait-drawer', 390, 844);
@@ -214,7 +222,9 @@ try {
   for (const user of users) {
     const view = await api(user, path + '/me/doudizhu');
     for (const seat of view.seats.filter((s) => !s.locked)) {
-      await user.page.locator(`.draft-task[data-seat="${seat.id}"]`).tap();
+      const task = user.page.locator(`.draft-task[data-seat="${seat.id}"]`);
+      if (await task.isVisible()) await task.tap();
+      else assert.equal(await task.getAttribute('aria-pressed'), 'true');
       await user.page.locator('.doudizhu-seat:not([hidden]) [data-general]').first().tap();
       await user.page.locator('#doudizhu-confirm').tap();
     }
@@ -248,6 +258,9 @@ try {
     }),
   );
   await worker.waitForFunction(() => partyEngine.proof.started, null, { timeout: 120000 });
+  const roles = owner.frame.locator('#arena .player > .identity[data-party-landlord-role]');
+  await roles.last().waitFor({ state: 'attached' });
+  assert.deepEqual((await roles.allTextContents()).sort(), ['农民', '农民', '地主']);
   await owner.page.setViewportSize({ width: 844, height: 390 });
   await owner.frame.locator('#party-farmer-hand-toggle').waitFor();
   const anchor = await owner.frame

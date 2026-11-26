@@ -12,6 +12,22 @@ import {
 export const app = document.querySelector<HTMLElement>('#app')!;
 initZibaiTheme();
 
+const nicknameKey = 'party_last_nickname';
+
+export function savedNickname(): string {
+  try {
+    return localStorage.getItem(nicknameKey) ?? '';
+  } catch {
+    return '';
+  }
+}
+
+export function rememberNickname(nickname: string): void {
+  try {
+    localStorage.setItem(nicknameKey, nickname.trim());
+  } catch {}
+}
+
 function requestDeadline(parent: AbortSignal | undefined, milliseconds: number) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), milliseconds);
@@ -76,7 +92,7 @@ export function frame(
   app.innerHTML = `
     <div class="zibai-backdrop" aria-hidden="true"><div class="zibai-backdrop-art day"></div><div class="zibai-backdrop-art night"></div><div class="zibai-backdrop-veil"></div></div>
     <a class="skip-link" href="#lobby-content">跳到主要内容</a>
-    <header class="masthead"><a class="brand" href="/" aria-label="聚会三国杀首页"><span class="seal">杀</span><span>聚会三国杀<small>兹白双境 · 一码入席</small></span></a><nav class="masthead-nav" aria-label="大厅导航"><a href="/" ${layout.includes('home-layout') ? 'aria-current="page"' : ''}>聚会大厅</a>${layout.includes('home-layout') ? '<a href="#lobby-guide">玩法与武将</a>' : ''}</nav><div class="masthead-prefs" role="group" aria-label="显示偏好"><button id="theme-toggle" class="pref-token" type="button" title="切换白衣素绡明境 / 月魄玄泉暗境"></button><button id="motion-toggle" class="pref-token" type="button" title="切换满血光影动效 / 精简动效"></button></div><span id="connection" class="connection" role="status">正在连接</span></header>
+    <header class="masthead"><a class="brand" href="/" aria-label="聚会三国杀首页"><span class="seal">杀</span><span>聚会三国杀</span></a><nav class="masthead-nav" aria-label="大厅导航"><a href="/" ${layout.includes('home-layout') ? 'aria-current="page"' : ''}>返回大厅</a></nav><div class="masthead-prefs" role="group" aria-label="显示偏好"><button id="theme-toggle" class="pref-token" type="button" title="切换日间或夜间"></button><button id="motion-toggle" class="pref-token" type="button" title="切换动效"></button></div><span id="connection" class="connection" role="status">正在连接</span></header>
     <section class="page-hero"><div class="intro"><p class="eyebrow">${ZIBAI_ICONS.star}<span>${eyebrow}</span></p><h1>${title}</h1><p>${subtitle}</p></div>${artwork}</section>
     <div id="lobby-content" tabindex="-1">
     <div id="message" class="message" role="alert" hidden></div>
@@ -86,9 +102,9 @@ export function frame(
   const themeBtn = element<HTMLButtonElement>('#theme-toggle');
   const motionBtn = element<HTMLButtonElement>('#motion-toggle');
   const paintPrefs = (theme = getZibaiTheme(), motion = getZibaiMotion()) => {
-    themeBtn.innerHTML = `${theme === 'day' ? ZIBAI_ICONS.sun : ZIBAI_ICONS.moon}<span>${theme === 'day' ? '素绡' : '玄泉'}</span>`;
+    themeBtn.innerHTML = `${theme === 'day' ? ZIBAI_ICONS.sun : ZIBAI_ICONS.moon}<span>${theme === 'day' ? '日间' : '夜间'}</span>`;
     themeBtn.setAttribute('aria-pressed', String(theme === 'night'));
-    motionBtn.innerHTML = `${ZIBAI_ICONS.spark}<span>${motion === 'full' ? '满血' : '精简'}</span>`;
+    motionBtn.innerHTML = `${ZIBAI_ICONS.spark}<span>${motion === 'full' ? '动效' : '精简'}</span>`;
     motionBtn.setAttribute('aria-pressed', String(motion === 'reduced'));
   };
   paintPrefs();

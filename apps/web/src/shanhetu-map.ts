@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 import type { ShanhetuCampaignView } from '../../../packages/shared/src/shanhetu.js';
+import { shanhetuIcon } from './shanhetu-art.js';
 import { button, make } from './shanhetu-ui.js';
 
 type MapView = NonNullable<ShanhetuCampaignView['map']>;
@@ -15,27 +16,6 @@ const labels: Record<string, string> = {
 const status = { available: '可前往', completed: '已通过', locked: '暂不可达' };
 const chapters = ['一', '二', '三'];
 const svgNS = 'http://www.w3.org/2000/svg';
-const icons: Record<string, [string, string]> = {
-  battle: [
-    'm5 4 5 3 8 12-2 2L7 9 5 4Zm2 13 3-3m-6 6 3-3m7-8 3-4 4-1-1 4-3 3',
-    'm15 16 4-4m-1 7 3 2',
-  ],
-  boss: ['M4 8l4 3 4-6 4 6 4-3-2 10H6L4 8Z', 'M7 21h10m-5-9 2 2-2 2-2-2Z'],
-  event: ['M7 20h11V7a3 3 0 0 0-3-3H6a2 2 0 1 0 0 4h2v10a2 2 0 1 1-2-2h12', 'M11 9h4m-4 3h4'],
-  camp: ['m2 20 10-15 10 15H2Zm6 0 4-7 4 7', 'm10 4 2 1 2-3'],
-  shop: ['M5 11v9h14v-9M3 11l3-6h12l3 6H3Zm6 9v-5h6v5', 'm9 5-1 6m7-6 1 6'],
-  card: ['M7 4h10v16H7zM4 7v13m16-13v13', 'm12 8 2 4-2 4-2-4Z'],
-  skill: ['M12 3c2 4 4 6 9 9-5 3-7 5-9 9-2-4-4-6-9-9 5-3 7-5 9-9Z', 'M12 8v8m-4-4h8'],
-  tactic: ['M6 21V4m0 1h13l-3 4 3 4H6', 'm9 9 2 1 3-3'],
-  equipment: ['M12 3 5 6v5c0 4 2 7 7 10 5-3 7-6 7-10V6l-7-3Z', 'M12 8v8m-3-4h6'],
-  recruit: [
-    'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm-6 8v-2a6 6 0 0 1 12 0v2',
-    'M3 9v4m-2-2h4m16-2v4m-2-2h4',
-  ],
-  completed: ['m5 12 5 5L20 7', 'M5 6h3m8 13h3'],
-  focus: ['M4 9V4h5m6 0h5v5m0 6v5h-5m-6 0H4v-5', 'M9 12h6m-3-3v6'],
-};
-
 export const MARKET_WARNING = '再推 1 日首领现身，未逛集市将自动关闭！';
 
 export function marketWillClose(map: MapView, days: number) {
@@ -56,22 +36,6 @@ export function closesMarket(map: MapView, days: number, actionId: string) {
     days + location.duration >= map.bossAt &&
     map.locations.some((item) => item.kind === 'shop' && item.status !== 'completed')
   );
-}
-
-export function shanhetuIcon(kind: string) {
-  const svg = document.createElementNS(svgNS, 'svg');
-  svg.classList.add('shanhetu-icon');
-  svg.setAttribute('viewBox', '0 0 24 24');
-  svg.setAttribute('aria-hidden', 'true');
-  svg.setAttribute('focusable', 'false');
-  const [outline, detail] = icons[kind] ?? icons.event!;
-  const drawing = document.createElementNS(svgNS, 'path');
-  drawing.setAttribute('d', outline);
-  const accent = document.createElementNS(svgNS, 'path');
-  accent.setAttribute('d', detail);
-  accent.classList.add('shanhetu-icon-accent');
-  svg.append(drawing, accent);
-  return svg;
 }
 
 function arrangeLocations(locations: Location[]) {

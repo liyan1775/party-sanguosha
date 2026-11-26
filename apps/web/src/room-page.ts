@@ -25,14 +25,17 @@ import {
   frame,
   message,
   perform,
+  rememberNickname,
+  savedNickname,
   watchEvents,
 } from './ui.js';
 import { bindQr, qrMarkup } from './qr.js';
 import { bindGeneralGuide, guideButton } from './general-guide.js';
 import { createAssetPreloader } from './engine-preloader.js';
 import { createLanConnection } from './lan-client.js';
-import { modeIcon, roomArtwork } from './lobby-art.js';
-import { onZibaiPreferenceChange, syncThemeToFrame } from './zibai-theme.js';
+import { modeIcon } from './lobby-art.js';
+import { bindStageBackdrop } from './stage-shell.js';
+import { onZibaiPreferenceChange, syncThemeToFrame, toggleZibaiMotion } from './zibai-theme.js';
 import { openPosterDialog } from './party-poster.js';
 import { renderRosterSource } from './roster-source.js';
 import { bindSurrenderDialog } from './surrender-dialog.js';
@@ -61,7 +64,9 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
   let draftRosterSummary: CustomRosterSummary | undefined = room.roster;
   let wasOwner = false;
   let qrBound = false;
+  let lastSeatLayout = '';
   let matchId: string | null = null;
+  let nativeEndedMatch: string | null = null;
   let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
   let reconnectAttempt = 0;
   let connectionIssue = false;
@@ -98,7 +103,7 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
         location.origin,
       );
   }
-  let horizontalTable = sessionStorage.getItem('party_table_view') !== 'portrait';
+  let tableOrientation = sessionStorage.getItem('party_table_view');
   let localConnection: ReturnType<typeof createLanConnection>;
   let localMatchAttempt: string | null = null;
   let localAttemptAt = 0;
@@ -124,24 +129,40 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
 
   frame(
     'room-layout',
-    '朋友已经在等你',
-    '好戏，等你入席。',
-    '准备好，就一起开场。每位入座的朋友都可以分享房间邀请。',
+    '',
+    '房间准备',
+    '',
     `
-    <section id="match-panel" class="match-panel" hidden><div class="match-toolbar"><strong id="match-label">正在选将</strong><span id="orientation-hint" class="orientation-hint" hidden>请横着握手机</span><button id="match-orientation" class="button secondary" type="button" hidden>竖屏显示</button><button id="match-sound" class="button secondary" type="button" aria-pressed="false">开启声音</button><label class="match-volume" for="match-volume">音量<input id="match-volume" type="range" min="0" max="100" step="5" value="35" aria-label="声音音量"><output id="match-volume-value" for="match-volume">35%</output></label><button id="match-share" class="button secondary" type="button">房间二维码</button><button id="rematch-button" class="button primary" type="button" hidden>回到房间，准备下一局</button><span id="finished-hint" hidden>请等房主返回房间</span></div><div id="game-frame-container"><div id="game-frame-mount"></div><div id="match-loading" class="match-loading" role="status" aria-live="polite" hidden><strong id="match-loading-status">正在准备对局…</strong><progress id="match-loading-progress" max="6" value="0" aria-label="对局载入步骤"></progress><p id="match-loading-detail">第 1 / 6 步 · 首次进入需要载入游戏资源</p></div></div></section>
-    <div class="room-grid">
-      <section class="panel welcome-panel"><div class="panel-heading"><h2>这一桌</h2><span class="tag" id="player-room-code"></span></div><div class="game-summary"><span id="summary-mode" class="summary-mode"></span><span id="summary-details"></span></div><p id="summary-preset" class="hint"></p>${guideButton}
+    <section id="match-panel" class="match-panel" hidden><div class="match-toolbar"><strong id="match-label">正在选将</strong><span id="orientation-hint" class="orientation-hint" hidden>请横着握手机</span><button id="match-orientation" class="button secondary" type="button" hidden>竖屏显示</button><button id="match-sound" class="button secondary" type="button" aria-pressed="false">开启声音</button><label class="match-volume" for="match-volume">音量<input id="match-volume" type="range" min="0" max="100" step="5" value="35" aria-label="声音音量"><output id="match-volume-value" for="match-volume">35%</output></label><select id="match-table-skin" class="button secondary" aria-label="牌桌"><option value="auto">牌桌 · 跟随模式</option><option value="jade">青玉案</option><option value="palace">朱漆宫案</option><option value="bamboo">竹林石案</option><option value="chibi">赤壁夜案</option></select><button id="match-emotions" class="button secondary" aria-label="互动道具" aria-pressed="true" type="button">互动道具 开</button><button id="match-motion" class="button secondary" aria-label="精简动效" type="button"></button><button id="match-share" class="button secondary" type="button">房间二维码</button><button id="rematch-button" class="button primary" type="button" hidden>回到房间，准备下一局</button><span id="finished-hint" hidden>请等房主返回房间</span></div><div id="game-frame-container"><div id="game-frame-mount"></div><div id="match-loading" class="match-loading" role="status" aria-live="polite" hidden><div class="room-loading-card"><span class="room-loading-seal" aria-hidden="true">杀</span><span class="room-loading-brand">聚会三国杀 · 对局准备</span><strong id="match-loading-status">正在准备对局…</strong><progress id="match-loading-progress" max="6" value="0" aria-label="对局载入步骤"></progress><p id="match-loading-detail">等待引擎连接；首次进入需要载入游戏资源。</p></div></div></div></section>
+    <div class="room-grid return-room">
+      <header class="panel room-prep-header">
+        <div class="room-prep-identity"><div class="room-prep-heading"><span id="summary-mode" class="summary-mode"></span><h1>房间 <strong id="player-room-code"></strong></h1></div><p id="summary-details"></p></div>
+        <div class="room-prep-invites"><a class="button subtle room-prep-mobile-home" href="/">返回大厅</a><button class="button secondary" id="room-copy-invite" type="button" hidden>复制邀请链接</button><button class="button secondary" id="share-button" type="button" hidden>房间二维码</button></div>
+        <div class="room-prep-copy"><p id="room-copy-status" class="hint" role="status"></p><input id="room-copy-url" aria-label="手动复制邀请链接" readonly hidden /></div>
+      </header>
+      <section class="panel players-panel" aria-labelledby="room-seats-title"><div class="panel-heading"><h2 id="room-seats-title">房间席位</h2><span id="player-counter" class="tag muted"></span></div><ul id="players" class="players"></ul><div class="room-seat-footer"><p id="seat-count" class="hint seat-count"></p><div id="bot-controls" class="bot-controls" hidden><button id="fill-bots" class="button subtle" type="button">一键补满 AI</button></div></div><p id="owner-status" class="hint" hidden></p></section>
+      <section class="panel welcome-panel room-prep-actions" aria-label="房间操作">
         <div id="other-room" class="message" hidden>你已经在另一间房，请先回去离开。<a id="other-room-link" href="/">返回原房间</a></div>
         <form id="join-form"><label for="nickname">怎么称呼你</label><input id="nickname" name="nickname" placeholder="输入昵称，朋友才认得你" autocomplete="nickname" maxlength="32" required /><p class="hint">昵称 1–16 个字，无需注册账号。</p><button id="join-button" class="button primary full-width" type="submit">入座</button></form>
-        <div id="my-seat" hidden><p class="my-seat-label" id="my-role"></p><h3 id="my-nickname"></h3><button id="ready-button" class="button primary full-width" type="button">我准备好了</button><button id="share-button" class="button secondary full-width" type="button">展示房间二维码</button><div id="owner-start" hidden><button id="start-button" class="button primary full-width" type="button" disabled>开始对局</button></div><button id="leave-button" class="button text-button full-width" type="button">离开房间</button><p id="owner-leave-hint" class="hint" hidden>离开后房主交接给下一位真人；最后一位真人离开会关闭房间。</p></div>
+        <div id="my-seat" role="group" aria-labelledby="my-nickname" aria-describedby="my-role" hidden><span id="my-nickname" hidden></span><span id="my-role" hidden></span><div class="room-prep-primary"><button id="ready-button" class="button primary full-width" type="button">准备</button><div id="owner-start" hidden><button id="start-button" class="button primary full-width" type="button" disabled>开始对局</button></div></div><div class="room-prep-secondary"><button id="leave-button" class="button text-button" type="button" aria-describedby="owner-leave-hint">离开房间</button><span id="owner-leave-hint" hidden></span></div></div>
+        <p id="waiting-text" class="waiting-text"></p><p id="engine-status" class="hint engine-status" hidden></p>
       </section>
-      <section class="panel players-panel"><div class="panel-heading"><h2 id="room-seats-title">等朋友到齐</h2><span id="player-counter" class="tag muted"></span></div><p id="seat-count" class="hint seat-count"></p><div id="bot-controls" class="bot-controls" hidden><button id="add-bot" class="button secondary" type="button">添加 1 个 AI</button><button id="fill-bots" class="button subtle" type="button">用 AI 补满空位</button><p class="hint">AI 自动准备，使用无名杀完整原生决策。</p></div><ul id="players" class="players"></ul><p id="waiting-text" class="waiting-text"></p><p id="owner-status" class="hint"></p><p id="engine-status" class="hint engine-status"></p></section>
-      <details id="settings-panel" class="panel settings-panel" hidden><summary><span>房主设置</span><small>玩法 · 武将 · 扩展</small></summary><div class="settings-body"><div class="mode-grid">${MODES.map((mode) => `<button type="button" class="mode-card" data-mode="${mode.id}" aria-pressed="false"><span class="mode-mark">${modeIcon(mode.id)}</span><strong>${mode.name}</strong><small>${mode.minPlayers === mode.maxPlayers ? mode.minPlayers : '5–8'} 席</small></button>`).join('')}</div><p id="mode-description" class="mode-description"></p><div class="field-row"><label for="player-count">总席位（含 AI）<select id="player-count"></select></label><label for="general-preset">武将范围<select id="general-preset">${GENERAL_PRESETS.map((preset) => `<option value="${preset.id}">${preset.name}</option>`).join('')}</select></label></div><p id="preset-description" class="hint"></p><div class="extensions"><h3>扩展包</h3><p class="hint">暂无已接入的扩展包</p></div><button id="save-settings" class="button secondary full-width" type="button" hidden>重试保存</button><p id="settings-state" class="hint" role="status" aria-live="polite"></p></div></details>
+      <details id="settings-panel" class="panel settings-panel" hidden><summary><span>房主设置</span><small>玩法 · 席位 · 将池 · 点将</small></summary><div class="settings-body"><div class="mode-grid" role="group" aria-label="选择玩法">${MODES.map((mode) => `<button type="button" class="mode-card" data-mode="${mode.id}" aria-pressed="false"><span class="mode-mark" aria-hidden="true">${modeIcon(mode.id)}</span><strong>${mode.name}</strong></button>`).join('')}</div><p id="mode-description" class="mode-description"></p><div class="field-row"><label for="player-count">总席位（含 AI）<select id="player-count"></select></label><label for="general-preset">武将范围<select id="general-preset">${GENERAL_PRESETS.map((preset) => `<option value="${preset.id}">${preset.name}</option>`).join('')}</select></label></div><p id="preset-description" class="hint"></p><button id="save-settings" class="button secondary full-width" type="button" hidden>重试保存</button><p id="settings-state" class="hint" role="status" aria-live="polite"></p></div></details>
+      <section class="panel room-prep-rule-panel"><details class="room-prep-rules"><summary aria-labelledby="room-rules-title"><span id="room-rules-title" class="room-rules-heading">本桌规则</span></summary><p id="summary-preset" class="hint"></p></details>${guideButton}</section>
     </div>
-    <dialog id="share-dialog" aria-labelledby="share-title"><div class="panel-heading"><h2 id="share-title">扫码直接进入本房间</h2><button id="close-share" class="close-dialog" type="button" aria-label="关闭房间二维码">×</button></div><p class="room-code">房间 <strong>${room.code}</strong></p>${qrMarkup('本房间邀请二维码', '微信扫一扫 · 直接进入这张牌桌')}</dialog>`,
-    roomArtwork,
+    <dialog id="share-dialog" aria-labelledby="share-title"><div class="panel-heading"><h2 id="share-title">房间邀请</h2><button id="close-share" class="close-dialog" type="button" aria-label="关闭房间二维码">×</button></div><p class="room-code">房间 <strong>${room.code}</strong></p>${qrMarkup('本房间邀请二维码', '微信扫一扫 · 直接进入这张牌桌')}</dialog>`,
   );
+  bindStageBackdrop(element('.zibai-backdrop'));
+  const matchMotion = element<HTMLButtonElement>('#match-motion');
+  const paintMotion = () => {
+    const compact = document.documentElement.dataset.motion === 'reduced';
+    matchMotion.textContent = compact ? '动效 · 精简' : '动效 · 完整';
+    matchMotion.setAttribute('aria-pressed', String(compact));
+  };
+  paintMotion();
+  matchMotion.onclick = toggleZibaiMotion;
   const unsubTheme = onZibaiPreferenceChange(() => {
+    paintMotion();
     syncThemeToFrame(document.querySelector<HTMLIFrameElement>('#game-frame'), matchId);
   });
   window.addEventListener('pagehide', unsubTheme, { once: true });
@@ -155,7 +176,7 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
   lastPosterBtn.addEventListener('click', () => {
     if (room.lastMatchSummary) openPosterDialog(room.lastMatchSummary, room.code);
   });
-  element('#share-button').after(lastPosterBtn);
+  element('.room-prep-secondary').after(lastPosterBtn);
 
   const doudizhuPanel = bindDoudizhuPanel(roomPath, roomApi);
   const collegeEnd = document.createElement('button');
@@ -240,6 +261,7 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
       matchId,
       room.phase === 'playing' && connected,
       Boolean(room.engine.experience),
+      room.phase === 'finished',
     );
   }
   for (const [anchor, id] of [
@@ -254,7 +276,6 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
     'afterend',
     '<label class="general-selection-setting"><input id="allow-general-selection" type="checkbox" />允许点将</label><p id="general-selection-description" class="hint">开放后，真人可在大厅点一名武将作为第1个候选；同局上场武将不重复，开局仍需选将。</p>',
   );
-  element('#settings-panel summary small').textContent = '玩法 · 武将 · 点将 · 扩展';
   element('#preset-description').insertAdjacentHTML(
     'afterend',
     '<p id="preset-deck" class="hint"></p>',
@@ -263,13 +284,17 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
     'afterend',
     '<p id="summary-deck" class="hint"></p><p id="summary-selection" class="hint"></p><p id="summary-rules" class="hint" hidden></p>',
   );
-  element('#ready-button').insertAdjacentHTML(
+  element('.room-prep-primary').insertAdjacentHTML(
     'afterend',
     '<div id="general-pick-panel" hidden><button id="general-pick" class="button secondary full-width" type="button">点将 · 设置第1个候选</button><p id="general-pick-state" class="hint" role="status"></p></div>',
   );
-  element('#owner-start').insertAdjacentHTML(
+  element('#leave-button').insertAdjacentHTML(
+    'beforebegin',
+    '<div id="owner-transfer-row" hidden><button id="owner-transfer" class="button text-button" type="button">转交房主</button></div><div id="owner-claim-row" hidden><button id="owner-claim" class="button text-button" type="button">接任房主</button></div>',
+  );
+  element('.room-prep-secondary').insertAdjacentHTML(
     'afterend',
-    '<div id="owner-transfer-row" hidden><button id="owner-transfer" class="button secondary full-width" type="button">转交房主</button></div><div id="owner-claim-row" hidden><button id="owner-claim" class="button secondary full-width" type="button">接任房主</button><p id="owner-claim-hint" class="hint" role="status"></p></div>',
+    '<p id="owner-claim-hint" class="hint" role="status"></p>',
   );
   app.insertAdjacentHTML(
     'beforeend',
@@ -381,7 +406,7 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
     const frame = document.querySelector<HTMLIFrameElement>('#game-frame');
     if (frame) frame.inert = false;
     // Never keep the mid-screen "你正在托管" overlay blocking settlement once finished.
-    if (room.phase === 'finished') {
+    if (room.phase === 'finished' || (matchId && nativeEndedMatch === matchId)) {
       connectionNotice.hidden = true;
       refresh();
       return;
@@ -436,6 +461,7 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
     disable(element('#owner-transfer'), settingsDirty || settingsSaving || !between);
     const claiming = Boolean(me && !owner() && between && typeof room.ownerClaimAt === 'number');
     element('#owner-claim-row').hidden = !claiming;
+    element('#owner-claim-hint').hidden = !claiming;
     if (claiming) {
       const seconds = Math.max(
         0,
@@ -460,10 +486,14 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
     select.value = selected;
     disable(element('#ownership-confirm'), !select.value || !owner());
   }
+  let nativeDraftMatch: string | null = null;
   function resizeTable(): void {
     const panel = element('#match-panel');
     const portrait = window.innerWidth < window.innerHeight;
     const journey = Boolean(room.shanhetu && room.phase === 'waiting');
+    const horizontalTable = tableOrientation
+      ? tableOrientation === 'landscape'
+      : room.phase !== 'starting';
     const rotated = !journey && portrait && horizontalTable;
     panel.classList.toggle('rotated-table', rotated);
     panel.style.setProperty('--table-width', `${window.innerHeight}px`);
@@ -476,16 +506,76 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
       'stage-short',
       (rotated ? window.innerWidth : window.innerHeight) <= 440,
     );
+    const compact =
+      (rotated ? window.innerHeight : window.innerWidth) <= 880 ||
+      (rotated ? window.innerWidth : window.innerHeight) <= 440;
+    panel.classList.toggle('stage-compact', compact);
+    const drafting = panel.classList.contains('stage-drafting');
+    collegeStage.layout(drafting, compact && (!journey || drafting));
     element('#match-orientation').hidden = journey || !portrait;
     element('#match-orientation').textContent = horizontalTable ? '竖屏显示' : '横屏牌桌';
     element('#orientation-hint').hidden = !rotated;
   }
   element('#match-orientation').addEventListener('click', () => {
-    horizontalTable = !horizontalTable;
-    sessionStorage.setItem('party_table_view', horizontalTable ? 'landscape' : 'portrait');
+    tableOrientation = element('#match-panel').classList.contains('rotated-table')
+      ? 'portrait'
+      : 'landscape';
+    sessionStorage.setItem('party_table_view', tableOrientation);
     resizeTable();
   });
   window.addEventListener('resize', resizeTable);
+  const tableSkin = element<HTMLSelectElement>('#match-table-skin');
+  const tableEmotions = element<HTMLButtonElement>('#match-emotions');
+  let emotionsEnabled = true;
+  try {
+    const skin = localStorage.getItem('party-table-skin');
+    if ([...tableSkin.options].some((option) => option.value === skin)) tableSkin.value = skin!;
+    emotionsEnabled = localStorage.getItem('party-emotions') !== 'off';
+  } catch {}
+  function renderEmotions() {
+    tableEmotions.setAttribute('aria-pressed', String(emotionsEnabled));
+    tableEmotions.textContent = emotionsEnabled ? '互动道具 开' : '互动道具 关';
+  }
+  function syncTableArt() {
+    if (!matchId) return;
+    document.querySelector<HTMLIFrameElement>('#game-frame')?.contentWindow?.postMessage(
+      {
+        type: 'party-table-art',
+        matchId,
+        skin: tableSkin.value,
+        emotions: emotionsEnabled,
+      },
+      location.origin,
+    );
+  }
+  renderEmotions();
+  tableSkin.onchange = () => {
+    try {
+      localStorage.setItem('party-table-skin', tableSkin.value);
+    } catch {}
+    syncTableArt();
+  };
+  tableEmotions.onclick = () => {
+    emotionsEnabled = !emotionsEnabled;
+    try {
+      localStorage.setItem('party-emotions', emotionsEnabled ? 'on' : 'off');
+    } catch {}
+    renderEmotions();
+    syncTableArt();
+  };
+
+  function syncDraftSoundPreference() {
+    const button = element('#match-sound');
+    const saved = localStorage.getItem('party_sound_muted');
+    button.textContent = saved === 'true' ? '声音关' : saved === 'false' ? '声音开' : '开启声音';
+    button.setAttribute('aria-pressed', String(saved === 'false'));
+    const volume = Number(localStorage.getItem('party_sound_volume') ?? 35);
+    if (Number.isFinite(volume) && volume >= 0 && volume <= 100) {
+      element<HTMLInputElement>('#match-volume').value = String(volume);
+      element('#match-volume-value').textContent = volume + '%';
+    }
+  }
+  syncDraftSoundPreference();
   element('#match-sound').addEventListener('click', () => {
     const frame = document.querySelector<HTMLIFrameElement>('#game-frame');
     const engine = (
@@ -498,9 +588,13 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
         | null
     )?.partyEngine;
     const audio = engine?.audio;
-    if (audio?.setEnabled)
-      void audio.setEnabled(element('#match-sound').getAttribute('aria-pressed') !== 'true');
-    else void audio?.toggle();
+    const enabled = element('#match-sound').getAttribute('aria-pressed') !== 'true';
+    if (audio?.setEnabled) void audio.setEnabled(enabled);
+    else if (audio) void audio.toggle();
+    else {
+      localStorage.setItem('party_sound_muted', String(!enabled));
+      syncDraftSoundPreference();
+    }
   });
   element<HTMLInputElement>('#match-volume').addEventListener('input', (event) => {
     const volume = Number((event.target as HTMLInputElement).value);
@@ -509,7 +603,8 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
       document.querySelector<HTMLIFrameElement>('#game-frame')?.contentWindow as
         (Window & { partyEngine?: { audio?: { setVolume?(volume: number): void } } }) | null
     )?.partyEngine?.audio;
-    audio?.setVolume?.(volume);
+    if (audio?.setVolume) audio.setVolume(volume);
+    else localStorage.setItem('party_sound_volume', String(volume));
   });
   async function restoreGame(): Promise<void> {
     if (room.matchFailure || room.matchRecovery) return;
@@ -526,9 +621,10 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
         info.room.matchId === restoringMatch &&
         ['starting', 'playing', 'finished'].includes(info.room.phase)
       ) {
-        element('#match-loading-status').textContent =
-          info.room.phase === 'finished' ? '正在同步最终牌桌…' : '正在恢复原座位…';
-        element('#match-loading').hidden = false;
+        showMatchLoading(
+          info.room.phase === 'finished' ? '正在同步最终牌桌…' : '正在恢复原座位…',
+          '正在等待牌桌重新连接。',
+        );
         frame.src = playerFrameUrl(restoringMatch);
         if (connectionIssue && !reconnectTimer)
           reconnectTimer = setTimeout(() => {
@@ -568,6 +664,10 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
       event.data?.matchId !== matchId
     )
       return;
+    if (event.data.type === 'party-hero-draft') {
+      nativeDraftMatch = event.data.active === true ? matchId : null;
+      refresh();
+    }
     if (event.data.type === 'party-disconnected') reconnectGame();
     if (event.data.type === 'party-connection-ended') {
       if (room.matchFailure || room.matchRecovery) return;
@@ -638,10 +738,16 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
       notifyFinished(frame);
       if (!connectionNotice.classList.contains('blocking')) connectionNotice.hidden = true;
     }
+    if (event.data.type === 'party-native-ended' && !room.matchFailure) {
+      nativeEndedMatch = matchId;
+      if (!connectionNotice.classList.contains('blocking')) connectionNotice.hidden = true;
+      refresh();
+    }
     if (event.data.type === 'party-connected') {
       element('#match-loading').hidden = true;
       if (!room.engine.connectionRecovery) confirmConnection();
       if (frame) syncThemeToFrame(frame, matchId);
+      syncTableArt();
       if (frame && room.settings.mode === 'shanhetu') notifyFinished(frame);
       refresh();
     }
@@ -703,12 +809,6 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
       }
       element<HTMLInputElement>('#allow-general-selection').checked = false;
     }
-    preloader.update(
-      Boolean(room.engine.preload) && room.phase === 'waiting',
-      selectedPreset(),
-      draftMode,
-      draftRoster,
-    );
   }
 
   function selectedPreset(): RoomSettings['generalPreset'] {
@@ -739,12 +839,6 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
       : (GENERAL_PRESETS.find((preset) => preset.id === selected)?.description ?? '');
     renderRosterSource(element('#preset-source'), selected, draftRosterSummary);
     element('#preset-deck').textContent = cardPileDescription(selected);
-    preloader.update(
-      Boolean(room.engine.preload) && room.phase === 'waiting',
-      selected,
-      draftMode,
-      draftRoster,
-    );
   }
 
   function cardPileDescription(presetId: string, modeId: ModeId = draftMode): string {
@@ -755,12 +849,58 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
     return `牌堆：${preset?.cardPile ?? ''}；四种模式按档位统一使用。`;
   }
 
-  function renderRoom(snapshot: RoomView): void {
+  function showMatchLoading(status: string, detail: string): void {
+    element('#match-loading-status').textContent = status;
+    element('#match-loading-detail').textContent = detail;
+    element<HTMLProgressElement>('#match-loading-progress').value = 0;
+    element('#match-loading').hidden = false;
+  }
+
+  function syncLanConnection(seated: boolean): void {
+    if (!seated && localConnection) {
+      localConnection.close();
+      localConnection = undefined;
+      Object.assign(window, { partyLan: undefined });
+    }
+    if (
+      seated &&
+      (initial.entry?.access ?? initial.entry?.mode) === 'internet' &&
+      room.engine.preload &&
+      (!localConnection ||
+        (localConnection.closed &&
+          (room.matchId !== localMatchAttempt || Date.now() - localAttemptAt >= 30000)))
+    ) {
+      localConnection = createLanConnection(room.code);
+      localMatchAttempt = room.matchId;
+      localAttemptAt = Date.now();
+      Object.assign(window, { partyLan: localConnection });
+    }
+  }
+
+  function renderRoom(snapshot: RoomView, fromEvents = false): void {
     // 旧 HTTP 响应晚于 SSE 到达时，仍使用较新的在线和权限状态。
     if (snapshot.revision < room.revision) return;
     if (snapshot !== room && typeof snapshot.serverTime === 'number')
       serverTimeOffset = Date.now() - snapshot.serverTime;
+    const unchangedPreparation =
+      fromEvents &&
+      snapshot.revision === room.revision &&
+      snapshot.phase === 'waiting' &&
+      room.phase === 'waiting' &&
+      !snapshot.shanhetu &&
+      !room.shanhetu &&
+      snapshot.ownerClaimAt === room.ownerClaimAt &&
+      snapshot.idleCloseAt === room.idleCloseAt &&
+      JSON.stringify(snapshot.engine) === JSON.stringify(room.engine);
     room = snapshot;
+    const me =
+      session.roomCode === room.code
+        ? room.players.find((player) => player.id === session.playerId)
+        : undefined;
+    if (unchangedPreparation) {
+      syncLanConnection(Boolean(me));
+      return;
+    }
     if (returnedMatchId && (returnedMatchId !== room.matchId || room.phase === 'waiting')) {
       returnedMatchId = null;
       sessionStorage.removeItem(returnedMatchKey);
@@ -771,10 +911,6 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
       settingsDirty ? draftMode : room.settings.mode,
       settingsDirty ? draftRoster : room.settings.customRoster,
     );
-    const me =
-      session.roomCode === room.code
-        ? room.players.find((player) => player.id === session.playerId)
-        : undefined;
     if (session.roomCode === room.code && session.playerId && !me) {
       session.playerId = null;
       session.roomCode = null;
@@ -800,24 +936,7 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
       collegeVote.hidden = true;
     }
     doudizhuPanel.context(room, me?.id ?? null);
-    if (!me && localConnection) {
-      localConnection.close();
-      localConnection = undefined;
-      Object.assign(window, { partyLan: undefined });
-    }
-    if (
-      me &&
-      (initial.entry?.access ?? initial.entry?.mode) === 'internet' &&
-      room.engine.preload &&
-      (!localConnection ||
-        (localConnection.closed &&
-          (room.matchId !== localMatchAttempt || Date.now() - localAttemptAt >= 30000)))
-    ) {
-      localConnection = createLanConnection(room.code);
-      localMatchAttempt = room.matchId;
-      localAttemptAt = Date.now();
-      Object.assign(window, { partyLan: localConnection });
-    }
+    syncLanConnection(Boolean(me));
     const waiting = room.phase === 'waiting' && !room.shanhetu;
     const inJourney = Boolean(me && room.shanhetu && room.phase === 'waiting');
     const standby = Boolean(
@@ -845,6 +964,13 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
           (room.phase === 'starting' && !room.matchId && room.doudizhu)),
       );
     element('#match-panel').hidden = !inStage;
+    element('#match-panel').classList.toggle(
+      'stage-drafting',
+      inStage &&
+        (room.phase === 'starting' ||
+          (inJourney && room.shanhetu?.phase === 'selection') ||
+          (inMatch && room.phase !== 'finished' && nativeDraftMatch === room.matchId)),
+    );
     app.classList.toggle('in-match', inStage);
     document.body.classList.toggle('playing-match', inStage);
     spectator.context(room, !me || standby, standby);
@@ -878,6 +1004,7 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
     matchLeave.hidden = room.phase !== 'finished' || room.ownerClaimAt === undefined;
     waitingReturn.hidden = room.phase !== 'finished' || returnedMatchId !== room.matchId;
     if (inMatch && room.matchId !== matchId) {
+      nativeEndedMatch = null;
       const frame = document.createElement('iframe');
       frame.id = 'game-frame';
       frame.title = '三国杀对局';
@@ -885,8 +1012,8 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
       frame.src = playerFrameUrl(room.matchId!);
       frame.addEventListener('load', () => notifyFinished(frame));
       element('#game-frame-mount').replaceChildren(frame);
-      element('#match-loading').hidden = false;
-      element('#match-sound').textContent = '开启声音';
+      showMatchLoading('正在准备对局…', '等待引擎连接；首次进入需要载入游戏资源。');
+      syncDraftSoundPreference();
       matchId = room.matchId;
       connectionIssue = false;
       connectionNotice.hidden = true;
@@ -996,7 +1123,7 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
     renderRosterSource(element('#summary-roster-source'), room.settings.generalPreset, room.roster);
     element('#player-counter').textContent =
       `${room.players.length} / ${room.settings.playerCount} 席`;
-    element('#room-seats-title').textContent = shanhetuMode ? '出征席位' : '等朋友到齐';
+    element('#room-seats-title').textContent = shanhetuMode ? '出征席位' : '房间席位';
     element('#seat-count').textContent = shanhetuMode
       ? '单人出征 · 队友在征程中加入'
       : `${humans.length} 位真人 · ${bots.length} 个 AI`;
@@ -1030,18 +1157,18 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
     generalGuide.refreshSelection(room.revision);
     element('#engine-status').textContent = room.engine.message;
     const roomOwner = room.players.find((player) => player.id === room.ownerId);
-    element('#owner-status').textContent = roomOwner
-      ? `房主：${roomOwner.nickname}${roomOwner.online ? '' : ' · 暂时离线，等待重新连接'}`
-      : '房间已关闭';
+    element('#engine-status').hidden = room.engine.ready || !waiting;
+    element('#owner-status').hidden = !roomOwner || roomOwner.online;
+    element('#owner-status').textContent = roomOwner ? `房主 ${roomOwner.nickname} 暂离` : '';
     const returnedIds = new Set(room.returnedPlayerIds ?? []);
     const returnedHumans = humans.filter((player) => returnedIds.has(player.id));
     const pendingHumans = humans.filter((player) => player.online && !player.ready);
     element('#waiting-text').textContent = waiting
       ? shanhetuMode
         ? '可独自出征。'
-        : `${readyHumans} / ${humans.length} 位真人已准备，${empty} 个空位；AI 自动准备。${pendingHumans.length > 0 && room.lastMatchSummary ? ` 待准备：${pendingHumans.map((p) => p.nickname).join('、')}。` : ''}`
+        : `${readyHumans}/${humans.length} 位真人已准备${empty ? ` · 余 ${empty} 席` : ''}${pendingHumans.length > 0 && room.lastMatchSummary ? ` · 等待 ${pendingHumans.map((p) => p.nickname).join('、')}` : ''}`
       : room.phase === 'closed'
-        ? '这张牌桌已散，返回主页可以另开一局。'
+        ? '房间已关闭，可返回大厅另开一局。'
         : room.phase === 'finished'
           ? returnedHumans.length > 0
             ? `本局已结束：${returnedHumans.map((p) => p.nickname).join('、')} 已回房，正等房主${roomOwner ? `（${roomOwner.nickname}）` : ''}点回房准备下一局。`
@@ -1055,6 +1182,16 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
     if (session.roomCode)
       element<HTMLAnchorElement>('#other-room-link').href = `/join/${session.roomCode}`;
     element('#my-seat').hidden = !me;
+    element('#room-copy-invite').hidden = !me;
+    element('#share-button').hidden = !me;
+    if (!me) {
+      const manual = element<HTMLInputElement>('#room-copy-url');
+      manual.value = '';
+      manual.hidden = true;
+      element('#room-copy-status').textContent = '';
+    }
+    element('.room-prep-actions').hidden =
+      !me && !session.roomCode && !waiting && !room.matchFailure;
     disable(element('#join-button'), empty <= 0 || !waiting);
     if (me) {
       element('#my-nickname').textContent = me.nickname;
@@ -1065,18 +1202,20 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
           : '已为你留好座位';
       const ready = element<HTMLButtonElement>('#ready-button');
       ready.hidden = shanhetuMode;
-      ready.textContent = me.ready ? '已准备 · 点击取消' : '我准备好了';
+      ready.textContent = me.ready ? '取消准备' : '准备';
       ready.classList.toggle('is-ready', me.ready);
+      ready.classList.toggle('primary', !isOwner);
+      ready.classList.toggle('secondary', isOwner);
+      ready.setAttribute('aria-pressed', String(me.ready));
       disable(ready, !me.online || !waiting || (isOwner && settingsPending));
     }
     element('#owner-start').hidden = !isOwner;
-    element('#owner-leave-hint').hidden = !isOwner;
-    element('#owner-leave-hint').textContent = shanhetuMode
-      ? '离开后将关闭此房间。'
-      : '离开后房主交接给下一位真人；最后一位真人离开会关闭房间。';
-    element('#bot-controls').hidden = !isOwner || shanhetuMode;
+    const leave = element('#leave-button');
+    const leaveHint = isOwner ? '离开后交接房主。最后一位真人离开时关闭房间。' : '';
+    element('#owner-leave-hint').textContent = leaveHint;
+    leave.title = leaveHint;
+    element('#bot-controls').hidden = !isOwner || shanhetuMode || !waiting || empty === 0;
     element('#settings-panel').hidden = !isOwner;
-    disable(element('#add-bot'), empty === 0 || !waiting || settingsPending || seriesLocked);
     disable(element('#fill-bots'), empty === 0 || !waiting || settingsPending || seriesLocked);
     disable(
       element('#leave-button'),
@@ -1146,36 +1285,95 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
       qrBound = true;
     }
 
+    renderSeats(isOwner, waiting, settingsPending, seriesLocked);
+    if (room.phase === 'closed') {
+      events?.close();
+      connection(false, '房间已关闭');
+    }
+    if (pendingReturnMatchId && pendingReturnMatchId !== room.matchId) pendingReturnMatchId = null;
+    if (!returning && pendingReturnMatchId === room.matchId && room.phase === 'finished') {
+      pendingReturnMatchId = null;
+      queueMicrotask(() => void perform(element('#rematch-button'), returnRoom, refresh));
+    }
+  }
+
+  function renderSeats(
+    isOwner: boolean,
+    waiting: boolean,
+    settingsPending: boolean,
+    seriesLocked: boolean,
+  ): void {
+    const layout = JSON.stringify([
+      room.settings.playerCount,
+      room.settings.mode,
+      room.ownerId,
+      session.playerId,
+      room.players.map(({ id, nickname, kind, ready, online }) => [
+        id,
+        nickname,
+        kind,
+        ready,
+        online,
+      ]),
+      isOwner,
+      waiting,
+      settingsPending,
+      seriesLocked,
+    ]);
+    if (layout === lastSeatLayout) return;
+    lastSeatLayout = layout;
     const list = element<HTMLUListElement>('#players');
-    list.replaceChildren();
+    list.dataset.seatCount = String(room.settings.playerCount);
+    const seats = document.createDocumentFragment();
     for (let index = 0; index < room.settings.playerCount; index++) {
       const player = room.players[index];
       const item = document.createElement('li');
       item.className = `seat ${player ? player.kind : 'empty'}`;
+      item.classList.toggle('seat-owner', Boolean(player && player.id === room.ownerId));
       const avatar = document.createElement('span');
       avatar.className = 'avatar';
-      avatar.textContent =
-        player?.kind === 'bot' ? 'AI' : player ? String(index + 1).padStart(2, '0') : '＋';
+      avatar.setAttribute('aria-hidden', 'true');
+      avatar.textContent = player?.kind === 'bot' ? 'AI' : String(index + 1).padStart(2, '0');
+      const identity = document.createElement('div');
+      identity.className = 'room-seat-identity';
       const name = document.createElement('strong');
-      name.textContent = player
-        ? player.nickname +
-          (player.id === room.ownerId ? '（房主）' : '') +
-          (player.id === session.playerId ? '（你）' : '')
-        : '虚位以待';
+      name.textContent = player?.nickname ?? '空席';
       if (room.settings.mode === 'college')
         name.textContent = `${index % 2 === 0 ? 'A' : 'B'}队 · ${name.textContent}`;
-      const status = document.createElement('span');
-      status.className = `seat-state ${player?.ready ? 'ready' : ''}`;
-      status.textContent = player
-        ? player.kind === 'bot'
-          ? '自动准备'
-          : !player.online
-            ? '已断开'
-            : player.ready
-              ? '已准备'
-              : '待准备'
-        : '等朋友 / AI';
-      item.append(avatar, name, status);
+      identity.append(name);
+      const mark = (label: string) => {
+        const badge = document.createElement('span');
+        badge.className = 'room-seat-badge';
+        badge.textContent = label;
+        identity.append(badge);
+      };
+      if (player && player.id === room.ownerId) mark('房主');
+      if (player?.kind === 'bot') mark('原生 AI');
+      item.append(avatar, identity);
+      if (isOwner && !player && room.settings.mode !== 'shanhetu') {
+        const add = document.createElement('button');
+        if (index === room.players.length) add.id = 'add-bot';
+        add.type = 'button';
+        add.className = 'button subtle room-seat-add';
+        add.textContent = '+ 添加原生 AI';
+        disable(add, !waiting || settingsPending || seriesLocked);
+        action(add, addBot, refresh);
+        item.append(add);
+      } else {
+        const status = document.createElement('span');
+        status.className = `seat-state${player?.ready && player.online ? ' ready' : ''}`;
+        status.textContent = player
+          ? player.kind === 'bot'
+            ? '自动准备'
+            : !player.online
+              ? '暂离'
+              : player.ready
+                ? '已准备'
+                : '待准备'
+          : '等待入座';
+        if (player && player.id === session.playerId) status.prepend('你 · ');
+        item.append(status);
+      }
       if (isOwner && player && room.settings.mode === 'college' && !seriesLocked) {
         const team = document.createElement('button');
         team.type = 'button';
@@ -1199,7 +1397,7 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
         const button = document.createElement('button');
         button.className = 'remove-player';
         button.type = 'button';
-        button.textContent = '移除';
+        button.textContent = player.kind === 'bot' ? '移除 AI' : '移除';
         button.setAttribute('aria-label', `移除 ${player.nickname}`);
         disable(button, !waiting || settingsPending || seriesLocked);
         action(
@@ -1211,17 +1409,9 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
         );
         item.append(button);
       }
-      list.append(item);
+      seats.append(item);
     }
-    if (room.phase === 'closed') {
-      events?.close();
-      connection(false, '房间已关闭');
-    }
-    if (pendingReturnMatchId && pendingReturnMatchId !== room.matchId) pendingReturnMatchId = null;
-    if (!returning && pendingReturnMatchId === room.matchId && room.phase === 'finished') {
-      pendingReturnMatchId = null;
-      queueMicrotask(() => void perform(element('#rematch-button'), returnRoom, refresh));
-    }
+    list.replaceChildren(seats);
   }
 
   function connectEvents(): void {
@@ -1229,19 +1419,21 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
     events = watchEvents(
       `${roomPath}/events`,
       'room',
-      (snapshot) => renderRoom(snapshot as RoomView),
+      (snapshot) => renderRoom(snapshot as RoomView, true),
       (initial.entry.access ?? initial.entry.mode) === 'internet',
     );
   }
 
+  const joinNickname = element<HTMLInputElement>('#nickname');
+  joinNickname.value = savedNickname();
   element<HTMLFormElement>('#join-form').addEventListener('submit', (event) => {
     event.preventDefault();
     void perform(
       element('#join-button'),
       async () => {
-        const joined = await roomApi<MembershipResult>(`${roomPath}/players`, 'POST', {
-          nickname: element<HTMLInputElement>('#nickname').value,
-        });
+        const nickname = joinNickname.value;
+        const joined = await roomApi<MembershipResult>(`${roomPath}/players`, 'POST', { nickname });
+        rememberNickname(nickname);
         session.playerId = joined.playerId;
         session.roomCode = room.code;
         renderRoom(joined.room);
@@ -1263,6 +1455,7 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
   action(element('#leave-button'), leaveRoom, refresh);
   async function leaveRoom(): Promise<void> {
     await roomApi(`${roomPath}/me`, 'DELETE');
+    preloader.update(false);
     sessionStorage.removeItem(returnedMatchKey);
     location.assign('/');
   }
@@ -1316,13 +1509,9 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
     },
     refresh,
   );
-  action(
-    element('#add-bot'),
-    async () => {
-      renderRoom(await roomApi<RoomView>(`${roomPath}/bots`, 'POST', { count: 1 }));
-    },
-    refresh,
-  );
+  async function addBot(): Promise<void> {
+    renderRoom(await roomApi<RoomView>(`${roomPath}/bots`, 'POST', { count: 1 }));
+  }
   action(
     element('#fill-bots'),
     async () => {
@@ -1344,6 +1533,31 @@ export function showRoomPage(initial: RoomInfo, initialSession: SessionView): vo
         '邀请信息暂时无法刷新，保留上次二维码；请确认对应网络可用。';
     }
   }
+  action(element('#room-copy-invite'), async () => {
+    const url = element<HTMLInputElement>('#join-url').value;
+    const status = element('#room-copy-status');
+    const manual = element<HTMLInputElement>('#room-copy-url');
+    manual.hidden = true;
+    if (!url) {
+      status.textContent = '暂无可用的邀请链接，可打开房间二维码检查邀请地址。';
+      return;
+    }
+    if (navigator.clipboard?.writeText) {
+      try {
+        await navigator.clipboard.writeText(url);
+        manual.hidden = true;
+        status.textContent = '邀请链接已复制。';
+        return;
+      } catch {
+        status.textContent = '';
+      }
+    }
+    manual.value = url;
+    manual.hidden = false;
+    status.textContent = '链接已选中，请手动复制。';
+    manual.focus();
+    manual.select();
+  });
   element('#share-button').addEventListener('click', () => void shareRoom());
   element('#match-share').addEventListener('click', () => void shareRoom());
   async function returnRoom(): Promise<void> {

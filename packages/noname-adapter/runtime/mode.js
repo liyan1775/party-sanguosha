@@ -133,7 +133,10 @@ export function generalChoices(setup, pool, players = game.players) {
               if (selected >= 0) labels.push(selected === 0 ? '自己' : 'AI 队友');
             }
             button.classList.toggle('party-team-taken', taken);
-            button.setAttribute('aria-disabled', String(taken));
+            // The draft uses a locked card as an enabled, read-only skill
+            // inspector. Native selection remains disallowed by this filter.
+            if (!button.classList.contains('hd-card'))
+              button.setAttribute('aria-disabled', String(taken));
             button.style.filter = taken ? 'grayscale(1)' : '';
             let badge = button.querySelector('.party-general-status');
             if (labels.length) {
@@ -372,6 +375,7 @@ export async function selectGenerals(setup, pool, initialize, replayChoice) {
   }
   const initialized = new Set();
   const choose = async (batch) => {
+    const deadline = Date.now() + Number(lib.configOL.choose_timeout) * 1000;
     const { requested, delegated } =
       setup.settings.mode === 'versus'
         ? delegateVersusChoices(setup, batch)
@@ -379,7 +383,20 @@ export async function selectGenerals(setup, pool, initialize, replayChoice) {
     const restore =
       setup.settings.mode === 'versus' ? trackVersusChoices(batch, replayChoice) : () => {};
     try {
-      const selected = await game.players[0].chooseButtonOL(requested).forResult();
+      const presented = requested.map(([player, offer, forced, selectButton, ai]) => [
+        player,
+        Object.assign(
+          Array.isArray(offer) ? { createDialog: offer, forced, selectButton, ai } : offer,
+          {
+            partyDraft: {
+              kind: 'general',
+              deadline,
+              preference: setup.generalSelections?.[player.playerid] ?? null,
+            },
+          },
+        ),
+      ]);
+      const selected = await game.players[0].chooseButtonOL(presented).forResult();
       for (const [player, ...args] of requested) {
         // Keep the upstream button AI for offline/expired human and bot choices.
         // A late reconnect must not ask an already expired choice again.
@@ -639,6 +656,12 @@ const start = async function start() {
     if (seat.kind === 'human') player.ws = lib.node.clients.find((client) => client.id === seat.id);
     lib.playerOL[seat.id] = player;
   }
+  if (setup.settings.mode === 'duel' || (setup.settings.mode === 'identity' && !setup.shanhetu)) {
+    const first = game.players.indexOf(game.zhu);
+    game.players.forEach((player, index) => {
+      player.seatNum = ((index - first + seats.length) % seats.length) + 1;
+    });
+  }
   lib.configOL.gameStarted = true;
   game.broadcast('gameStart');
   for (const player of game.players) {
@@ -753,6 +776,11 @@ const start = async function start() {
           )
           .set('ai', () => Math.random())
           .set('direct', true)
+          .set('partyDraft', {
+            kind: 'faction',
+            general: name,
+            deadline: Date.now() + Number(lib.configOL.choose_timeout) * 1000,
+          })
           .forResult();
         const group = result.links?.[0]?.[2]?.slice(6);
         if (!groups.includes(group)) throw new Error('无效的势力选择');

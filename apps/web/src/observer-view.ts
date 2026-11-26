@@ -212,21 +212,22 @@ export function renderObserver(
   const board = document.createElement('div');
   board.className = 'observer-board';
   for (const player of state.players) {
+    const currentTurn = !state.ended && state.currentPlayerId === player.id;
     const seat = document.createElement('article');
-    seat.className = `observer-seat${player.dead ? ' is-dead' : ''}${state.currentPlayerId === player.id ? ' is-active' : ''}`;
+    seat.className = `observer-seat${player.dead ? ' is-dead' : ''}${currentTurn ? ' is-active' : ''}`;
     const name = document.createElement('h3');
     name.textContent = player.nickname;
     const general = document.createElement('strong');
     general.className = 'observer-general';
     general.textContent = player.general;
     const status = document.createElement('p');
-    status.textContent = `${player.identity} · ${player.dead ? '已阵亡' : state.currentPlayerId === player.id ? '当前回合' : '在场'}${player.linked ? ' · 连环' : ''}${player.turnedOver ? ' · 翻面' : ''}`;
+    status.textContent = `${player.identity} · ${player.dead ? '已阵亡' : currentTurn ? '当前回合' : '在场'}${player.linked ? ' · 连环' : ''}${player.turnedOver ? ' · 翻面' : ''}`;
     const control = document.createElement('p');
     control.className = 'observer-control';
     control.textContent = player.controller
       ? {
           human: '玩家手动操作',
-          auto: '玩家开启托管',
+          auto: state.ended ? '' : '玩家开启托管',
           reconnecting: '连接中断 · 等待重连',
           offline: state.ended
             ? '玩家断线'

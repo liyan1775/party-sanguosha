@@ -1088,23 +1088,11 @@ button:disabled {
   border: 2px solid #9e4b37;
   padding: 4px 10px;
 }
-.reduced-motion .table-item,
-.reduced-motion .player-face,
-.reduced-motion .hp {
+html[data-motion='reduced'] :is(.table-item, .player-face, .hp) {
   transition-duration: 0.1s;
 }
-.reduced-motion .choice-section {
+html[data-motion='reduced'] .choice-section {
   animation-duration: 0.1s;
-}
-@media (prefers-reduced-motion: reduce) {
-  .table-item,
-  .player-face,
-  .hp {
-    transition-duration: 0.1s;
-  }
-  .choice-section {
-    animation-duration: 0.1s;
-  }
 }
 @media (max-width: 520px) and (min-height: 500px) {
   .hand-row {

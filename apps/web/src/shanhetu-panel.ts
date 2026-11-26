@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+import { bindCityScene, cityScene, labelWithIcon, shanhetuIcon } from './shanhetu-art.js';
 import type { RoomView } from '../../../packages/shared/src/contracts.js';
 import {
   shanhetuSynergyNames,
@@ -17,11 +18,14 @@ import {
   marketWillClose,
   renderLocations,
   renderRegions,
-  shanhetuIcon,
 } from './shanhetu-map.js';
 import { journeyHighlight, saveJourneyHighlight } from './shanhetu-highlight.js';
+import { bindShanhetuDraft } from './shanhetu-draft.js';
 
 type Choice = ShanhetuCampaignView['actions'][number];
+const tacticDescriptions = new Map(
+  [...bookRules.tactics, ...growth.tactics].map(({ name, description }) => [name, description]),
+);
 const kinds: Record<string, string> = {
   battle: '战斗',
   boss: '首领',
@@ -98,27 +102,19 @@ function paymentText(action: Choice, coins: number) {
 }
 
 function choiceTile(action: Choice, coins: number) {
-  const isHero = action.kind === 'hero';
   const tile = button('', 'shanhetu-option');
   tile.dataset.actionId = tile.dataset.choiceKey = action.id;
   tile.dataset.kind = action.kind;
   tile.setAttribute('aria-pressed', 'false');
-  if (isHero && action.general) {
-    tile.dataset.general = action.general;
-    const frame = make('span', 'shanhetu-hero-portrait');
-    if (action.portrait) {
-      const image = make('img');
-      image.alt = '';
-      image.src = action.portrait;
-      frame.append(image);
-    }
-    tile.append(frame);
-  } else if (action.offer) {
-    tile.dataset.rarity = String(action.offer.rarity);
-    const icon = shanhetuIcon(action.offer.kind);
+  const iconKind = action.recruitLabel ? 'recruit' : action.offer?.kind;
+  if (iconKind) {
+    const icon = shanhetuIcon(iconKind);
     icon.classList.add('shanhetu-prize-icon');
+    tile.append(icon);
+  }
+  if (action.offer) {
+    tile.dataset.rarity = String(action.offer.rarity);
     tile.append(
-      icon,
       make(
         'small',
         'shanhetu-option-type',
@@ -140,11 +136,7 @@ function choiceTile(action: Choice, coins: number) {
         action.synergyTags.map((tag) => shanhetuSynergyNames[tag]).join(' · '),
       ),
     );
-  const effect = make(
-    'span',
-    'shanhetu-option-description',
-    plain(isHero ? action.description.split('\n')[0]! : action.description),
-  );
+  const effect = make('span', 'shanhetu-option-description', plain(action.description));
   if (action.replacement?.length) {
     tile.classList.add('shanhetu-option-compared');
     const comparison = make('span', 'shanhetu-replacement');
@@ -201,12 +193,14 @@ export function bindShanhetuPanel(
   const facts = make('div', 'shanhetu-facts');
   const actions = make('div', 'shanhetu-hud-actions');
   const openBuild = button('本局构筑', 'shanhetu-quiet');
+  labelWithIcon(openBuild, '本局构筑', 'build');
   const end = button('结束征程', 'shanhetu-quiet');
   end.id = 'shanhetu-end';
   actions.append(openBuild, end);
   hud.append(facts, actions);
 
   const scene = make('header', 'shanhetu-scene');
+  const showPainting = bindCityScene(scene);
   const kicker = make('p', 'shanhetu-kicker');
   const title = make('h2');
   title.id = 'shanhetu-scene-title';
@@ -228,6 +222,7 @@ export function bindShanhetuPanel(
   march.setAttribute('aria-label', '距本城首领的行军进度');
   const mapSwitch = button('章间路线', 'shanhetu-quiet');
   const mapFocus = button('全屏看图', 'shanhetu-quiet shanhetu-map-focus');
+  labelWithIcon(mapFocus, '全屏看图', 'focus');
   mapFocus.setAttribute('aria-pressed', 'false');
   const mapControls = make('div', 'shanhetu-map-controls');
   mapControls.append(mapSwitch, mapFocus);
@@ -249,8 +244,6 @@ export function bindShanhetuPanel(
   const rewardControls = make('div', 'shanhetu-reward-controls');
   rewardControls.setAttribute('role', 'group');
   rewardControls.setAttribute('aria-label', '战后奖励操作');
-  const heroDetail = make('p', 'shanhetu-hero-details');
-  heroDetail.tabIndex = 0;
   const aftermath = make('div', 'shanhetu-aftermath');
   const tray = make('div', 'shanhetu-tray');
   const trayInfo = make('div', 'shanhetu-tray-info');
@@ -268,8 +261,33 @@ export function bindShanhetuPanel(
   focusConfirm.onclick = () => confirm.click();
   trayHeading.append(detailTitle, openSpot);
   trayInfo.append(trayHeading, detailMeta, detail);
-  tray.append(heroDetail, trayInfo, confirm);
-  panel.append(hud, scene, map, shopControls, list, rewardControls, aftermath, status, tray);
+  tray.append(trayInfo, confirm);
+  const draft = bindShanhetuDraft(confirm, end, status, choose);
+  panel.append(
+    draft.root,
+    hud,
+    scene,
+    map,
+    shopControls,
+    list,
+    rewardControls,
+    aftermath,
+    status,
+    tray,
+  );
+
+  function clearDraft() {
+    if (draft.root.hidden) return;
+    draft.clear();
+    draft.grid.removeAttribute('id');
+    list.id = 'shanhetu-options';
+    tray.append(confirm);
+    tray.before(status);
+    actions.append(end);
+    confirm.className = 'shanhetu-primary';
+    end.className = 'shanhetu-quiet';
+    panel.setAttribute('aria-labelledby', title.id);
+  }
 
   const collection = make('dialog', 'shanhetu-theme shanhetu-dialog');
   collection.setAttribute('aria-labelledby', 'shanhetu-build-title');
@@ -318,7 +336,7 @@ export function bindShanhetuPanel(
   function setMapFocus(focused: boolean, restoreFocus = false) {
     map.classList.toggle('is-focused', focused);
     mapFocus.setAttribute('aria-pressed', String(focused));
-    mapFocus.textContent = focused ? '退出全屏' : '全屏看图';
+    labelWithIcon(mapFocus, focused ? '退出全屏' : '全屏看图', 'focus');
     focusDetail.hidden = !focused;
     if (focused) updateChoice();
     if (focused || restoreFocus) mapFocus.focus({ preventScroll: true });
@@ -467,6 +485,11 @@ export function bindShanhetuPanel(
     const journey = room.shanhetu;
     if (!journey || panel.hidden) return;
     const action = journey.actions.find((item) => item.id === selected);
+    end.disabled = busy || !owner;
+    if (journey.phase === 'selection') {
+      draft.sync(action, !busy && owner, busy);
+      return;
+    }
     const readableName =
       action?.label ?? peek?.name ?? (journey.phase === 'map' ? '点选可达地点' : '点选一项');
     const canAfford = !action || action.cost <= journey.coins;
@@ -484,10 +507,6 @@ export function bindShanhetuPanel(
           : '';
     detail.textContent = journey.phase === 'map' ? plain(action?.description ?? '') : '';
     openSpot.hidden = (detail.textContent?.length ?? 0) <= 20;
-    heroDetail.textContent =
-      journey.phase === 'selection' && action
-        ? plain(action.description.split('\n').slice(1).join('\n'))
-        : '';
     confirm.textContent = busy
       ? '正在同步…'
       : action
@@ -503,7 +522,6 @@ export function bindShanhetuPanel(
       focusConfirm.textContent = confirm.textContent;
       focusConfirm.disabled = confirm.disabled;
     }
-    end.disabled = busy || !owner;
   }
 
   function renderMap(journey: ShanhetuCampaignView) {
@@ -522,7 +540,7 @@ export function bindShanhetuPanel(
       ? `${region.terrain.name} · 全场${region.terrain.description}`
       : '';
     mapSwitch.hidden = leaving;
-    mapSwitch.textContent = showRoutes ? '本城地图' : '章间路线';
+    labelWithIcon(mapSwitch, showRoutes ? '本城地图' : '章间路线', 'route');
     mapSwitch.setAttribute('aria-pressed', String(showRoutes));
     mapLabel.textContent = leaving
       ? '本城已攻下 · 选择下一座城池'
@@ -661,11 +679,26 @@ export function bindShanhetuPanel(
     status.textContent = '';
     showRoutes = false;
     const { node, phase } = journey;
+    panel.dataset.phase = phase;
+    host.classList.toggle('shanhetu-selecting', phase === 'selection');
+    if (phase === 'selection') {
+      showPainting();
+      disposeMap?.();
+      disposeMap = undefined;
+      setMapFocus(false);
+      list.removeAttribute('id');
+      draft.grid.id = 'shanhetu-options';
+      end.textContent = '结束征程';
+      panel.setAttribute('aria-labelledby', 'shanhetu-draft-title');
+      draft.mount(journey, tacticDescriptions);
+      updateChoice();
+      return;
+    }
+    clearDraft();
     const terminal = phase === 'won' || phase === 'lost';
     const opening = phase === 'reward' && !node;
     const regionName = journey.map?.name ?? '';
     const heading = {
-      selection: '择将出征',
       map: journey.map?.name ?? '行军图',
       reward: opening ? '传承' : '战后所得',
       choice: node?.name ?? '此地际遇',
@@ -674,55 +707,51 @@ export function bindShanhetuPanel(
       interrupted: '战斗中断',
       battle: node?.name ?? '交战中',
     }[phase];
-    const stat = (label: string, value: string) => {
+    const stat = (label: string, value: string, icon?: string) => {
       const row = make('span', 'shanhetu-stat');
-      row.append(make('small', '', label), make('strong', '', value));
+      const caption = make('small', '', label);
+      if (icon) labelWithIcon(caption, label, icon);
+      row.append(caption, make('strong', '', value));
       return row;
     };
     facts.replaceChildren(
       stat('武将', journey.heroName ?? '未选'),
-      ...(journey.hero ? [stat('体力', `${journey.hero.hp} / ${journey.hero.maxHp}`)] : []),
-      stat('铜币', String(journey.coins)),
+      ...(journey.hero ? [stat('体力', `${journey.hero.hp} / ${journey.hero.maxHp}`, 'hp')] : []),
+      stat('铜币', String(journey.coins), 'coin'),
     );
     if (journey.hero) {
       const health = facts.querySelectorAll('.shanhetu-stat')[1]!;
       health.classList.add('shanhetu-health');
     }
 
-    panel.dataset.phase = phase;
+    showPainting(cityScene(journey.map?.regionId));
     scene.dataset.scene = phase === 'choice' ? (node?.kind ?? 'event') : phase;
     const chapter = ['一', '二', '三'][journey.chapter - 1] ?? String(journey.chapter);
-    kicker.textContent =
-      phase === 'selection'
-        ? journey.scenario
-        : `第${chapter}章${phase !== 'map' && regionName ? ` · ${regionName}` : ''}`;
+    kicker.textContent = `第${chapter}章${phase !== 'map' && regionName ? ` · ${regionName}` : ''}`;
     title.textContent = heading;
     description.textContent =
-      phase === 'selection'
-        ? '选定一名武将，随你走完这趟征程。'
-        : phase === 'choice'
-          ? plain(node?.description ?? '')
-          : opening
-            ? '选一项稀有技能，带入本次征程。'
-            : phase === 'reward'
-              ? [
-                  node?.name,
-                  journey.lastBattle?.recoveredHp
-                    ? `回复${journey.lastBattle.recoveredHp}点体力`
-                    : '',
-                  '选择一项所得',
-                ]
-                  .filter(Boolean)
-                  .join(' · ')
-              : phase === 'interrupted'
-                ? '本场尚未结算。'
-                : '';
+      phase === 'choice'
+        ? plain(node?.description ?? '')
+        : opening
+          ? '选一项稀有技能，带入本次征程。'
+          : phase === 'reward'
+            ? [
+                node?.name,
+                journey.lastBattle?.recoveredHp
+                  ? `回复${journey.lastBattle.recoveredHp}点体力`
+                  : '',
+                '选择一项所得',
+              ]
+                .filter(Boolean)
+                .join(' · ')
+            : phase === 'interrupted'
+              ? '本场尚未结算。'
+              : '';
     renderMap(journey);
     const choices = !map.hidden ? [] : journey.actions;
     const isShopControl = (action: Choice) => action.kind === 'refresh' || action.kind === 'leave';
     const isRewardControl = (action: Choice) => action.kind === 'reroll' || action.kind === 'skip';
-    list.dataset.layout =
-      phase === 'selection' ? 'heroes' : phase === 'reward' ? 'rewards' : (node?.kind ?? phase);
+    list.dataset.layout = phase === 'reward' ? 'rewards' : (node?.kind ?? phase);
     list.replaceChildren(
       ...choices
         .filter((action) => !isShopControl(action) && !isRewardControl(action))
@@ -848,6 +877,10 @@ export function bindShanhetuPanel(
       renderRestart();
       if (visible) render();
       else {
+        clearDraft();
+        host.classList.remove('shanhetu-selecting');
+        showPainting();
+        renderedKey = '';
         if (collection.open) collection.close();
         if (spot.open) spot.close();
         if (marketDialog.open) marketDialog.close();

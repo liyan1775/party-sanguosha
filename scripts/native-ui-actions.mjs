@@ -69,10 +69,12 @@ export async function chooseGeneral(frame, worker, options = {}) {
       await new Promise((resolve) => setTimeout(resolve, 150));
       continue;
     }
-    const confirm = frame
+    const nativeConfirm = frame
       .locator('.control:not(.removing) > div')
       .filter({ hasText: /^确定$/ })
       .first();
+    const draftConfirm = frame.locator('.hero-draft .hd-primary:enabled');
+    const confirm = draftConfirm.or(nativeConfirm.and(frame.locator(':visible')));
     // Shared-pool confirmations can race with a teammate or native AI. The
     // losing submission receives another native general choice, with the same
     // deadline; finish that real UI instead of assuming one dialog per seat.

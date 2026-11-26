@@ -1,0 +1,272 @@
+/* SPDX-License-Identifier: GPL-3.0-only */
+html[data-table-skin='jade'] {
+  --party-table-art: url('/engine/runtime/assets/tables/table-jade.webp');
+}
+html[data-table-skin='palace'] {
+  --party-table-art: url('/engine/runtime/assets/tables/table-palace.webp');
+}
+html[data-table-skin='bamboo'] {
+  --party-table-art: url('/engine/runtime/assets/tables/table-bamboo.webp');
+}
+html[data-table-skin='chibi'] {
+  --party-table-art: url('/engine/runtime/assets/tables/table-chibi.webp');
+}
+html[data-table-skin] #window {
+  background-image:
+    radial-gradient(ellipse at 50% 43%, #08151016 30%, #050d11a8 100%), var(--party-table-art) !important;
+  background-size: cover !important;
+  background-position: center !important;
+}
+html[data-table-skin] #window > .background {
+  background: transparent !important;
+}
+html[data-table-emotions='off'] :is(.party-basket, .party-basket-menu, .party-emotion-choice),
+.player:is(.selectable, .selected, .disabled, [aria-disabled='true']) .party-basket,
+#window.party-choosing-target :is(.party-basket, .party-basket-menu) {
+  display: none !important;
+  pointer-events: none !important;
+}
+#window:has(#arena .player:is(.selectable, .selected)) :is(.party-basket, .party-basket-menu) {
+  display: none !important;
+  pointer-events: none !important;
+}
+.party-basket {
+  position: absolute;
+  top: 24px;
+  right: -9px;
+  z-index: 7;
+  width: 32px;
+  height: 32px;
+  padding: 3px;
+  border: 1px solid #ac8b51;
+  border-radius: 50%;
+  background: #182c26ec;
+  cursor: pointer;
+}
+.party-basket img,
+.party-emotion-choice img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+}
+.party-basket-menu,
+.party-emotion-notice,
+.party-emotion-combo {
+  position: absolute;
+  z-index: 102;
+  border: 1px solid #ad8a50;
+  color: #fff1ca;
+  background: linear-gradient(155deg, #2e493e, #132621 70%);
+  box-shadow:
+    inset 0 0 0 2px #d7b97b20,
+    0 4px 14px #0008;
+  border-radius: 6px;
+  font:
+    13px/1.4 system-ui,
+    sans-serif;
+}
+.party-basket-menu {
+  box-sizing: border-box;
+  width: 230px;
+  height: 100px;
+  max-width: calc(100% - 12px);
+  padding: 5px;
+  text-align: center;
+}
+.party-basket-menu[hidden] {
+  display: none;
+}
+.party-basket-title {
+  display: block;
+  height: 19px;
+  color: #efd39b;
+}
+.party-basket-items {
+  display: flex;
+  justify-content: center;
+  gap: 3px;
+}
+.party-emotion-choice {
+  box-sizing: border-box;
+  display: inline-grid;
+  grid-template-rows: 32px auto;
+  place-items: center;
+  width: 51px;
+  min-height: 54px;
+  padding: 1px 2px;
+  border: 1px solid #c9a65e55;
+  border-radius: 4px;
+  background: #12241dbb;
+  color: #fff1ca;
+  font:
+    12px/1.2 system-ui,
+    sans-serif;
+  cursor: pointer;
+}
+.party-basket-menu .party-emotion-choice img {
+  width: 32px;
+}
+.party-emotion-choice[data-emotion='wine'] {
+  background-color: #375045;
+}
+@media (orientation: landscape) and (max-height: 440px) {
+  .party-basket-menu {
+    width: 252px;
+    height: 112px;
+  }
+  .party-basket-menu .party-emotion-choice {
+    width: 57px;
+    grid-template-rows: 37px auto;
+    min-height: 62px;
+    font-size: 14px;
+  }
+  .party-basket-menu .party-emotion-choice img {
+    width: 37px;
+  }
+}
+.player > .identity[data-party-landlord-role] > div {
+  width: max-content;
+  padding-inline: 3px;
+  border-radius: 3px;
+  border: 1px solid #c6a365;
+  color: #fff1c5;
+  text-shadow: none;
+  background: #662e27;
+  letter-spacing: 0;
+}
+.player > .identity[data-party-landlord-role='fan'] > div {
+  color: #dcffea;
+  border-color: #78ae96;
+  background: #20554a;
+}
+.party-basket-cooldown {
+  display: block;
+  color: #efd39b;
+  font-size: 11px;
+}
+:is(.party-basket, .party-emotion-choice):is(:hover, :focus-visible) {
+  background-color: #43654e;
+  outline: 1px solid #f3d89a;
+}
+.party-emotion-notice {
+  left: 8px;
+  top: 8px;
+  max-width: 45%;
+  width: auto;
+  height: auto;
+  padding: 5px 9px;
+  overflow-wrap: anywhere;
+  pointer-events: none;
+}
+.party-emotion-combo {
+  width: auto;
+  height: auto;
+  padding: 1px 7px;
+  font-size: 19px;
+  font-weight: 800;
+  pointer-events: none;
+}
+.party-emotion,
+.party-emotion-particle {
+  position: absolute;
+  z-index: 101;
+  pointer-events: none;
+  transition: none !important;
+  will-change: transform, opacity;
+}
+.party-emotion {
+  width: 68px;
+  height: 68px;
+}
+.party-emotion img,
+.party-emotion-fallback {
+  box-sizing: border-box;
+  display: grid;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  place-items: center;
+}
+.party-emotion-fallback {
+  border: 2px solid #ffe39a;
+  border-radius: 50%;
+  background: #192a23;
+  color: #fff4c9;
+  font:
+    800 20px system-ui,
+    sans-serif;
+}
+.party-emotion-combo[data-high='true'] {
+  border-color: #f4ca76;
+  color: #fff4d3;
+  background: linear-gradient(155deg, #873d2c, #482119 75%);
+  box-shadow:
+    inset 0 0 0 1px #ffe3a766,
+    0 0 10px #d9904b80,
+    0 3px 8px #0009;
+}
+.party-emotion-particle {
+  opacity: 0;
+  margin: -4px 0 0 -4px;
+  width: 8px;
+  height: 8px;
+}
+.party-emotion-particle:is([data-effect='petal'], [data-effect='trail-petal']) {
+  width: 11px;
+  height: 8px;
+  border-radius: 82% 28% 75% 18%;
+  background: linear-gradient(150deg, #fff2d9 8%, #ff9ead 40%, #d22958 90%);
+}
+.party-emotion-particle[data-effect='halo'] {
+  width: 74px;
+  height: 74px;
+  margin: 0;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    #ffd18b75 4%,
+    #ffc67518 52%,
+    #ffd591b5 66%,
+    #ffedb7 69%,
+    transparent 73%
+  );
+}
+.party-emotion-particle[data-effect='shell'] {
+  background: linear-gradient(125deg, #fffade 35%, #e9b976 58%, #ad6e3b);
+  clip-path: polygon(0 14%, 80% 0, 100% 49%, 68% 61%, 77% 100%, 22% 87%);
+}
+.party-emotion-particle[data-effect='foam'] {
+  border-radius: 63% 37% 55% 45%;
+  background: radial-gradient(circle at 34% 28%, #fff, #ffeab5 70%);
+}
+.party-emotion-particle[data-effect='drop'] {
+  width: 8px;
+  height: 13px;
+  border-radius: 75% 22% 65% 55%;
+  background: radial-gradient(circle at 40% 35%, #fff0b9, #fbbb57 45%, #bb5a18 88%);
+}
+.party-emotion-particle[data-effect='star'] {
+  width: 15px;
+  height: 15px;
+  background: #ffe49b;
+  clip-path: polygon(50% 0, 63% 36%, 100% 50%, 63% 63%, 50% 100%, 37% 63%, 0 50%, 37% 37%);
+}
+.party-emotion-particle[data-effect='dust'] {
+  width: 15px;
+  height: 11px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, #f0d3a7, #caa978aa 48%, transparent 74%);
+}
+.party-emotion-particle[data-effect='wind'] {
+  width: 63px;
+  height: 14px;
+  margin: 0;
+  border-radius: 50%;
+  background: linear-gradient(90deg, transparent 2%, #ffedc166 54%, #fff6d7 100%);
+  clip-path: polygon(0 30%, 95% 17%, 100% 39%, 29% 53%, 100% 64%, 95% 84%, 0 78%);
+}
+html[data-motion='reduced'] .party-emotion-particle {
+  display: none;
+}

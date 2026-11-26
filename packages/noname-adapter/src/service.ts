@@ -24,6 +24,7 @@ import {
   sanitizeObserver,
 } from './observer.js';
 import { EngineAssets } from './assets.js';
+import { matchesResourceProof } from './resource-proof.mjs';
 import { isLocalRequest, parseUpgradeUrl } from './access.js';
 import { PollChannel } from './poll-channel.js';
 import { LanBridge } from './lan-bridge.js';
@@ -213,6 +214,7 @@ export class NativeNonameService implements EngineAdapter {
   private readonly runtimeRoot: string;
   private readonly assets = new EngineAssets();
   private readonly resourcesReady: boolean;
+  readonly startupAssetsReused: boolean;
   private readonly shanhetuArtReady: boolean;
   private readonly hostToken = randomBytes(32).toString('base64url');
   private readonly matches = new Map<string, Match>();
@@ -231,22 +233,33 @@ export class NativeNonameService implements EngineAdapter {
   private heartbeat?: NodeJS.Timeout;
   private readonly jobStreams = new Set<{ response: ServerResponse; publish: () => void }>();
   private readonly expiry: NodeJS.Timeout;
-  constructor(private readonly projectRoot: string) {
+  constructor(
+    private readonly projectRoot: string,
+    proofToken?: string,
+    private readonly buildDir = resolve(projectRoot, 'dist'),
+  ) {
     this.engineRoot = resolve(projectRoot, '.local/noname/v1.11.6');
     this.assetVersion = JSON.parse(
       readFileSync(resolve(projectRoot, 'config/noname-candidate.json'), 'utf8'),
     ).commit;
-    this.runtimeRoot = resolve(projectRoot, 'packages/noname-adapter/runtime');
+    this.runtimeRoot = resolve(this.buildDir, 'runtime');
+    this.startupAssetsReused = false;
     try {
-      const manifest = JSON.parse(
-        readFileSync(resolve(projectRoot, 'config/noname-lab-assets.json'), 'utf8'),
-      );
+      const manifestBytes = readFileSync(resolve(projectRoot, 'config/noname-lab-assets.json'));
+      const manifest = JSON.parse(manifestBytes.toString('utf8'));
       const candidate = JSON.parse(
         readFileSync(resolve(projectRoot, 'config/noname-candidate.json'), 'utf8'),
       );
       const build = JSON.parse(readFileSync(this.engineFile('game/build-info.json'), 'utf8'));
       const bundle = JSON.parse(
-        readFileSync(resolve(projectRoot, 'dist/engine/manifest.json'), 'utf8'),
+        readFileSync(resolve(this.buildDir, 'engine/manifest.json'), 'utf8'),
+      );
+      this.startupAssetsReused = matchesResourceProof(
+        projectRoot,
+        this.engineRoot,
+        manifestBytes,
+        manifest.assets,
+        proofToken,
       );
       this.resourcesReady =
         candidate.tag === 'v1.11.6' &&
@@ -255,18 +268,19 @@ export class NativeNonameService implements EngineAdapter {
         bundle.commit === candidate.commit &&
         bundle.hash ===
           createHash('sha256')
-            .update(readFileSync(resolve(projectRoot, 'dist/engine/noname.js')))
+            .update(readFileSync(resolve(this.buildDir, 'engine/noname.js')))
             .digest('hex') &&
-        manifest.assets.every((entry: { path: string; bytes: number; gitBlobSha: string }) => {
-          const bytes = readFileSync(this.engineFile(entry.path));
-          return (
-            bytes.length === entry.bytes &&
-            createHash('sha1').update(`blob ${bytes.length}\0`).update(bytes).digest('hex') ===
-              entry.gitBlobSha
-          );
-        });
+        (this.startupAssetsReused ||
+          manifest.assets.every((entry: { path: string; bytes: number; gitBlobSha: string }) => {
+            const bytes = readFileSync(this.engineFile(entry.path));
+            return (
+              bytes.length === entry.bytes &&
+              createHash('sha1').update(`blob ${bytes.length}\0`).update(bytes).digest('hex') ===
+                entry.gitBlobSha
+            );
+          }));
       try {
-        const portraitRoot = resolve(projectRoot, 'dist/engine/portraits');
+        const portraitRoot = resolve(this.buildDir, 'engine/portraits');
         const portraits: Portraits = JSON.parse(
           readFileSync(resolve(portraitRoot, 'manifest.json'), 'utf8'),
         );
@@ -1541,11 +1555,16 @@ export class NativeNonameService implements EngineAdapter {
           return true;
         }
         if (url.searchParams.get('client') === 'light') {
-          json(response, 200, { assets: ['/assets/table.js', '/assets/table.css'] });
+          const html = await readFile(resolve(this.buildDir, 'web/table.html'), 'utf8');
+          const assets = Array.from(
+            html.matchAll(/"(\/assets\/table\.(?:js|css)(?:\?v=[a-f0-9]{64})?)"/g),
+            (match) => match[1],
+          );
+          json(response, 200, { assets });
           return true;
         }
         const manifest = JSON.parse(
-          await readFile(resolve(this.projectRoot, 'dist/engine/manifest.json'), 'utf8'),
+          await readFile(resolve(this.buildDir, 'engine/manifest.json'), 'utf8'),
         );
         const definitions = effective.definitionPacks;
         const base = `/engine/core/${this.assetVersion}/`;
@@ -1623,7 +1642,6 @@ export class NativeNonameService implements EngineAdapter {
                 paths.push(path);
             }
           }
-          paths.push(...this.audioFiles(effective, assets).map((path) => `audio/${path}`));
         }
         json(response, 200, {
           assets: [
@@ -1637,7 +1655,7 @@ export class NativeNonameService implements EngineAdapter {
       const bundled = /^\/engine\/bundle\/noname-([a-f0-9]{64})\.js$/.exec(url.pathname);
       if (bundled) {
         const manifest = JSON.parse(
-          await readFile(resolve(this.projectRoot, 'dist/engine/manifest.json'), 'utf8'),
+          await readFile(resolve(this.buildDir, 'engine/manifest.json'), 'utf8'),
         );
         if (bundled[1] !== manifest.hash) {
           json(response, 404, {});
@@ -1646,7 +1664,7 @@ export class NativeNonameService implements EngineAdapter {
         await this.assets.send(
           request,
           response,
-          resolve(this.projectRoot, 'dist/engine/noname.js'),
+          resolve(this.buildDir, 'engine/noname.js'),
           types['.js']!,
           { immutable: true },
         );
@@ -1657,7 +1675,8 @@ export class NativeNonameService implements EngineAdapter {
         if (
           !this.portraits ||
           (portrait[1] !== this.portraits.hash &&
-            portrait[1] !== this.portraits.files[portrait[2]!]?.version) ||
+            portrait[1] !== this.portraits.files[portrait[2]!]?.version &&
+            portrait[1] !== this.portraits.files[portrait[2]!]?.sha256) ||
           !this.portraits.files[portrait[2]!]
         ) {
           json(response, 404, {});
@@ -1666,7 +1685,7 @@ export class NativeNonameService implements EngineAdapter {
         await this.assets.send(
           request,
           response,
-          resolve(this.projectRoot, 'dist/engine/portraits', portrait[2]!),
+          resolve(this.buildDir, 'engine/portraits', portrait[2]!),
           types['.webp']!,
           { immutable: true },
         );
@@ -1748,7 +1767,7 @@ export class NativeNonameService implements EngineAdapter {
             playerNetwork: request.headers['x-party-ingress'] === 'public' ? 'internet' : 'lan',
           });
         } else {
-          const content = await readFile(resolve(this.projectRoot, 'dist/web/table.html'), 'utf8');
+          const content = await readFile(resolve(this.buildDir, 'web/table.html'), 'utf8');
           response.writeHead(200, { 'Content-Type': types['.html']!, 'Cache-Control': 'no-store' });
           response.end(request.method === 'HEAD' ? undefined : content);
         }
@@ -1862,6 +1881,7 @@ export class NativeNonameService implements EngineAdapter {
             id: match.id,
             serverVersion: APP_VERSION,
             selectionRecovery: true,
+            heroDraft: !worker && !view,
             connectionRecovery: true,
             controlVersions: true,
             luckCards: true,
@@ -1919,11 +1939,18 @@ export class NativeNonameService implements EngineAdapter {
           });
         } else {
           const manifest = JSON.parse(
-            await readFile(resolve(this.projectRoot, 'dist/engine/manifest.json'), 'utf8'),
+            await readFile(resolve(this.buildDir, 'engine/manifest.json'), 'utf8'),
           );
           const content = (await readFile(resolve(this.runtimeRoot, 'index.html'), 'utf8'))
             .replace('/engine/core/noname.js', `/engine/bundle/noname-${manifest.hash}.js`)
-            .replaceAll('/engine/core/', `/engine/core/${this.assetVersion}/`);
+            .replaceAll('/engine/core/', `/engine/core/${this.assetVersion}/`)
+            .replace(
+              '<!-- PARTY_PLAYER_DRAFT_STYLES -->',
+              !worker && !view
+                ? '<link rel="stylesheet" href="/engine/runtime/hero-draft.css">\n' +
+                    '<link rel="stylesheet" href="/engine/runtime/hero-draft-native.css">'
+                : '',
+            );
           response.writeHead(200, { 'Content-Type': types['.html']!, 'Cache-Control': 'no-store' });
           response.end(request.method === 'HEAD' ? undefined : content);
         }
@@ -1972,6 +1999,16 @@ export class NativeNonameService implements EngineAdapter {
       if (url.pathname.startsWith('/engine/runtime/')) {
         const name = url.pathname.slice('/engine/runtime/'.length);
         if (
+          /^assets\/(?:props\/prop-(?:flower|egg|egg-splat|wine|shoe|basket)|tables\/table-(?:jade|palace|bamboo|chibi))\.webp$/.test(
+            name,
+          )
+        ) {
+          await this.assets.send(request, response, resolve(this.runtimeRoot, name), 'image/webp', {
+            cacheControl: 'public, max-age=86400',
+          });
+          return true;
+        }
+        if (
           ![
             'bootstrap.js',
             'mode.js',
@@ -1982,6 +2019,7 @@ export class NativeNonameService implements EngineAdapter {
             'rule-socket.js',
             'privacy.js',
             'controls.js',
+            'control-presentation.js',
             'audio.js',
             'player-transport.js',
             'prompts.js',
@@ -1992,6 +2030,11 @@ export class NativeNonameService implements EngineAdapter {
             'luck-cards.js',
             'surrender.js',
             'emotions.js',
+            'table-art.js',
+            'table-art.css',
+            'hero-draft.js',
+            'hero-draft.css',
+            'hero-draft-native.css',
             'table-projection.js',
             'table-presentation.js',
             'farmer-hands.js',

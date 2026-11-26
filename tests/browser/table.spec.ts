@@ -276,7 +276,9 @@ test('原生动作表现：稳定节点、正常半秒飞牌、选择不中断�
   page,
 }) => {
   await page.setViewportSize({ width: 844, height: 390 });
+  await page.emulateMedia({ reducedMotion: 'reduce' });
   await withTable(page, async ({ state, send }) => {
+    await expect(page.locator('html')).toHaveAttribute('data-motion', 'full');
     await page.locator('#hand [data-key="bagua"]').focus();
     await page.evaluate(
       () =>
@@ -342,6 +344,7 @@ test('原生动作表现：稳定节点、正常半秒飞牌、选择不中断�
     await expect(page.locator('#table')).toHaveAttribute('data-presentation-id', '3');
     await expect(page.locator('.motion-card')).toHaveCount(1);
     await page.locator('#motion-button').click();
+    await expect(page.locator('html')).toHaveAttribute('data-motion', 'reduced');
     await expect(page.locator('#motion-button')).toHaveAttribute('aria-pressed', 'true');
     await expect(page.locator('.motion-card')).toHaveCount(0);
     await page.reload();

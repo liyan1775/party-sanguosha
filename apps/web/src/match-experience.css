@@ -6,9 +6,9 @@
   flex-shrink: 0;
   min-height: 30px;
   padding: 4px 12px;
-  color: var(--z-ink-2, #d4e3e0);
-  background: var(--z-hud-strip, rgba(16, 30, 38, 0.92));
-  border-bottom: 1px solid var(--z-gold-hair, rgba(208, 178, 114, 0.25));
+  color: #c9dbd0;
+  background: #142d28;
+  border-bottom: 1px solid #826d44;
   font-size: 12px;
 }
 .match-experience[hidden],
@@ -18,7 +18,7 @@
 #match-identities {
   flex-shrink: 0;
   white-space: nowrap;
-  color: var(--z-gold, #d7b46a);
+  color: #f4d78e;
   font-weight: 700;
 }
 #match-actions {
@@ -43,7 +43,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: var(--z-ink, #edf4f2);
+  color: #fbefd7;
   min-width: 0;
   flex: 1;
 }
@@ -67,7 +67,7 @@
 }
 #match-control-state {
   max-width: 170px;
-  color: var(--z-jade, #5cc9bc);
+  color: #9ce0c6;
   font-weight: 600;
 }
 
@@ -97,14 +97,58 @@
 
 .party-tracker-drawer {
   position: absolute;
-  top: 10px;
-  right: 12px;
-  bottom: 12px;
-  width: min(276px, calc(100% - 24px));
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(350px, 46%);
+  max-height: 52%;
   z-index: 24;
   display: flex;
   flex-direction: column;
   pointer-events: auto;
+}
+.stage-short .party-tracker-drawer {
+  width: min(310px, 42%);
+  max-height: 55%;
+}
+.stage-short .tracker-rod {
+  height: 5px;
+}
+.stage-short .tracker-scroll-body {
+  padding: 4px 8px;
+  gap: 4px;
+}
+.stage-short .tracker-header {
+  align-items: center;
+  gap: 4px;
+  padding-bottom: 3px;
+}
+.stage-short .tracker-header > div {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  column-gap: 8px;
+}
+.stage-short .tracker-header strong {
+  font-size: 13px;
+}
+.stage-short .tracker-close-btn {
+  min-height: 24px;
+  padding: 2px 6px;
+  white-space: nowrap;
+}
+.stage-short .tracker-categories {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+}
+.stage-short .tracker-row {
+  padding: 2px 4px;
+}
+.stage-short .tracker-row-top {
+  margin-bottom: 1px;
+}
+.stage-portrait .party-tracker-drawer {
+  width: min(350px, 72%);
 }
 .party-tracker-drawer[hidden] {
   display: none !important;

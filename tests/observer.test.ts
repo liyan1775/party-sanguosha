@@ -20,6 +20,25 @@ const setup: MatchSetup = {
   aiPolicy: 'strongest-native',
 };
 
+test('公开观战只接收本桌且未过期的连击摘要', () => {
+  const at = Date.now() - 20;
+  const gifts = [
+    { targetId: 'bot', count: 2, at, sender: 'SECRET' },
+    { targetId: 'other-room', count: 2, at },
+    { targetId: 'human', count: 2, at: at - 4000 },
+    { targetId: 'human', count: 2, at: at + 4000 },
+    { targetId: 'human', count: 100, at },
+    { targetId: 'human', count: 1, at },
+  ];
+  const state = { players: [], recent: [], giftCombos: gifts };
+  assert.deepEqual(sanitizeObserver(state, setup)?.giftCombos, [{ targetId: 'bot', count: 2, at }]);
+  assert.equal(sanitizeObserver({ ...state, ended: true }, setup)?.giftCombos, undefined);
+  assert.equal(
+    sanitizeObserver({ ...state, giftCombos: [...gifts, ...gifts] }, setup)?.giftCombos,
+    undefined,
+  );
+});
+
 test('观察者历史去重、分页、房间白名单与容量边界', () => {
   const journal = new ObserverJournal();
   for (let start = 1; start <= 10100; start += 100) {

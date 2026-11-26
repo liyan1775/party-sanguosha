@@ -19,7 +19,14 @@ async function runtime(name: string) {
       new URL(`../packages/noname-adapter/runtime/${name}.js`, import.meta.url),
       'utf8',
     )
-  ).replace(/import \{([^}]+)\} from 'noname';/, 'const {$1} = globalThis.nativeFixture;');
+  )
+    .replace(/import \{([^}]+)\} from 'noname';/, 'const {$1} = globalThis.nativeFixture;')
+    .replace(
+      "'./control-presentation.js'",
+      JSON.stringify(
+        new URL('../packages/noname-adapter/runtime/control-presentation.js', import.meta.url).href,
+      ),
+    );
   if (source.includes("from './privacy.js';")) {
     const privacy = (
       await readFile(

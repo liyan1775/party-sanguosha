@@ -1,18 +1,42 @@
 import { spawn } from 'node:child_process';
-import { createHash } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import { closeSync, openSync } from 'node:fs';
-import { mkdir, open, readFile, unlink, writeFile } from 'node:fs/promises';
+import {
+  mkdir,
+  mkdtemp,
+  open,
+  readFile,
+  realpath,
+  rm,
+  stat,
+  unlink,
+  writeFile,
+} from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { setTimeout as delay } from 'node:timers/promises';
 import { LAUNCH_LOCK_TIMEOUT_MS, waitForStartup } from './launcher-readiness.mjs';
 import { startProgressServer } from './launcher-progress.mjs';
+import { proofFile } from '../packages/noname-adapter/src/resource-proof.mjs';
+import {
+  createBuildSnapshot,
+  readBuildManifest,
+  sourceFingerprint,
+  verifyBuildManifest,
+} from './build-manifest.mjs';
+import {
+  isCurrentBuild,
+  prepareReplacement,
+  readRunningSession,
+  waitForProcessExit,
+} from './launcher-upgrade.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const runtime = path.join(root, '.runtime');
 const sessionFile = path.join(runtime, 'session.json');
 const lockFile = path.join(runtime, 'launcher.lock');
 const progressFile = path.join(runtime, 'launcher-progress.json');
+const builds = path.join(runtime, 'builds');
 const pkg = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8'));
 const noBrowser = process.argv.includes('--no-browser');
 const entryMode = process.argv.includes('--lan') ? 'lan' : 'internet';
@@ -20,36 +44,7 @@ const portable = await readFile(path.join(root, 'portable.json'), 'utf8')
   .then(JSON.parse)
   .catch(() => null);
 
-async function runningSession(checkVersion = true) {
-  try {
-    const session = JSON.parse(await readFile(sessionFile, 'utf8'));
-    const url = new URL(session.serverUrl);
-    if (
-      session.app !== 'party-sanguosha' ||
-      url.protocol !== 'http:' ||
-      url.hostname !== '127.0.0.1' ||
-      url.pathname !== '/server' ||
-      url.username ||
-      url.password ||
-      url.search ||
-      url.hash
-    )
-      return null;
-    const health = await (
-      await fetch(`${url.origin}/api/health`, { signal: AbortSignal.timeout(1000) })
-    ).json();
-    if (
-      health.app !== session.app ||
-      health.instanceId !== session.instanceId ||
-      !health.ok ||
-      (checkVersion && health.version !== pkg.version)
-    )
-      return null;
-    return session;
-  } catch {
-    return null;
-  }
-}
+const runningSession = () => readRunningSession(sessionFile);
 
 async function openBrowser(url) {
   if (noBrowser) return;
@@ -121,10 +116,11 @@ async function activeProgressUrl() {
   }
 }
 
-async function runNode(args, onLine) {
+async function runNode(args, onLine, proofToken = '', buildDir = '') {
   const child = spawn(process.execPath, args, {
     cwd: root,
     windowsHide: true,
+    env: { ...process.env, PARTY_STARTUP_PROOF: proofToken, PARTY_BUILD_DIR: buildDir },
     stdio: onLine ? ['ignore', 'pipe', 'pipe'] : 'inherit',
   });
   if (onLine && child.stdout && child.stderr) {
@@ -159,12 +155,14 @@ async function runNode(args, onLine) {
   });
 }
 
-async function prepare(progress) {
+async function prepare(progress, proofToken, useDirectory) {
+  const log = (line) => progress?.pushLog(line);
+  let directory;
   if (portable) {
     if (portable.version !== pkg.version)
       throw new Error('发行包版本不匹配，请重新解压完整发行包。');
-    await readFile(path.join(root, 'dist/server/main.js'));
-    await readFile(path.join(root, 'dist/web/index.html'));
+    directory = await createBuildSnapshot(root, path.join(root, 'dist'));
+    useDirectory(directory);
     if (portable.resources === 'download-pinned-upstream') {
       progress?.update({
         step: 2,
@@ -172,14 +170,54 @@ async function prepare(progress) {
         stageTitle: '正在准备与校验游戏资源与山河图立绘…',
       });
       console.log('正在检查本机游戏资源，首次使用会下载无名杀资源和三国杀 OL 山河图立绘。');
-      await runNode(['--use-env-proxy', path.join(root, 'scripts/prepare-portable.mjs')], (line) =>
-        progress?.pushLog(line),
+      await runNode(
+        ['--use-env-proxy', path.join(root, 'scripts/prepare-portable.mjs')],
+        log,
+        proofToken,
+        directory,
       );
     }
     progress?.update({ step: 3, percent: 86, stageTitle: '发行包资源已就绪，正在唤醒本机服务…' });
     console.log('发行包已就绪。');
-    return;
+  } else {
+    await prepareSource(progress);
+    await mkdir(builds, { recursive: true });
+    directory = await mkdtemp(path.join(builds, 'build-'));
+    useDirectory(directory);
+    progress?.update({ step: 3, percent: 78, stageTitle: '正在构建页面与本机服务…' });
+    console.log('正在准备页面与快速载入引擎……');
+    await runNode([path.join(root, 'scripts/build.mjs'), '--out-dir', directory], log);
   }
+  progress?.update({ step: 3, percent: 88, stageTitle: '正在校验新版运行快照…' });
+  const manifest = await verifiedEngineBuild(directory);
+  if (!manifest) throw new Error('新版运行快照校验失败，没有停止正在运行的服务。');
+  await runNode(['--check', path.join(directory, 'server/main.js')], log);
+  return { directory, manifest };
+}
+
+async function verifiedEngineBuild(directory) {
+  const manifest = await verifyBuildManifest(root, directory);
+  if (!manifest) return null;
+  const requiredFiles = [
+    'engine/noname.js',
+    'web/index.html',
+    'web/app.js',
+    'web/style.css',
+    'runtime/index.html',
+    'runtime/bootstrap.js',
+    'server/main.js',
+  ];
+  const files = await Promise.all(
+    requiredFiles.map((file) => stat(path.join(directory, file)).catch(() => null)),
+  );
+  if (files.some((file) => !file?.isFile() || file.size === 0)) return null;
+  const engine = await readFile(path.join(directory, 'engine/manifest.json'), 'utf8')
+    .then(JSON.parse)
+    .catch(() => null);
+  return engine?.bytes === files[0].size ? manifest : null;
+}
+
+async function prepareSource(progress) {
   const lockHash = createHash('sha256')
     .update(await readFile(path.join(root, 'package-lock.json')))
     .digest('hex');
@@ -209,20 +247,12 @@ async function prepare(progress) {
   await runNode(['--use-env-proxy', path.join(root, 'scripts/prepare-noname-lab.mjs')], (line) =>
     progress?.pushLog(line),
   );
-  progress?.update({ step: 3, percent: 78, stageTitle: '正在构建页面与本机服务…' });
-  console.log('正在准备页面与快速载入引擎……');
-  await runNode([path.join(root, 'scripts/build.mjs')], (line) => progress?.pushLog(line));
 }
 
-async function start() {
-  let session = await runningSession();
-  if (session) {
-    if (session.entryMode !== entryMode)
-      throw new Error(
-        '本目录已有另一种连接方式在运行。结束牌桌后先双击停止，再打开需要的启动入口。',
-      );
-    if (entryMode === 'internet') {
-      const origin = new URL(session.serverUrl).origin;
+async function reuse(session, message, progress) {
+  if (entryMode === 'internet') {
+    const origin = new URL(session.serverUrl).origin;
+    try {
       const info = await (
         await fetch(`${origin}/api/info`, { signal: AbortSignal.timeout(3000) })
       ).json();
@@ -232,12 +262,112 @@ async function start() {
           headers: { 'X-Party-Control': session.controlToken },
           signal: AbortSignal.timeout(3000),
         });
+    } catch {
+      // Retrying the optional public connection must not prevent reopening the page.
     }
-    console.log('服务已在运行，打开电脑二维码页面。');
-    await openBrowser(session.serverUrl);
-    console.log(session.serverUrl);
-    return;
   }
+  console.log(message);
+  if (progress) {
+    progress.pushLog(message);
+    progress.setReady(session.serverUrl, message);
+    await delay(3000);
+  } else await openBrowser(session.serverUrl);
+  console.log(session.serverUrl);
+}
+
+function previousBuildDirectory(session) {
+  if (typeof session?.buildDir !== 'string' || !path.isAbsolute(session.buildDir)) return null;
+  const directory = path.resolve(session.buildDir);
+  return path.dirname(directory) === builds ? directory : null;
+}
+
+async function alreadyCurrent(session) {
+  if (session.health.stopping) return false;
+  const installed = await readBuildManifest(root, previousBuildDirectory(session) ?? undefined);
+  if (!portable)
+    return isCurrentBuild(session.health, pkg.version, installed, await sourceFingerprint(root));
+  const distribution = await readBuildManifest(root);
+  return (
+    isCurrentBuild(session.health, pkg.version, installed, distribution?.sourceId) &&
+    distribution &&
+    (portable.resources === 'download-pinned-upstream' ||
+      distribution.buildId === installed.buildId)
+  );
+}
+
+async function launch(candidate, proofToken, version, progress) {
+  const { directory, manifest } = candidate;
+  const stdout = openSync(path.join(runtime, 'server.log'), 'a');
+  const stderr = openSync(path.join(runtime, 'server-error.log'), 'a');
+  let child;
+  try {
+    child = spawn(
+      process.execPath,
+      ['--use-env-proxy', '--env-file-if-exists=.env', path.join(directory, 'server/main.js')],
+      {
+        cwd: root,
+        detached: true,
+        windowsHide: true,
+        stdio: ['ignore', stdout, stderr],
+        env: {
+          ...process.env,
+          PARTY_AUTO_PORT: '1',
+          PARTY_PROJECT_ROOT: root,
+          PARTY_BUILD_DIR: directory,
+          PARTY_NETWORK: entryMode,
+          PARTY_STARTUP_PROOF: proofToken,
+          NO_PROXY: [process.env.NO_PROXY, 'localhost', '127.0.0.1', '::1']
+            .filter(Boolean)
+            .join(','),
+        },
+      },
+    );
+  } finally {
+    closeSync(stdout);
+    closeSync(stderr);
+  }
+  let startupError;
+  let exited = false;
+  child.once('error', (error) => {
+    startupError = error;
+  });
+  child.once('exit', () => {
+    exited = true;
+  });
+  child.unref();
+  try {
+    console.log('正在启动本机服务；首次资源校验可能需要几十秒，请保持此窗口开启……');
+    return await waitForStartup({
+      check: async () => {
+        const current = await runningSession();
+        return current?.pid === child.pid &&
+          !current.health.stopping &&
+          current.health.engineAssetsReady === true &&
+          isCurrentBuild(current.health, version, manifest)
+          ? current
+          : null;
+      },
+      assertAlive: () => {
+        if (startupError) throw startupError;
+        if (exited) throw new Error('服务未能启动，请查看 .runtime/server-error.log。');
+      },
+      onProgress: (seconds) => {
+        const note = `仍在启动本机服务（已等待${seconds}秒），首次运行可能较慢……`;
+        console.log(note);
+        progress?.pushLog(note);
+      },
+    });
+  } catch (error) {
+    // Only terminate this exact child, never a process identified by port.
+    if (!exited && child.pid) {
+      child.kill();
+      await waitForProcessExit(child.pid);
+    }
+    throw error;
+  }
+}
+
+async function start() {
   if (!noBrowser) {
     const existingProgress = await activeProgressUrl();
     if (existingProgress) {
@@ -248,81 +378,78 @@ async function start() {
   }
   const release = await acquireLock();
   let progress = null;
+  let stageDirectory;
+  let launchAttempted = false;
+  const proofToken =
+    portable?.resources === 'download-pinned-upstream' ? randomBytes(32).toString('hex') : '';
   try {
-    session = await runningSession();
-    if (session && session.entryMode !== entryMode)
+    const current = await runningSession();
+    if (current && current.entryMode !== entryMode)
       throw new Error(
         '本目录已有另一种连接方式在运行。结束牌桌后先双击停止，再打开需要的启动入口。',
       );
-    if (!session) {
-      if (await runningSession(false))
-        throw new Error('旧版本服务仍在运行。请先双击停止，再双击启动以加载新版本。');
-      if (!noBrowser) {
-        progress = await startProgressServer({
-          runtimeDir: runtime,
-          version: pkg.version,
-          entryMode,
-        }).catch(() => null);
-        if (progress) await openBrowser(progress.url).catch(() => {});
-      }
-      await prepare(progress);
-      progress?.update({
-        step: 3,
-        percent: 90,
-        stageTitle: '正在启动本机规则服务…',
-        detail: '首次资源校验可能需要几十秒，就绪后自动跳转客厅大屏。',
-      });
-      const stdout = openSync(path.join(runtime, 'server.log'), 'a');
-      const stderr = openSync(path.join(runtime, 'server-error.log'), 'a');
-      const child = spawn(
-        process.execPath,
-        ['--use-env-proxy', '--env-file-if-exists=.env', 'dist/server/main.js'],
-        {
-          cwd: root,
-          detached: true,
-          windowsHide: true,
-          stdio: ['ignore', stdout, stderr],
-          env: {
-            ...process.env,
-            PARTY_AUTO_PORT: '1',
-            PARTY_PROJECT_ROOT: root,
-            PARTY_NETWORK: entryMode,
-            NO_PROXY: [process.env.NO_PROXY, 'localhost', '127.0.0.1', '::1']
-              .filter(Boolean)
-              .join(','),
-          },
-        },
-      );
-      closeSync(stdout);
-      closeSync(stderr);
-      let startupError;
-      let exited = false;
-      child.once('error', (error) => {
-        startupError = error;
-      });
-      child.once('exit', () => {
-        exited = true;
-      });
-      child.unref();
-      try {
-        console.log('正在启动本机服务；首次资源校验可能需要几十秒，请保持此窗口开启……');
-        session = await waitForStartup({
-          check: runningSession,
-          assertAlive: () => {
-            if (startupError) throw startupError;
-            if (exited) throw new Error('服务未能启动，请查看 .runtime/server-error.log。');
-          },
-          onProgress: (seconds) => {
-            const note = `仍在启动本机服务（已等待${seconds}秒），首次运行可能较慢……`;
-            console.log(note);
-            progress?.pushLog(note);
-          },
+    if (current && (await alreadyCurrent(current))) {
+      await reuse(current, '当前版本服务已在运行，打开电脑二维码页面。');
+      return;
+    }
+    const showProgress = async () => {
+      if (noBrowser || progress) return;
+      progress = await startProgressServer({
+        runtimeDir: runtime,
+        version: pkg.version,
+        entryMode,
+      }).catch(() => null);
+      if (progress) await openBrowser(progress.url).catch(() => {});
+    };
+    let prior;
+    const replacement = await prepareReplacement(current, {
+      stage: async () => {
+        await showProgress();
+        const candidate = await prepare(progress, proofToken, (directory) => {
+          stageDirectory = directory;
         });
-      } catch (error) {
-        // 只清理本次启动器刚创建的进程，绝不按端口杀掉其他服务。
-        if (!exited) child.kill();
-        throw error;
-      }
+        const directory = previousBuildDirectory(current);
+        if (directory) {
+          const manifest = await verifiedEngineBuild(directory).catch(() => null);
+          if (manifest && manifest.buildId === current.health.buildId)
+            prior = { directory, manifest };
+        }
+        if (current && !current.health.stopping && !prior)
+          throw new Error('无法校验旧服务的备用构建，原服务继续运行。未执行自动停机。');
+        return candidate;
+      },
+      onAccepted: () => {
+        const note = '新版已校验，旧服务正在退出。退出后将启动新版，不会打开旧联机页。';
+        console.log(note);
+        progress?.update({ step: 3, percent: 90, stageTitle: '正在等待旧服务安全退出…' });
+        progress?.pushLog(note);
+      },
+      wait: (pid) => waitForProcessExit(pid, { attempts: 600 }),
+    });
+    if (replacement.status !== 'ready') {
+      await showProgress();
+      await reuse(current, `暂缓自动更新：${replacement.message}`, progress);
+      return;
+    }
+    progress?.update({
+      step: 3,
+      percent: 92,
+      stageTitle: '正在启动本机规则服务…',
+      detail: '资源校验和联机入口就绪后自动打开联机与观战页。',
+    });
+    launchAttempted = true;
+    let session;
+    try {
+      session = await launch(replacement.candidate, proofToken, pkg.version, progress);
+    } catch (error) {
+      if (!prior) throw error;
+      if (await runningSession()) throw error;
+      const note = '新版未能启动，正在重新启动已保留的上一版。原内存房间不会恢复。';
+      console.log(note);
+      progress?.pushLog(note);
+      session = await launch(prior, '', current.health.version, progress);
+      await reuse(session, '已恢复上一版服务。请查看运行日志后再次尝试更新。', progress);
+      return;
     }
     console.log(
       entryMode === 'internet'
@@ -344,12 +471,20 @@ async function start() {
     throw error;
   } finally {
     if (progress) await progress.close().catch(() => {});
+    if (proofToken) await unlink(path.join(root, proofFile)).catch(() => {});
+    if (!launchAttempted && stageDirectory && path.dirname(stageDirectory) === builds) {
+      const [actualBuildRoot, actualStage] = await Promise.all(
+        [builds, stageDirectory].map((directory) => realpath(directory).catch(() => null)),
+      );
+      if (actualBuildRoot && actualStage && path.dirname(actualStage) === actualBuildRoot)
+        await rm(actualStage, { recursive: true, force: true }).catch(() => {});
+    }
     await release();
   }
 }
 
 async function stop() {
-  const session = await runningSession(false);
+  const session = await runningSession();
   if (!session) {
     console.log('本项目服务没有运行，无需停止。');
     return;
@@ -361,14 +496,9 @@ async function stop() {
     signal: AbortSignal.timeout(5000),
   });
   if (!response.ok) throw new Error('停止失败，请查看服务日志。');
-  for (let attempt = 0; attempt < 25; attempt++) {
-    if (!(await runningSession(false))) {
-      console.log('聚会三国杀服务已停止。');
-      return;
-    }
-    await delay(200);
-  }
-  throw new Error('服务仍在结束连接，请稍后再试。');
+  await response.arrayBuffer();
+  await waitForProcessExit(session.pid);
+  console.log('聚会三国杀服务已停止。');
 }
 
 try {

@@ -1,11 +1,325 @@
 import { test, expect, type Browser, type BrowserContext, type Page } from '@playwright/test';
 import { mkdir } from 'node:fs/promises';
+import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { RoomView } from '../../packages/shared/src/contracts.js';
+import type { PublicMatchSummary, RoomView } from '../../packages/shared/src/contracts.js';
 import { GENERAL_PRESETS } from '../../packages/shared/src/contracts.js';
 import type { EngineAdapter, EngineEvent } from '../../packages/noname-adapter/src/index.js';
+import { NativeNonameService } from '../../packages/noname-adapter/src/service.js';
 import { createPartyServer } from '../../apps/server/src/server.js';
 import { createPublicGateway } from '../../apps/server/src/public-gateway.js';
+
+const draftEvidence = fileURLToPath(
+  new URL('../../.runtime/unified-draft-evidence-20261125/', import.meta.url),
+);
+const draftViewports = [
+  { name: 'desktop', width: 1280, height: 800 },
+  { name: 'landscape', width: 844, height: 390 },
+  { name: 'portrait', width: 390, height: 844 },
+] as const;
+
+async function expectOuterCardsFit(page: Page, name: string, candidateCount: number) {
+  const pool = page.locator('#doudizhu-panel .hd-pool');
+  await expect(pool.locator('.doudizhu-seat:not([hidden]) .hd-card')).toHaveCount(candidateCount);
+  const boxes = await pool.evaluate((node) => {
+    const poolRect = node.getBoundingClientRect();
+    return [...node.querySelectorAll('.doudizhu-seat:not([hidden]) .hd-card')].map((card) => {
+      const label = card.querySelector('.hd-card-name')!;
+      const portrait = card.querySelector<HTMLImageElement>('img')!;
+      const rect = card.getBoundingClientRect();
+      const range = document.createRange();
+      range.selectNodeContents(label);
+      const text = [...range.getClientRects()];
+      return {
+        general: label.textContent,
+        card: rect.toJSON(),
+        pool: poolRect.toJSON(),
+        fullyVisible:
+          !!text.length &&
+          rect.top >= poolRect.top - 1 &&
+          rect.bottom <= Math.min(poolRect.bottom, innerHeight) + 1 &&
+          rect.left >= poolRect.left - 1 &&
+          rect.right <= Math.min(poolRect.right, innerWidth) + 1 &&
+          text.every(
+            (glyph) =>
+              glyph.top >= rect.top &&
+              glyph.bottom <= rect.bottom &&
+              glyph.left >= rect.left &&
+              glyph.right <= rect.right,
+          ),
+        portraitReady: portrait.naturalWidth > 0,
+      };
+    });
+  });
+  expect.soft(boxes.at(-1)?.fullyVisible, `${name} 末张`).toBe(true);
+  expect(
+    boxes.filter((box) => !box.fullyVisible || !box.portraitReady),
+    name,
+  ).toEqual([]);
+}
+
+async function captureOuterDraft(page: Page, name: string, selecting: boolean, count: number) {
+  const draft = page.locator('#doudizhu-panel');
+  await expect(draft).toBeVisible();
+  for (const size of draftViewports) {
+    await page.setViewportSize({ width: size.width, height: size.height });
+    const cards = draft.locator('.doudizhu-seat:not([hidden]) .hd-card');
+    const card = size.name === 'portrait' && selecting ? cards.last() : cards.first();
+    await expect(cards).toHaveCount(count);
+    await expect(card.locator('img')).toBeVisible();
+    await expect
+      .poll(() => card.locator('img').evaluate((node) => (node as HTMLImageElement).naturalWidth))
+      .toBeGreaterThan(0);
+    if (selecting) await card.click();
+    if (size.name !== 'portrait') {
+      await cards
+        .locator('img')
+        .evaluateAll((images) =>
+          Promise.all(images.map((image) => (image as HTMLImageElement).decode())),
+        );
+      await expectOuterCardsFit(page, `${name} ${size.name}`, count);
+    }
+    if (size.name === 'portrait') {
+      const toolbar = page.locator('.match-toolbar');
+      await expect(toolbar).toHaveCSS('background-color', 'rgb(16, 46, 39)');
+      await expect(toolbar.locator('#match-share')).toBeInViewport({ ratio: 0.98 });
+      await expect(toolbar.locator('#stage-more')).toBeInViewport({ ratio: 0.98 });
+      if (name === 'doudizhu-choosing') {
+        const more = toolbar.locator('#stage-more');
+        await expect(more).toBeVisible();
+        await expect(toolbar.locator('#match-table-skin')).toHaveCount(0);
+        await more.click();
+        const tools = page.locator('#stage-tools');
+        await expect(tools).toBeVisible();
+        await expect(tools.locator('#match-sound')).toBeVisible();
+        await expect(tools.locator('#match-volume')).toBeVisible();
+        const skin = tools.locator('#match-table-skin');
+        await expect(skin).toBeVisible();
+        await skin.selectOption('bamboo');
+        await expect(skin).toHaveValue('bamboo');
+        await skin.selectOption('auto');
+        const emotions = tools.locator('#match-emotions');
+        const initial = await emotions.getAttribute('aria-pressed');
+        await emotions.click();
+        await expect(emotions).toHaveAttribute('aria-pressed', String(initial !== 'true'));
+        await emotions.click();
+        await tools.getByRole('button', { name: '关闭比赛工具' }).click();
+        await toolbar.locator('#match-share').click();
+        const qr = page.locator('#share-dialog');
+        await expect(qr).toBeVisible();
+        await expect(qr.locator('.room-code strong')).not.toBeEmpty();
+        await qr.getByRole('button', { name: '关闭房间二维码' }).click();
+      }
+      const excerpt = toolbar.locator('.stage-heading strong');
+      const orientation = toolbar.locator('#match-orientation');
+      const titleBox = (await excerpt.boundingBox())!;
+      const orientationBox = (await orientation.boundingBox())!;
+      expect(
+        titleBox.x + titleBox.width <= orientationBox.x ||
+          titleBox.y + titleBox.height <= orientationBox.y,
+        '桌名和方向按钮不能相互遮挡',
+      ).toBe(true);
+      const skills = draft.getByRole('button', { name: '查看技能', exact: true });
+      await expect(skills).toBeVisible();
+      await skills.click();
+      await expect(draft.locator('.hd-skills h4').first()).toBeVisible();
+      await expect(skills).toBeHidden();
+      await expect(draft.getByRole('button', { name: '返回候选', exact: true })).toHaveCount(1);
+      await expect(draft.locator('#doudizhu-detail-name')).toHaveText(
+        (await card.locator('.hd-card-name').textContent())?.trim() ?? '',
+      );
+      await expect(draft.locator('#doudizhu-detail-selection')).toHaveText(
+        selecting ? /^待确认：.+/ : '未预选',
+      );
+    }
+    const blocks = await draft.evaluate((node) => {
+      const box = (item: Element) => {
+        const { x, y, width, height } = item.getBoundingClientRect();
+        return { x, y, width, height, bottom: y + height };
+      };
+      return {
+        shell: box(node),
+        header: box(node.querySelector('.hd-header')!),
+        pool: box(node.querySelector('.hd-pool')!),
+        scroll: box(node.querySelector('.hd-scroll')!),
+        actions: box(node.querySelector('.hd-actions')!),
+        seats: [...node.querySelectorAll('.hd-seat')].map(box),
+        card: box(node.querySelector('.doudizhu-seat:not([hidden]) .hd-card')!),
+        buttons: [...node.querySelectorAll('.hd-actions button')]
+          .map(box)
+          .filter((b) => b.width > 0),
+      };
+    });
+    if (size.name !== 'portrait') expect(blocks.header.bottom).toBeLessThanOrEqual(blocks.pool.y);
+    expect(blocks.actions.y).toBeGreaterThanOrEqual(blocks.pool.bottom);
+    expect(blocks.actions.y).toBeGreaterThanOrEqual(blocks.scroll.bottom);
+    if (size.name === 'portrait') {
+      await expect(draft.locator('.hd-pool')).toBeHidden();
+      expect(blocks.scroll.y).toBeGreaterThanOrEqual(blocks.header.bottom);
+    } else {
+      expect(blocks.card.width / blocks.card.height).toBeCloseTo(2 / 3, 1);
+      expect(blocks.scroll.x).toBeGreaterThanOrEqual(blocks.pool.x + blocks.pool.width);
+    }
+    for (const item of [blocks.header, blocks.actions, ...blocks.seats, ...blocks.buttons]) {
+      expect(item.x, `${name} ${size.name}: ${JSON.stringify(item)}`).toBeGreaterThanOrEqual(
+        blocks.shell.x,
+      );
+      expect(
+        item.x + item.width,
+        `${name} ${size.name}: ${JSON.stringify(item)}`,
+      ).toBeLessThanOrEqual(blocks.shell.x + blocks.shell.width + 1);
+      expect(item.bottom, `${name} ${size.name}: ${JSON.stringify(item)}`).toBeLessThanOrEqual(
+        size.height + 1,
+      );
+    }
+    await mkdir(draftEvidence, { recursive: true });
+    await page.screenshot({ path: path.join(draftEvidence, `${name}-${size.name}.png`) });
+    if (size.name === 'portrait') {
+      await draft.getByRole('button', { name: '返回候选' }).click();
+      await expect(card).toBeFocused();
+      await expect(card.locator('.hd-card-name')).toBeInViewport({ ratio: 0.98 });
+    }
+  }
+}
+
+for (const mode of ['doudizhu', 'college'] as const) {
+  test(`统一选将台 / ${mode}：公开座次、叫分、查看技能和选将布局`, async ({ browser }) => {
+    const engine = new NativeNonameService(fileURLToPath(new URL('../../', import.meta.url)));
+    if (!engine.status().preload) {
+      engine.close();
+      test.skip(true, '缺少固定原生引擎与武将立绘');
+    }
+    test.setTimeout(100_000);
+    const issues: string[] = [];
+    await withLobby(
+      browser,
+      async ({ base, page }) => {
+        const owner = await page();
+        const watch = (target: Page) => {
+          target.setDefaultTimeout(9000);
+          target.on('console', (msg) => {
+            if (msg.type() === 'error') issues.push(msg.text());
+          });
+          target.on('response', (response) => {
+            if (response.status() === 404) issues.push(response.url());
+          });
+        };
+        watch(owner);
+        const computer = await page(true);
+        await computer.goto(`${base}/server`);
+        await expect.poll(() => engine.status().ready, { timeout: 20000 }).toBe(true);
+        const code = await createRoom(owner, base, '临江听风');
+        await owner.locator(`[data-mode="${mode}"]`).click();
+        await waitForSettings(owner);
+        const pages = [owner];
+        for (const name of ['流云', '青砚', ...(mode === 'college' ? ['松间月'] : [])]) {
+          const guest = await page();
+          watch(guest);
+          await joinRoom(guest, base, code, name);
+          pages.push(guest);
+        }
+        const roomUrl = `${base}/api/rooms/${code}`;
+        if (mode === 'doudizhu') {
+          await owner.locator('#general-preset').selectOption('ol-ranked-2026-10-full');
+          await waitForSettings(owner);
+          await owner.getByLabel('允许点将').check();
+          await waitForSettings(owner);
+          for (const [participant, general] of [
+            [owner, 'ol_sb_dengai'],
+            [pages[1]!, 'shen_ganning'],
+          ] as const) {
+            const applied = await participant.request.put(`${roomUrl}/me/general`, {
+              data: { general },
+            });
+            expect(applied.ok()).toBe(true);
+          }
+        }
+        for (const participant of pages) await participant.locator('#ready-button').click();
+        await expect(owner.locator('#start-button')).toBeEnabled();
+        await owner.locator('#start-button').click();
+        const snapshot = async () =>
+          (await (await owner.request.get(roomUrl)).json()).room as RoomView;
+        await expect.poll(async () => (await snapshot()).doudizhu?.phase).toBe('bidding');
+        const bidding = (await snapshot()).doudizhu!;
+        if (mode === 'doudizhu') {
+          await expect(
+            owner.locator('.hd-card[data-general="ol_sb_dengai"] .hd-card-meta'),
+          ).toHaveText('魏 · 4/5');
+          await expect(
+            pages[1]!.locator('.hd-card[data-general="shen_ganning"] .hd-card-meta'),
+          ).toHaveText('神 · 3/6');
+        }
+        const bidder =
+          pages[(await snapshot()).players.findIndex((seat) => seat.id === bidding.bidSeatId)]!;
+        const draft = bidder.locator('#doudizhu-panel');
+        await expect(draft.locator('.hd-seat')).toHaveCount(pages.length);
+        await expect(draft.locator('.hd-self')).toContainText('叫分中');
+        if (mode === 'college') {
+          await bidder.setViewportSize({ width: 1280, height: 800 });
+          const seats = (await snapshot()).players;
+          const mate = seats[(seats.findIndex((seat) => seat.id === bidding.bidSeatId) + 2) % 4]!;
+          const tab = draft.locator(`.draft-task[data-seat="${mate.id}"]`);
+          const chips = draft.locator('#doudizhu-bids');
+          const prior = bidding.bids;
+          await tab.click();
+          await expect(tab).toHaveAttribute('aria-pressed', 'true');
+          await expect(draft.locator('#doudizhu-status')).toContainText('只读');
+          await expect(chips).toBeHidden();
+          await expect(draft.getByRole('button', { name: '不叫', exact: true })).toHaveCount(0);
+          // The client action guard also rejects a stale handler, even without the CSS hiding it.
+          await chips.locator('button').first().dispatchEvent('click');
+          expect((await snapshot()).doudizhu?.bids).toEqual(prior);
+          await mkdir(draftEvidence, { recursive: true });
+          await bidder.screenshot({
+            path: path.join(draftEvidence, 'college-bidding-teammate-desktop.png'),
+          });
+          const actor = seats.find((seat) => seat.id === bidding.bidSeatId)!;
+          await draft.getByRole('button', { name: `返回为 ${actor.nickname} 叫分` }).click();
+          await expect(chips).toBeVisible();
+          await expect(tab).toHaveAttribute('aria-pressed', 'false');
+        }
+        await captureOuterDraft(bidder, `${mode}-bidding`, false, mode === 'college' ? 4 : 6);
+        const bid = mode === 'college' ? 4 : 3;
+        await bidder.getByRole('button', { name: `叫 ${bid} 倍`, exact: true }).click();
+        await expect.poll(async () => (await snapshot()).doudizhu?.phase).toBe('choosing');
+        await expect(bidder.locator('#doudizhu-multiplier')).toHaveText(`${bid} 倍`);
+        await expect(draft.locator('.hd-seat').first()).toContainText('1号位·地主');
+        await expect(draft.locator('.hd-self')).toContainText('1号位 · 地主');
+        await expect(draft.locator('.hd-seat[data-self="true"]')).toHaveCount(1);
+        await captureOuterDraft(bidder, `${mode}-choosing`, true, mode === 'college' ? 6 : 10);
+        const self = async () =>
+          (await (await bidder.request.get(`${roomUrl}/me/doudizhu`)).json()).seats[0];
+        expect((await self()).locked).toBe(false);
+        if (mode === 'college') {
+          const before = await self();
+          await bidder.locator('#doudizhu-replace').click();
+          await expect
+            .poll(async () => (await self()).replacementsLeft)
+            .toBe(before.replacementsLeft - 1);
+        }
+        await bidder.locator('.doudizhu-seat:not([hidden]) .hd-card').first().click();
+        if (mode === 'college') {
+          await bidder.setViewportSize(draftViewports[0]);
+          await expect(bidder.locator('#doudizhu-replace')).toHaveText('换此将（余 1 次）');
+          await draft
+            .locator('.doudizhu-seat:not([hidden]) .hd-card img')
+            .evaluateAll((images) =>
+              Promise.all(images.map((image) => (image as HTMLImageElement).decode())),
+            );
+          await expectOuterCardsFit(bidder, 'college-replaced desktop', 6);
+          await bidder.screenshot({
+            path: path.join(draftEvidence, 'college-replaced-desktop.png'),
+          });
+        }
+        await bidder.locator('#doudizhu-confirm').click();
+        await expect.poll(async () => (await self()).locked).toBe(true);
+        expect(issues).toEqual([]);
+      },
+      false,
+      engine,
+    );
+  });
+}
 
 test('高校赛前界面：快速赛制、AI地主代理、换将及刷新恢复（引擎为协议夹具）', async ({
   browser,
@@ -109,6 +423,29 @@ test('高校赛前界面：快速赛制、AI地主代理、换将及刷新恢复
       await section.locator('button[data-general]').nth(1).click();
       expect(await candidate!.evaluate((node) => node.isConnected)).toBe(true);
       expect(await owner.locator('#doudizhu-confirm').boundingBox()).toEqual(confirmPosition);
+      const privateUrl = `${base}/api/rooms/${code}/me/doudizhu`;
+      let rejectRead = true;
+      await owner.route(privateUrl, async (route) => {
+        const post = route.request().method() === 'POST';
+        if (post || rejectRead)
+          await route.fulfill({
+            status: post ? 409 : 503,
+            json: {
+              error: {
+                code: post ? 'DENIED' : 'UNAVAILABLE',
+                message: post ? '提交被拒' : '临时无法读取',
+              },
+            },
+          });
+        else await route.continue();
+      });
+      await expect(owner.locator('#doudizhu-error')).toBeVisible();
+      await owner.locator('#doudizhu-confirm').click();
+      await expect(owner.locator('#doudizhu-submit-error')).toBeVisible();
+      rejectRead = false;
+      await expect(owner.locator('#doudizhu-error')).toBeHidden();
+      await expect(owner.locator('#doudizhu-submit-error')).toBeVisible();
+      await owner.unroute(privateUrl);
       await owner.locator('#doudizhu-replace').click();
       await expect(owner.locator('#doudizhu-quota')).toHaveText('剩余换将 1 次');
       const before = await (
@@ -150,6 +487,7 @@ for (const internet of [false, true]) {
         await owner.locator('#fill-bots').click();
         await observer.goto(`${entry}/join/${code}`);
         await home.goto(entry + '/');
+        await openFriends(home);
         await expect(home.locator('#room-list li')).toHaveCount(1);
         const room = party.lobby.get(code);
         const tokens = await Promise.all(
@@ -183,8 +521,8 @@ for (const internet of [false, true]) {
         await expect(home.locator('#room-list li')).toHaveCount(0);
         expect((await observer.request.get(`${entry}/api/rooms/${code}`)).status()).toBe(404);
         await owner.reload();
-        await expect(owner.locator('#current-room')).toBeHidden();
-        await expect(owner.locator('#create-button')).toBeVisible();
+        await expect(owner.locator('#return-room')).toBeHidden();
+        await expect(openTableButton(owner)).toBeVisible();
         await observer.reload();
         await expect(observer.getByText('暂时没找到牌桌')).toBeVisible();
       },
@@ -284,7 +622,7 @@ test('结算可直接离房；普通成员回房后刷新仍在大厅，房主�
       expect(party.lobby.get(code).snapshot().phase).toBe('playing');
       for (const listener of listeners) listener({ type: 'ended', roomCode: code });
       await leaving.locator('#match-leave').click();
-      await expect(leaving.locator('#create-panel')).toBeVisible();
+      await expect(leaving.locator('#new-room-actions')).toBeVisible();
       expect(party.lobby.get(code).snapshot().phase).toBe('finished');
       await member.locator('#rematch-button').click();
       await expect(member.locator('#waiting-return')).toBeVisible();
@@ -293,7 +631,7 @@ test('结算可直接离房；普通成员回房后刷新仍在大厅，房主�
       await expect(member.locator('#game-frame')).toHaveCount(0);
       await expect(member.locator('#leave-button')).toBeEnabled();
       await owner.locator('#match-leave').click();
-      await expect(owner.locator('#create-panel')).toBeVisible();
+      await expect(owner.locator('#new-room-actions')).toBeVisible();
       await expect(member.locator('#my-role')).toHaveText('你是房主，也参加这一局');
       expect(party.lobby.get(code).snapshot().phase).toBe('waiting');
       await member.locator('#fill-bots').click();
@@ -303,7 +641,7 @@ test('结算可直接离房；普通成员回房后刷新仍在大厅，房主�
       expect(sequence).toBe(2);
       for (const listener of listeners) listener({ type: 'ended', roomCode: code });
       await member.locator('#match-leave').click();
-      await expect(member.locator('#create-panel')).toBeVisible();
+      await expect(member.locator('#new-room-actions')).toBeVisible();
       expect(party.lobby.list()).toHaveLength(0);
     },
     false,
@@ -356,12 +694,13 @@ test('手机公开记录分页与安全文本，规则端恢复和失败均保�
       const code = await createRoom(phone, base, '记录测试');
       await phone.getByRole('button', { name: /单挑/ }).click();
       await waitForSettings(phone);
-      await phone.getByRole('button', { name: '补满空位' }).click();
+      await phone.locator('#fill-bots').click();
       await phone.locator('#ready-button').click();
       await phone.locator('#start-button').click();
       await expect(phone.locator('#match-deck')).toHaveCount(0);
       await expect(phone.frameLocator('#game-frame').locator('#party-table-count')).toBeVisible();
-      await phone.locator('#match-records').click();
+      await phone.locator('#stage-more').click();
+      await phone.locator('#stage-tools #match-records').click();
       await expect(phone.locator('#match-records-dialog .observer-recent li')).toHaveCount(100);
       await expect(
         phone.locator('#match-records-dialog .observer-recent li').first(),
@@ -435,6 +774,7 @@ test('新版主页在手机与电脑可入座，筛选随房间更新，轮询�
       full.room.addBots(1, full.token);
       const home = await page();
       await home.goto(publicBase + '/');
+      await openFriends(home);
       await expect(home.locator('#room-list li')).toHaveCount(2);
       await expect(home.locator('#room-list strong').first()).toHaveText('<b>乔</b>的房间');
       expect(await home.locator('#room-list strong b').count()).toBe(0);
@@ -446,22 +786,24 @@ test('新版主页在手机与电脑可入座，筛选随房间更新，轮询�
       }
       await home.emulateMedia({ reducedMotion: 'reduce' });
       await expect(home.locator('html')).toHaveAttribute('data-motion', 'full');
+      await expect(openTableButton(home)).not.toHaveCSS('transition-duration', '0s');
       await home.locator('#motion-toggle').click();
       await expect(home.locator('html')).toHaveAttribute('data-motion', 'reduced');
-      await expect(home.locator('#create-button')).toHaveCSS('transition-duration', '0s');
-      await home.locator('#motion-toggle').click();
-      await expect(home.locator('html')).toHaveAttribute('data-motion', 'full');
+      await expect(openTableButton(home)).toHaveCSS('transition-duration', '0s');
       await home.setViewportSize({ width: 390, height: 844 });
+      await openFriends(home);
       await home.getByRole('button', { name: '可加入', exact: true }).click();
       await expect(home.locator('#room-list li')).toHaveCount(1);
-      const link = home.getByRole('link', { name: '加入房间', exact: true });
+      const link = home.getByRole('link', { name: '加入', exact: true });
       await link.focus();
+      const original = (await link.elementHandle())!;
       available.room.addBots(1, available.token);
-      await expect(home.locator('#room-list p')).toContainText('1 AI');
+      await expect(home.locator('#room-list p')).toContainText('2/5 席');
       await expect(link).toBeFocused();
+      expect(await original.evaluate((node) => node === document.activeElement)).toBe(true);
       available.room.addBots(3, available.token);
       await expect(home.locator('#room-list li')).toHaveCount(0);
-      await expect(home.locator('#empty-room-title')).toHaveText('这一刻，大家都已入席。');
+      await expect(home.locator('#empty-room-title')).toContainText(/没有空座|大家都已入席/);
       const bot = available.room.snapshot().players.find((player) => player.kind === 'bot')!;
       available.room.removePlayer(bot.id, available.token);
       await expect(home.locator('#room-list li')).toHaveCount(1);
@@ -476,9 +818,10 @@ test('新版主页在手机与电脑可入座，筛选随房间更新，轮询�
       await home.getByRole('button', { name: '入座', exact: true }).click();
       await expect(home.locator('#my-nickname')).toHaveText('关羽');
       await home.goto(publicBase + '/');
-      await expect(home.locator('#current-room')).toBeVisible();
-      await expect(home.locator('#create-panel')).toBeHidden();
-      await home.getByRole('link', { name: '返回我的房间', exact: true }).click();
+      await expect(home.locator('#return-room')).toBeVisible();
+      await expect(openTableButton(home)).toBeHidden();
+      await expect(home.locator('#new-room-actions')).toBeHidden();
+      await home.locator('#return-room').click();
       await expect(home.locator('#my-nickname')).toHaveText('关羽');
       expect(
         available.room.snapshot().players.filter((player) => player.kind === 'human'),
@@ -486,6 +829,188 @@ test('新版主页在手机与电脑可入座，筛选随房间更新，轮询�
     },
     true,
   );
+});
+
+test('网页首帧读取已保存主题，连接失败可重新连接', async ({ browser }) => {
+  await withLobby(browser, async ({ base, page }) => {
+    const phone = await page();
+    await phone.addInitScript(() => localStorage.setItem('party_zibai_theme', 'night'));
+    let release!: () => void;
+    const responseReady = new Promise<void>((resolve) => (release = resolve));
+    await phone.route('**/api/info', async (route) => {
+      await responseReady;
+      await route.fulfill({ status: 503, json: { error: { message: '本机服务尚未就绪' } } });
+    });
+    await phone.goto(base + '/');
+    const skeleton = phone.getByRole('status', { name: /聚会三国杀.*正在连接本机服务/ });
+    try {
+      await expect(skeleton).toBeVisible();
+      await expect(phone.locator('html')).toHaveAttribute('data-theme', 'night');
+      await expect(phone.locator('html')).toHaveCSS('background-color', 'rgb(8, 16, 23)');
+    } finally {
+      release();
+    }
+    await expect(phone.getByText('本机服务尚未就绪')).toBeVisible();
+    await expect(skeleton).toBeHidden();
+    await phone.unroute('**/api/info');
+    await phone.getByRole('button', { name: '重新连接' }).click();
+    await expect(phone.getByRole('heading', { name: '模式大厅' })).toBeVisible();
+  });
+});
+
+test('大厅流式牌匾：手机按主次分三行，空昵称聚焦，刷新保留草稿，原座优先', async ({ browser }) => {
+  const adapter: EngineAdapter = {
+    status: () => ({ id: 'noname', ready: true, shanhetu: true, message: '大厅测试夹具' }),
+    start: async () => {},
+  };
+  await withLobby(
+    browser,
+    async ({ party, base, page }) => {
+      const home = await page();
+      await home.goto(base + '/');
+      const create = openTableButton(home);
+      const nickname = home.locator('#nickname');
+      const modes = home.locator('[data-quick-preset]');
+      await expect(modes).toHaveCount(6);
+      const shanhetu = modes.filter({ has: home.locator('.sgs-mode-subtitle') });
+      await expect(shanhetu).toBeEnabled();
+      await expect(shanhetu.locator('strong')).toHaveText('山河图诸侯伐董');
+      await expect(shanhetu.locator('.sgs-mode-subtitle')).toHaveText('诸侯伐董');
+      for (const viewport of [
+        { width: 390, height: 844 },
+        { width: 320, height: 568 },
+        { width: 667, height: 320 },
+      ]) {
+        await home.setViewportSize(viewport);
+        await expect(create).toBeInViewport();
+        const dimensions = await home.evaluate(() => ({
+          horizontal: document.documentElement.scrollWidth,
+          height: document.documentElement.scrollHeight,
+        }));
+        expect(dimensions.horizontal).toBeLessThanOrEqual(viewport.width);
+        if (viewport.height < 600) expect(dimensions.height).toBeGreaterThan(viewport.height);
+        if (viewport.width <= 390) {
+          const rows = await modes.evaluateAll((buttons) => {
+            const counts = new Map<number, number>();
+            for (const button of buttons) {
+              const top = Math.round(button.getBoundingClientRect().top);
+              counts.set(top, (counts.get(top) ?? 0) + 1);
+            }
+            return [...counts.values()];
+          });
+          expect(rows).toEqual([1, 2, 3]);
+        }
+      }
+      await home.setViewportSize({ width: 390, height: 844 });
+      await create.click();
+      await expect(nickname).toBeFocused();
+      await expect(home.locator('#nickname-hint')).toHaveText('请先填个昵称，马上开房');
+      expect(party.lobby.list()).toHaveLength(0);
+      await nickname.fill('大厅房主');
+      const original = (await nickname.elementHandle())!;
+      party.lobby.create('等待中的朋友');
+      await expect(home.locator('#room-total')).toHaveText('1 桌');
+      await expect(nickname).toHaveValue('大厅房主');
+      expect(await original.evaluate((node) => node === document.activeElement)).toBe(true);
+      await create.click();
+      await expect(home.locator('#my-role')).toHaveText('你是房主，也参加这一局');
+      const session = await (await home.request.get(base + '/api/me')).json();
+      await home.goto(base + '/');
+      await expect(home.locator('#current-room-label')).toHaveText(
+        `你正在 ${session.roomCode} 号房`,
+      );
+      await expect(create).toBeHidden();
+      await expect(nickname).toHaveValue('大厅房主');
+      await home.locator('#return-room').click();
+      await expect(home).toHaveURL(`${base}/join/${session.roomCode}`);
+      expect(await (await home.request.get(base + '/api/me')).json()).toEqual(session);
+      expect(party.lobby.list()).toHaveLength(2);
+    },
+    false,
+    adapter,
+  );
+});
+
+test('过期大厅发出的带保护开房请求不能改掉另一标签页的房号、玩法、将池或席位', async ({
+  browser,
+}) => {
+  await withLobby(browser, async ({ party, base, page }) => {
+    const home = await page();
+    await home.goto(base + '/');
+    await home.locator('#nickname').fill('同浏览器房主');
+    const other = await home.context().newPage();
+    await home.route('**/api/me', (route) =>
+      route.fulfill({ json: { roomCode: null, playerId: null } }),
+    );
+    const original = await other.request.post(`${base}/api/rooms/preset`, {
+      data: { nickname: '原座主人', presetId: 'college-4', requireUnseated: true },
+    });
+    expect(original.status()).toBe(201);
+    const { room, playerId } = await original.json();
+    const before = party.lobby.get(room.code).snapshot();
+    await home.route('**/api/rooms/preset', async (route) => {
+      expect(route.request().postDataJSON()).toMatchObject({
+        presetId: 'duel-2',
+        requireUnseated: true,
+      });
+      const response = await route.fetch();
+      expect(response.status()).toBe(409);
+      await home.unroute('**/api/me');
+      await route.fulfill({ response });
+    });
+    await home.locator('[data-quick-preset="duel-2"]').click();
+    await expect(home).toHaveURL(`${base}/join/${room.code}`);
+    const after = party.lobby.get(room.code).snapshot();
+    expect(after.settings).toEqual(before.settings);
+    expect(after.ownerId).toBe(playerId);
+    expect(after.players.map(({ id, nickname }) => ({ id, nickname }))).toEqual([
+      { id: playerId, nickname: '原座主人' },
+    ]);
+    expect(party.lobby.list()).toHaveLength(1);
+    await other.close();
+  });
+});
+
+test('大厅牌匾：快捷 2v2 失败保留草稿，重试按原预设建房及补 AI', async ({ browser }) => {
+  await withLobby(browser, async ({ party, base, page }) => {
+    const phone = await page();
+    const attempts: unknown[] = [];
+    await phone.route('**/api/rooms/preset', async (route) => {
+      attempts.push(route.request().postDataJSON());
+      if (attempts.length === 1) {
+        await route.fulfill({
+          status: 503,
+          json: { error: { code: 'TEST_RETRY', message: '开桌暂时失败，请重试' } },
+        });
+      } else await route.continue();
+    });
+    await phone.goto(`${base}/`);
+    const nickname = phone.locator('#nickname');
+    await nickname.fill('快捷场房主');
+    await phone.getByLabel('空位自动补 AI').check();
+    const quick = phone.locator('[data-quick-preset="versus-2v2"]');
+    await quick.tap();
+    await expect(phone.getByText('开桌暂时失败，请重试')).toBeVisible();
+    await expect(phone).toHaveURL(`${base}/`);
+    await expect(nickname).toHaveValue('快捷场房主');
+    await expect(phone.getByLabel('空位自动补 AI')).toBeChecked();
+    expect(party.lobby.list()).toHaveLength(0);
+    await quick.tap();
+    await expect(phone.locator('#my-role')).toHaveText('你是房主，也参加这一局');
+    expect(attempts).toMatchObject(
+      Array.from({ length: 2 }, () => ({
+        nickname: '快捷场房主',
+        presetId: 'versus-2v2',
+        fillBots: true,
+        requireUnseated: true,
+        requestId: expect.any(String),
+      })),
+    );
+    expect(party.lobby.list()).toMatchObject([{ mode: 'versus', humanCount: 1, botCount: 3 }]);
+    expect(await phone.evaluate(() => localStorage.getItem('party_last_nickname'))).toBe(
+      '快捷场房主',
+    );
+  });
 });
 
 test('四模式的房间与设置同步展示档位牌堆，旧服务保留108说明', async ({ browser }) => {
@@ -591,18 +1116,40 @@ async function withLobby(
   } finally {
     for (const context of contexts) await context.close();
     gateway?.close();
-    party.closeStreams();
+    party.stop();
     party.server.closeAllConnections();
     await new Promise<void>((resolve) => party.server.close(() => resolve()));
   }
 }
 
 async function createRoom(page: Page, base: string, nickname: string): Promise<string> {
-  await page.goto(base + '/');
-  await page.getByLabel('怎么称呼你').fill(nickname);
-  await page.getByRole('button', { name: '创建房间并入座' }).click();
+  const response = await page.request.post(`${base}/api/rooms`, { data: { nickname } });
+  expect(response.status()).toBe(201);
+  const { room } = await response.json();
+  await page.goto(`${base}/join/${room.code}`);
   await expect(page.locator('#my-role')).toHaveText('你是房主，也参加这一局');
   return page.url().split('/').at(-1)!;
+}
+
+function openTableButton(page: Page) {
+  return page.locator('[data-quick-preset="identity-6"]');
+}
+
+async function openFriends(page: Page) {
+  await expect(page.getByRole('button', { name: '全部房间', exact: true })).toBeVisible();
+}
+
+async function switchConsoleControls(computer: Page, otherCode: string) {
+  await computer.locator('#theme-toggle').click();
+  await expect(computer.locator('html')).toHaveAttribute('data-theme', 'night');
+  await computer.locator('#stage-mute').click();
+  await expect(computer.locator('#stage-mute')).toHaveAttribute('aria-pressed', 'true');
+  const other = computer.locator('#room-list li').filter({ hasText: otherCode });
+  await other.getByRole('button').click();
+  await expect(computer.locator('#console-room-title')).toContainText(otherCode);
+  await expect(other.getByRole('button')).toBeFocused();
+  await computer.locator('#console-network-toggle').click();
+  await expect(computer.locator('#entry-status')).toBeVisible();
 }
 
 async function waitForSettings(page: Page): Promise<void> {
@@ -611,6 +1158,41 @@ async function waitForSettings(page: Page): Promise<void> {
   );
   await expect(page.locator('#save-settings')).toBeHidden();
 }
+
+test('准备房复制本房间邀请；剪贴板拒绝时保留选中的邀请链接', async ({ browser }) => {
+  await withLobby(browser, async ({ base, page }) => {
+    const owner = await page();
+    await owner.addInitScript(() => {
+      Object.defineProperty(navigator, 'clipboard', {
+        configurable: true,
+        value: {
+          async writeText(value: string) {
+            if (document.documentElement.dataset.rejectClipboard) throw new Error('blocked');
+            document.documentElement.dataset.clipboardValue = value;
+          },
+        },
+      });
+    });
+    const code = await createRoom(owner, base, '邀请测试');
+    const copy = owner.getByRole('button', { name: '复制邀请链接' });
+    const status = owner.locator('#room-copy-status');
+    const url = await owner.locator('#join-url').inputValue();
+    expect(new URL(url).pathname).toBe(`/join/${code}`);
+    await copy.click();
+    await expect(status).toHaveText('邀请链接已复制。');
+    await expect(owner.locator('html')).toHaveAttribute('data-clipboard-value', url);
+    await owner.evaluate(() => (document.documentElement.dataset.rejectClipboard = '1'));
+    await copy.click();
+    await expect(status).toHaveText('链接已选中，请手动复制。');
+    const manual = owner.locator('#room-copy-url');
+    await expect(manual).toBeFocused();
+    expect(
+      await manual.evaluate((input: HTMLInputElement) =>
+        input.value.slice(input.selectionStart!, input.selectionEnd!),
+      ),
+    ).toBe(url);
+  });
+});
 
 async function checkQr(page: Page, roomCode?: string, prefix = ''): Promise<string> {
   await expect(page.locator(`#${prefix}qr`)).toBeVisible();
@@ -629,7 +1211,7 @@ async function joinRoom(page: Page, base: string, code: string, nickname: string
   await page.goto(`${base}/join/${code}`);
   await page.getByLabel('怎么称呼你').fill(nickname);
   await page.getByRole('button', { name: '入座', exact: true }).click();
-  await expect(page.getByRole('button', { name: '我准备好了' })).toBeEnabled();
+  await expect(page.getByRole('button', { name: '准备', exact: true })).toBeEnabled();
 }
 
 test('房主设置自动合并与串行保存，晚响应保留新草稿，失败可重试并重新准备', async ({ browser }) => {
@@ -711,7 +1293,7 @@ test('房主设置自动合并与串行保存，晚响应保留新草稿，失�
       await waitForSettings(owner);
       await expect(member.locator('#summary-mode')).toHaveText('单挑');
       expect(party.lobby.get(code).snapshot().players).toHaveLength(2);
-      await expect(member.locator('#ready-button')).toHaveText('我准备好了');
+      await expect(member.locator('#ready-button')).toHaveText('准备');
       await expect(owner.locator('#ready-button')).toBeEnabled();
       await expect(owner.locator('#start-button')).toBeDisabled();
       await owner.reload();
@@ -964,11 +1546,12 @@ test('手机工具条主动托管与恢复由牌桌确认，公开身份与最�
         await expect(phone.locator('#match-connection')).toBeHidden();
         await expect(phone.locator('#match-auto')).toBeEnabled();
       }
-      await phone.locator('#match-auto').click();
+      await phone.locator('#stage-more').click();
+      await phone.locator('#stage-tools #match-auto').click();
       await expect(phone.locator('#match-auto')).toHaveText('恢复手动操作');
       await expect(phone.locator('#match-auto')).toHaveAttribute('aria-pressed', 'true');
       await expect(phone.locator('#match-control-state')).toHaveText('原生 AI 正在替你操作');
-      await phone.locator('#match-auto').click();
+      await phone.locator('#stage-tools #match-auto').click();
       await expect(phone.locator('#match-auto')).toHaveText('主动托管');
       await expect(phone.locator('#match-auto')).toHaveAttribute('aria-pressed', 'false');
       expect(
@@ -976,8 +1559,11 @@ test('手机工具条主动托管与恢复由牌桌确认，公开身份与最�
           () => (window as Window & { controlRequests?: string[] }).controlRequests,
         ),
       ).toEqual(['party-auto', 'party-manual']);
+      await phone.getByRole('button', { name: '关闭比赛工具' }).click();
       for (const listener of listeners) listener({ type: 'ended', roomCode: code });
       await expect(phone.locator('#match-auto')).toBeDisabled();
+      await expect(phone.locator('#match-auto')).toBeHidden();
+      await expect(phone.locator('#match-control-state')).toBeHidden();
     },
     false,
     adapter,
@@ -1000,7 +1586,7 @@ test('官方将池同步公告/缺项与图鉴；只有房主可换档，点将�
     await member.getByRole('button', { name: '点将 · 设置第1个候选' }).click();
     await member.locator('[data-general="zhaoyun"]').click();
     await member.getByRole('button', { name: '关闭武将图鉴' }).click();
-    await member.getByRole('button', { name: '我准备好了' }).click();
+    await member.getByRole('button', { name: '准备', exact: true }).click();
     const officialPresets = GENERAL_PRESETS.filter((entry) => entry.official);
     for (const preset of officialPresets) {
       await owner.getByLabel('武将范围').selectOption(preset.id);
@@ -1013,7 +1599,7 @@ test('官方将池同步公告/缺项与图鉴；只有房主可换档，点将�
       for (const name of preset.official!.missingGenerals)
         await expect(member.locator('#summary-roster-source')).toContainText(name);
       await expect(member.locator('#general-pick-state')).toContainText('未点将');
-      await expect(member.getByRole('button', { name: '我准备好了' })).toBeVisible();
+      await expect(member.getByRole('button', { name: '准备', exact: true })).toBeVisible();
       expect(party.lobby.get(code).snapshot().settings.generalPreset).toBe(preset.id);
       await member.getByRole('button', { name: '武将图鉴 · 查看技能' }).click();
       await expect(member.getByLabel('武将档位')).toHaveValue(preset.id);
@@ -1086,6 +1672,7 @@ test('电脑只展示主页码，手机建房参赛，任意成员展示直达�
     await computer.goto(base + '/server');
     await checkQr(computer);
     expect(party.lobby.list()).toHaveLength(0);
+    await expect(openTableButton(computer)).toHaveCount(0);
     expect(await computer.getByRole('button', { name: '创建房间并入座' }).count()).toBe(0);
     expect(await computer.getByRole('button', { name: '保存房间设置' }).count()).toBe(0);
     const owner = await page();
@@ -1097,12 +1684,14 @@ test('电脑只展示主页码，手机建房参赛，任意成员展示直达�
     ).toEqual({ playerId: null, roomCode: null });
     await owner.getByRole('button', { name: /2v2/ }).click();
     await waitForSettings(owner);
+    await expect(owner.locator('#summary-rules')).toBeHidden();
+    await owner.locator('.room-prep-rules summary').click();
     await expect(owner.locator('#summary-rules')).toBeVisible();
     await expect(owner.locator('#summary-rules')).toContainText('每队共享 10 名候选');
     await expect(owner.locator('#summary-rules')).toContainText('已选武将保留在将池');
     await expect(owner.locator('#summary-rules')).toContainText('1 号位首回合摸牌阶段少摸 1 张');
     await expect(owner.locator('#summary-rules')).toContainText('队友阵亡可摸 1 张');
-    await owner.getByRole('button', { name: '展示房间二维码' }).click();
+    await owner.getByRole('button', { name: '房间二维码', exact: true }).click();
     await checkQr(owner, code);
     await owner.getByRole('button', { name: '关闭房间二维码' }).click();
     const phones = [owner];
@@ -1119,7 +1708,7 @@ test('电脑只展示主页码，手机建房参赛，任意成员展示直达�
           if (route.request().method() === 'GET' && ++requests === 2 && stale) {
             const response = await route.fetch();
             const data = await response.json();
-            await expect(phone.getByRole('button', { name: '我准备好了' })).toBeEnabled();
+            await expect(phone.getByRole('button', { name: '准备', exact: true })).toBeEnabled();
             await route.fulfill({ response, json: { ...data, room: stale } });
             unsubscribe();
           } else await route.continue();
@@ -1127,9 +1716,9 @@ test('电脑只展示主页码，手机建房参赛，任意成员展示直达�
       }
       await joinRoom(phone, base, code, nickname);
       await expect(phone.locator('#summary-rules')).toContainText('起手分别 4/4/4/5 张');
-      await phone.getByRole('button', { name: '展示房间二维码' }).click();
+      await phone.getByRole('button', { name: '房间二维码', exact: true }).click();
       await checkQr(phone, code);
-      expect(await phone.getByRole('button', { name: '添加 1 个 AI' }).isVisible()).toBe(false);
+      expect(await phone.locator('#add-bot').isVisible()).toBe(false);
       await phone.getByRole('button', { name: '关闭房间二维码' }).click();
       expect(
         await phone.evaluate(
@@ -1138,7 +1727,8 @@ test('电脑只展示主页码，手机建房参赛，任意成员展示直达�
       ).toBe(true);
       phones.push(phone);
     }
-    for (const phone of phones) await phone.getByRole('button', { name: '我准备好了' }).click();
+    for (const phone of phones)
+      await phone.getByRole('button', { name: '准备', exact: true }).click();
     await expect(owner.locator('#player-counter')).toHaveText('4 / 4 席');
     await expect(owner.getByRole('button', { name: '开始对局' })).toBeDisabled();
     await expect(phones[3]!.locator('#my-nickname')).toHaveText('<b>乔</b>');
@@ -1146,7 +1736,7 @@ test('电脑只展示主页码，手机建房参赛，任意成员展示直达�
     await owner.reload();
     await expect(owner.locator('#my-role')).toHaveText('你是房主，也参加这一局');
     expect(room.snapshot().players).toHaveLength(4);
-    await owner.getByRole('button', { name: '我准备好了' }).click();
+    await owner.getByRole('button', { name: '准备', exact: true }).click();
     await expect
       .poll(() => room.snapshot().players.filter((player) => player.ready).length)
       .toBe(4);
@@ -1166,7 +1756,7 @@ test('电脑只展示主页码，手机建房参赛，任意成员展示直达�
     });
     await computer.screenshot({ path: '.runtime/previews/server.png', fullPage: true });
     await owner.screenshot({ path: '.runtime/previews/owner.png', fullPage: true });
-    await phones[1]!.getByRole('button', { name: '展示房间二维码' }).click();
+    await phones[1]!.getByRole('button', { name: '房间二维码', exact: true }).click();
     await phones[1]!.screenshot({ path: '.runtime/previews/member-qr.png', fullPage: true });
   });
 });
@@ -1218,11 +1808,15 @@ test('模拟投降界面：先确认、真人表态、冷却和断线锁定，�
         await phone.locator('#fill-bots').click();
         await phone.locator('#ready-button').click();
         await phone.locator('#start-button').click();
-        await expect(phone.locator('#match-surrender')).toBeVisible();
-        await expect(phone.locator('#match-surrender')).toHaveText(
-          kind === 'end' ? '提前结束' : '投降',
-        );
-        await phone.locator('#match-surrender').click();
+        const surrender = phone.locator('#stage-tools #match-surrender');
+        const openSurrender = async () => {
+          await phone.locator('#stage-more').click();
+          await surrender.click();
+        };
+        await phone.locator('#stage-more').click();
+        await expect(surrender).toBeVisible();
+        await expect(surrender).toHaveText(kind === 'end' ? '提前结束' : '投降');
+        await surrender.click();
         await expect(phone.locator('#surrender-detail')).toContainText(
           kind === 'end' ? '含已阵亡玩家' : '对方获胜',
         );
@@ -1239,7 +1833,7 @@ test('模拟投降界面：先确认、真人表态、冷却和断线锁定，�
             .locator('body')
             .evaluate(() => (window as any).commands.length),
         ).toBe(0);
-        await phone.locator('#match-surrender').click();
+        await openSurrender();
         await phone.locator('#surrender-confirm').click();
         await expect(phone.locator('#surrender-voters')).toContainText('<b>乔</b> · 已同意');
         expect(await phone.locator('#surrender-voters b').count()).toBe(0);
@@ -1255,7 +1849,7 @@ test('模拟投降界面：先确认、真人表态、冷却和断线锁定，�
           { action: 'request', epoch: '' },
           { action: 'reject', epoch: 'vote-1' },
         ]);
-        await phone.locator('#match-surrender').click();
+        await openSurrender();
         await expect(phone.locator('#surrender-confirm')).toBeDisabled();
         await expect(phone.locator('#surrender-countdown')).toContainText('才能再次发起');
         await phone.locator('#surrender-close').click();
@@ -1307,7 +1901,7 @@ test('断线提示保持可见并锁住旧牌桌，原生重建确认后才恢�
       await phone.locator('[data-mode="duel"]').click();
       await waitForSettings(phone);
       await expect(phone.locator('#summary-deck')).toContainText('3次');
-      await phone.getByRole('button', { name: '补满空位' }).click();
+      await phone.locator('#fill-bots').click();
       await phone.locator('#ready-button').click();
       await phone.locator('#start-button').click();
       await expect(phone.frameLocator('#game-frame').getByRole('button')).toBeVisible();
@@ -1381,7 +1975,7 @@ test('模拟牌桌更新中断：结束后同步最终画面，手动恢复保�
       const seatBefore = party.lobby.get(code).snapshot().players[0]!.id;
       await phone.getByRole('button', { name: /单挑/ }).click();
       await waitForSettings(phone);
-      await phone.getByRole('button', { name: '补满空位' }).click();
+      await phone.locator('#fill-bots').click();
       await phone.locator('#ready-button').click();
       await phone.locator('#start-button').click();
       await expect(phone.frameLocator('#game-frame').locator('#native-state')).toContainText(
@@ -1402,7 +1996,8 @@ test('模拟牌桌更新中断：结束后同步最终画面，手动恢复保�
       disconnect();
       await phone.waitForTimeout(2200);
       expect(loads).toBe(2);
-      await phone.getByRole('button', { name: '恢复牌桌', exact: true }).click();
+      await phone.locator('#stage-more').click();
+      await phone.locator('#stage-tools #match-restore').click();
       await expect.poll(() => loads).toBe(3);
       expect(party.lobby.get(code).snapshot().phase).toBe('finished');
       expect(party.lobby.get(code).snapshot().players[0]!.id).toBe(seatBefore);
@@ -1449,7 +2044,7 @@ test('结算先到牌桌：提前点击回房等待服务端结束，原房与�
       const seat = party.lobby.get(code).snapshot().ownerId;
       await phone.getByRole('button', { name: /单挑/ }).click();
       await waitForSettings(phone);
-      await phone.getByRole('button', { name: '补满空位' }).click();
+      await phone.locator('#fill-bots').click();
       await phone.locator('#ready-button').click();
       await phone.locator('#start-button').click();
       const response = phone.waitForResponse(
@@ -1487,15 +2082,20 @@ test('电脑控制台管理两桌，安全显示昵称、移除等待席位和�
     expect(await computer.locator('#console-room-title img').count()).toBe(0);
     const session = await computer.request.get(base + '/api/me');
     expect(await session.json()).toEqual({ playerId: null, roomCode: null });
-    computer.on('dialog', (dialog) => void dialog.accept());
     await computer
       .locator('.console-player')
       .filter({ hasText: '朋友' })
       .getByRole('button', { name: '移除席位' })
       .click();
+    await expect(computer.getByRole('button', { name: '取消', exact: true })).toBeFocused();
+    await computer.getByRole('button', { name: '确认操作' }).click();
     await expect(friend.locator('#my-seat')).toBeHidden();
     expect(party.lobby.get(code).snapshot().players.length).toBe(1);
     await computer.getByRole('button', { name: '关闭房间', exact: true }).click();
+    await computer.getByRole('button', { name: '取消', exact: true }).click();
+    expect(party.lobby.get(code).snapshot().players).toHaveLength(1);
+    await computer.getByRole('button', { name: '关闭房间', exact: true }).click();
+    await computer.getByRole('button', { name: '确认操作' }).click();
     await expect(computer.locator('#room-total')).toHaveText('1 间');
     await expect(owner.locator('#connection')).toHaveText('房间已关闭');
     expect(party.lobby.get(otherCode).snapshot().players.length).toBe(1);
@@ -1504,101 +2104,438 @@ test('电脑控制台管理两桌，安全显示昵称、移除等待席位和�
   });
 });
 
-test('公开记录占位页面：回看整局、实时更新保留阅读位置，换局清空记录与安全文本', async ({
+test('电脑观战：公开记录分页与安全文本，刷新保留焦点、阅读位置及双码', async ({ browser }) => {
+  await withLobby(
+    browser,
+    async ({ party, base, page }) => {
+      const computer = await page(true);
+      const publicUrl = 'https://stage-party.trycloudflare.com/';
+      party.setInternetEntry('ready', '跨网络可扫码', publicUrl);
+      const qrRequests: string[] = [];
+      computer.on('request', (request) => {
+        if (new URL(request.url()).pathname === '/api/qr.svg') qrRequests.push(request.url());
+      });
+      const created = party.lobby.create('<b>玩家</b>');
+      const neighbors = Array.from({ length: 12 }, (_, index) =>
+        party.lobby.create(`并行房间 ${index + 1}`),
+      );
+      let total = 220;
+      let matchId = 'observer-match-1';
+      let summary: PublicMatchSummary | undefined;
+      await computer.route('**/api/console', (route) =>
+        route.fulfill({
+          json: {
+            rooms: [
+              {
+                room: {
+                  ...created.room.snapshot(),
+                  phase: summary ? 'finished' : 'playing',
+                  matchId,
+                  lastMatchSummary: summary,
+                },
+                networks: [],
+                observer: {
+                  updatedAt: 1,
+                  round: 2,
+                  ended: false,
+                  currentPlayerId: created.playerId,
+                  players: [
+                    {
+                      id: created.playerId,
+                      nickname: '<b>玩家</b>',
+                      general: '公开武将',
+                      identity: '身份未公开',
+                      hp: 3,
+                      maxHp: 4,
+                      armor: 0,
+                      handCount: 2,
+                      dead: false,
+                      linked: false,
+                      turnedOver: false,
+                      controller: 'human',
+                      equipment: [],
+                      judgments: [],
+                    },
+                  ],
+                  recent: Array.from(
+                    { length: 100 },
+                    (_, offset) => `公开动作 ${total - 99 + offset} <img src=x>`,
+                  ),
+                  logStart: total - 99,
+                  logTotal: total,
+                  logFirst: 1,
+                },
+              },
+              ...neighbors.map(({ room }) => ({ room: room.snapshot(), networks: [] })),
+            ],
+          },
+        }),
+      );
+      await computer.route('**/api/console/rooms/*/log?*', (route) => {
+        const before = Number(new URL(route.request().url()).searchParams.get('before'));
+        return route.fulfill({
+          json: {
+            matchId,
+            total,
+            first: 1,
+            entries: Array.from({ length: Math.min(100, before - 1) }, (_, offset) => ({
+              sequence: Math.max(1, before - 100) + offset,
+              text: `早期公开动作 ${Math.max(1, before - 100) + offset}`,
+            })),
+          },
+        });
+      });
+      await computer.goto(`${base}/server`);
+      expect(await checkQr(computer)).toBe('http://192.168.1.100:3000/');
+      expect(await checkQr(computer, undefined, 'internet-')).toBe(publicUrl);
+      await expectUncoveredQrs(computer);
+      const qr = (await computer.locator('#qr').elementHandle())!;
+      const publicQr = (await computer.locator('#internet-qr').elementHandle())!;
+      await expectUncoveredQrs(computer);
+      const list = computer.locator('.observer-recent');
+      await expect(list.locator('li')).toHaveCount(100);
+      await expect(computer.locator('.observer-seat h3')).toHaveText('<b>玩家</b>');
+      await expect(computer.locator('.observer-recent img, .observer-seat b')).toHaveCount(0);
+      await computer.getByRole('button', { name: '查看更早记录' }).click();
+      await expect(list.locator('li')).toHaveCount(200);
+      await computer.getByRole('button', { name: '查看更早记录' }).click();
+      await expect(list.locator('li')).toHaveCount(220);
+      await expect(list.locator('li').first()).toHaveText('早期公开动作 1');
+      await list.evaluate((node) => {
+        node.scrollTop = 140;
+      });
+      const firstRoom = computer.locator('#room-list li').first().getByRole('button');
+      const roomControl = (await firstRoom.elementHandle())!;
+      const scrollBefore = await computer.evaluate(() => {
+        window.scrollTo(0, 120);
+        return window.scrollY;
+      });
+      expect(scrollBefore).toBeGreaterThan(0);
+      await roomControl.evaluate((node) => node.focus({ preventScroll: true }));
+      total = 240;
+      await expect(computer.locator('.observer-log h3')).toHaveText('本局公开记录 · 240 条');
+      await expect(list.locator('li')).toHaveCount(240);
+      expect(await list.evaluate((node) => node.scrollTop)).toBeCloseTo(140, 0);
+      expect(await computer.evaluate(() => scrollY)).toBe(scrollBefore);
+      expect(await roomControl.evaluate((node) => node === document.activeElement)).toBe(true);
+      await expect(list.locator('li').first()).toHaveText('早期公开动作 1');
+      total = 500;
+      await expect(list.locator('li')).toHaveCount(500);
+      expect(
+        await list
+          .locator('li')
+          .evaluateAll((items) => items.map((item) => (item as HTMLLIElement).value)),
+      ).toEqual(Array.from({ length: 500 }, (_, index) => index + 1));
+      matchId = 'observer-match-2';
+      await expect(computer.locator('.observer-log')).toHaveAttribute('data-match-id', matchId);
+      await expect(list.locator('li')).toHaveCount(100);
+      await expect(list.locator('li').first()).toHaveText('公开动作 401 <img src=x>');
+      await expect(firstRoom).toBeFocused();
+      summary = {
+        matchId,
+        mode: 'identity',
+        winnerLabel: '主忠一方获胜',
+        rounds: 2,
+        finishedAt: Date.now(),
+        players: [],
+        highlights: ['本局公开高光'],
+        awards: [
+          {
+            title: '席间奇谋',
+            holderNickname: '<b>玩家</b>',
+            generalName: '公开武将',
+            detail: '精彩的一手',
+          },
+        ],
+      };
+      party.setInternetEntry('unavailable', '公网连接中断');
+      await expect(computer.getByText('主忠一方获胜', { exact: true })).toBeVisible();
+      await expect(computer.getByText('席间奇谋', { exact: true })).toBeVisible();
+      await expect(computer.locator('#internet-qr-hint')).toContainText('原码保留');
+      const skip = computer.getByRole('button', { name: '跳过颁奖' });
+      const replay = computer.getByRole('button', { name: '回看上局颁奖' });
+      await expectUncoveredQrs(computer);
+      await skip.click();
+      await expect(replay).toBeFocused();
+      total = 501;
+      await expect(computer.locator('.observer-log h3')).toContainText('501 条');
+      await expect(skip).toBeHidden();
+      await replay.click();
+      await expect(skip).toBeVisible();
+      await expectUncoveredQrs(computer);
+      await skip.click();
+      await computer.getByRole('button', { name: /战绩海报/ }).click();
+      await expect(computer.locator('#party-poster-download')).toHaveAttribute(
+        'href',
+        /^data:image\/png;base64,/,
+      );
+      if (process.env.E2E_RETURN_EVIDENCE) {
+        await computer
+          .locator('#party-poster-img')
+          .evaluate((image: HTMLImageElement) => image.decode());
+        await computer.locator('#console-poster-panel').screenshot({
+          path: path.join(process.env.E2E_RETURN_EVIDENCE, 'server-poster.png'),
+          animations: 'disabled',
+        });
+      }
+      await expectUncoveredQrs(computer);
+      await computer.locator('#console-poster').click();
+      for (const viewport of [
+        { width: 1440, height: 1050 },
+        { width: 800, height: 480 },
+        { width: 320, height: 568 },
+        { width: 667, height: 320 },
+      ]) {
+        await computer.setViewportSize(viewport);
+        await expectUncoveredQrs(computer);
+        expect(
+          await computer.evaluate(() => document.documentElement.scrollWidth),
+        ).toBeLessThanOrEqual(viewport.width);
+      }
+      expect(await qr.evaluate((node) => node === document.getElementById('qr'))).toBe(true);
+      expect(
+        await publicQr.evaluate((node) => node === document.getElementById('internet-qr')),
+      ).toBe(true);
+      expect(qrRequests).toHaveLength(2);
+    },
+    true,
+  );
+});
+
+async function expectUncoveredQrs(computer: Page) {
+  for (const id of ['#qr', '#internet-qr']) {
+    const image = computer.locator(id);
+    await image.evaluate((node) => node.scrollIntoView({ block: 'center', inline: 'nearest' }));
+    await expect(image).toBeInViewport({ ratio: 1 });
+    await expect
+      .poll(() =>
+        image.evaluate((node) => {
+          const rect = node.getBoundingClientRect();
+          return [
+            [0.2, 0.2],
+            [0.2, 0.8],
+            [0.5, 0.5],
+            [0.8, 0.2],
+            [0.8, 0.8],
+          ].every(
+            ([x, y]) =>
+              document.elementFromPoint(
+                rect.left + rect.width * x!,
+                rect.top + rect.height * y!,
+              ) === node,
+          );
+        }),
+      )
+      .toBe(true);
+  }
+}
+
+test('联机页只提示新增真人，初次快照和 AI 补位不播放入席提示', async ({ browser }) => {
+  await withLobby(browser, async ({ party, base, page }) => {
+    const { room, token } = party.lobby.create('已在场的房主');
+    const computer = await page(true);
+    await computer.goto(`${base}/server`);
+    const seats = computer.locator('#console-players');
+    await expect(seats).toContainText('已在场的房主');
+    const arrivals = seats.locator('.is-arriving');
+    await expect(arrivals).toHaveCount(0);
+    room.addBots(1, token);
+    await expect(seats).toContainText('原生 AI');
+    await expect(arrivals).toHaveCount(0);
+    party.lobby.join(room.code, '刚入座的朋友');
+    await expect(arrivals).toHaveText(/刚入座的朋友/);
+    await expect(arrivals).toHaveCount(0);
+    await computer.locator('#console-network-toggle').click();
+    await computer.getByRole('button', { name: '刷新连接状态' }).click();
+    await expect(arrivals).toHaveCount(0);
+  });
+});
+
+test('规则宿主协议夹具：切主题、静音、网络诊断和观战桌不重建 iframe 或重新加载页面', async ({
   browser,
 }) => {
   await withLobby(browser, async ({ party, base, page }) => {
     const computer = await page(true);
-    const created = party.lobby.create('<b>玩家</b>');
-    let total = 220;
-    let matchId = 'observer-match-1';
-    await computer.route('**/api/console', (route) =>
+    const primary = party.lobby.create('原桌房主').room.snapshot().code;
+    const other = party.lobby.create('另一桌房主').room.snapshot().code;
+    const matchId = 'stage-worker-fixture';
+    const jobs = { jobs: [{ id: matchId, roomCode: primary }] };
+    await computer.route('**/engine/jobs?transport=events', (route) =>
       route.fulfill({
-        json: {
-          rooms: [
-            {
-              room: { ...created.room.snapshot(), phase: 'playing', matchId },
-              networks: [],
-              observer: {
-                updatedAt: 1,
-                round: 2,
-                ended: false,
-                currentPlayerId: created.playerId,
-                players: [
-                  {
-                    id: created.playerId,
-                    nickname: '<b>玩家</b>',
-                    general: '公开武将',
-                    identity: '身份未公开',
-                    hp: 3,
-                    maxHp: 4,
-                    armor: 0,
-                    handCount: 2,
-                    dead: false,
-                    linked: false,
-                    turnedOver: false,
-                    controller: 'human',
-                    equipment: [],
-                    judgments: [],
-                  },
-                ],
-                recent: Array.from(
-                  { length: 100 },
-                  (_, offset) => `公开动作 ${total - 99 + offset} <img src=x>`,
-                ),
-                logStart: total - 99,
-                logTotal: total,
-                logFirst: 1,
-              },
-            },
-          ],
-        },
+        contentType: 'text/event-stream',
+        body: `event: jobs\ndata: ${JSON.stringify(jobs)}\n\n`,
       }),
     );
-    await computer.route('**/api/console/rooms/*/log?*', (route) => {
-      const before = Number(new URL(route.request().url()).searchParams.get('before'));
-      return route.fulfill({
-        json: {
-          matchId,
-          total,
-          first: 1,
-          entries: Array.from({ length: Math.min(100, before - 1) }, (_, offset) => ({
-            sequence: Math.max(1, before - 100) + offset,
-            text: `早期公开动作 ${Math.max(1, before - 100) + offset}`,
-          })),
-        },
-      });
+    await computer.route('**/engine/jobs', (route) => route.fulfill({ json: jobs }));
+    let loads = 0;
+    await computer.route(`**/engine/worker/${matchId}`, (route) => {
+      loads++;
+      return route.fulfill({ contentType: 'text/html', body: '<p>规则宿主页占位器</p>' });
     });
     await computer.goto(`${base}/server`);
-    const list = computer.locator('.observer-recent');
-    await expect(list.locator('li')).toHaveCount(100);
-    await expect(computer.locator('.observer-seat h3')).toHaveText('<b>玩家</b>');
-    await expect(computer.locator('.observer-recent img, .observer-seat b')).toHaveCount(0);
-    await computer.getByRole('button', { name: '查看更早记录' }).click();
-    await expect(list.locator('li')).toHaveCount(200);
-    await computer.getByRole('button', { name: '查看更早记录' }).click();
-    await expect(list.locator('li')).toHaveCount(220);
-    await expect(list.locator('li').first()).toHaveText('早期公开动作 1');
-    await list.evaluate((node) => {
-      node.scrollTop = 140;
-    });
-    total = 240;
-    await expect(computer.locator('.observer-log h3')).toHaveText('本局公开记录 · 240 条');
-    await expect(list.locator('li')).toHaveCount(240);
-    expect(await list.evaluate((node) => node.scrollTop)).toBeCloseTo(140, 0);
-    await expect(list.locator('li').first()).toHaveText('早期公开动作 1');
-    total = 500;
-    await expect(list.locator('li')).toHaveCount(500);
-    expect(
-      await list
-        .locator('li')
-        .evaluateAll((items) => items.map((item) => (item as HTMLLIElement).value)),
-    ).toEqual(Array.from({ length: 500 }, (_, index) => index + 1));
-    matchId = 'observer-match-2';
-    await expect(computer.locator('.observer-log')).toHaveAttribute('data-match-id', matchId);
-    await expect(list.locator('li')).toHaveCount(100);
-    await expect(list.locator('li').first()).toHaveText('公开动作 401 <img src=x>');
+    const locator = computer.locator(`iframe[src="/engine/worker/${matchId}"]`);
+    const original = (await locator.elementHandle())!;
+    const frame = (await original.contentFrame())!;
+    await frame.waitForURL(`**/engine/worker/${matchId}`);
+    const timeOrigin = await frame.evaluate(() => performance.timeOrigin);
+    await switchConsoleControls(computer, other);
+    expect(await original.evaluate((node) => node.isConnected)).toBe(true);
+    expect(await frame.evaluate(() => performance.timeOrigin)).toBe(timeOrigin);
+    await expect(locator).toHaveCount(1);
+    expect(loads).toBe(1);
   });
+});
+
+test('固定无名杀：切主题、换观战桌及公网中断后，同局原生选将并发牌', async ({ browser }) => {
+  const engine = new NativeNonameService(fileURLToPath(new URL('../../', import.meta.url)));
+  if (!engine.status().preload) {
+    engine.close();
+    test.skip(true, '缺少固定原生引擎资源；独立协议夹具仍覆盖 iframe 保活');
+  }
+  test.setTimeout(90000);
+  await withLobby(
+    browser,
+    async ({ party, base, page }) => {
+      party.setInternetEntry('ready', '跨网络可扫码', 'https://native-party.trycloudflare.com/');
+      const computer = await page(true);
+      await computer.goto(`${base}/server`);
+      const originalCode = await checkQr(computer, undefined, 'internet-');
+      const publicQr = (await computer.locator('#internet-qr').elementHandle())!;
+      await expect.poll(() => engine.status().ready).toBe(true);
+      const owner = await page();
+      const code = await createRoom(owner, base, '原生房主');
+      const other = party.lobby.create('观战切桌').room.snapshot().code;
+      await owner.locator('[data-mode="duel"]').click();
+      await waitForSettings(owner);
+      await owner.locator('#fill-bots').click();
+      await owner.locator('#ready-button').click();
+      await owner.locator('#start-button').click();
+      await expect.poll(() => party.lobby.get(code).snapshot().matchId).toBeTruthy();
+      const matchId = party.lobby.get(code).snapshot().matchId!;
+      const locator = computer.locator(`iframe[src="/engine/worker/${matchId}"]`);
+      const original = (await locator.elementHandle({ timeout: 20000 }))!;
+      const worker = (await original.contentFrame())!;
+      const proof = () => {
+        const native = (
+          window as Window & { partyEngine?: { proof: { hostReady?: boolean; started?: boolean } } }
+        ).partyEngine;
+        return native?.proof;
+      };
+      await expect
+        .poll(async () => (await worker.evaluate(proof))?.hostReady, { timeout: 25000 })
+        .toBe(true);
+      const timeOrigin = await worker.evaluate(() => performance.timeOrigin);
+      await switchConsoleControls(computer, other);
+      party.setInternetEntry('unavailable', '公网入口暂时中断');
+      await expect(computer.locator('#internet-qr-hint')).toContainText('原码保留');
+      expect(await checkQr(computer, undefined, 'internet-')).toBe(originalCode);
+      expect(
+        await publicQr.evaluate((node) => node === document.getElementById('internet-qr')),
+      ).toBe(true);
+      expect(await original.evaluate((node) => node.isConnected)).toBe(true);
+      expect(await worker.evaluate(() => performance.timeOrigin)).toBe(timeOrigin);
+
+      const table = owner.frameLocator('#game-frame');
+      await table
+        .locator('.dialog:not(.removing) .button.character.selectable')
+        .first()
+        .tap({ timeout: 20000 });
+      await table.locator('.hero-draft .hd-primary').tap();
+      await table.locator('#party-luck-cards button[data-action="keep"]').tap({ timeout: 20000 });
+      await expect
+        .poll(async () => (await worker.evaluate(proof))?.started, { timeout: 15000 })
+        .toBe(true);
+      const player = owner
+        .frames()
+        .find((frame) => frame.url().includes(`/engine/player/${matchId}`))!;
+      await player.waitForFunction(() => {
+        const native = (
+          window as Window & {
+            partyEngine?: { game: { me?: { countCards(zone: string): number } } };
+          }
+        ).partyEngine;
+        return (native?.game.me?.countCards('h') ?? 0) > 0;
+      });
+      expect(await worker.evaluate(() => performance.timeOrigin)).toBe(timeOrigin);
+      expect(party.lobby.get(code).snapshot()).toMatchObject({ phase: 'playing', matchId });
+    },
+    false,
+    engine,
+  );
+});
+
+test('电脑舞台复制两条玩家主页链接：确认写入才报成功，拒绝时选中文本供手动复制', async ({
+  browser,
+}) => {
+  await withLobby(
+    browser,
+    async ({ party, base, page }) => {
+      const publicUrl = 'https://clipboard-party.trycloudflare.com/';
+      party.setInternetEntry('ready', '跨网络可扫码', publicUrl);
+      const computer = await page(true);
+      await computer.addInitScript(() => {
+        const clipboard = document.createElement('div');
+        const requested: string[] = [];
+        Object.defineProperty(navigator, 'clipboard', {
+          value: {
+            writeText: (value: string) =>
+              new Promise<void>((resolve, reject) => {
+                requested.push(value);
+                clipboard.addEventListener('accept', () => resolve(), { once: true });
+                clipboard.addEventListener(
+                  'deny',
+                  () => reject(new DOMException('Denied', 'NotAllowedError')),
+                  { once: true },
+                );
+                document.documentElement.setAttribute(
+                  'data-clipboard-pending',
+                  JSON.stringify(requested),
+                );
+              }),
+          },
+        });
+        document.addEventListener('fixture-clipboard', (event) => {
+          clipboard.dispatchEvent(new Event((event as CustomEvent<string>).detail));
+        });
+      });
+      await computer.goto(`${base}/server`);
+      const success = computer.getByText('已复制玩家链接', { exact: true });
+      const lanUrl = await checkQr(computer);
+      await computer.getByRole('button', { name: /复制玩家链接.*局域网/ }).click();
+      await expect(computer.locator('html')).toHaveAttribute(
+        'data-clipboard-pending',
+        JSON.stringify([lanUrl]),
+      );
+      await expect(success).toBeHidden();
+      await computer.evaluate(() =>
+        document.dispatchEvent(new CustomEvent('fixture-clipboard', { detail: 'accept' })),
+      );
+      await expect(success).toBeVisible();
+
+      await computer.reload();
+      await checkQr(computer, undefined, 'internet-');
+      await computer.getByRole('button', { name: /复制玩家链接.*公网/ }).click();
+      await expect(computer.locator('html')).toHaveAttribute(
+        'data-clipboard-pending',
+        JSON.stringify([publicUrl]),
+      );
+      await computer.evaluate(() =>
+        document.dispatchEvent(new CustomEvent('fixture-clipboard', { detail: 'deny' })),
+      );
+      await expect(computer.getByText(/请手动复制/)).toBeVisible();
+      await expect(success).toBeHidden();
+      const manual = computer.locator('#internet-join-url');
+      await expect(manual).toBeVisible();
+      await expect(manual).toBeFocused();
+      await expect(manual).toHaveValue(publicUrl);
+      expect(
+        await manual.evaluate((node: HTMLInputElement) =>
+          node.value.slice(node.selectionStart!, node.selectionEnd!),
+        ),
+      ).toBe(publicUrl);
+    },
+    true,
+  );
 });
 
 test('双码电脑页立即提供局域网，公网等待验证；公网手机 HTTP 更新、交接和中断保留原码', async ({
@@ -1611,6 +2548,8 @@ test('双码电脑页立即提供局域网，公网等待验证；公网手机 H
       await computer.goto(base + '/server');
       expect(await checkQr(computer)).toBe('http://192.168.1.100:3000/');
       await expect(computer.locator('#internet-qr')).toBeHidden();
+      await expect(computer.locator('#internet-qr-placeholder')).toBeVisible();
+      await computer.locator('#console-network-toggle').click();
       await expect(computer.locator('#entry-status')).toContainText('正在准备');
       const publicUrl = 'https://browser-party.trycloudflare.com/';
       party.setInternetEntry('ready', '跨网络可扫码', publicUrl);
@@ -1687,6 +2626,7 @@ test('四个局域网成员与一个公网成员同桌，切断公网后局域�
       ).toBe('internet');
       party.setInternetEntry('unavailable', '跨网络入口暂时中断，局域网继续可用');
       gateway!.close();
+      await computer.locator('#console-network-toggle').click();
       await expect(computer.locator('#entry-status')).toContainText('暂时中断');
       expect(await checkQr(computer)).toBe(lanQr);
       expect(await checkQr(computer, undefined, 'internet-')).toBe(publicUrl);
@@ -1728,18 +2668,22 @@ test('手机房主为 5/8 席补 AI、修改玩法裁掉多余 AI，真人准备
     const code = await createRoom(owner, base, '刘备');
     const friend = await page();
     await joinRoom(friend, base, code, '关羽');
-    await owner.getByRole('button', { name: '用 AI 补满空位' }).click();
+    await owner.getByRole('button', { name: '一键补满 AI' }).click();
     await expect(owner.locator('#seat-count')).toHaveText('2 位真人 · 3 个 AI');
-    await expect(owner.getByRole('button', { name: '添加 1 个 AI' })).toBeDisabled();
+    await expect(owner.locator('#add-bot')).toBeHidden();
     for (const phone of [owner, friend])
-      await phone.getByRole('button', { name: '我准备好了' }).click();
+      await phone.getByRole('button', { name: '准备', exact: true }).click();
     const waiting = await page();
     await waiting.goto(`${base}/join/${code}`);
     await expect(waiting.getByRole('button', { name: '入座', exact: true })).toBeDisabled();
     await owner.getByLabel('总席位（含 AI）').selectOption('8');
     await waitForSettings(owner);
-    await expect(friend.getByRole('button', { name: '我准备好了' })).toBeVisible();
-    await owner.getByRole('button', { name: '用 AI 补满空位' }).click();
+    await owner.locator('#room-seats-title').evaluate((node) => {
+      node.ownerDocument.defaultView!.scrollTo(0, 0);
+    });
+    await expect(owner.locator('#start-button')).toBeInViewport({ ratio: 1 });
+    await expect(friend.getByRole('button', { name: '准备', exact: true })).toBeVisible();
+    await owner.getByRole('button', { name: '一键补满 AI' }).click();
     await expect(owner.locator('#seat-count')).toHaveText('2 位真人 · 6 个 AI');
     expect(
       party.lobby
@@ -1778,19 +2722,19 @@ test('房主离开由真人接任，两间房独立，空房关闭后旧邀请�
     });
     expect(attempt.status()).toBe(403);
     await owner.getByRole('button', { name: '离开房间', exact: true }).click();
-    await expect(owner.getByRole('button', { name: '创建房间并入座' })).toBeVisible();
+    await expect(openTableButton(owner)).toBeVisible();
     await expect(friend.locator('#my-role')).toHaveText('你是房主，也参加这一局');
-    await friend.getByRole('button', { name: '添加 1 个 AI' }).click();
+    await friend.locator('#add-bot').click();
     await friend.reload();
     await expect(friend.locator('#my-role')).toHaveText('你是房主，也参加这一局');
     expect(party.lobby.get(otherCode).snapshot().players).toHaveLength(1);
     await friend.getByRole('button', { name: '离开房间', exact: true }).click();
-    await expect(friend.getByRole('button', { name: '创建房间并入座' })).toBeVisible();
+    await expect(openTableButton(friend)).toBeVisible();
     expect(party.lobby.list()).toHaveLength(1);
     await owner.goto(`${base}/join/${code}`);
     await expect(owner.getByText('暂时没找到牌桌')).toBeVisible();
     await owner.getByRole('link', { name: '返回主页', exact: true }).click();
-    await expect(owner.getByRole('button', { name: '创建房间并入座' })).toBeVisible();
+    await expect(openTableButton(owner)).toBeVisible();
   });
 });
 
@@ -1805,13 +2749,13 @@ test('房主开放大厅点将，成员搜索和保留首候选，争抢、取�
     await expect(owner.getByLabel('允许点将')).not.toBeChecked();
     await expect(owner.locator('#summary-selection')).toContainText('主公 5 名候选，其余每人 3 名');
     await expect(member.locator('#general-pick-panel')).toBeHidden();
-    await owner.getByRole('button', { name: '用 AI 补满空位' }).click();
+    await owner.getByRole('button', { name: '一键补满 AI' }).click();
     for (const phone of [owner, member])
-      await phone.getByRole('button', { name: '我准备好了' }).click();
+      await phone.getByRole('button', { name: '准备', exact: true }).click();
     await owner.getByLabel('允许点将').check();
     await waitForSettings(owner);
     await expect(member.locator('#summary-selection')).toContainText('点将已开放');
-    await expect(member.getByRole('button', { name: '我准备好了' })).toBeVisible();
+    await expect(member.getByRole('button', { name: '准备', exact: true })).toBeVisible();
     await expect(member.locator('#settings-panel')).toBeHidden();
     await owner.getByRole('button', { name: '点将 · 设置第1个候选' }).click();
     await expect(owner.getByLabel('武将档位')).toBeDisabled();
@@ -1874,12 +2818,15 @@ test('局外图鉴可查看两档技能、筛选和搜索，保持成员在线�
     await phone.goto(base + '/');
     const catalogRequests: string[] = [];
     phone.on('request', (request) => {
-      if (/\/assets\/generals.*\.json$/.test(request.url()))
-        catalogRequests.push(new URL(request.url()).pathname);
+      const url = new URL(request.url());
+      if (/^\/assets\/generals.*\.json$/.test(url.pathname))
+        catalogRequests.push(url.pathname + url.search);
     });
-    await phone.getByRole('button', { name: '武将图鉴 · 查看技能' }).click();
+    await phone.getByRole('button', { name: '武将图鉴', exact: true }).click();
     await expect(phone.locator('#guide-count')).toHaveText('显示 27 / 27 位武将');
-    expect(catalogRequests).toEqual(['/assets/generals-beginner.json']);
+    expect(catalogRequests).toEqual([
+      expect.stringMatching(/^\/assets\/generals-beginner\.json\?v=[a-f0-9]{64}$/),
+    ]);
     await expect(phone.locator('#guide-preset option')).toHaveText(
       GENERAL_PRESETS.map((entry) => entry.name),
     );
@@ -1920,6 +2867,6 @@ test('局外图鉴可查看两档技能、筛选和搜索，保持成员在线�
     await expect(member.locator('.guide-entry').first()).toContainText('魔 · 体力');
     await member.screenshot({ path: '.runtime/previews/general-guide-sxrm.png' });
     await member.getByRole('button', { name: '关闭武将图鉴' }).click();
-    await expect(member.getByRole('button', { name: '我准备好了' })).toBeEnabled();
+    await expect(member.getByRole('button', { name: '准备', exact: true })).toBeEnabled();
   });
 });

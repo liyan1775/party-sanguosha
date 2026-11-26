@@ -1,4 +1,5 @@
 import { api, app, element, action, message } from './ui.js';
+import { staticAsset } from './static-assets.js';
 import type {
   CustomRosterRef,
   CustomRosterSummary,
@@ -225,7 +226,7 @@ export function bindGeneralGuide(
                 };
               },
             )
-          : api<Catalog>(`/assets/generals-${selected}.json`);
+          : api<Catalog>(staticAsset(`/assets/generals-${selected}.json`));
         pendingCatalogs.set(selected, pending);
       }
       catalogs.set(selected, await pending);

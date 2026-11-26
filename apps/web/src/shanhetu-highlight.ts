@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 import type { ShanhetuCampaignView } from '../../../packages/shared/src/shanhetu.js';
+import { staticAsset } from './static-assets.js';
 
 const difficultyTiers = ['普通', '中等', '困难', '噩梦', '炼狱'];
 
@@ -45,7 +46,7 @@ function loadCover(): Promise<HTMLImageElement | undefined> {
     const image = new Image();
     image.onload = () => resolve(image);
     image.onerror = () => resolve(undefined);
-    image.src = '/assets/shanhetu-pass.webp';
+    image.src = staticAsset('/assets/shanhetu-pass.webp');
   });
 }
 

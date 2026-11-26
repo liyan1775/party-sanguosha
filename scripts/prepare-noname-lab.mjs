@@ -1,14 +1,17 @@
 import { createHash } from 'node:crypto';
 import { readFile, writeFile, mkdir, rename, rm } from 'node:fs/promises';
+import { lstatSync, realpathSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
 import { downloadArchiveAssets } from './download-noname-assets.mjs';
 import { prepareShanhetuPortraits } from './prepare-shanhetu-portraits.mjs';
+import { assetStamp } from '../packages/noname-adapter/src/resource-proof.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const candidate = JSON.parse(await readFile(resolve(root, 'config/noname-candidate.json'), 'utf8'));
-const manifest = JSON.parse(await readFile(resolve(root, 'config/noname-lab-assets.json'), 'utf8'));
+const manifestBytes = await readFile(resolve(root, 'config/noname-lab-assets.json'));
+const manifest = JSON.parse(manifestBytes);
 if (candidate.tag !== 'v1.11.6' || manifest.commit !== candidate.commit) {
   throw new Error('This lab supports the reviewed v1.11.6 candidate and manifest only.');
 }
@@ -122,6 +125,35 @@ const progress = () => {
     );
 };
 const missing = new Map();
+function proofDevice() {
+  if (process.platform !== 'win32' || !/^[a-f0-9]{64}$/.test(process.env.PARTY_STARTUP_PROOF ?? ''))
+    return 0n;
+  try {
+    const format = execFileSync(
+      'powershell.exe',
+      [
+        '-NoProfile',
+        '-NonInteractive',
+        '-Command',
+        '([IO.DriveInfo]::new([IO.Path]::GetPathRoot($env:PARTY_PROOF_VOLUME))).DriveFormat',
+      ],
+      {
+        encoding: 'utf8',
+        windowsHide: true,
+        env: {
+          ...process.env,
+          PARTY_PROOF_VOLUME: realpathSync(engineRoot),
+          PARTY_STARTUP_PROOF: '',
+        },
+      },
+    ).trim();
+    return format === 'NTFS' ? lstatSync(engineRoot, { bigint: true }).dev : 0n;
+  } catch {
+    return 0n;
+  }
+}
+const device = proofDevice();
+let stamps = device ? [] : undefined;
 for (const entry of manifest.assets) {
   if (
     !/^(?:image\/(?:card|character|background)\/[\p{L}\p{N}_.-]+\.(?:png|jpg)|audio\/(?:skill|die|effect|card\/(?:male|female))\/[\p{L}\p{N}_.-]+\.mp3|LICENSE)$/u.test(
@@ -129,6 +161,13 @@ for (const entry of manifest.assets) {
     )
   )
     throw new Error('Invalid asset manifest path');
+  if (stamps) {
+    try {
+      stamps.push(assetStamp(engineRoot, entry, device));
+    } catch {
+      stamps = undefined;
+    }
+  }
   const present = await readFile(resolve(engineRoot, entry.path)).catch((error) => {
     if (error.code === 'ENOENT') return null;
     throw error;
@@ -136,7 +175,10 @@ for (const entry of manifest.assets) {
   if (present && present.length === entry.bytes && blobHash(present) === entry.gitBlobSha) {
     checkedBytes += entry.bytes;
     progress();
-  } else missing.set(entry.path, entry);
+  } else {
+    stamps = undefined;
+    missing.set(entry.path, entry);
+  }
 }
 async function save(entry, bytes) {
   if (bytes.length !== entry.bytes || blobHash(bytes) !== entry.gitBlobSha)
@@ -188,3 +230,5 @@ try {
     error.message,
   );
 }
+
+export const startupProof = stamps && { engineRoot, manifestBytes, stamps };

@@ -1,0 +1,19 @@
+{
+  "emblems": ["identity", "doudizhu", "versus", "duel", "college", "shanhetu"],
+  "cityScenes": {
+    "1": "beiping",
+    "2": "yizhou",
+    "3": "hulao",
+    "4": "hulao",
+    "5": "yizhou",
+    "6": "chibi",
+    "7": "xuchang",
+    "8": "guandu",
+    "9": "jingzhou",
+    "10": "luoyang",
+    "11": "jingzhou",
+    "12": "guandu",
+    "13": "beiping",
+    "14": "chibi"
+  }
+}

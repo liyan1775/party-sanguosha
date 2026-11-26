@@ -6,7 +6,7 @@ import {
 import rules from '../../../config/shanhetu-book.json' with { type: 'json' };
 import { app, element } from './ui.js';
 import { make, button, plain } from './shanhetu-ui.js';
-import { shanhetuIcon } from './shanhetu-map.js';
+import { bindCityScene, labelWithIcon, shanhetuIcon } from './shanhetu-art.js';
 
 const openings = [
   { id: null, name: '自行出征', description: '从选将与第一场遭遇开始。' },
@@ -24,11 +24,13 @@ export function bindShanhetuLaunch(request: () => Promise<ShanhetuBookView>) {
   launch.id = 'shanhetu-launch';
   launch.hidden = true;
   const hero = make('header', 'shanhetu-launch-cover');
+  const showPainting = bindCityScene(hero);
   const title = make('h2', '', '山河图');
   const scene = make('p', 'shanhetu-kicker', '诸侯伐董');
   const navigation = make('div', 'shanhetu-launch-nav');
   const showRoom = button('房间设置', 'shanhetu-quiet');
   const showBook = button('山河册', 'shanhetu-quiet');
+  labelWithIcon(showBook, '山河册', 'book');
   navigation.append(showRoom, showBook);
   hero.append(navigation, scene, title);
   const body = make('div', 'shanhetu-launch-body');
@@ -109,6 +111,7 @@ export function bindShanhetuLaunch(request: () => Promise<ShanhetuBookView>) {
     const showing = visible && !settings;
     app.classList.toggle('shanhetu-launch-active', showing);
     launch.hidden = !showing;
+    showPainting(showing ? 'luoyang' : undefined);
     lobby.hidden = showing;
     resume.hidden = !visible || !settings;
     if (visible) operations.append(start);
@@ -117,12 +120,19 @@ export function bindShanhetuLaunch(request: () => Promise<ShanhetuBookView>) {
 
   function difficultyHint() {
     const current = view?.difficulties.find((rule) => String(rule.id) === difficulty.value);
-    hint.textContent =
-      current?.description ||
-      (loading
-        ? '正在读取山河册…'
-        : view?.difficulties.find((rule) => !rule.unlocked)?.unlockText) ||
-      '';
+    if (!current) {
+      hint.textContent = loading ? '正在读取山河册…' : '';
+      return;
+    }
+    const next = view?.difficulties.find((rule) => rule.id === current.id + 1 && !rule.unlocked);
+    const unlock =
+      next &&
+      (next.unlockText.startsWith(`通过${current.name}后`)
+        ? `通关${current.name}后解锁${next.name}`
+        : `${next.name}：${next.unlockText}`);
+    hint.textContent = current.unlocked
+      ? ['当前已开放', current.description, unlock].filter(Boolean).join(' · ')
+      : `${current.name}：${current.unlockText}`;
   }
 
   function render() {
@@ -174,6 +184,7 @@ export function bindShanhetuLaunch(request: () => Promise<ShanhetuBookView>) {
     for (const step of view.goals) {
       const row = make('li');
       const tally = make('div', 'shanhetu-milestone-goal');
+      tally.toggleAttribute('data-open', !step.target);
       tally.append(make('span', '', step.target ? `${step.progress}/${step.target}` : '已开放'));
       const details = make('div');
       details.append(make('strong', '', step.label));

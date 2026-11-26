@@ -1,17 +1,18 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 @import './lobby-theme.css';
-
-/* ============================================================================
-   聚会三国杀 v1.0 · 兹白双境商业游戏视觉体系
-   明境：白衣素绡（默认）  |  暗境：月魄玄泉（一键切换）
-   作为最终样式层在 lobby-theme 之后生效，完整接管双境配色与玉金主按钮。
-   ============================================================================ */
+@import './stage-shell.css';
+@import './return-room.css';
+@import './return-console.css';
+@import '../../../packages/noname-adapter/runtime/hero-draft.css';
 
 :root,
 html[data-theme='day'] {
   --z-bg: #eef4f3;
   --z-surface: rgba(255, 254, 249, 0.88);
   --z-surface-strong: #fffefb;
+  --z-dialog-card: #fffef8;
+  --z-dialog-ink: #263832;
+  --z-dialog-accent: #80522b;
   --z-surface-jade: rgba(31, 125, 114, 0.08);
   --z-hud-strip: rgba(248, 251, 250, 0.94);
   --z-ink: #132430;
@@ -27,6 +28,7 @@ html[data-theme='day'] {
   --z-cinnabar: #c73c32;
   --z-cinnabar-soft: rgba(199, 60, 50, 0.12);
   --z-shade: rgba(16, 46, 56, 0.16);
+  --z-scroll-art: url('/assets/zibai-day.webp');
   --z-veil: linear-gradient(
     180deg,
     rgba(244, 249, 248, 0.72) 0%,
@@ -48,6 +50,9 @@ html[data-theme='night'] {
   --z-bg: #081017;
   --z-surface: rgba(14, 27, 37, 0.86);
   --z-surface-strong: #11202c;
+  --z-dialog-card: #152b2b;
+  --z-dialog-ink: #fbefd7;
+  --z-dialog-accent: #f4d78e;
   --z-surface-jade: rgba(92, 201, 188, 0.12);
   --z-hud-strip: rgba(10, 20, 28, 0.95);
   --z-ink: #eff6f7;
@@ -63,6 +68,7 @@ html[data-theme='night'] {
   --z-cinnabar: #e25347;
   --z-cinnabar-soft: rgba(226, 83, 71, 0.18);
   --z-shade: rgba(0, 6, 12, 0.6);
+  --z-scroll-art: url('/assets/zibai-night.webp');
   --z-veil: linear-gradient(
     180deg,
     rgba(7, 14, 21, 0.64) 0%,
@@ -107,23 +113,10 @@ body {
 .zibai-backdrop-art {
   position: absolute;
   inset: 0;
-  background-size: cover;
-  background-position: 62% 24%;
-  transition: opacity 420ms ease;
-}
-.zibai-backdrop-art.day {
-  background-image: url('/assets/zibai-day.webp');
-  opacity: 1;
-}
-.zibai-backdrop-art.night {
-  background-image: url('/assets/zibai-night.webp');
-  opacity: 0;
-}
-html[data-theme='night'] .zibai-backdrop-art.day {
-  opacity: 0;
-}
-html[data-theme='night'] .zibai-backdrop-art.night {
-  opacity: 1;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 62% 24%;
 }
 .zibai-backdrop-veil {
   position: absolute;
@@ -131,7 +124,7 @@ html[data-theme='night'] .zibai-backdrop-art.night {
   background: var(--z-veil);
 }
 
-#app > :not(.zibai-backdrop) {
+#app.room-layout:not(.in-match) > :not(.zibai-backdrop, dialog) {
   position: relative;
   z-index: 1;
 }
@@ -152,7 +145,6 @@ html[data-theme='night'] .zibai-backdrop-art.night {
   flex-shrink: 0;
 }
 
-/* 兹白双境首屏主舞台（彻底告别旧暗黑底色，昼境白衣素绡 / 夜境月魄玄泉高对比可读） */
 #app .page-hero {
   background:
     linear-gradient(
@@ -260,8 +252,8 @@ html[data-theme='night'] #app .page-hero .console-hero-note {
 /* 精工玉金八角切角面板与按钮（触控友好 46px+ 黄金比例） */
 #app:not(.in-match) .panel {
   background: var(--z-surface);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   border: 1px solid var(--z-gold-line);
   border-radius: 6px;
   box-shadow: 0 16px 38px -14px var(--z-shade);
@@ -481,62 +473,6 @@ dialog .button.secondary:hover:not(:disabled) {
   flex-shrink: 0;
 }
 
-/* 客厅大屏控制台 & 剧场全屏模式 */
-.console-mode-bar {
-  display: flex;
-  align-items: stretch;
-  justify-content: space-between;
-  gap: 14px;
-  margin-bottom: 18px;
-}
-.console-mode-bar .console-stats {
-  flex: 1;
-  margin: 0;
-}
-.stage-toggle-btn {
-  padding: 0 20px !important;
-  white-space: nowrap;
-}
-.console-grid:has(#internet-invite[hidden]) .console-rooms {
-  grid-column: auto;
-}
-
-body.party-stage-active #app.console-layout {
-  max-width: 1560px;
-  padding: 14px 28px 28px;
-}
-body.party-stage-active .page-hero,
-body.party-stage-active .console-keepalive-note,
-body.party-stage-active footer {
-  display: none;
-}
-body.party-stage-active #lobby-content {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-body.party-stage-active .console-mode-bar {
-  order: 0;
-  margin-bottom: 0;
-}
-body.party-stage-active #console-room {
-  order: 1;
-  margin-top: 0;
-}
-body.party-stage-active .console-grid {
-  order: 2;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-}
-body.party-stage-active .console-grid .qr-image {
-  max-width: 168px;
-}
-body.party-stage-active .observer-board {
-  padding: 20px;
-  border-radius: 26px;
-  background: radial-gradient(ellipse at 50% 45%, var(--z-surface-jade), transparent 72%);
-  border: 1.5px solid var(--z-gold-line);
-}
-
 /* 聚会 MVP 颁奖区 & 海报弹窗 */
 .console-mvp-showcase {
   margin: 14px 0 18px;
@@ -682,20 +618,29 @@ body.party-stage-active .observer-board {
 
 /* 重铸局内顶栏浮岛（告别一排丑白方块，紧凑清爽、零遮挡；山河图征程保留 44px 触控高度） */
 #match-panel:not(.shanhetu-journey) .match-toolbar {
-  background: var(--z-hud-strip) !important;
-  color: var(--z-ink) !important;
-  border-bottom: 1px solid var(--z-gold-line);
+  background: #102e27 !important;
+  color: #fbefd7 !important;
+  border-bottom: 1px solid #9f7d47;
   padding: 5px 10px;
   gap: 6px;
+}
+#match-panel.practice-stage .match-toolbar {
+  background: #102e27 !important;
+  color: #fbefd7 !important;
+  border-color: #9f7d47;
+}
+#match-panel.stage-drafting :is(#match-experience, #match-tracker-toggle, #match-auto) {
+  display: none;
 }
 #match-panel:not(.shanhetu-journey) .match-toolbar .button {
   min-height: 32px;
   padding: 4px 10px;
   font-size: 12px;
   border-radius: 4px;
-  border: 1px solid var(--z-gold-line);
-  background: var(--z-surface-strong);
-  color: var(--z-ink);
+  color-scheme: dark;
+  border: 1px solid #a0844e;
+  background: #203e32;
+  color: #fbefd7;
 }
 #match-panel:not(.shanhetu-journey) .match-toolbar .button.primary {
   background: linear-gradient(168deg, var(--z-jade), var(--z-jade-deep));
@@ -704,7 +649,7 @@ body.party-stage-active .observer-board {
 }
 #match-panel:not(.shanhetu-journey) .match-volume,
 #match-panel:not(.shanhetu-journey) #match-network {
-  color: var(--z-ink-2);
+  color: #c9dbd0;
   font-size: 12px;
   font-weight: 600;
 }
@@ -725,9 +670,6 @@ body.party-stage-active .observer-board {
   }
   .quick-scenes-grid {
     grid-template-columns: 1fr;
-  }
-  .console-mode-bar {
-    flex-direction: column;
   }
   .masthead-prefs {
     gap: 5px;
@@ -763,4 +705,85 @@ body.party-stage-active .observer-board {
     font-size: clamp(32px, 9vw, 44px);
     letter-spacing: 2px;
   }
+}
+
+/* All six draft modes use the same jade surface and controls. */
+#match-panel.stage-drafting .match-toolbar {
+  background: #102e27 !important;
+  color: #fbefd7 !important;
+  border-color: #9f7d47;
+  min-height: 0;
+  flex-wrap: nowrap;
+  padding: 4px max(8px, env(safe-area-inset-left));
+  gap: 5px;
+}
+#match-panel.stage-drafting .match-toolbar :is(.button, select),
+#stage-tools.draft-tools :is(.button, select, .close-dialog) {
+  color-scheme: dark;
+  min-height: 32px;
+  padding: 4px 9px;
+  font-size: 12px;
+  border: 1px solid #a0844e;
+  border-radius: 5px;
+  background: #203e32;
+  color: #fbefd7;
+  white-space: nowrap;
+}
+#match-panel.stage-drafting .match-toolbar :is(.button, select):focus-visible,
+#stage-tools.draft-tools :is(button, select, input):focus-visible {
+  outline: 2px solid #f3cf7c;
+  outline-offset: 2px;
+}
+#match-panel.stage-drafting .match-volume,
+#match-panel.stage-drafting #match-network,
+#stage-tools.draft-tools :is(.match-volume, .stage-tools-status, #match-network) {
+  color: #c9dbd0;
+}
+#stage-tools.draft-tools {
+  background: #102e27;
+  color: #fbefd7;
+  border-color: #a0844e;
+}
+#stage-tools.draft-tools .panel-heading h2 {
+  color: inherit;
+}
+#match-panel.stage-drafting #match-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+#match-panel.stage-drafting #stage-more {
+  color: #f4d78e;
+}
+#match-panel.stage-drafting.stage-portrait :is(#stage-role, #match-network) {
+  display: none;
+}
+#match-panel.stage-drafting.shanhetu-journey :is(#match-network, #match-restore) {
+  display: none;
+}
+#match-panel.stage-compact:not(.stage-drafting) .match-toolbar {
+  padding-inline: max(5px, env(safe-area-inset-left));
+  gap: 4px;
+  overflow-x: hidden;
+}
+#match-panel.stage-compact:not(.stage-drafting) .match-toolbar .button {
+  padding-inline: 6px;
+}
+#match-panel.stage-compact.stage-portrait:not(.stage-drafting) .match-toolbar {
+  flex-wrap: wrap;
+}
+#match-panel.stage-compact:not(.stage-drafting) :is(#match-label, #stage-role, #finished-hint) {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+#match-panel.stage-compact:not(.stage-drafting) #orientation-hint {
+  display: none;
+}
+#match-panel.stage-portrait:not(.stage-drafting) .tracker-toggle-btn svg {
+  display: none;
+}
+#match-panel:not(.stage-drafting) #stage-more {
+  color: #f4d78e;
 }

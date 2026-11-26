@@ -143,10 +143,8 @@ html[data-theme='night'] :is(.shanhetu-theme, .shanhetu-journey) {
   align-items: flex-start;
   padding: clamp(20px, 4vw, 54px);
   position: relative;
-  background:
-    linear-gradient(0deg, #101d1a 1%, #101d1a50 50%, #101d1a22 75%),
-    linear-gradient(90deg, #101d1a90, transparent 62%),
-    url('/assets/shanhetu-pass.webp') 56% 52% / cover;
+  background: #17251b;
+  isolation: isolate;
 }
 .shanhetu-launch-cover h2 {
   color: #fff0d2;
@@ -245,16 +243,18 @@ html[data-theme='night'] :is(.shanhetu-theme, .shanhetu-journey) {
   color: var(--sht-text);
   flex-wrap: wrap;
 }
-#match-panel.shanhetu-journey .match-toolbar .button.secondary {
+#match-panel.shanhetu-journey:not(.stage-drafting) .match-toolbar .button.secondary {
   min-height: 44px;
   color: var(--sht-text);
   background: var(--sht-panel);
   border-color: var(--sht-line);
   transition: none;
 }
-.shanhetu-journey
+.shanhetu-journey:not(.stage-drafting)
   :is(
     #match-sound,
+    #match-table-skin,
+    #match-emotions,
     .match-volume,
     #match-orientation,
     #orientation-hint,
@@ -272,6 +272,106 @@ html[data-theme='night'] :is(.shanhetu-theme, .shanhetu-journey) {
   isolation: isolate;
   padding-bottom: env(safe-area-inset-bottom, 0px);
   background-image: radial-gradient(ellipse at 65% 0%, var(--sht-raised), transparent 64%);
+}
+.match-panel.shanhetu-selecting {
+  display: flex;
+  overflow: hidden;
+  background: #101e1c;
+}
+.shanhetu-selecting .match-toolbar {
+  background: #192925;
+  color: #f9eed7;
+}
+.shanhetu-selecting .shanhetu-panel {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  padding: 0;
+}
+.shanhetu-panel[data-phase='selection'] > :not(.shanhetu-draft) {
+  display: none;
+}
+.shanhetu-draft {
+  --hd-seat-columns: 2;
+  --hd-compact-seats: 2;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+.shanhetu-draft .hd-self {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.shanhetu-draft .hd-self h2 {
+  margin: 0;
+  font-size: inherit;
+  line-height: 1.35;
+}
+.shanhetu-draft-seal {
+  width: clamp(30px, 5vw, 42px);
+  aspect-ratio: 1;
+  object-fit: contain;
+}
+.shanhetu-draft .hd-scroll-heading .hd-card-meta {
+  display: table;
+  position: static;
+  margin-top: 3px;
+}
+.shanhetu-draft .hd-card-mark {
+  top: auto;
+  right: 3px;
+  bottom: 32px;
+}
+.shanhetu-draft .hd-skills p {
+  white-space: pre-line;
+}
+.shanhetu-draft .hd-tactic-trigger {
+  align-items: flex-start;
+  border-color: var(--hd-line);
+  color: var(--hd-gold);
+}
+.shanhetu-draft .hd-tactic-dialog {
+  width: min(430px, calc(100% - 28px));
+  max-height: calc(100% - 28px);
+  padding: 16px;
+  border: 1px solid var(--hd-line);
+  border-radius: 10px;
+  background: #12342c;
+  color: var(--hd-ink);
+}
+.shanhetu-draft .hd-tactic-dialog::backdrop {
+  background: #061813c0;
+}
+.shanhetu-draft .hd-tactic-dialog .hd-skills {
+  margin: 12px 0;
+}
+.shanhetu-draft-factions {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+.shanhetu-draft-factions button[aria-pressed='true'] {
+  border-color: var(--hd-gold, #e5c471);
+  background: #31635a;
+}
+.shanhetu-draft .shanhetu-status {
+  /* Keep request feedback alongside the confirm button. */
+  color: inherit;
+  margin: 0;
+}
+.shanhetu-draft .shanhetu-status:empty {
+  display: none;
+}
+@media (max-width: 500px) {
+  .shanhetu-draft .hd-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    justify-content: stretch;
+  }
+  .shanhetu-draft .hd-buttons {
+    justify-content: end;
+  }
 }
 .shanhetu-hud {
   padding: 8px clamp(12px, 3vw, 28px);
@@ -338,42 +438,41 @@ html[data-theme='night'] :is(.shanhetu-theme, .shanhetu-journey) {
 .shanhetu-story:empty {
   display: none;
 }
+.shanhetu-scene {
+  min-height: clamp(140px, 23vw, 222px);
+  isolation: isolate;
+  overflow: hidden;
+  background: #18271f;
+}
 .shanhetu-scene:is([data-scene='event'], [data-scene='camp'], [data-scene='shop']) {
-  --sht-scene-art: url('/assets/shanhetu-encounter.webp');
   min-height: clamp(210px, 35vw, 336px);
-  background:
-    linear-gradient(0deg, #0d211b 4%, #14251b9e 55%, #101d1a0d 93%),
-    var(--sht-scene-art) 56% 54% / cover;
 }
-.shanhetu-scene[data-scene='shop'] {
-  --sht-scene-art: url('/assets/shanhetu-market.webp');
+.shanhetu-painting,
+:is(.shanhetu-scene, .shanhetu-launch-cover)::before {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
 }
-.shanhetu-scene[data-scene='camp'] {
-  --sht-scene-art: url('/assets/shanhetu-camp.webp');
+.shanhetu-painting {
+  z-index: -2;
+  object-fit: cover;
+  object-position: 50% 48%;
 }
-.shanhetu-scene:is([data-scene='selection'], [data-scene='won'], [data-scene='lost']) {
-  min-height: clamp(146px, 22vw, 224px);
-  background:
-    linear-gradient(0deg, #10251d 3%, #10251d95 58%, #101d1a22 96%),
-    url('/assets/shanhetu-pass.webp') 52% 46% / cover;
+:is(.shanhetu-scene, .shanhetu-launch-cover)::before {
+  content: '';
+  z-index: -1;
+  background: linear-gradient(0deg, #0b1916ed, #0b19167a 48%, #0b19162b);
 }
-.shanhetu-scene:is(
-    [data-scene='selection'],
-    [data-scene='won'],
-    [data-scene='lost'],
-    [data-scene='event'],
-    [data-scene='camp'],
-    [data-scene='shop']
-  )
-  :is(.shanhetu-story, .shanhetu-kicker, h2) {
+.shanhetu-scene :is(.shanhetu-story, .shanhetu-kicker, h2) {
   color: #fff0d2;
-  text-shadow: 0 2px 14px #0d211b;
+  text-shadow: 0 2px 10px #0d211b;
 }
 .shanhetu-scene[data-scene='reward'] {
   min-height: 124px;
   align-items: center;
   text-align: center;
-  background: radial-gradient(ellipse at 50% 100%, var(--sht-lotus-hi), transparent 68%);
   border-bottom: 1px solid var(--sht-stripe);
 }
 
@@ -515,9 +614,7 @@ html[data-theme='night'] :is(.shanhetu-theme, .shanhetu-journey) {
   height: clamp(334px, min(47dvh, 42vw), 504px);
   isolation: isolate;
   border-inline: 1px solid var(--sht-rule);
-  background:
-    var(--sht-paper-wash),
-    url('/assets/shanhetu-pass.webp') center 50% / cover var(--sht-paper);
+  background: var(--sht-paper-wash), var(--sht-paper);
   box-shadow:
     inset 0 0 54px var(--sht-shade),
     0 10px 18px -12px var(--sht-shade);
@@ -545,18 +642,36 @@ html[data-theme='night'] :is(.shanhetu-theme, .shanhetu-journey) {
 }
 .shanhetu-icon {
   display: inline-block;
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
   flex: none;
-  overflow: visible;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.4;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+  background-image: url('/assets/shanhetu/shanhetu-icons-atlas.webp');
+  background-repeat: no-repeat;
+  vertical-align: middle;
 }
-.shanhetu-icon-accent {
-  stroke: var(--sht-icon-accent, var(--sht-jade));
+.shanhetu-opening-choice .shanhetu-icon {
+  width: 42px;
+  height: 42px;
+}
+.shanhetu-theme :is(.shanhetu-quiet, .shanhetu-primary) {
+  min-height: 44px;
+  border-radius: 5px;
+  box-shadow:
+    inset 0 0 0 2px #92723d22,
+    inset 0 1px #f2d59845;
+}
+.shanhetu-quiet:has(.shanhetu-icon),
+.shanhetu-stat small:has(.shanhetu-icon) {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.shanhetu-theme :is(.shanhetu-quiet, .shanhetu-primary):focus-visible {
+  outline: 2px solid var(--sht-gold);
+  outline-offset: 2px;
+}
+.shanhetu-theme :is(.shanhetu-quiet, .shanhetu-primary):disabled {
+  opacity: 0.58;
 }
 .shanhetu-pin {
   width: 44px;
@@ -624,7 +739,6 @@ html[data-theme='night'] :is(.shanhetu-theme, .shanhetu-journey) {
 }
 .shanhetu-pin[data-location-kind='boss'] {
   color: #fff2d2;
-  --sht-icon-accent: #f3c284;
 }
 .shanhetu-pin[data-location-kind='boss']::before {
   background: var(--sht-accent);
@@ -797,9 +911,6 @@ html[data-theme='night'] :is(.shanhetu-theme, .shanhetu-journey) {
   grid-template-columns: 1fr;
   max-width: 720px;
 }
-.shanhetu-options[data-layout='heroes'] {
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 120px), 1fr));
-}
 .shanhetu-option {
   display: grid;
   align-content: start;
@@ -864,34 +975,6 @@ html[data-theme='night'] :is(.shanhetu-theme, .shanhetu-journey) {
 }
 .shanhetu-option[data-general] :is(strong, .shanhetu-option-description) {
   padding-inline: 4px;
-}
-.shanhetu-hero-portrait {
-  display: block;
-  height: clamp(96px, 14vw, 180px);
-  overflow: hidden;
-  border-radius: 4px;
-  background: var(--sht-portrait-face);
-}
-.shanhetu-hero-portrait img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: center 27%;
-}
-.shanhetu-hero-details {
-  grid-column: 1 / -1;
-  max-height: min(26dvh, 160px);
-  overflow-y: auto;
-  padding: 0 0 7px;
-  border-bottom: 1px solid var(--sht-line);
-  color: var(--sht-muted);
-  font-size: 14px;
-  white-space: pre-line;
-  overflow-wrap: anywhere;
-}
-.shanhetu-hero-details:empty {
-  display: none;
 }
 .shanhetu-option-type,
 .shanhetu-price {
@@ -1003,10 +1086,12 @@ html[data-theme='night'] :is(.shanhetu-theme, .shanhetu-journey) {
   width: 55px;
   height: 55px;
   margin: 1px auto 3px;
-  padding: 13px;
+  padding: 7px;
   border-radius: 50%;
   border: 1px solid var(--sht-bronze);
-  background: radial-gradient(circle at 30% 26%, var(--sht-panel), var(--sht-lotus));
+  background-origin: content-box;
+  background-clip: content-box;
+  background-color: var(--sht-panel);
   box-shadow:
     inset 0 0 0 3px var(--sht-panel),
     inset 0 0 0 4px var(--sht-stripe);
@@ -1223,7 +1308,7 @@ html[data-theme='night'] :is(.shanhetu-theme, .shanhetu-journey) {
 }
 .shanhetu-milestones > li {
   display: grid;
-  grid-template-columns: 48px minmax(0, 1fr);
+  grid-template-columns: 66px minmax(0, 1fr);
   gap: 12px;
   padding: 12px 0;
   border-top: 1px solid var(--sht-line);
@@ -1235,11 +1320,15 @@ html[data-theme='night'] :is(.shanhetu-theme, .shanhetu-journey) {
   align-items: baseline;
   color: var(--sht-gold);
   font-size: 12px;
+  white-space: nowrap;
 }
 .shanhetu-milestone-goal span:first-child {
   font:
     24px Georgia,
     serif;
+}
+.shanhetu-milestone-goal[data-open] span:first-child {
+  font-size: 17px;
 }
 .shanhetu-dialog summary {
   cursor: pointer;
@@ -1340,11 +1429,17 @@ html[data-theme='night'] :is(.shanhetu-theme, .shanhetu-journey) {
     grid-template-columns: minmax(70px, auto) minmax(0, 1fr);
     align-items: baseline;
   }
+  .shanhetu-opening-choice[data-opening-package] {
+    grid-template-columns: 42px minmax(0, 1fr);
+    column-gap: 10px;
+    align-items: start;
+  }
+  .shanhetu-opening-choice[data-opening-package] .shanhetu-icon {
+    grid-row: 1 / 3;
+    align-self: center;
+  }
   .shanhetu-launch-actions {
     width: 100%;
-  }
-  .shanhetu-options[data-layout='heroes'] {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .shanhetu-options[data-layout='rewards'] {
     grid-template-columns: minmax(0, 1fr);
@@ -1357,7 +1452,7 @@ html[data-theme='night'] :is(.shanhetu-theme, .shanhetu-journey) {
     width: 44px;
     height: 44px;
     margin-inline: 0;
-    padding: 9px;
+    padding: 5px;
   }
   .shanhetu-option[data-kind='reward'] strong {
     font-size: 20px;

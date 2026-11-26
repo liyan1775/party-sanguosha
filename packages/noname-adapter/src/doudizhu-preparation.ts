@@ -135,6 +135,9 @@ export class DoudizhuPreparation {
       nickname: s.nickname,
       revision: s.revision,
       candidates: [...s.candidates],
+      ...(!this.college && s.id === playerId && this.setup.generalSelections?.[playerId]
+        ? { pointed: this.setup.generalSelections[playerId] }
+        : {}),
       replacementsLeft: s.replacementsLeft,
       selected: s.selected,
       locked: s.locked,

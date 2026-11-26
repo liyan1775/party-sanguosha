@@ -1,5 +1,13 @@
 import type { DoudizhuPrivateState, RoomView } from '../../../packages/shared/src/contracts.js';
 import { element } from './ui.js';
+import { staticAsset } from './static-assets.js';
+import { loadRosterCatalog } from './custom-rosters.js';
+import {
+  draftBidControl,
+  draftCandidateGrid,
+  draftMeta,
+  focusDraftCandidate,
+} from './draft-controls.js';
 
 type Request = <T>(path: string, method?: string, body?: unknown) => Promise<T>;
 type Seat = DoudizhuPrivateState['seats'][number];
@@ -7,6 +15,9 @@ type General = {
   id: string;
   name: string;
   portrait: string;
+  draftPortrait?: string;
+  faction: string;
+  hp: string;
   skills: { name: string; description: string }[];
 };
 type SeatView = {
@@ -14,34 +25,47 @@ type SeatView = {
   tab: HTMLButtonElement;
   section: HTMLElement;
   list: HTMLElement;
-  cards: { id: string; button: HTMLButtonElement; image: HTMLImageElement; name: HTMLElement }[];
+  cards: {
+    id: string;
+    button: HTMLButtonElement;
+    image: HTMLImageElement;
+    name: HTMLElement;
+    meta: HTMLElement;
+    mark: HTMLElement;
+  }[];
 };
 
 /** Private choices stay outside the native executor and use the room's own session. */
 export function bindDoudizhuPanel(roomPath: string, request: Request) {
   const panel = document.createElement('section');
   panel.id = 'doudizhu-panel';
-  panel.className = 'doudizhu-panel';
+  panel.className = 'doudizhu-panel hero-draft';
   panel.hidden = true;
-  panel.innerHTML = `<header class="draft-heading"><div><h2 id="doudizhu-heading">叫分</h2><p id="doudizhu-task"></p></div><span id="doudizhu-deadline" class="draft-clock"></span></header>
-    <div id="doudizhu-progress" class="draft-progress" aria-label="报名席位与公开叫分"></div>
-    <nav id="doudizhu-tasks" class="draft-tasks" aria-label="本人、AI代理与队友候选"></nav>
-    <div class="draft-workspace"><section class="draft-pool"><div class="draft-pool-heading"><h3 id="doudizhu-seat-title"></h3><span id="doudizhu-quota"></span></div><div id="doudizhu-seats"></div><p id="doudizhu-wait" hidden></p></section>
-    <aside id="doudizhu-detail" class="draft-detail" aria-label="武将技能"><div class="draft-detail-heading"><h3 id="doudizhu-detail-name">查看武将</h3><button id="doudizhu-close-detail" type="button" class="button secondary">返回候选</button></div><div id="doudizhu-detail-skills"></div></aside></div>
-    <footer class="draft-actions"><div class="draft-feedback"><p id="doudizhu-status" role="status"></p><p id="doudizhu-error" role="alert" hidden></p></div><div id="doudizhu-bids" class="doudizhu-bids"></div><div id="doudizhu-choose-actions"><button id="doudizhu-show-detail" class="button secondary" type="button">技能</button><button id="doudizhu-replace" class="button secondary" type="button">换此将</button><button id="doudizhu-confirm" class="button primary" type="button">确认出战</button></div></footer>`;
+  panel.innerHTML = `<header class="hd-header">
+      <div id="doudizhu-self" class="hd-self"><h2 id="doudizhu-heading">叫分</h2><p id="doudizhu-task"></p></div>
+      <div id="doudizhu-progress" class="hd-seats" aria-label="出场座次与公开叫分"></div>
+      <div class="hd-metrics"><strong id="doudizhu-multiplier" class="hd-multiplier"></strong><span id="doudizhu-deadline" class="hd-clock" role="timer"></span></div>
+    </header>
+    <nav id="doudizhu-tasks" class="hd-tabs" aria-label="本人、AI代理与队友候选"></nav>
+    <div class="hd-workspace"><section class="hd-pool"><div class="draft-pool-heading"><h3 id="doudizhu-seat-title"></h3><span id="doudizhu-quota"></span></div><div id="doudizhu-seats"></div><p id="doudizhu-wait" hidden></p></section>
+    <aside id="doudizhu-detail" class="hd-scroll" aria-label="武将技能"><div class="hd-scroll-heading"><div><h3 id="doudizhu-detail-name">查看武将</h3><p id="doudizhu-detail-meta"></p><p id="doudizhu-detail-selection" class="hd-detail-selection"></p></div><button id="doudizhu-close-detail" type="button" class="hd-button hd-close-skills">返回候选</button></div><div id="doudizhu-detail-skills" class="hd-skills" tabindex="0"></div></aside></div>
+    <footer class="hd-actions"><div class="hd-feedback"><p id="doudizhu-status" role="status"></p><p id="doudizhu-error" class="hd-error" role="alert" hidden></p><p id="doudizhu-submit-error" class="hd-error" role="alert" hidden></p></div><div class="hd-buttons"><button id="doudizhu-show-detail" class="hd-button hd-show-skills" type="button" aria-controls="doudizhu-detail" aria-expanded="false">查看技能</button><div id="doudizhu-bids" class="hd-buttons" hidden></div><button id="doudizhu-return-bid" class="hd-button hd-primary" type="button" hidden></button><div id="doudizhu-choose-actions" class="hd-buttons"><button id="doudizhu-replace" class="hd-button" type="button">换此将</button><button id="doudizhu-confirm" class="hd-button hd-primary" type="button">确认出战</button></div></div></footer>`;
   element('#game-frame-container').append(panel);
   const find = <T extends HTMLElement = HTMLElement>(id: string) => panel.querySelector<T>(id)!;
   const heading = find('#doudizhu-heading'),
     task = find('#doudizhu-task'),
     deadline = find('#doudizhu-deadline');
   const status = find('#doudizhu-status'),
-    error = find('#doudizhu-error'),
+    readError = find('#doudizhu-error'),
+    submitError = find('#doudizhu-submit-error'),
     bids = find('#doudizhu-bids');
   const seats = find('#doudizhu-seats'),
     tasks = find('#doudizhu-tasks'),
     progress = find('#doudizhu-progress');
   const detail = find('#doudizhu-detail'),
     skills = find('#doudizhu-detail-skills');
+  const returnBid = find<HTMLButtonElement>('#doudizhu-return-bid');
+  const closeDetail = find<HTMLButtonElement>('#doudizhu-close-detail');
   const confirm = find<HTMLButtonElement>('#doudizhu-confirm');
   const replace = find<HTMLButtonElement>('#doudizhu-replace');
   const showDetail = find<HTMLButtonElement>('#doudizhu-show-detail');
@@ -85,15 +109,25 @@ export function bindDoudizhuPanel(roomPath: string, request: Request) {
         Number(controllable(b)) - Number(controllable(a)),
     );
   const current = () => allSeats().find((s) => s.id === activeSeat);
+  const bidActor = () =>
+    state?.preparation.phase === 'bidding'
+      ? state.seats.find((seat) => seat.id === state?.preparation.bidSeatId)
+      : undefined;
   const expired = () =>
     !!state && state.preparation.phase !== 'ready' && performance.now() >= expiresAt;
 
+  let clock: ReturnType<typeof setTimeout> | undefined;
   function updateClock() {
-    if (!state || panel.hidden) return;
+    clearTimeout(clock);
+    if (!state || panel.hidden || stopped) return;
     const ready = state.preparation.phase === 'ready';
-    const seconds = Math.max(0, Math.ceil((expiresAt - performance.now()) / 1000));
-    deadline.textContent = ready ? '正在载入' : seconds ? `${seconds} 秒` : '规则端确认中';
+    const remaining = expiresAt - performance.now();
+    const seconds = Math.max(0, Math.ceil(remaining / 1000));
+    const text = ready ? '正在载入' : seconds ? `${seconds} 秒` : '规则端确认中';
+    if (deadline.textContent !== text) deadline.textContent = text;
     deadline.classList.toggle('is-urgent', !ready && seconds <= 10);
+    if (!ready && seconds)
+      clock = setTimeout(updateClock, Math.max(1, remaining - (seconds - 1) * 1000));
     if (!ready && !seconds) {
       confirm.disabled = true;
       replace.disabled = true;
@@ -108,6 +142,7 @@ export function bindDoudizhuPanel(roomPath: string, request: Request) {
   }
   function updateViews() {
     const legal = new Set(ordered().map((s) => s.id));
+    tasks.hidden = legal.size < 2;
     for (const [id, view] of views)
       if (!legal.has(id)) {
         view.tab.remove();
@@ -120,17 +155,18 @@ export function bindDoudizhuPanel(roomPath: string, request: Request) {
       if (!view) {
         const tab = document.createElement('button');
         tab.type = 'button';
-        tab.className = 'draft-task';
+        tab.className = 'draft-task hd-button';
         tab.dataset.seat = seat.id;
         tab.onclick = () => {
           activeSeat = seat.id;
+          detailOpen = false;
           paint();
         };
         const section = document.createElement('section');
         section.className = 'doudizhu-seat';
         section.dataset.seat = seat.id;
         const list = document.createElement('div');
-        list.className = 'doudizhu-candidates';
+        list.className = 'doudizhu-candidates hd-grid';
         section.append(list);
         view = { seat, tab, section, list, cards: [] };
         views.set(seat.id, view);
@@ -142,10 +178,9 @@ export function bindDoudizhuPanel(roomPath: string, request: Request) {
       view.tab.setAttribute('aria-pressed', String(seat.id === activeSeat));
       view.tab.disabled = busy;
       view.section.hidden = seat.id !== activeSeat;
-      view.list.style.setProperty(
-        '--draft-columns',
-        String(seat.candidates.length > 6 ? 5 : seat.candidates.length),
-      );
+      const { columns, rows } = draftCandidateGrid(seat.candidates.length);
+      view.list.style.setProperty('--hd-columns', String(columns));
+      view.list.style.setProperty('--hd-rows', String(rows));
       if (seat.selected && !selected.has(seat.id)) selected.set(seat.id, seat.selected);
       if (!seat.candidates.includes(selected.get(seat.id) ?? '')) selected.delete(seat.id);
       for (let index = 0; index < seat.candidates.length; index++) {
@@ -154,12 +189,19 @@ export function bindDoudizhuPanel(roomPath: string, request: Request) {
         if (!card) {
           const button = document.createElement('button');
           button.type = 'button';
-          button.className = 'draft-general';
+          button.className = 'draft-general hd-card';
           const image = document.createElement('img');
           image.alt = '';
+          image.decoding = 'async';
+          image.className = 'hd-portrait';
           const label = document.createElement('strong');
-          button.append(image, label);
-          card = { id: '', button, image, name: label };
+          label.className = 'hd-card-name';
+          const meta = document.createElement('span');
+          meta.className = 'hd-card-meta';
+          const mark = document.createElement('span');
+          mark.className = 'hd-card-mark';
+          button.append(image, label, meta, mark);
+          card = { id: '', button, image, name: label, meta, mark };
           const slot = card,
             ownView = view;
           button.onclick = () => inspect(ownView.seat, slot.id);
@@ -175,31 +217,91 @@ export function bindDoudizhuPanel(roomPath: string, request: Request) {
           'aria-label',
           `${name(id)}${seat.selected === id ? '，已锁定出战' : ''}，${!controllable(seat) || seat.locked ? '只读查看技能' : '查看技能并选择'}`,
         );
-        card.name.textContent = `${name(id)}${seat.selected === id ? ' · 已锁定' : ''}`;
-        card.image.hidden = !general?.portrait;
-        if (general?.portrait && card.image.getAttribute('src') !== general.portrait)
-          card.image.src = general.portrait;
+        card.name.textContent = name(id);
+        card.meta.hidden = !general;
+        card.meta.textContent = general ? draftMeta(general.faction, general.hp) : '';
+        card.meta.dataset.faction = general?.faction ?? '';
+        const locked = seat.selected === id;
+        card.mark.hidden = !locked && seat.pointed !== id;
+        card.mark.textContent = locked ? (seat.id === playerId ? '已锁定' : '队友已选') : '点将';
+        card.mark.dataset.mark = locked ? (seat.id === playerId ? 'locked' : 'teammate') : 'point';
+        const portrait = general?.draftPortrait ?? general?.portrait;
+        card.image.hidden = !portrait;
+        if (portrait && card.image.dataset.portrait !== portrait) {
+          const image = card.image;
+          image.dataset.portrait = portrait;
+          image.onerror = () => {
+            if (general?.draftPortrait && image.getAttribute('src') === general.draftPortrait)
+              image.src = general.portrait;
+          };
+          image.src = portrait;
+        }
       }
       while (view.cards.length > seat.candidates.length) view.cards.pop()!.button.remove();
     }
   }
   function paintProgress() {
     const p = state!.preparation;
-    for (const [index, seat] of room.players.entries()) {
+    const isCollege = room.settings.mode === 'college';
+    const bidOrder = p.phase === 'bidding' || !p.activeSeatIds.length;
+    const teamOf = (id: string) => (room.series?.teams[1].includes(id) ? 'B' : 'A');
+    const ids = bidOrder
+      ? room.players.map((seat) => seat.id)
+      : [
+          ...p.activeSeatIds,
+          ...room.players.map((seat) => seat.id).filter((id) => !p.activeSeatIds.includes(id)),
+        ];
+    const myIndex = p.activeSeatIds.indexOf(playerId ?? '');
+    const myRole = bidOrder
+      ? p.bidSeatId === playerId
+        ? '叫分中'
+        : '叫分阶段'
+      : myIndex === 0
+        ? '地主'
+        : myIndex > 0
+          ? '农民'
+          : '本局待命';
+    const registration = room.players.findIndex((seat) => seat.id === playerId) + 1;
+    heading.textContent = [
+      '你',
+      isCollege ? `${teamOf(playerId ?? '')}队` : '',
+      bidOrder || myIndex < 0 ? `报名${registration}位` : `${myIndex + 1}号位`,
+      myRole,
+    ]
+      .filter(Boolean)
+      .join(' · ');
+    find('#doudizhu-self').dataset.tone = isCollege
+      ? teamOf(playerId ?? '') === 'A'
+        ? 'blue'
+        : 'amber'
+      : myIndex === 0
+        ? 'red'
+        : 'jade';
+    find('#doudizhu-multiplier').textContent = `${p.highestBid} 倍`;
+    progress.style.setProperty('--hd-compact-seats', String(ids.length));
+    for (const [order, id] of ids.entries()) {
+      const index = room.players.findIndex((seat) => seat.id === id);
+      const seat = room.players[index];
+      if (!seat) continue;
       let chip = chips.get(seat.id);
       if (!chip) {
         chip = document.createElement('div');
-        chip.className = 'draft-seat-progress';
+        chip.className = 'draft-seat-progress hd-seat';
         chip.append(document.createElement('strong'), document.createElement('span'));
-        progress.append(chip);
         chips.set(seat.id, chip);
       }
-      chip.dataset.team = room.settings.mode === 'college' ? (index % 2 ? 'b' : 'a') : '';
+      const existing = progress.children.item(order);
+      if (existing !== chip) progress.insertBefore(chip, existing);
+      chip.dataset.self = String(seat.id === playerId);
+      chip.dataset.tone = isCollege
+        ? teamOf(seat.id) === 'A'
+          ? 'blue'
+          : 'amber'
+        : p.landlordId === seat.id
+          ? 'red'
+          : 'jade';
       chip.classList.toggle('is-current', p.bidSeatId === seat.id);
-      const label =
-        room.settings.mode === 'college'
-          ? `${index % 2 ? 'B' : 'A'}队·报名${index + 1}位`
-          : `报名${index + 1}位`;
+      const label = `${isCollege ? `${teamOf(seat.id)}队 · ` : ''}${bidOrder ? `报名${index + 1}位 · ` : ''}`;
       chip.querySelector('strong')!.textContent =
         `${label} ${seat.nickname}${seat.id === playerId ? '（你）' : ''}`;
       const bid = p.bids.find((b) => b.seatId === seat.id);
@@ -209,7 +311,7 @@ export function bindDoudizhuPanel(roomPath: string, request: Request) {
             ? '正在叫分'
             : bid
               ? bid.bid
-                ? `${bid.bid} 倍`
+                ? `叫 ${bid.bid} 倍`
                 : '不叫'
               : '等待叫分'
           : p.landlordId === seat.id
@@ -226,6 +328,9 @@ export function bindDoudizhuPanel(roomPath: string, request: Request) {
     if (key !== detailKey) {
       detailKey = key;
       find('#doudizhu-detail-name').textContent = name(id);
+      const meta = find('#doudizhu-detail-meta');
+      meta.textContent = general ? draftMeta(general.faction, general.hp) : '';
+      meta.dataset.faction = general?.faction ?? '';
       skills.replaceChildren();
       for (const skill of general?.skills ?? []) {
         const line = document.createElement('section'),
@@ -239,8 +344,21 @@ export function bindDoudizhuPanel(roomPath: string, request: Request) {
       if (!general) skills.textContent = id ? '正在载入技能说明…' : '选中候选查看技能。';
       skills.scrollTop = 0;
     }
+    const selection = find('#doudizhu-detail-selection');
+    selection.textContent = !seat
+      ? ''
+      : seat.locked
+        ? seat.selected === id
+          ? '已锁定'
+          : `已锁定：${name(seat.selected)}`
+        : !controllable(seat)
+          ? '真人队友 · 只读'
+          : selected.has(seat.id) && state?.preparation.phase === 'choosing'
+            ? `待确认：${name(id)}`
+            : '未预选';
     detail.hidden = !seat;
     panel.classList.toggle('detail-open', detailOpen && !!seat);
+    showDetail.setAttribute('aria-expanded', String(detailOpen && !!seat));
     showDetail.hidden = !seat;
   }
   function paint() {
@@ -249,18 +367,14 @@ export function bindDoudizhuPanel(roomPath: string, request: Request) {
       seat = current();
     updateViews();
     paintProgress();
-    heading.textContent =
-      p.phase === 'bidding'
-        ? '先看候选，再叫分'
-        : p.phase === 'ready'
-          ? '选将完成'
-          : '选择出战武将';
     task.textContent =
       seat?.role === 'landlord' && seat.id !== playerId && controllable(seat)
-        ? `替 ${seat.nickname} 选将 · 本局由你操作地主`
+        ? '本局由你代理地主'
         : p.phase === 'bidding'
-          ? `当前 ${p.highestBid} 倍 · ${room.players.find((s) => s.id === p.bidSeatId)?.nickname ?? '下一位'}叫分`
-          : `本局 ${p.highestBid} 倍 · ${p.phase === 'ready' ? '正在准备原生牌桌' : '确认后锁定出战武将'}`;
+          ? '先看候选，再叫分'
+          : p.phase === 'ready'
+            ? '正在准备牌桌'
+            : '选择出战武将';
     find('#doudizhu-seat-title').textContent = seat
       ? `${position(seat.id)} · ${seat.role === 'landlord' ? '地主' : seat.role === 'farmer' ? '农民' : '叫分候选'} · ${who(seat)} · ${seat.candidates.length}${controllable(seat) ? '选1' : '将'}`
       : '本局待命';
@@ -279,7 +393,12 @@ export function bindDoudizhuPanel(roomPath: string, request: Request) {
         ? '选将已完成，正在连接同一场比赛。'
         : '队友担任地主，本局你在待命位。选将结束后进入公开牌桌。';
     paintDetail(seat);
-    const actor = state.seats.find((s) => s.id === p.bidSeatId);
+    const actor = bidActor();
+    const control = draftBidControl(actor?.id, seat?.id);
+    bids.hidden = control !== 'bid';
+    returnBid.hidden = control !== 'return';
+    returnBid.disabled = busy;
+    returnBid.textContent = actor ? `返回为 ${actor.nickname} 叫分` : '';
     const nextBidKey = `${p.phase}/${actor?.id}/${p.highestBid}/${state.maxBid}`;
     if (nextBidKey !== bidKey) {
       bidKey = nextBidKey;
@@ -291,9 +410,13 @@ export function bindDoudizhuPanel(roomPath: string, request: Request) {
         ]) {
           const button = document.createElement('button');
           button.type = 'button';
-          button.className = `button ${n ? 'primary' : 'secondary'}`;
+          button.className = 'hd-button';
+          button.dataset.bid = String(n);
           button.textContent = n ? `叫 ${n} 倍` : '不叫';
-          button.onclick = () => void submit(actor, 'bid', n);
+          button.onclick = () => {
+            const latest = bidActor();
+            if (latest) void submit(latest, 'bid', n);
+          };
           bids.append(button);
         }
     }
@@ -302,7 +425,7 @@ export function bindDoudizhuPanel(roomPath: string, request: Request) {
     const choosing = p.phase === 'choosing' && controllable(seat);
     find('#doudizhu-choose-actions').hidden = p.phase === 'bidding' && !!actor;
     replace.hidden = !choosing || !!seat?.locked || seat?.replacementsLeft === 0;
-    replace.textContent = `换此将（余${seat?.replacementsLeft ?? 0}）`;
+    replace.textContent = `换此将（余 ${seat?.replacementsLeft ?? 0} 次）`;
     replace.disabled = busy || expired() || !seat || !selected.has(seat.id);
     confirm.hidden = !choosing || !!seat?.locked;
     confirm.disabled = busy || expired() || !seat || !selected.has(seat.id);
@@ -353,11 +476,12 @@ export function bindDoudizhuPanel(roomPath: string, request: Request) {
   }
   async function submit(seat: Seat, action: string, value?: string | number) {
     if (!state || busy || expired() || !controllable(seat)) return;
+    if (action === 'bid' && (seat.id !== activeSeat || seat.id !== bidActor()?.id)) return;
     const id = currentId;
     mutation++;
     busy = true;
     paint();
-    error.hidden = true;
+    submitError.hidden = true;
     try {
       const updated = await request<DoudizhuPrivateState>(`${roomPath}/me/doudizhu`, 'POST', {
         id: state.preparation.id,
@@ -370,8 +494,8 @@ export function bindDoudizhuPanel(roomPath: string, request: Request) {
       if (currentId === id) accept(updated);
     } catch (cause) {
       if (id === currentId) {
-        error.hidden = false;
-        error.textContent = cause instanceof Error ? cause.message : '操作未能同步，请重试。';
+        submitError.hidden = false;
+        submitError.textContent = cause instanceof Error ? cause.message : '操作未能同步，请重试。';
       }
     } finally {
       busy = false;
@@ -389,20 +513,34 @@ export function bindDoudizhuPanel(roomPath: string, request: Request) {
     const seat = current();
     if (seat) void submit(seat, 'replace', selected.get(seat.id));
   };
+  returnBid.onclick = () => {
+    const actor = bidActor();
+    if (!actor || busy) return;
+    activeSeat = actor.id;
+    detailOpen = false;
+    paint();
+    views.get(actor.id)?.tab.focus({ preventScroll: true });
+  };
+  function closeSkills() {
+    detailOpen = false;
+    const seat = current();
+    paintDetail(seat);
+    const cards = seat ? views.get(seat.id)?.cards : undefined;
+    const selectedId = seat ? selected.get(seat.id) : undefined;
+    focusDraftCandidate(
+      cards?.find((card) => card.id === selectedId)?.button ?? cards?.[0]?.button,
+    );
+  }
   showDetail.onclick = () => {
     detailOpen = true;
     paintDetail(current());
+    closeDetail.focus({ preventScroll: true });
   };
-  find('#doudizhu-close-detail').onclick = () => {
-    detailOpen = false;
-    paintDetail(current());
-    showDetail.focus();
-  };
+  closeDetail.onclick = closeSkills;
   panel.addEventListener('keydown', (event) => {
     if (event.key === 'Escape' && detailOpen) {
-      detailOpen = false;
-      paintDetail(current());
-      showDetail.focus();
+      event.preventDefault();
+      closeSkills();
     }
   });
   async function read() {
@@ -420,6 +558,7 @@ export function bindDoudizhuPanel(roomPath: string, request: Request) {
         updated.preparation.phaseId !== room.doudizhu?.phaseId
       )
         return;
+      readError.hidden = true;
       if (
         state &&
         (updated.preparation.bids.length < state.preparation.bids.length ||
@@ -434,9 +573,9 @@ export function bindDoudizhuPanel(roomPath: string, request: Request) {
         accept(updated);
       }
     } catch (cause) {
-      if (id === currentId) {
-        error.hidden = false;
-        error.textContent =
+      if (id === currentId && at === mutation) {
+        readError.hidden = false;
+        readError.textContent =
           cause instanceof Error ? cause.message : '正在恢复赛前选择，原期限继续。';
       }
     } finally {
@@ -444,13 +583,12 @@ export function bindDoudizhuPanel(roomPath: string, request: Request) {
       if (!panel.hidden && !stopped && currentId) timer = setTimeout(() => void read(), 800);
     }
   }
-  const clock = setInterval(updateClock, 250);
   window.addEventListener(
     'pagehide',
     () => {
       stopped = true;
       clearTimeout(timer);
-      clearInterval(clock);
+      clearTimeout(clock);
     },
     { once: true },
   );
@@ -483,17 +621,26 @@ export function bindDoudizhuPanel(roomPath: string, request: Request) {
         views.clear();
         for (const chip of chips.values()) chip.remove();
         chips.clear();
-        error.hidden = true;
+        readError.hidden = submitError.hidden = true;
         clearTimeout(timer);
       }
-      if (!id) return;
-      if (catalogPreset !== snapshot.settings.generalPreset) {
-        const preset = snapshot.settings.generalPreset;
+      if (!id) {
+        clearTimeout(clock);
+        return;
+      }
+      const preset = snapshot.settings.customRoster ? 'custom' : snapshot.settings.generalPreset;
+      if (catalogPreset !== preset) {
         catalogPreset = preset;
-        void request<{ characters: General[] }>(`/assets/generals-${preset}.json`)
+        const catalog =
+          preset === 'custom'
+            ? loadRosterCatalog()
+            : request<{ characters: General[] }>(
+                staticAsset(`/assets/generals-${preset}.json`),
+              ).then((data) => data.characters);
+        void catalog
           .then((data) => {
             if (catalogPreset !== preset) return;
-            generals = new Map(data.characters.map((g) => [g.id, g]));
+            generals = new Map(data.map((g) => [g.id, g]));
             detailKey = '';
             paint();
           })

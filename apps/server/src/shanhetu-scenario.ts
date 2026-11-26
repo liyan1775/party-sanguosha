@@ -82,6 +82,7 @@ export function createShanhetuScenario(
         group,
         hp,
         maxHp,
+        skills: details.skills,
         description: `${({ wei: '魏', shu: '蜀', wu: '吴', qun: '群', shen: '神', jin: '晋' } as Record<string, string>)[group]} · ${hp}/${maxHp}体力\n${details.skills.map((skill) => `${skill.name}：${skill.description}`).join('\n')}`,
       }),
     );

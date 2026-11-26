@@ -85,10 +85,12 @@ test('库加载前拒绝超限文件，主文件丢失但有备份时不初始�
   const file = join(directory, 'library.json');
   writeFileSync(file, Buffer.alloc(16 * 1024 * 1024 + 1, 32));
   assert.throws(() => new RosterLibrary(directory), /16 MiB/);
-  rmSync(file);
-  writeFileSync(`${file}.bak`, 'backup remains');
-  assert.throws(() => new RosterLibrary(directory), /主文件缺失/);
-  assert.equal(readFileSync(`${file}.bak`, 'utf8'), 'backup remains');
+  const missing = mkdtempSync(join(tmpdir(), 'party-rosters-missing-'));
+  t.after(() => rmSync(missing, { recursive: true, force: true }));
+  const backup = join(missing, 'library.json.bak');
+  writeFileSync(backup, 'backup remains');
+  assert.throws(() => new RosterLibrary(missing), /主文件缺失/);
+  assert.equal(readFileSync(backup, 'utf8'), 'backup remains');
 });
 
 test('归档后重启仍能读取旧修订及摘要，禁止新的房间应用', (t) => {

@@ -1,5 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
+import { once } from 'node:events';
+import { request as httpRequest } from 'node:http';
 import { createPartyServer } from '../apps/server/src/server.js';
 import { fileURLToPath } from 'node:url';
 import type { TestContext } from 'node:test';
@@ -126,11 +129,12 @@ test('HTTP：转交和离线接任逐次验证本房会话，旧房主和过期�
   assert.equal(room.session(memberCookie.slice('party_player='.length))?.id, member.playerId);
 });
 
-async function fixture(t: TestContext, adapter?: EngineAdapter) {
+async function fixture(t: TestContext, adapter?: EngineAdapter, buildId = 'fixture-build') {
   const party = createPartyServer({
     port: 0,
     webRoot: fileURLToPath(new URL('../apps/web/', import.meta.url)),
     publicUrl: 'http://192.168.1.100:3000',
+    buildId,
     ...(adapter ? { adapter } : {}),
   });
   await new Promise<void>((resolve) => party.server.listen(0, '127.0.0.1', resolve));
@@ -190,6 +194,7 @@ test('HTTP 快捷开桌只发布完整预设，原会话并发重试只建一次
         code: first.room.code,
         ownerNickname: '快捷房主',
         mode: 'doudizhu',
+        generalPreset: 'advanced',
         playerCount: 3,
         humanCount: 1,
         botCount: 2,
@@ -198,6 +203,16 @@ test('HTTP 快捷开桌只发布完整预设，原会话并发重试只建一次
     ],
   ]);
   assert.deepEqual(await (await request('/api/events?transport=poll')).json(), notices[0]);
+  const guarded = await request(
+    '/api/rooms/preset',
+    'POST',
+    { nickname: '误触', presetId: 'shanhetu-solo', requireUnseated: true },
+    cookie,
+  );
+  assert.equal(guarded.status, 409);
+  assert.equal((await guarded.json()).error.roomCode, first.room.code);
+  assert.equal(notices.length, 1, '已入座的首页请求不会更改原桌或发布新快照');
+  assert.deepEqual(party.lobby.list(), notices[0]);
   const solo = await quick('shanhetu-solo', 'solo', true);
   assert.equal(solo.status, 200);
   const switched = await solo.json();
@@ -392,9 +407,13 @@ test('HTTP 同源白名单提供两张兹白 WebP，不开放任意素材路径'
     assert.equal(head.status, 200);
     assert.equal(head.headers.get('content-type'), 'image/webp');
     assert.equal(head.headers.get('cross-origin-resource-policy'), 'same-origin');
-    assert.equal(head.headers.get('cache-control'), 'public, max-age=3600');
+    assert.equal(head.headers.get('cache-control'), 'no-cache');
     const file = Buffer.from(await (await request(url)).arrayBuffer());
     assert.equal(file.toString('ascii', 8, 12), 'WEBP');
+    const digest = createHash('sha256').update(file).digest('hex');
+    const fingerprinted = await request(`${url}?v=${digest}`, 'HEAD');
+    assert.equal(fingerprinted.headers.get('cache-control'), 'public, max-age=31536000, immutable');
+    assert.equal(fingerprinted.headers.get('etag'), head.headers.get('etag'));
   }
   assert.equal((await request('/assets/zibai-other.webp')).status, 404);
 });
@@ -480,7 +499,7 @@ test('HTTP：玩家创建房间、房主参赛、跨房间权限隔离与 AI 管
 });
 
 test('HTTP：大厅点将按本房会话授权，同时争抢只保留一份，公开快照不含偏好', async (t) => {
-  const { request, create } = await fixture(t);
+  const { party, base, request, create } = await fixture(t);
   const owner = await create('房主');
   const other = await create('另一桌');
   const path = `/api/rooms/${owner.data.room.code}`;
@@ -520,6 +539,14 @@ test('HTTP：大厅点将按本房会话授权，同时争抢只保留一份，�
     ),
   );
   assert.equal(choices.filter((choice) => choice.selected === 'zhaoyun').length, 1);
+  assert.equal((await (await request(path)).json()).room.phase, 'waiting');
+  const stop = await fetch(base + '/api/shutdown-if-idle', {
+    method: 'POST',
+    headers: { 'X-Party-Control': party.controlToken },
+  });
+  assert.equal(stop.status, 409);
+  assert.match((await stop.json()).error.message, /已开放点将且仍有真人入座/);
+  assert.equal(party.server.listening, true);
   assert.equal(JSON.stringify(await (await request(path)).json()).includes('zhaoyun'), false);
   const winner = [owner.cookie, friendCookie][
     raced.findIndex((response) => response.status === 200)
@@ -599,6 +626,8 @@ test('HTTP：只有持有当前实例本机控制凭据才能停止服务', asyn
   const health = await (await fetch(base + '/api/health')).json();
   assert.equal(health.app, 'party-sanguosha');
   assert.equal(health.instanceId, party.instanceId);
+  assert.equal(health.buildId, 'fixture-build');
+  assert.equal(health.conditionalShutdown, true);
   assert.equal(JSON.stringify(health).includes(party.controlToken), false);
   const rejected = await fetch(base + '/api/shutdown', {
     method: 'POST',
@@ -611,4 +640,95 @@ test('HTTP：只有持有当前实例本机控制凭据才能停止服务', asyn
   });
   assert.equal(stopped.status, 200);
   assert.equal(party.server.listening, false);
+});
+
+test('HTTP：有真人的开局和对局始终拒绝自动停机', async (t) => {
+  let finishLoading!: () => void;
+  const loading = new Promise<void>((resolve) => (finishLoading = resolve));
+  t.after(finishLoading);
+  const adapter: EngineAdapter = {
+    status: () => ({ id: 'noname', ready: true, message: '' }),
+    start: () => loading,
+  };
+  const { party, base, request } = await fixture(t, adapter);
+  const created = await request('/api/rooms/preset', 'POST', {
+    nickname: '房主',
+    presetId: 'duel-2',
+    fillBots: true,
+  });
+  assert.equal(created.status, 201);
+  const {
+    room: { code },
+  } = await created.json();
+  const room = party.lobby.get(code);
+  const token = created.headers.get('set-cookie')!.match(/party_player=([^;]+)/)![1]!;
+  room.connect(token);
+  room.setReady(token, true);
+  const starting = room.start(token);
+  const conditional = () =>
+    fetch(base + '/api/shutdown-if-idle', {
+      method: 'POST',
+      headers: { 'X-Party-Control': party.controlToken },
+    });
+  for (const [phase, reason] of [
+    ['starting', /选将/],
+    ['playing', /对局/],
+  ] as const) {
+    assert.equal(room.snapshot().phase, phase);
+    const rejected = await conditional();
+    assert.equal(rejected.status, 409);
+    assert.match((await rejected.json()).error.message, reason);
+    assert.equal(party.server.listening, true);
+    finishLoading();
+    await starting;
+  }
+});
+
+test('HTTP：保护等待状态的山河图征程，空闲停机后已在读取的开局请求不能继续', async (t) => {
+  const adapter: EngineAdapter = {
+    status: () => ({ id: 'noname', ready: true, message: '', shanhetu: true }),
+    async start() {},
+  };
+  const { party, base, request } = await fixture(t, adapter);
+  const created = await request('/api/rooms/preset', 'POST', {
+    nickname: '旅人',
+    presetId: 'shanhetu-solo',
+  });
+  assert.equal(created.status, 201);
+  const {
+    room: { code },
+  } = await created.json();
+  const cookie = created.headers.get('set-cookie')!.split(';')[0]!;
+  const room = party.lobby.get(code);
+  room.connect(cookie.slice('party_player='.length));
+  const roomRoute = `/api/rooms/${code}`;
+  assert.equal((await request(roomRoute + '/start', 'POST', {}, cookie)).status, 200);
+  assert.equal(room.snapshot().phase, 'waiting');
+  const runId = room.snapshot().shanhetu!.id;
+  const conditional = (headers: Record<string, string>) =>
+    fetch(base + '/api/shutdown-if-idle', { method: 'POST', headers });
+  const control = { 'X-Party-Control': party.controlToken };
+  assert.equal((await conditional({})).status, 403);
+  assert.equal((await conditional({ ...control, 'X-Forwarded-For': '127.0.0.1' })).status, 403);
+  const rejected = await conditional(control);
+  assert.equal(rejected.status, 409);
+  assert.match((await rejected.json()).error.message, /山河图征程尚未结束/);
+  assert.equal((await request(roomRoute + '/shanhetu/end', 'POST', { runId }, cookie)).status, 200);
+
+  const slow = httpRequest(base + roomRoute + '/start', {
+    method: 'POST',
+    headers: { Cookie: cookie, 'Content-Type': 'application/json' },
+  });
+  t.after(() => slow.destroy());
+  const acceptedHeaders = once(party.server, 'request');
+  const response = once(slow, 'response');
+  slow.write('{');
+  await acceptedHeaders;
+  const stopped = await conditional(control);
+  assert.equal(stopped.status, 200);
+  slow.end('}');
+  const [denied] = await response;
+  assert.equal(denied.statusCode, 503);
+  denied.resume();
+  assert.equal(room.snapshot().shanhetu, undefined);
 });

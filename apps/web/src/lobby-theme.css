@@ -447,7 +447,7 @@ dialog .button.subtle {
 #join-form label,
 .field-row label {
   font-size: 13px;
-  color: #465143;
+  color: var(--z-ink-2);
 }
 #create-form input,
 #join-form input {
@@ -600,7 +600,7 @@ dialog .button.subtle {
   height: 32px;
 }
 .empty-rooms h3 {
-  color: #626b5c;
+  color: var(--z-ink-2);
   font:
     19px 'STSong',
     'SimSun',
@@ -1150,9 +1150,10 @@ dialog::backdrop,
   gap: 14px;
 }
 .guide-entry {
-  background: #fffef8;
+  background: var(--z-dialog-card);
+  color: var(--z-dialog-ink);
   border-radius: 6px;
-  border-color: #dfe1d5;
+  border-color: var(--z-gold-hair);
 }
 .guide-entry summary {
   padding: 14px;
@@ -1163,6 +1164,9 @@ dialog::backdrop,
 }
 .guide-entry strong {
   font-size: 16px;
+}
+.guide-entry dt {
+  color: var(--z-dialog-accent);
 }
 .guide-entry small {
   font-size: 11px;
