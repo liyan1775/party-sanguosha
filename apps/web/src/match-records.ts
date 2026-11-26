@@ -46,7 +46,7 @@ export function bindMatchRecords() {
     try {
       const page = await read(id);
       if (current !== generation || !dialog.open) return;
-      error.hidden = true;
+      error.toggleAttribute('hidden', true);
       renderObserverLog(log, page, (before) => read(id, before));
     } catch (cause) {
       if (current === generation && dialog.open) {
@@ -74,6 +74,7 @@ export function bindMatchRecords() {
         generation++;
         loading = false;
         log.replaceChildren();
+        delete log.dataset.matchId;
         error.hidden = true;
         close();
       }

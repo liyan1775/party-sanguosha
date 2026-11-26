@@ -1,26 +1,28 @@
-# 聚会三国杀 · Party Sanguosha `v1.1.0`
+# 聚会三国杀 · Party Sanguosha `v1.1.1`
 
 > **一桌朋友，一场好戏。**
 > 一台 Windows 电脑双击启动，手机扫二维码即刻入席——无需安装 App、无需注册账号、无需加好友，同 Wi-Fi 与跨网络朋友同桌开黑；更内置完整单人肉鸽 **《山河图·诸侯伐董》**（普通至炼狱 25 档、十四城）。
 
 [![在线互动官网](https://img.shields.io/badge/%E5%9C%A8%E7%BA%BF%E4%BA%92%E5%8A%A8%E5%AE%98%E7%BD%91-GitHub%20Pages-1f7d72?style=for-the-badge)](https://liyan1775.github.io/party-sanguosha/)
-[![下载 Windows 启动包](https://img.shields.io/badge/Windows%20x64-%E4%B8%8B%E8%BD%BD%20v1.1.0-b88b35?style=for-the-badge)](https://github.com/liyan1775/party-sanguosha/releases/latest)
+[![下载 Windows 启动包](https://img.shields.io/badge/Windows%20x64-%E4%B8%8B%E8%BD%BD%20v1.1.1-b88b35?style=for-the-badge)](https://github.com/liyan1775/party-sanguosha/releases/latest)
 [![License: GPL-3.0-only](https://img.shields.io/badge/License-GPL--3.0--only-47606f?style=for-the-badge)](LICENSE)
 
 <p align="center">
-  <img src="docs/images/v1.1-lobby-day.webp" alt="聚会三国杀 v1.1.0 日间六玉印大厅" width="49%" />
-  <img src="docs/images/v1.1-lobby-night.webp" alt="聚会三国杀 v1.1.0 夜间六玉印大厅" width="49%" />
+  <img src="docs/images/v1.1-lobby-day.webp" alt="聚会三国杀 v1.1.1 日间六玉印大厅" width="49%" />
+  <img src="docs/images/v1.1-lobby-night.webp" alt="聚会三国杀 v1.1.1 夜间六玉印大厅" width="49%" />
 </p>
 <p align="center">
-  <img src="docs/images/v1.1-console-night.webp" alt="聚会三国杀 v1.1.0 电脑联机页与公开观战" width="66%" />
-  <img src="docs/images/v1.1-shanhetu-map.webp" alt="聚会三国杀 v1.1.0 山河图·诸侯伐董手机行军地图" width="31%" />
+  <img src="docs/images/v1.1-console-night.webp" alt="聚会三国杀 v1.1.1 电脑联机页与公开观战" width="66%" />
+  <img src="docs/images/v1.1-shanhetu-map.webp" alt="聚会三国杀 v1.1.1 山河图·诸侯伐董手机行军地图" width="31%" />
 </p>
 
 对局规则、武将技能、原生 AI 与手机牌桌底层来自 [无名杀](https://github.com/libnoname/noname)（固定 `v1.11.6` / commit `2367607e246d21aae168dba15c01151ee0651f30`）。本项目专注于扫码入席、东汉末年青绿暗金绘卷视觉、六模式统一选将台、电脑联机页、隐私安全公开记牌器、跨网联机与单人《山河图》肉鸽体验；衷心感谢上游开发者。
 
 ---
 
-## v1.1.0 有什么亮点？
+## v1.1.1 有什么亮点？
+
+- **v1.1.1 稳定性与防闪烁专项修复**：根除队友手牌窗口在临界尺寸下的每帧显隐闪烁与远处控件改色误收起，补齐长动画询问首击让位；消除出牌「确定／取消」触屏确认栏逐帧 1px 抖动；改造公开观战、本局公开记录、投降投票窗与公开记牌器为增量复用并避让队友牌条；修复 2v2 公开观战统一显示为 `zhong2` 的问题（现清晰展示红蓝两队）。
 
 - **东汉青绿暗金定制美术体系**：大厅六枚原创浮雕玉印、4 套全玩法共用的可切换古风牌桌（青玉 / 汉宫 / 竹简 / 赤壁）、8 幅东汉末年城池长卷（覆盖《山河图》十四城零相邻重复）与 20 合 1 山河图图标图集；所有界面支持日夜一键切换，且**默认不受 Windows 系统「减动效」设置阉割**，开箱即享完整动效。
 - **六模式统一「青玉暗金选将台」**：经典身份、欢乐斗地主、2v2、1v1 单挑、高校联赛与《山河图》共用统一选将交互，清晰展示 1–8 号位座次、已亮主公点击查技能与真实体力/上限铭牌、2v2 队友只读锁将防撞、高校联赛叫分防误触与山河图初始战法展开；同时优化选将进桌图传体积（减少 35%）与空闲重排开销（降至 0）。
@@ -33,7 +35,7 @@
 
 ## 三步开一桌（Windows 免安装）
 
-1. **下载并完整解压**：前往 [GitHub Releases](https://github.com/liyan1775/party-sanguosha/releases/latest) 下载 `party-sanguosha-v1.1.0-windows-x64-setup.zip`，完整解压到任意文件夹（升级时保留原 `data/shanhetu` 与 `data/rosters` 目录即可延续全部山河册与自定义将池进度）。
+1. **下载并完整解压**：前往 [GitHub Releases](https://github.com/liyan1775/party-sanguosha/releases/latest) 下载 `party-sanguosha-v1.1.1-windows-x64-setup.zip`，完整解压到任意文件夹（升级时保留原 `data/shanhetu` 与 `data/rosters` 目录即可延续全部山河册与自定义将池进度）。
 2. **双击零黑框启动**：双击 **「无黑框启动聚会三国杀.vbs」**（或「启动聚会三国杀.cmd」），浏览器会立即弹出可视化进度页，首次使用自动从无名杀固定上游下载校验约 441 MiB 资源与约 3.8 MiB 山河图立绘（支持断点续传），就绪后自动跳转电脑联机页 `/server`。
 3. **手机扫码即刻开局**：同 Wi-Fi 扫局域网码，其他网络等公网码就绪后扫公网码——两者可加入同一间房。单人直接点「单人一键出征」玩《山河图》，聚会多人点「一键场景开桌」或自定义开房；聚会结束双击 **「停止聚会三国杀.cmd」**。
 
@@ -62,7 +64,7 @@
 - **单机与内存边界**：房间、席位与最多 10,000 条本局公开记录存于内存，停止或重启电脑服务会清空房间；`data/shanhetu`（山河册解锁与结局记录）与 `data/rosters`（自定义将池库）持久化保存在电脑本地，升级时保留该目录即可。
 - **公网入口说明**：默认跨网入口使用 Cloudflare Quick Tunnel，无需域名或路由器配置，但临时地址每次重启会变化且不承诺长期 SLA；同 Wi-Fi 聚会始终优先使用局域网直连码，公网波动不影响局域网牌桌。
 - **《山河图》聚会版明定规则**：炼狱 1–5 解锁链（通关噩梦 1 开放炼狱 1，逐档至炼狱 5）、「英武壮志」预留敌席龙卫机制、「智勇双杰」预留敌席狂暴枪王入场与噩梦「功成不居」/炼狱「震古烁今」特判条件均在 [山河图调研与规则说明](docs/shanhetu.md) 明确标出与商业服未公开细节的边界。
-- **设备验证边界**：v1.1.0 已在桌面 Windows 环境下通过全部 344 项单元测试、71 项 Edge 浏览器端到端验收、原生队伍/山河图/高校专项验收与官网 24 窗口冷加载 60fps 零漏帧验收，并沿用此前安卓/iPhone 微信局域网实玩经验；不同手机型号、系统版本与异地公网组合仍建议参考 [试用清单](docs/beta-testing.md) 反馈。
+- **设备验证边界**：v1.1.1 已在桌面 Windows 环境下通过全部 347 项单元测试、80 项 Edge 浏览器端到端验收、原生队伍/山河图/高校专项验收与两轮独立 Codex 对抗复验（官网 24 窗口冷加载 60fps 零漏帧沿用 v1.1.0 验收结果），并沿用此前安卓/iPhone 微信局域网实玩经验；不同手机型号、系统版本与异地公网组合仍建议参考 [试用清单](docs/beta-testing.md) 反馈。
 
 ---
 

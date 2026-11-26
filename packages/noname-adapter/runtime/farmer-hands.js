@@ -9,7 +9,7 @@ const inquiries =
   '.dialog, .dialog .content, .prompt, .control, #control > *, .popup-container, #party-wugu-preview';
 const tableLabels = '.party-turn-badge, #party-table-count';
 const geometryTransition =
-  /^(transform|translate|scale|rotate|opacity|visibility|width|height|top|right|bottom|left|inset|margin|padding)(-|$)/;
+  /^(transform|translate|scale|rotate|visibility|width|height|top|right|bottom|left|inset|margin|padding|offset-path|offset-distance|offset-position)(-|$)/;
 const gap = 6;
 
 function visibleRect(node) {
@@ -105,6 +105,8 @@ export function installFarmerHandView() {
     mateId = '',
     nickname = '',
     button,
+    normalCaption,
+    tuckedCaption,
     layer,
     tray,
     list,
@@ -116,11 +118,17 @@ export function installFarmerHandView() {
   let appliedZoom;
   let touchScale = 1;
   let knownInquiries = [];
-  const motions = new Map();
+  const motionTargets = new Set();
+  const geometryEffects = new WeakMap();
   const style = document.createElement('style');
   style.textContent = `
     .party-farmer-toggle{position:absolute;left:50%;bottom:-26px;transform:translateX(-50%);min-width:88px;max-width:168px;height:24px;padding:1px 9px;border:1px solid rgba(220,186,114,.72);border-radius:4px;background:rgba(12,30,30,.86);color:#f3e6c8;font:600 11.5px/20px system-ui;white-space:nowrap;cursor:pointer;z-index:8;box-shadow:0 3px 10px rgba(0,0,0,.35);backdrop-filter:blur(4px)}
     .party-farmer-toggle[aria-expanded=true]{background:linear-gradient(168deg,#1f7d72,#124a44);color:#fffaf0;border-color:#e8c97a}
+    /* Both captions size the same grid cell, even when only one is visible. */
+    .party-farmer-toggle { display: inline-grid; }
+    .party-farmer-toggle > span { grid-area: 1 / 1; }
+    .party-farmer-toggle:not([data-tucked]) > :last-child,
+    .party-farmer-toggle[data-tucked] > :first-child { visibility: hidden; }
     #party-farmer-layer{position:fixed;left:0;top:0;width:100px;height:100px;z-index:48;transform-origin:top left;pointer-events:none;overflow:visible;transition:none}
     #party-farmer-hand {
       position: absolute;
@@ -228,6 +236,9 @@ export function installFarmerHandView() {
       button.type = 'button';
       button.className = 'party-farmer-toggle';
       button.setAttribute('aria-controls', 'party-farmer-hand');
+      normalCaption = document.createElement('span');
+      tuckedCaption = document.createElement('span');
+      button.append(normalCaption, tuckedCaption);
       for (const event of ['click', 'mousedown', 'touchstart', 'touchend'])
         button.addEventListener(event, stop);
       button.addEventListener('click', () => {
@@ -304,6 +315,10 @@ export function installFarmerHandView() {
   }
   function renderCards() {
     if (cardsDirty) {
+      const normal = `队友手牌 ${cards.length}张`;
+      const tucked = `手牌${cards.length}张 · 暂收起`;
+      if (normalCaption.textContent !== normal) normalCaption.textContent = normal;
+      if (tuckedCaption.textContent !== tucked) tuckedCaption.textContent = tucked;
       const contents = document.createDocumentFragment();
       for (const card of cards) {
         const item = document.createElement('span');
@@ -342,6 +357,46 @@ export function installFarmerHandView() {
       ...knownInquiries,
       ...document.querySelectorAll(tableLabels),
     ];
+    // An inquiry can already be moving when the player opens this view.
+    // Check actual browser animations, including their delays and iterations.
+    for (const node of [document.body, ui.window, ui.arena, ...anchorNodes, ...obstacles]) {
+      if (node?.getAnimations?.().length) motionTargets.add(node);
+    }
+    let follow = false;
+    let continuousInquiry = false;
+    for (const node of motionTargets) {
+      const animations = node.isConnected ? (node.getAnimations?.() ?? []) : [];
+      if (!animations.length) motionTargets.delete(node);
+      for (const animation of animations) {
+        if (animation.playState !== 'running' || !animation.playbackRate) continue;
+        const effect = animation.effect;
+        if (!effect || effect.pseudoElement) continue;
+        if (!geometryEffects.has(effect)) {
+          geometryEffects.set(
+            effect,
+            effect
+              .getKeyframes()
+              .some((frame) =>
+                Object.keys(frame).some((property) =>
+                  geometryTransition.test(
+                    property.replace(/[A-Z]/g, (letter) => '-' + letter.toLowerCase()),
+                  ),
+                ),
+              ),
+          );
+        }
+        if (!geometryEffects.get(effect)) continue;
+        if (effect.getComputedTiming().endTime === Infinity) {
+          // A perpetually moving inquiry has no settled hit area. Yield until
+          // cancellation, pause or removal; do not keep a permanent RAF loop.
+          continuousInquiry ||= inquiryTarget(node);
+        } else {
+          follow = true;
+        }
+      }
+    }
+    if (follow && !continuousInquiry) scheduleLayout();
+    if (continuousInquiry) return;
     const rects = new Map(
       [...new Set([mate, ...anchorNodes, ...obstacles])].map((node) => [node, visibleRect(node)]),
     );
@@ -394,11 +449,7 @@ export function installFarmerHandView() {
     }
     if (tray.hidden !== !placement) tray.hidden = !placement;
     const tucked = expanded && tray.hidden;
-    const caption = tucked ? `手牌${cards.length}张 · 暂收起` : `队友手牌 ${cards.length}张`;
-    if (button.textContent !== caption) {
-      button.textContent = caption;
-      if (expanded) scheduleLayout();
-    }
+    button.toggleAttribute('data-tucked', tucked);
     const title = tucked
       ? '当前询问或牌桌空间不足，结束后自动展开队友手牌'
       : `${nickname}的手牌 · 只读`;
@@ -420,8 +471,8 @@ export function installFarmerHandView() {
       if (expanded) scheduleLayout();
       return;
     }
-    const placement = expanded ? measure(view.mate) : undefined;
     renderCards();
+    const placement = expanded ? measure(view.mate) : undefined;
     setPlacement(placement);
   }
   globalThis.partyEngine.updateFarmerHands = (incoming, id, name) => {
@@ -441,21 +492,32 @@ export function installFarmerHandView() {
     layoutFrame = requestAnimationFrame(() => {
       layoutFrame = 0;
       position();
-      const now = performance.now();
-      for (const [node, active] of motions) {
-        if (!node.isConnected) {
-          motions.delete(node);
-          continue;
-        }
-        for (const [name, until] of active) if (now >= until) active.delete(name);
-        if (!active.size) motions.delete(node);
-      }
-      if (expanded && motions.size) scheduleLayout();
     });
   };
   const owned = (node) => layer?.contains(node) || button?.contains(node);
   const inquiryTarget = (node) =>
     node.closest(inquiries) || knownInquiries.some((control) => node.contains(control));
+  function yieldIfObstructed() {
+    if (!tray || tray.hidden) return;
+    const panel = tray.getBoundingClientRect();
+    // Query the current tree: an inserted or newly visible confirm must receive
+    // the first tap, including during its opacity transition before paint.
+    // Leave slack inside the normal 6px clearance for fractional native zoom.
+    const near = gap / 2;
+    for (const node of new Set([...(ui.controls ?? []), ...document.querySelectorAll(inquiries)])) {
+      const rect = visibleRect(node);
+      if (
+        rect &&
+        panel.left < rect.right + near &&
+        panel.right > rect.left - near &&
+        panel.top < rect.bottom + near &&
+        panel.bottom > rect.top - near
+      ) {
+        tuck();
+        return;
+      }
+    }
+  }
   const handContainers = () => [ui.handcards1Container, ui.handcards2Container];
   const layoutTarget = (node) =>
     node === document.body ||
@@ -489,7 +551,7 @@ export function installFarmerHandView() {
       }
       if (yieldToInquiry) break;
     }
-    if (yieldToInquiry) tuck();
+    if (yieldToInquiry) yieldIfObstructed();
     if (yieldToInquiry || layout) scheduleLayout();
   });
   observer.observe(document.body, {
@@ -500,7 +562,7 @@ export function installFarmerHandView() {
     attributeFilter: ['class', 'style', 'hidden', 'data-position', 'id', 'open', 'aria-hidden'],
   });
   const resize = () => {
-    if (expanded) tuck();
+    if (expanded) yieldIfObstructed();
     scheduleLayout();
   };
   const motionEvents = [
@@ -519,10 +581,9 @@ export function installFarmerHandView() {
       if (event.propertyName && !geometryTransition.test(name)) return;
       const inquiry = inquiryTarget(event.target);
       if (!inquiry && !layoutTarget(event.target)) return;
-      if (inquiry) tuck();
-      if (!motions.has(event.target)) motions.set(event.target, new Map());
-      motions.get(event.target).set(name, performance.now() + 700);
-    } else if (!motions.get(event.target)?.delete(name)) return;
+      if (inquiry) yieldIfObstructed();
+      motionTargets.add(event.target);
+    } else if (!motionTargets.has(event.target)) return;
     scheduleLayout();
   };
   window.addEventListener('resize', resize);
@@ -532,7 +593,7 @@ export function installFarmerHandView() {
     disposed = true;
     cancelAnimationFrame(layoutFrame);
     observer.disconnect();
-    motions.clear();
+    motionTargets.clear();
     knownInquiries = [];
     window.removeEventListener('resize', resize);
     for (const event of motionEvents) document.removeEventListener(event, trackMotion, true);
@@ -543,7 +604,7 @@ export function installFarmerHandView() {
     tray?.replaceChildren();
     layer?.remove();
     style.remove();
-    button = layer = tray = list = heading = undefined;
+    button = normalCaption = tuckedCaption = layer = tray = list = heading = undefined;
     delete globalThis.partyEngine.updateFarmerHands;
     window.removeEventListener('message', finish);
   };

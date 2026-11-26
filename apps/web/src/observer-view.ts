@@ -1,4 +1,5 @@
 import type { ObserverState, ObserverLogPage } from '../../../packages/shared/src/contracts.js';
+import { patchAttr, patchHidden, patchText } from './console-dom.js';
 
 type LogView = {
   matchId: string | null;
@@ -10,6 +11,24 @@ type LogView = {
   complete: boolean;
 };
 const logViews = new WeakMap<HTMLElement, LogView>();
+const boardSignatures = new WeakMap<HTMLElement, string>();
+
+function mergeLogPage(view: LogView, page: ObserverLogPage): boolean {
+  const first = Math.max(view.first, page.first);
+  const total = Math.max(view.total, page.total);
+  let changed = first !== view.first || total !== view.total;
+  if (first > view.first) {
+    for (const sequence of view.entries.keys()) if (sequence < first) view.entries.delete(sequence);
+  }
+  view.first = first;
+  view.total = total;
+  for (const { sequence, text } of page.entries) {
+    if (sequence < first || view.entries.get(sequence) === text) continue;
+    view.entries.set(sequence, text);
+    changed = true;
+  }
+  return changed;
+}
 
 /** The same numbered public journal can be read by an authenticated seated player. */
 export function renderObserverLog(
@@ -30,12 +49,9 @@ export function renderObserverLog(
     };
     logViews.set(target, view);
   }
-  for (const entry of page.entries) view.entries.set(entry.sequence, entry.text);
+  const changed = mergeLogPage(view, page);
+  if (target.dataset.matchId === page.matchId && target.firstElementChild && !changed) return;
   target.dataset.matchId = page.matchId;
-  view.first = Math.max(view.first, page.first);
-  view.total = Math.max(view.total, page.total);
-  for (const sequence of view.entries.keys())
-    if (sequence < view.first) view.entries.delete(sequence);
   renderLog(target, view, load);
 }
 
@@ -43,21 +59,29 @@ function renderLog(
   target: HTMLElement,
   view: LogView,
   load?: (before: number) => Promise<ObserverLogPage>,
-  focusEarlier = false,
-  scroll?: { position: number; atEnd: boolean },
+  scrollToStart = false,
 ) {
-  const old = target.querySelector('.observer-recent');
-  const position = scroll?.position ?? old?.scrollTop ?? 0;
-  const atEnd = scroll?.atEnd ?? (!old || old.scrollHeight - old.clientHeight - position < 30);
-  target.replaceChildren();
-  const heading = document.createElement('h3');
-  heading.textContent = `${view.complete ? '本局公开记录' : '最近公开动作'} · ${view.total} 条`;
+  if (!target.firstElementChild) {
+    target.innerHTML = `<h3></h3>
+      <button type="button" class="button secondary observer-earlier" hidden>查看更早记录</button>
+      <button type="button" class="button secondary observer-retry" hidden>重试读取缺失记录</button>
+      <p class="hint"></p><ol class="observer-recent" tabindex="-1" aria-label="本局公开事件记录"></ol>`;
+  }
+  const earlier = target.querySelector<HTMLButtonElement>('.observer-earlier')!;
+  const retry = target.querySelector<HTMLButtonElement>('.observer-retry')!;
+  const list = target.querySelector<HTMLOListElement>('.observer-recent')!;
+  const position = list.scrollTop;
+  const atEnd = list.scrollHeight - list.clientHeight - position < 30;
+  patchText(
+    target.querySelector('h3')!,
+    `${view.complete ? '本局公开记录' : '最近公开动作'} · ${view.total} 条`,
+  );
   const entries = [...view.entries].sort(([a], [b]) => a - b);
   const first = entries[0]?.[0] ?? view.total + 1;
   const gap = entries.find(
     ([sequence], index) => index > 0 && sequence > entries[index - 1]![0] + 1,
   )?.[0];
-  async function readPage(before: number, focusEarlier: boolean) {
+  async function readPage(before: number, scrollToStart: boolean) {
     if (!load || view.loading) return;
     view.loading = true;
     view.error = '';
@@ -71,11 +95,7 @@ function renderLog(
       )
         return;
       const size = view.entries.size;
-      for (const entry of page.entries) view.entries.set(entry.sequence, entry.text);
-      view.first = Math.max(view.first, page.first);
-      view.total = Math.max(view.total, page.total);
-      for (const sequence of view.entries.keys())
-        if (sequence < view.first) view.entries.delete(sequence);
+      mergeLogPage(view, page);
       if (view.entries.size <= size && before > view.first)
         view.error = '记录暂未同步，请重试读取。';
     } catch (error) {
@@ -83,47 +103,49 @@ function renderLog(
     } finally {
       view.loading = false;
       if (target.isConnected && target.dataset.matchId === view.matchId)
-        renderLog(target, view, load, focusEarlier && !view.error);
+        renderLog(target, view, load, scrollToStart && !view.error);
     }
   }
-  if (load && first > view.first) {
-    const earlier = document.createElement('button');
-    earlier.className = 'button secondary observer-earlier';
-    earlier.textContent = view.loading ? '正在读取…' : '查看更早记录';
-    earlier.disabled = view.loading;
-    earlier.addEventListener('click', () => void readPage(first, true));
-    target.append(earlier);
-  }
-  if (gap && view.error) {
-    const retry = document.createElement('button');
-    retry.className = 'button secondary';
-    retry.textContent = '重试读取缺失记录';
-    retry.addEventListener('click', () => void readPage(gap, false));
-    target.append(retry);
-  }
-  const hint = document.createElement('p');
-  hint.className = 'hint';
-  hint.textContent =
+  const hasEarlier = Boolean(load && first > view.first);
+  const hasRetry = Boolean(gap && (view.error || (view.loading && !retry.hidden)));
+  // Keep a busy control focusable. When its action disappears, only move focus
+  // if the reader is still on that control at the time the response arrives.
+  if (
+    (!hasEarlier && document.activeElement === earlier) ||
+    (!hasRetry && document.activeElement === retry)
+  )
+    list.focus({ preventScroll: true });
+  patchHidden(earlier, !hasEarlier);
+  patchHidden(retry, !hasRetry);
+  patchAttr(earlier, 'aria-disabled', String(view.loading));
+  patchAttr(retry, 'aria-disabled', String(view.loading));
+  patchText(earlier, view.loading ? '正在读取…' : '查看更早记录');
+  earlier.onclick = () => {
+    if (hasEarlier) void readPage(first, true);
+  };
+  retry.onclick = () => {
+    if (hasRetry && gap) void readPage(gap, false);
+  };
+  patchText(
+    target.querySelector<HTMLElement>('.hint')!,
     view.error ||
-    (view.first > 1
-      ? '本局超过 10000 条，最早记录已释放；下方编号保留原顺序。'
-      : first > 1
-        ? '按发生顺序显示，点击「查看更早记录」可回看本局开头。'
-        : '按发生顺序记录；暗手牌只显示数量，私人选择不展示。');
-  const list = document.createElement('ol');
-  list.className = 'observer-recent';
-  list.setAttribute('aria-label', '本局公开事件记录');
-  for (const [sequence, text] of entries) {
-    const item = document.createElement('li');
-    item.value = sequence;
-    item.textContent = text;
-    list.append(item);
-  }
-  target.prepend(heading);
-  target.append(hint, list);
+      (view.first > 1
+        ? '本局超过 10000 条，最早记录已释放；下方编号保留原顺序。'
+        : first > 1
+          ? '按发生顺序显示，点击「查看更早记录」可回看本局开头。'
+          : '按发生顺序记录；暗手牌只显示数量，私人选择不展示。'),
+  );
+  entries.forEach(([sequence, text], index) => {
+    const item =
+      (list.children[index] as HTMLLIElement | undefined) ?? document.createElement('li');
+    if (item.value !== sequence) item.value = sequence;
+    patchText(item, text);
+    if (!item.parentNode) list.append(item);
+  });
+  while (list.childElementCount > entries.length) list.lastElementChild!.remove();
   // Keep a reader's position when live updates arrive; follow new events only
   // when already at the end. Older pages remain available after every poll.
-  list.scrollTop = focusEarlier ? 0 : atEnd ? list.scrollHeight : position;
+  list.scrollTop = scrollToStart ? 0 : atEnd ? list.scrollHeight : position;
   // Console polling may skip multiple preview batches. Fill middle gaps from
   // the server journal too, not just the entries preceding the first row.
   if (gap && load && !view.loading && !view.error) void readPage(gap, false);
@@ -136,22 +158,39 @@ export function renderObserver(
   matchId: string | null = null,
   load?: (before: number) => Promise<ObserverLogPage>,
 ): void {
+  const tracker = state?.cardTracker;
+  // Delivery timestamps and effects are independent of this text-only public board.
+  const signature = JSON.stringify([
+    matchId,
+    Boolean(load),
+    state?.ended,
+    state?.round,
+    state?.deckCount,
+    state?.identityCounts,
+    state?.currentPlayerId,
+    state?.players,
+    state?.recent,
+    state?.logStart,
+    state?.logFirst,
+    state?.logTotal,
+    tracker && [
+      tracker.pileName,
+      tracker.deckCount,
+      tracker.knownPublicCount,
+      tracker.shuffledCount,
+      tracker.unknownDiscards,
+      tracker.categories,
+    ],
+  ]);
+  if (target.firstElementChild && boardSignatures.get(target) === signature) return;
+  boardSignatures.set(target, signature);
   const oldLog = target.querySelector<HTMLElement>('.observer-log');
-  const oldList = oldLog?.querySelector('.observer-recent');
-  const scroll =
-    oldList && oldLog?.dataset.matchId === (matchId ?? '')
-      ? {
-          position: oldList.scrollTop,
-          atEnd: oldList.scrollHeight - oldList.clientHeight - oldList.scrollTop < 30,
-        }
-      : undefined;
-  target.replaceChildren();
   if (!state) {
     logViews.delete(target);
     const hint = document.createElement('p');
     hint.className = 'hint';
     hint.textContent = '选将发牌后，这里会同步公开牌桌。观战不占玩家席位。';
-    target.append(hint);
+    target.replaceChildren(hint);
     return;
   }
   const heading = document.createElement('p');
@@ -278,7 +317,11 @@ export function renderObserver(
   if (spotlight) children.push(spotlight);
   children.push(board);
   if (trackerBox) children.push(trackerBox);
-  children.push(log);
-  target.append(...children);
-  renderLog(log, view, state.logStart === undefined ? undefined : load, false, scroll);
+  if (log === oldLog) {
+    for (const node of Array.from(target.children)) if (node !== log) node.remove();
+    log.before(...children);
+  } else {
+    target.replaceChildren(...children, log);
+  }
+  renderLog(log, view, state.logStart === undefined ? undefined : load);
 }

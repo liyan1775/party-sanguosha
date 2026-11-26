@@ -1,5 +1,5 @@
 import type { ModeId, SurrenderState } from '../../../packages/shared/src/contracts.js';
-import { element } from './ui.js';
+import { element, setText } from './ui.js';
 
 /** Kept outside the rotated native canvas so confirmation stays readable. */
 export function bindSurrenderDialog(
@@ -28,6 +28,8 @@ export function bindSurrenderDialog(
   const find = <T extends HTMLElement = HTMLElement>(id: string) => dialog.querySelector<T>(id)!;
   const confirm = find<HTMLButtonElement>('#surrender-confirm');
   const reject = find<HTMLButtonElement>('#surrender-reject');
+  const voters = find('#surrender-voters');
+  const countdown = find('#surrender-countdown');
   const rules = dialog.lastElementChild as HTMLElement;
   let state: SurrenderState | null = null;
   let matchId: string | null = null;
@@ -57,60 +59,72 @@ export function bindSurrenderDialog(
     );
     render();
   };
+  const updateTime = () => {
+    const vote = state?.vote;
+    const cooldown = Math.max(0, Math.ceil((cooldownDeadline - performance.now()) / 1000));
+    setText(
+      countdown,
+      pending
+        ? '正在等待牌桌确认…'
+        : !connected
+          ? '连接尚未恢复，请先恢复牌桌。'
+          : vote
+            ? `剩余 ${Math.max(0, Math.ceil((voteDeadline - performance.now()) / 1000))} 秒${vote.voted ? ' · 你已同意，可选择继续游戏撤回本次投票' : vote.eligible ? ' · 请明确选择' : ' · 对方正在商议'}。`
+            : cooldown
+              ? `还需 ${cooldown} 秒才能再次发起。`
+              : state?.notice || '',
+    );
+    confirm.toggleAttribute(
+      'disabled',
+      !enabled || !state?.available || !connected || pending || (!vote && cooldown > 0),
+    );
+  };
   const render = () => {
     const vote = state?.vote;
     const end = state?.kind === 'end';
     const duel = mode() === 'duel';
     const required = mode() === 'college' ? '本队在线真人（含待命队友）' : '本方所有存活真人';
-    rules.hidden = duel;
-    const cooldown = Math.max(0, Math.ceil((cooldownDeadline - performance.now()) / 1000));
-    button.hidden = !enabled || !state?.available;
-    button.textContent = vote ? '查看结束投票' : end ? '提前结束' : '投降';
-    button.disabled = !connected || pending;
-    find('#surrender-title').textContent = vote
-      ? end
-        ? '提前结束投票'
-        : '本方投降投票'
-      : end
-        ? '提前结束这局？'
-        : '确认本方认输？';
-    find('#surrender-detail').textContent = vote
-      ? `${vote.initiator} 发起${end ? '提前结束' : '本方认输'}。${end ? '须所有真人同意，结束后不判胜负。' : `须${required}同意，AI自动同意；通过后对方获胜。`}`
-      : end
-        ? '身份局须所有真人（含已阵亡玩家）明确同意。通过后本局结束，不判胜负，不需要公开身份来组队投票。'
-        : duel
-          ? '确认后本局立即结束，你将认输，对方获胜。'
-          : `须${required}同意，AI自动同意。通过后本方失败、对方获胜。`;
-    find('#surrender-voters').replaceChildren(
-      ...(vote?.participants ?? []).map((participant) => {
-        const row = document.createElement('li');
-        row.textContent = `${participant.nickname} · ${participant.approved ? '已同意' : '等待确认'}`;
-        return row;
-      }),
+    rules.toggleAttribute('hidden', duel);
+    button.toggleAttribute('hidden', !enabled || !state?.available);
+    setText(button, vote ? '查看结束投票' : end ? '提前结束' : '投降');
+    button.toggleAttribute('disabled', !connected || pending);
+    setText(
+      find('#surrender-title'),
+      vote ? (end ? '提前结束投票' : '本方投降投票') : end ? '提前结束这局？' : '确认本方认输？',
     );
-    find('#surrender-countdown').textContent = pending
-      ? '正在等待牌桌确认…'
-      : !connected
-        ? '连接尚未恢复，请先恢复牌桌。'
-        : vote
-          ? `剩余 ${Math.max(0, Math.ceil((voteDeadline - performance.now()) / 1000))} 秒${vote.voted ? ' · 你已同意，可选择继续游戏撤回本次投票' : vote.eligible ? ' · 请明确选择' : ' · 对方正在商议'}。`
-          : cooldown
-            ? `还需 ${cooldown} 秒才能再次发起。`
-            : state?.notice || '';
-    confirm.hidden = Boolean(vote && (!vote.eligible || vote.voted));
-    confirm.textContent = vote
-      ? end
-        ? '同意结束'
-        : '同意投降'
-      : end
-        ? '发起结束投票'
-        : duel
-          ? '确认投降'
-          : '发起投降投票';
-    confirm.disabled =
-      !enabled || !state?.available || !connected || pending || (!vote && cooldown > 0);
-    reject.textContent = vote?.eligible ? '不同意，继续游戏' : '继续游戏';
-    reject.disabled = pending || (Boolean(vote?.eligible) && !connected);
+    setText(
+      find('#surrender-detail'),
+      vote
+        ? `${vote.initiator} 发起${end ? '提前结束' : '本方认输'}。${end ? '须所有真人同意，结束后不判胜负。' : `须${required}同意，AI自动同意；通过后对方获胜。`}`
+        : end
+          ? '身份局须所有真人（含已阵亡玩家）明确同意。通过后本局结束，不判胜负，不需要公开身份来组队投票。'
+          : duel
+            ? '确认后本局立即结束，你将认输，对方获胜。'
+            : `须${required}同意，AI自动同意。通过后本方失败、对方获胜。`,
+    );
+    const participants = vote?.participants ?? [];
+    participants.forEach((participant, index) => {
+      const row = voters.children[index] ?? document.createElement('li');
+      setText(row, `${participant.nickname} · ${participant.approved ? '已同意' : '等待确认'}`);
+      if (!row.parentElement) voters.append(row);
+    });
+    while (voters.childElementCount > participants.length) voters.lastElementChild!.remove();
+    confirm.toggleAttribute('hidden', Boolean(vote && (!vote.eligible || vote.voted)));
+    setText(
+      confirm,
+      vote
+        ? end
+          ? '同意结束'
+          : '同意投降'
+        : end
+          ? '发起结束投票'
+          : duel
+            ? '确认投降'
+            : '发起投降投票',
+    );
+    setText(reject, vote?.eligible ? '不同意，继续游戏' : '继续游戏');
+    reject.toggleAttribute('disabled', pending || (Boolean(vote?.eligible) && !connected));
+    updateTime();
   };
   const open = () => {
     render();
@@ -124,7 +138,7 @@ export function bindSurrenderDialog(
     else close();
   };
   const interval = setInterval(() => {
-    if (dialog.open) render();
+    if (dialog.open) updateTime();
   }, 500);
   window.addEventListener(
     'pagehide',

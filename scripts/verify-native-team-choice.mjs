@@ -6,8 +6,14 @@ import { createPartyServer } from '../apps/server/src/server.ts';
 import { NativeNonameService } from '../packages/noname-adapter/src/service.ts';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
+const output =
+  process.env.E2E_TEAM_EVIDENCE ??
+  `.runtime/native-team-choice/${new Date().toISOString().replaceAll(':', '-')}`;
+await mkdir(output, { recursive: true });
 const party = createPartyServer({
   webRoot: `${root}/dist/web`,
+  rosterDirectory: `${output}/rosters`,
+  shanhetuDirectory: `${output}/shanhetu`,
   port: 0,
   publicUrl: 'http://192.168.1.100:3000',
   adapter: new NativeNonameService(root),
@@ -18,10 +24,6 @@ const browser = await chromium.launch({
   channel: process.env.E2E_BROWSER_CHANNEL ?? 'msedge',
   args: ['--disable-background-timer-throttling', '--disable-renderer-backgrounding'],
 });
-const output =
-  process.env.E2E_TEAM_EVIDENCE ??
-  `.runtime/native-team-choice/${new Date().toISOString().replaceAll(':', '-')}`;
-await mkdir(output, { recursive: true });
 const errors = [],
   missing = new Set(),
   contexts = [],
@@ -188,6 +190,48 @@ async function swipeRotated(phone, frame) {
   );
 }
 
+async function verifyMovingInquiry(phone, frame) {
+  const viewport = await phone.locator('#game-frame').boundingBox();
+  const point = await frame.locator('#party-farmer-hand').evaluate(async (tray) => {
+    const box = tray.getBoundingClientRect();
+    const target = document.createElement('button');
+    target.id = 'moving-inquiry';
+    target.className = 'prompt';
+    target.style.cssText =
+      'position:fixed!important;left:0!important;top:0!important;width:50px!important;height:30px!important;z-index:5;transition:none!important';
+    document.body.append(target);
+    const start = target.getBoundingClientRect();
+    const scale = start.width / 50;
+    const dx = (box.left + box.width / 2 - start.left - start.width / 2) / scale;
+    const dy = (box.top + box.height / 2 - start.top - start.height / 2) / scale;
+    const style = document.createElement('style');
+    style.id = 'moving-inquiry-style';
+    style.textContent = `@keyframes inquiryTravel {
+      0%,55% {transform: translate(0px,0px)}
+      85%,100% {transform: translate(${dx}px,${dy}px)}
+    }`;
+    document.head.append(style);
+    target.onclick = () => (target.dataset.clicked = 'yes');
+    target.style.animation = 'inquiryTravel 1.5s linear forwards';
+    const animation = target.getAnimations()[0];
+    await animation.ready;
+    while (animation.currentTime < 1300) await new Promise(requestAnimationFrame);
+    const moved = target.getBoundingClientRect();
+    const x = moved.left + moved.width / 2;
+    const y = moved.top + moved.height / 2;
+    if (animation.currentTime >= 1500 || document.elementFromPoint(x, y) !== target)
+      throw new Error('1.5秒询问在825ms后移入牌条，动画结束前首击位置必须已让出');
+    return { x, y };
+  });
+  await phone.touchscreen.tap(viewport.x + point.x, viewport.y + point.y);
+  assert.equal(await frame.locator('#moving-inquiry').getAttribute('data-clicked'), 'yes');
+  await frame.evaluate(() => {
+    document.getElementById('moving-inquiry').remove();
+    document.getElementById('moving-inquiry-style').remove();
+  });
+  await frame.locator('#party-farmer-hand').waitFor();
+}
+
 async function sampleIdleHand(frame, mode) {
   const layer = frame.locator('#party-farmer-layer');
   await layer.evaluate(() => new Promise((resolve) => setTimeout(resolve, 800)));
@@ -210,6 +254,44 @@ async function sampleIdleHand(frame, mode) {
   if (!idleBaseline)
     assert.equal(sample.passes, 0, `静置牌桌不应轮询布局：${JSON.stringify(sample)}`);
   return sample;
+}
+
+async function verifyDistantInquiry(frame) {
+  const hiddenAt = await frame.locator('#party-farmer-hand').evaluate(async (tray) => {
+    const nextFrame = () => new Promise(requestAnimationFrame);
+    const panel = tray.getBoundingClientRect();
+    const probe = document.createElement('div');
+    probe.className = 'prompt';
+    const left = panel.left > innerWidth / 2 ? 2 : innerWidth - 12;
+    probe.style.cssText = `position:fixed;left:${left}px;top:2px;width:8px;height:8px;pointer-events:none;transition:none`;
+    document.body.append(probe);
+    try {
+      await nextFrame();
+      const actual = probe.getBoundingClientRect();
+      const current = tray.getBoundingClientRect();
+      if (
+        tray.hidden ||
+        (actual.left < current.right + 6 &&
+          actual.right > current.left - 6 &&
+          actual.top < current.bottom + 6 &&
+          actual.bottom > current.top - 6)
+      ) {
+        throw new Error('远处询问夹具未与已展开牌条分离');
+      }
+      const failures = [];
+      for (let tick = 0; tick < 10; tick++) {
+        probe.style.color = tick % 2 ? 'red' : 'blue';
+        probe.classList.toggle('highlight');
+        await new Promise(queueMicrotask);
+        if (tray.hidden) failures.push(tick);
+        await nextFrame();
+      }
+      return failures;
+    } finally {
+      probe.remove();
+    }
+  });
+  assert.deepEqual(hiddenAt, [], '远处询问改变颜色或高亮时不应先隐藏队友牌条');
 }
 
 async function startNativeInquiry(worker, id) {
@@ -275,7 +357,74 @@ async function verifyRegularInquiry(phone, frame, worker, id, humans) {
   await confirm.waitFor();
   await wait(450);
   await phone.screenshot({ path: `${output}/team-hand-inquiry-${humans}.png` });
-  await confirm.tap();
+  if (humans === 4) {
+    await phone.setViewportSize({ width: 1280, height: 720 });
+    // Native updatexr defers its deviceZoom conversion by 500 ms on resize.
+    // Set the requested zoom after that conversion, as a player would.
+    await frame.waitForFunction(
+      () =>
+        document.documentElement.offsetWidth >= 900 &&
+        partyEngine.game.deviceZoom === 1 &&
+        !partyEngine.ui._updatexr,
+      undefined,
+      { timeout: 8000 },
+    );
+    const priorZoom = await frame.evaluate(() => {
+      const previous = partyEngine.game.documentZoom;
+      partyEngine.game.documentZoom = 0.85;
+      partyEngine.ui.updatez();
+      return previous;
+    });
+    await frame.waitForFunction(
+      () => {
+        const { game, ui } = partyEngine;
+        const entering = ui.control
+          .getAnimations({ subtree: true })
+          .some(
+            (animation) =>
+              animation.playState === 'running' &&
+              Number.isFinite(animation.effect?.getComputedTiming().endTime),
+          );
+        return game.documentZoom === 0.85 && !ui._updatexr && !entering;
+      },
+      undefined,
+      { timeout: 8000 },
+    );
+    const sample = await confirm.evaluate(async (button) => {
+      const positions = new Set();
+      let clearance = Infinity;
+      for (let i = 0; i < 60; i++) {
+        await new Promise(requestAnimationFrame);
+        if (partyEngine.game.documentZoom !== 0.85 || partyEngine.ui._updatexr)
+          throw new Error('确认栏60帧必须全程处于0.85缩放及已完成的原生布局');
+        positions.add(button.getBoundingClientRect().top);
+        const bottom = Math.max(
+          ...[partyEngine.ui.control, ...button.parentElement.children].map(
+            (node) => node.getBoundingClientRect().bottom,
+          ),
+        );
+        const hands = [...document.querySelectorAll('#me .handcards, #me .handcards .card')]
+          .filter((node) =>
+            node.checkVisibility({ opacityProperty: true, visibilityProperty: true }),
+          )
+          .map((node) => node.getBoundingClientRect())
+          .filter((rect) => rect.width && rect.height);
+        if (!hands.length) throw new Error('确认栏验收必须有真实的手牌边界');
+        clearance = Math.min(clearance, ...hands.map((rect) => rect.top - bottom));
+      }
+      return { positions: [...positions], clearance };
+    });
+    console.log('team-confirm-stability', JSON.stringify(sample));
+    assert.equal(sample.positions.length, 1, '触控确认栏在60个静止帧中不得上下跳位');
+    assert(sample.clearance >= 12, `触控确认栏距手牌应至少12像素，实测${sample.clearance}`);
+    await confirm.tap();
+    await frame.evaluate((previous) => {
+      partyEngine.game.documentZoom = previous;
+      partyEngine.ui.updatez();
+    }, priorZoom);
+  } else {
+    await confirm.tap();
+  }
   await worker.waitForFunction(() => globalThis.partyTeamInquiryDone);
   assert(await worker.evaluate(() => globalThis.partyTeamInquiryResult.bool));
   await frame.locator('#party-inquiry-layout-probe').evaluate((node) => node.remove());
@@ -400,7 +549,7 @@ async function assertHandPrivate(frame, ids) {
   );
 }
 
-async function assertObserverPrivate(computer, address, code, matchId, ids) {
+async function assertObserverPrivate(computer, address, code, matchId, ids, teams) {
   const spectator = await page(true);
   try {
     await spectator.goto(address);
@@ -411,6 +560,22 @@ async function assertObserverPrivate(computer, address, code, matchId, ids) {
     const publicView = await request(computer, '/api/console', 'GET');
     const observed = publicView.rooms.find((entry) => entry.room.code === code);
     assert(observed?.observer);
+    if (teams) {
+      const seats = observed.observer.players;
+      assert.deepEqual(
+        seats.map((seat) => seat.identity),
+        seats.map((seat) => teams[seat.id]),
+      );
+      assert.deepEqual(Object.values(teams).sort(), ['红队', '红队', '蓝队', '蓝队']);
+      const rows = spectator.locator('#spectator-table .observer-seat');
+      await rows.nth(3).waitFor();
+      for (const seat of seats) {
+        const row = rows.filter({
+          has: spectator.getByRole('heading', { name: seat.nickname, exact: true }),
+        });
+        assert((await row.innerText()).includes(teams[seat.id]), '访客应能看到该席真实的红蓝队别');
+      }
+    }
     const publicJson = JSON.stringify(observed);
     assert(!publicJson.match(/"cardid"|"handCards"|"farmerHands"/i));
     assert(ids.every((id) => !publicJson.includes(JSON.stringify(String(id)))));
@@ -548,6 +713,10 @@ async function verifyLandlord(computer) {
   await phones[1].setViewportSize({ width: 844, height: 390 });
   const normalLayout = await assertAttached(farmer);
   assert.equal(normalLayout.actual, normalLayout.direction);
+  if (!idleBaseline) {
+    await verifyMovingInquiry(phones[1], farmer);
+    await sampleIdleHand(farmer, 'doudizhu-after-long-inquiry');
+  }
   await phones[1].screenshot({ path: `${output}/doudizhu-teammate-landscape.png` });
   await farmer.locator('.party-farmer-cards').evaluate((node) => {
     node.scrollLeft = 0;
@@ -908,7 +1077,7 @@ try {
       await assertAttached(frames[0]);
       await verifyRegularInquiry(phones[0], frames[0], worker, ownerId, humans);
       await phones[0].setViewportSize({ width: 390, height: 844 });
-      const { privateCards, opponents } = await worker.evaluate((id) => {
+      const { privateCards, opponents, teams } = await worker.evaluate((id) => {
         const { game, lib } = partyEngine;
         const player = lib.playerOL[id];
         const mate = game.players.find(
@@ -924,6 +1093,9 @@ try {
           opponents: game.players
             .filter((candidate) => candidate.side !== player.side)
             .map((candidate) => candidate.playerid),
+          teams: Object.fromEntries(
+            game.players.map((p) => [p.playerid, p.side ? '蓝队' : '红队']),
+          ),
         };
       }, ownerId);
       await frames[0].waitForFunction(
@@ -933,6 +1105,7 @@ try {
       idleLayout = await sampleIdleHand(frames[0], 'versus');
       firstConfirm = [];
       if (!idleBaseline) {
+        await verifyDistantInquiry(frames[0]);
         for (const variant of ['insertion', 'visibility'])
           firstConfirm.push(
             await verifyFirstConfirm(phones[0], frames[0], worker, 'versus', variant),
@@ -942,7 +1115,14 @@ try {
         if (opponents.includes(await frame.evaluate(() => partyEngine.game.me.playerid)))
           await assertHandPrivate(frame, privateCards);
       }
-      await assertObserverPrivate(computer, `${base}/join/${code}`, code, matchId, privateCards);
+      await assertObserverPrivate(
+        computer,
+        `${base}/join/${code}`,
+        code,
+        matchId,
+        privateCards,
+        teams,
+      );
     } else {
       await verifyRegularInquiry(phones[0], frames[0], worker, ownerId, humans);
     }

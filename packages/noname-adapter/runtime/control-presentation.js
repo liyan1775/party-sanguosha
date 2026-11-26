@@ -2,7 +2,12 @@
 
 /** Work in painted viewport pixels before converting back to native zoom. */
 export function confirmationLift(controlBottom, handTop, existingLift, scale) {
-  return Math.max(0, Math.ceil((controlBottom + existingLift * scale - handTop + 12) / scale));
+  const clearance = handTop - controlBottom;
+  // Keep a safe placement across the rounding of painted rects and offsetWidth.
+  // Always correct a real shortfall. Lower only when a whole native pixel and
+  // a half painted pixel of rounding slack can safely be given back.
+  if (clearance >= 12 && clearance < 12 + scale + 0.5) return existingLift;
+  return Math.max(0, existingLift + Math.ceil((12 - clearance) / scale));
 }
 
 export function landlordRole(mode, identity) {

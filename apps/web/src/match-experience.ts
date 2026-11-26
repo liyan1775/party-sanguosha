@@ -3,7 +3,7 @@ import type {
   IdentityCounts,
   PublicCardTrackerSnapshot,
 } from '../../../packages/shared/src/contracts.js';
-import { element } from './ui.js';
+import { element, setText } from './ui.js';
 import { ZIBAI_ICONS } from './zibai-theme.js';
 
 type PublicSummary = {
@@ -99,21 +99,48 @@ export function bindMatchExperience() {
     ended = false,
     trackerOpen = false;
   let latestTracker: PublicCardTrackerSnapshot | null = null;
+  let categorySignature = '';
+  let recentSignature = '';
+  let actionSignature = '';
+  let resetScrollOnOpen = true;
+  const scrollBody = drawer.querySelector<HTMLElement>('.tracker-scroll-body')!;
+  let watchedDocument: Document | undefined;
+  let watchedHand: Element | null = null;
+  const handSize = new ResizeObserver(dockTracker);
+  const handGeometry = new MutationObserver(dockTracker);
+  const handChanges = new MutationObserver(() => {
+    const hand = watchedDocument?.getElementById('party-farmer-hand') ?? null;
+    if (hand !== watchedHand) dockTracker();
+  });
   let timer: ReturnType<typeof setTimeout> | undefined;
 
   function dockTracker(): void {
-    drawer.style.removeProperty('top');
-    drawer.style.removeProperty('max-height');
-    const native = board.querySelector('iframe')?.contentDocument;
+    const native = drawer.hidden ? null : board.querySelector('iframe')?.contentDocument;
+    if (watchedDocument !== (native ?? undefined)) {
+      handChanges.disconnect();
+      watchedDocument = native ?? undefined;
+      // The hand layer is mounted directly under the native document body.
+      if (native?.body) handChanges.observe(native.body, { childList: true });
+    }
+    const hand = native?.getElementById('party-farmer-hand') ?? null;
+    if (hand !== watchedHand) {
+      handSize.disconnect();
+      handGeometry.disconnect();
+      watchedHand = hand;
+      if (hand) {
+        handSize.observe(hand);
+        const attributes = { attributeFilter: ['style', 'hidden', 'class'] };
+        handGeometry.observe(hand, attributes);
+        if (hand.parentElement) handGeometry.observe(hand.parentElement, attributes);
+      }
+    }
     if (!native || drawer.hidden) return;
     const width = drawer.offsetWidth;
     // Use the inner frame's coordinates. They stay unrotated even when the
     // outer WeChat table is rotated as a single surface.
-    const left = (board.clientWidth - width) / 2 - 6;
-    const right = left + width + 12;
     const blocking = Array.from(
       native.querySelectorAll(
-        '#arena > .player, .party-seat-status[data-docked], #me .handcards .card, #control > .control:not(.removing)',
+        '#arena > .player, .party-seat-status[data-docked], #me .handcards .card, #control > .control:not(.removing), #party-farmer-hand',
       ),
     )
       .flatMap((node) => {
@@ -122,48 +149,128 @@ export function bindMatchExperience() {
           native.defaultView?.getComputedStyle(node).visibility === 'visible';
         if (!visible) return [];
         const box = node.getBoundingClientRect();
-        return box.right > left && box.left < right && box.width && box.height ? [box] : [];
+        return box.width && box.height
+          ? [
+              {
+                left: box.left,
+                right: box.right,
+                top: box.top,
+                bottom: box.bottom,
+                control: node.matches('#control > .control'),
+              },
+            ]
+          : [];
       })
       .sort((a, b) => a.top - b.top);
-    let start = 8;
-    const gaps: { top: number; height: number }[] = [];
-    for (const box of blocking) {
-      if (box.top - 5 > start) gaps.push({ top: start, height: box.top - 5 - start });
-      start = Math.max(start, box.bottom + 5);
+    const center = board.clientWidth / 2;
+    const centers =
+      hand && !hand.hidden ? [center, width / 2 + 8, board.clientWidth - width / 2 - 8] : [center];
+    for (const x of centers) {
+      let start = 8;
+      const gaps: { top: number; height: number }[] = [];
+      for (const box of blocking) {
+        if (box.right <= x - width / 2 - 6 || box.left >= x + width / 2 + 6) continue;
+        const end = Math.min(box.top - 5, board.clientHeight - 8);
+        if (end > start) gaps.push({ top: start, height: end - start });
+        start = Math.max(start, box.bottom + 5);
+      }
+      gaps.push({ top: start, height: board.clientHeight - 8 - start });
+      const limit = board.clientHeight * (board.clientHeight <= 440 ? 0.55 : 0.52);
+      const gap =
+        gaps.find((item) => item.height >= limit) ?? gaps.sort((a, b) => b.height - a.height)[0];
+      if (gap && gap.height >= 56) {
+        drawer.style.left = x === center ? '50%' : `${x}px`;
+        drawer.style.top = `${gap.top}px`;
+        drawer.style.maxHeight = `${Math.min(gap.height, limit)}px`;
+        return;
+      }
     }
-    gaps.push({ top: start, height: board.clientHeight - 8 - start });
-    const limit = board.clientHeight * (board.clientHeight <= 440 ? 0.55 : 0.52);
-    const gap =
-      gaps.find((item) => item.height >= limit) ?? gaps.sort((a, b) => b.height - a.height)[0];
-    if (gap && gap.height >= 56) {
-      drawer.style.top = `${gap.top}px`;
-      drawer.style.maxHeight = `${Math.min(gap.height, limit)}px`;
+    drawer.style.removeProperty('top');
+    drawer.style.removeProperty('max-height');
+    drawer.style.removeProperty('left');
+    if (hand && !hand.hidden) {
+      const height = Math.min(96, board.clientHeight - 16);
+      const bottom = board.clientHeight - height - 8;
+      const rows = [
+        8,
+        bottom,
+        ...blocking.flatMap((box) => [box.top - height - 5, box.bottom + 5]),
+      ];
+      let best: { x: number; y: number; control: number; total: number } | undefined;
+      for (const x of centers) {
+        for (const y of rows) {
+          if (y < 8 || y > bottom) continue;
+          let control = 0,
+            total = 0;
+          for (const box of blocking) {
+            const overlap =
+              Math.max(0, Math.min(x + width / 2, box.right) - Math.max(x - width / 2, box.left)) *
+              Math.max(0, Math.min(y + height, box.bottom) - Math.max(y, box.top));
+            total += overlap;
+            if (box.control) control += overlap;
+          }
+          if (!best || control < best.control || (control === best.control && total < best.total)) {
+            best = { x, y, control, total };
+          }
+        }
+      }
+      if (best) {
+        drawer.style.left = `${best.x}px`;
+        drawer.style.top = `${best.y}px`;
+        drawer.style.maxHeight = `${height}px`;
+      }
     }
   }
   const trackerLayout = new ResizeObserver(dockTracker);
   trackerLayout.observe(board);
+  board.addEventListener('load', dockTracker, true);
 
   function renderTracker(): void {
+    const wasHidden = drawer.hidden;
     const hasTracker = Boolean(matchId && available && latestTracker);
     trackerToggle.hidden = !hasTracker;
     drawer.hidden = !hasTracker || !trackerOpen;
+    if (drawer.hidden !== wasHidden) {
+      if (!drawer.hidden && resetScrollOnOpen) {
+        scrollBody.scrollTop = 0;
+        resetScrollOnOpen = false;
+      }
+      dockTracker();
+    }
     trackerToggle.setAttribute('aria-expanded', String(!drawer.hidden));
     trackerToggle.classList.toggle('is-active', !drawer.hidden);
-    if (!latestTracker) return;
+    if (!latestTracker || drawer.hidden) return;
 
-    trackerTitle.textContent = `公开记牌 · ${latestTracker.pileName}`;
-    trackerMeta.textContent = `余牌 ${latestTracker.deckCount} · 已公开 ${latestTracker.knownPublicCount} 张`;
+    setText(trackerTitle, `公开记牌 · ${latestTracker.pileName}`);
+    setText(
+      trackerMeta,
+      `余牌 ${latestTracker.deckCount} · 已公开 ${latestTracker.knownPublicCount} 张`,
+    );
 
     const flags: string[] = [];
     if (latestTracker.shuffledCount > 0)
       flags.push(`牌堆已洗牌 ${latestTracker.shuffledCount} 次，计数为累计已公开牌面`);
     if (latestTracker.unknownDiscards > 0)
       flags.push(`另有 ${latestTracker.unknownDiscards} 张暗弃牌未公开`);
-    trackerShuffle.hidden = flags.length === 0;
-    trackerShuffle.textContent = flags.join('；');
+    if (trackerShuffle.hidden !== !flags.length) trackerShuffle.hidden = !flags.length;
+    setText(trackerShuffle, flags.join('；'));
 
+    const categories = JSON.stringify(latestTracker.categories);
+    if (categorySignature !== categories) {
+      categorySignature = categories;
+      renderCategories(latestTracker.categories);
+    }
+    const recent = latestTracker.recentRevealed.slice(-8).reverse();
+    const signature = JSON.stringify(recent);
+    if (recentSignature !== signature) {
+      recentSignature = signature;
+      renderRecent(recent);
+    }
+  }
+
+  function renderCategories(categories: PublicCardTrackerSnapshot['categories']) {
     trackerCats.replaceChildren();
-    for (const item of latestTracker.categories) {
+    for (const item of categories) {
       const row = document.createElement('div');
       row.className = 'tracker-row';
       const top = document.createElement('div');
@@ -186,9 +293,10 @@ export function bindMatchExperience() {
       row.append(top, bar);
       trackerCats.append(row);
     }
+  }
 
+  function renderRecent(recent: PublicCardTrackerSnapshot['recentRevealed']) {
     trackerRecent.replaceChildren();
-    const recent = latestTracker.recentRevealed.slice(-8).reverse();
     if (!recent.length) {
       const empty = document.createElement('span');
       empty.className = 'tracker-empty';
@@ -219,17 +327,15 @@ export function bindMatchExperience() {
   trackerToggle.onclick = () => {
     trackerOpen = !trackerOpen;
     renderTracker();
-    dockTracker();
   };
   function closeTracker() {
     if (!trackerOpen) return;
+    const restoreFocus = drawer.contains(document.activeElement);
     trackerOpen = false;
     renderTracker();
+    if (restoreFocus && !trackerToggle.hidden) trackerToggle.focus({ preventScroll: true });
   }
-  drawer.querySelector<HTMLButtonElement>('#tracker-close')!.onclick = () => {
-    trackerOpen = false;
-    renderTracker();
-  };
+  drawer.querySelector<HTMLButtonElement>('#tracker-close')!.onclick = closeTracker;
 
   button.onclick = () => {
     const frame = document.querySelector<HTMLIFrameElement>('#game-frame');
@@ -288,15 +394,22 @@ export function bindMatchExperience() {
       : `剩余身份 · 主 ${roles!.zhu} 忠 ${roles!.zhong} 反 ${roles!.fan} 内 ${roles!.nei}`;
     counts.title = '开局身份人数减去已公开的阵亡身份，不显示在场角色的隐藏身份';
     if (Array.isArray(summary.actions)) {
-      actions.replaceChildren();
-      for (const item of summary.actions.slice(-3)) {
-        if (!Number.isSafeInteger(item.sequence) || typeof item.text !== 'string') continue;
-        const row = document.createElement('li');
-        row.value = item.sequence;
-        row.textContent = item.text.slice(0, 500);
-        actions.append(row);
+      const visible = summary.actions
+        .slice(-3)
+        .filter((item) => Number.isSafeInteger(item.sequence) && typeof item.text === 'string')
+        .map((item) => [item.sequence, item.text.slice(0, 500)] as const);
+      const signature = JSON.stringify(visible);
+      if (signature !== actionSignature) {
+        actionSignature = signature;
+        actions.replaceChildren();
+        for (const [sequence, text] of visible) {
+          const row = document.createElement('li');
+          row.value = sequence;
+          row.textContent = text;
+          actions.append(row);
+        }
+        setText(lastAction, actions.lastElementChild?.textContent ?? '等待出牌');
       }
-      lastAction.textContent = actions.lastElementChild?.textContent ?? '等待出牌';
     }
     if (summary.cardTracker && typeof summary.cardTracker === 'object') {
       latestTracker = summary.cardTracker;
@@ -316,6 +429,9 @@ export function bindMatchExperience() {
     () => {
       clearTimeout(timer);
       trackerLayout.disconnect();
+      handChanges.disconnect();
+      handGeometry.disconnect();
+      handSize.disconnect();
     },
     { once: true },
   );
@@ -326,7 +442,9 @@ export function bindMatchExperience() {
         status.hidden = false;
         pending = false;
         trackerOpen = false;
+        resetScrollOnOpen = true;
         latestTracker = null;
+        categorySignature = recentSignature = actionSignature = '';
         clearTimeout(timer);
         status.textContent = '';
         counts.hidden = true;

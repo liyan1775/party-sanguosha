@@ -50,6 +50,16 @@ export function publicLogText(args) {
   return args.map(valueText).join('').trim().slice(0, 500);
 }
 
+function publicIdentity(player) {
+  if (globalThis.partyEngine?.setup?.settings?.mode === 'versus') {
+    if (typeof player.side !== 'boolean') return '阵营待定';
+    return player.side ? '蓝队' : '红队';
+  }
+  return player.identityShown || player.isZhu
+    ? get.translation(`${player.identity}2`)
+    : '身份未公开';
+}
+
 /** Public observer projection; no hand faces, deck, choice arguments or storage. */
 export function publicObserverState(recent = []) {
   const players = [...game.players, ...game.dead];
@@ -64,10 +74,7 @@ export function publicObserverState(recent = []) {
       general: player.isUnseen?.(0)
         ? '未亮将'
         : get.translation(player.name1 || player.name || '未选将'),
-      identity:
-        player.identityShown || player.isZhu
-          ? get.translation(`${player.identity}2`)
-          : '身份未公开',
+      identity: publicIdentity(player),
       hp: player.hp,
       maxHp: player.maxHp,
       armor: player.hujia || 0,

@@ -49,6 +49,10 @@ export function element<T extends HTMLElement = HTMLElement>(selector: string): 
   return result;
 }
 
+export function setText(node: Element, text: string): void {
+  if (node.textContent !== text) node.textContent = text;
+}
+
 export async function api<T>(
   path: string,
   method = 'GET',

@@ -1,6 +1,6 @@
 {
   "name": "party-sanguosha",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "license": "GPL-3.0-only",
   "private": true,
   "type": "module",
@@ -43,7 +43,8 @@
     "release:check": "node scripts/check-publication.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "check": "npm run typecheck && npm run build && npm test && npm run format:check",
+    "check:garden": "node scripts/check-garden.mjs",
+    "check": "npm run check:garden && npm run typecheck && npm run build && npm test && npm run format:check",
     "engine:verify:table": "npm run build && node --import tsx scripts/verify-native-table-feedback.mjs",
     "engine:verify:jiedao-zonghu": "npm run build && node --import tsx scripts/verify-native-jiedao-zonghu.mjs",
     "engine:verify:college": "npm run build && npm run engine:check-definitions && node --import tsx scripts/verify-college-runtime.mjs",

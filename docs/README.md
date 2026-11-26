@@ -19,6 +19,7 @@
 
 这些记录保留当时的证据、设计取舍与原有链接，不作为当前实现状态。
 
+- [截至 v1.1.0 的完整原交接](archive/handoff-history-to-v1.1.0.md)，按当时记录查找验收和已知问题。
 - 起步与联机验证：[早期路线](roadmap.md)、[固定引擎调研](engine-investigation.md)、[原生运行验证](runtime-validation.md)、[房间体验复盘](party-room-review.md)。
 - 将池与活动：[第二档方案](second-roster-proposal.md)、[将池评估](roster-review.md)、[时光场调研](mobile-time-field-research.md)、[高校联赛界面评审](ol-college-ui-review.md)。
 - 视觉与宣传：[旧版轻量预览](ui-preview.html)、[视频制作记录](bilibili-video.md)。旧牌桌方案的保留章节在 [视觉设计](ui-design.md#历史研究轻量牌桌) 内。

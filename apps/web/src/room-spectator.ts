@@ -4,7 +4,7 @@ import {
   type ObserverState,
   type RoomView,
 } from '../../../packages/shared/src/contracts.js';
-import { api, element } from './ui.js';
+import { api, element, setText } from './ui.js';
 import { renderObserver } from './observer-view.js';
 
 type PublicObservation = ObserverLogPage & {
@@ -49,33 +49,40 @@ export function bindRoomSpectator(roomCode: string) {
     return page;
   }
   function label(): void {
-    status.textContent = snapshot?.matchFailure
-      ? '本局中断 · 未判胜负'
-      : snapshot?.matchRecovery
-        ? '正在恢复电脑规则连接'
-        : snapshot?.phase === 'finished'
-          ? '本局已结束'
-          : snapshot?.phase === 'starting'
-            ? '选将与发牌中'
-            : '正在对局';
+    setText(
+      status,
+      snapshot?.matchFailure
+        ? '本局中断 · 未判胜负'
+        : snapshot?.matchRecovery
+          ? '正在恢复电脑规则连接'
+          : snapshot?.phase === 'finished'
+            ? '本局已结束'
+            : snapshot?.phase === 'starting'
+              ? '选将与发牌中'
+              : '正在对局',
+    );
   }
-  async function refresh(): Promise<void> {
+  async function refresh(manual = false): Promise<void> {
     clearTimeout(timer);
-    if (!matchId || !available || loading || panel.hidden || stopped) return;
+    if (!matchId || !available || panel.hidden || stopped) return;
+    if (manual) {
+      button.disabled = true;
+      setText(button, '正在同步…');
+    }
+    if (loading) return;
     const id = matchId;
     const current = generation;
     loading = true;
-    button.disabled = true;
-    button.textContent = '正在同步…';
     try {
       const page = await read(id);
       if (current !== generation || stopped) return;
-      error.hidden = !snapshot?.matchFailure;
-      error.textContent = snapshot?.matchFailure
-        ? MATCH_FAILURE_MESSAGES[snapshot.matchFailure.code]
-        : '';
-      count.hidden = page.observer?.deckCount === undefined;
-      count.textContent = `牌堆剩余 ${page.observer?.deckCount ?? 0} 张`;
+      error.toggleAttribute('hidden', !snapshot?.matchFailure);
+      setText(
+        error,
+        snapshot?.matchFailure ? MATCH_FAILURE_MESSAGES[snapshot.matchFailure.code] : '',
+      );
+      count.toggleAttribute('hidden', page.observer?.deckCount === undefined);
+      setText(count, `牌堆剩余 ${page.observer?.deckCount ?? 0} 张`);
       renderObserver(board, page.observer, id, (before) => read(id, before));
       label();
     } catch (cause) {
@@ -86,14 +93,14 @@ export function bindRoomSpectator(roomCode: string) {
     } finally {
       if (current === generation && !stopped) {
         loading = false;
-        button.disabled = false;
-        button.textContent = '刷新观战';
+        button.toggleAttribute('disabled', false);
+        setText(button, '刷新观战');
         if (!document.hidden && !panel.hidden && available)
           timer = setTimeout(() => void refresh(), 1600);
       }
     }
   }
-  button.addEventListener('click', () => void refresh());
+  button.addEventListener('click', () => void refresh(true));
   document.addEventListener('visibilitychange', () => {
     clearTimeout(timer);
     if (!document.hidden) void refresh();
@@ -114,10 +121,13 @@ export function bindRoomSpectator(roomCode: string) {
       else if (!standby && panel.parentElement?.id === 'game-frame-container')
         element('.room-grid').before(panel);
       panel.classList.toggle('college-spectator', standby);
-      panel.querySelector('h2')!.textContent = standby ? '本局待命 · 公开牌桌' : '公开观战';
-      panel.querySelector<HTMLElement>('p.hint')!.textContent = standby
-        ? '本局队友为地主，你处于待命位，可在此查看公开牌桌和本队比分。'
-        : '本局已开场，先在这里观战。观战不占席位；下一局回到等待房间后可填写昵称入座。';
+      setText(panel.querySelector('h2')!, standby ? '本局待命 · 公开牌桌' : '公开观战');
+      setText(
+        panel.querySelector<HTMLElement>('p.hint')!,
+        standby
+          ? '本局队友为地主，你处于待命位，可在此查看公开牌桌和本队比分。'
+          : '本局已开场，先在这里观战。观战不占席位；下一局回到等待房间后可填写昵称入座。',
+      );
       snapshot = room;
       const id =
         unseated && ['starting', 'playing', 'finished'].includes(room.phase) ? room.matchId : null;
@@ -133,6 +143,7 @@ export function bindRoomSpectator(roomCode: string) {
         count.hidden = true;
         error.hidden = true;
         button.disabled = false;
+        setText(button, '刷新观战');
         board.replaceChildren();
         if (id) {
           renderObserver(board, null);

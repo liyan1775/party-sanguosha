@@ -1192,6 +1192,35 @@ test('公开观战投影：暗手牌、私有 storage、未亮身份与私人选
   assert.equal(publicObserverState().players[0].general, '未亮将');
 });
 
+test('公开观战仅在 2v2 公布红蓝队，身份局的 side 不揭示暗身份', async (t) => {
+  const settings = { mode: 'versus' };
+  const players = [true, false, false, true, undefined].map((side, index) => ({
+    playerid: String(index),
+    side,
+    identity: 'zhong',
+    identityShown: false,
+    countCards: () => 0,
+    getCards: () => [],
+    isDead: () => false,
+    isLinked: () => false,
+    isTurnedOver: () => false,
+  }));
+  globals(t, {
+    partyEngine: { setup: { settings, seats: [] } },
+    nativeFixture: {
+      game: { players, dead: [] },
+      get: { translation: (text: string) => text },
+      _status: {},
+    },
+  });
+  const { publicObserverState } = await runtime('observer');
+  const roles = () =>
+    publicObserverState().players.map((seat: { identity: string }) => seat.identity);
+  assert.deepEqual(roles(), ['蓝队', '红队', '红队', '蓝队', '阵营待定']);
+  settings.mode = 'identity';
+  assert.deepEqual(roles(), Array(players.length).fill('身份未公开'));
+});
+
 test('公开日志捕捉短事件与虚拟牌，整局分批保留；暗牌、观星与未知对象不泄露', async (t) => {
   const player = (id: string) => ({
     kind: 'player',

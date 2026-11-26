@@ -16,6 +16,23 @@ test('confirmation clearance measures painted pixels and accounts for existing l
   assert.equal(confirmationLift(230, Infinity, 10, 1), 0);
 });
 
+test('a fractional measured scale preserves clearance without alternating between adjacent lift pixels', () => {
+  const handTop = 500;
+  const unshiftedBottom = 504.01;
+  // offsetWidth rounds the native container to an integer, slightly
+  // underestimating the actual translation of one CSS pixel.
+  const scale = 0.999;
+  let lift = 0;
+  const positions = new Set<number>();
+  for (let frame = 0; frame < 60; frame++) {
+    lift = confirmationLift(unshiftedBottom - lift, handTop, lift, scale);
+    positions.add(lift);
+    assert(handTop - (unshiftedBottom - lift) >= 12);
+  }
+  assert.deepEqual([...positions], [17]);
+  assert.equal(confirmationLift(440, handTop, lift, scale), 0);
+});
+
 test('landlord display labels never translate classic hidden or public roles', () => {
   for (const mode of ['doudizhu', 'college']) {
     assert.equal(landlordRole(mode, 'zhu'), '地主');

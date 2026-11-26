@@ -10,7 +10,15 @@ import {
   type ServerInfo,
   type SessionView,
 } from '../../../packages/shared/src/contracts.js';
-import { api, connection, element, rememberNickname, savedNickname, watchEvents } from './ui.js';
+import {
+  api,
+  connection,
+  element,
+  rememberNickname,
+  savedNickname,
+  setText,
+  watchEvents,
+} from './ui.js';
 import { stagePreferences, stageShell } from './stage-shell.js';
 import { bindGeneralGuide } from './general-guide.js';
 import { bindLobbyRosters } from './custom-rosters.js';
@@ -30,10 +38,6 @@ const joinable = (room: RoomSummary) =>
   room.phase === 'waiting' && room.humanCount + room.botCount < room.playerCount;
 
 const roomHref = (code: string) => `/join/${encodeURIComponent(code)}`;
-
-function setText(node: Element, text: string): void {
-  if (node.textContent !== text) node.textContent = text;
-}
 
 function createRoomList() {
   const list = element('#room-list');
