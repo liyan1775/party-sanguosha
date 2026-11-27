@@ -6,6 +6,17 @@ import { resolve } from 'node:path';
 import test from 'node:test';
 
 const script = resolve('scripts/check-garden.mjs');
+const charter = [
+  '# 项目北极星',
+  '## 第一性原理',
+  '一台电脑开服，手机扫码即玩。',
+  '## 明确不做（Non-Goals）',
+  '不做账号和商业解锁。',
+  '## 单向门决策备忘（Why）',
+  '固定无名杀原生引擎。',
+  '## 修宪记录',
+  '- 2026-11-27｜立宪',
+].join('\n');
 const handoff = [
   '## 正式打开入口',
   '源码：启动聚会三国杀.cmd。Windows 发行包：无黑框启动聚会三国杀.vbs。',
@@ -26,6 +37,7 @@ test('项目地图护栏允许合规源码，并为每个违规文件给出修�
     execFileSync('git', ['init', '-q'], { cwd });
     write('docs/product.md', '# 产品');
     execFileSync('git', ['add', '--', 'docs/product.md'], { cwd });
+    write('docs/charter.md', charter);
     write('docs/handoff.md', handoff);
     write('packages/shared/src/model.ts', "import type { Card } from './cards.js';");
     write('website/style.css', '@media (max-width: 800px) { .card { display: block; } }');
@@ -46,6 +58,7 @@ test('项目地图护栏允许合规源码，并为每个违规文件给出修�
       '@media (prefers-reduced-motion: reduce) { .card { animation: none; } }',
     );
     write('docs/draft.md', '未受跟踪');
+    write('docs/charter.md', '\n'.repeat(61) + '# 空白北极星');
     write(
       'docs/handoff.md',
       '\n'.repeat(181) + '下一项按 v0.7.11 候选执行 [缺失](missing.md) [草稿](draft.md)',
@@ -56,6 +69,7 @@ test('项目地图护栏允许合规源码，并为每个违规文件给出修�
       'packages/shared/src/model.ts': ['node:fs', 'fs/promises', '模块 os', '模块 path'],
       'apps/web/src/table.ts': ['prefers-reduced-transparency'],
       'website/style.css': ['prefers-reduced-motion'],
+      'docs/charter.md': ['60 行', '第一性原理', '明确不做', '单向门决策备忘', '修宪记录'],
       'docs/handoff.md': ['180 行', '入口', '待验', 'v0.7.11', 'missing.md', 'draft.md'],
     })) {
       for (const reason of reasons) {

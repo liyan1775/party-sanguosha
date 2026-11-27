@@ -5,6 +5,7 @@ import { join, posix } from 'node:path';
 import ts from 'typescript';
 
 const rerun = 'npm run check:garden';
+const charter = 'docs/charter.md';
 const handoff = 'docs/handoff.md';
 function report(file, reason, fix) {
   console.error(`${file} — ${reason}。修复：${fix}。重跑：${rerun}`);
@@ -68,6 +69,26 @@ function inspectMotion(file, source) {
   }
 }
 
+function inspectCharter() {
+  const source = readFileSync(charter, 'utf8');
+  if (source.trimEnd().split(/\r?\n/).length > 60 || source.split(/\r?\n/).length > 61)
+    report(
+      charter,
+      '北极星页超过 60 行',
+      '精简措辞，只留第一性原理、明确不做、单向门初衷与修宪记录',
+    );
+  const sections = source.split(/^##\s+/m).slice(1);
+  for (const [pattern, name] of [
+    [/^第一性原理\s*\r?\n/, '第一性原理'],
+    [/^明确不做/, '明确不做'],
+    [/^单向门决策备忘/, '单向门决策备忘'],
+    [/^修宪记录\s*\r?\n/, '修宪记录'],
+  ]) {
+    if (!sections.some((section) => pattern.test(section)))
+      report(charter, `缺少“${name}”分段`, `在 ${charter} 中补回“## ${name}”分段`);
+  }
+}
+
 function inspectHandoff() {
   const source = readFileSync(handoff, 'utf8');
   if (source.trimEnd().split(/\r?\n/).length > 180 || source.split(/\r?\n/).length > 181)
@@ -119,6 +140,7 @@ for (const [path, check] of [
     dir,
     () => scan(dir, /\.(?:[cm]?[jt]sx?|css|scss|sass|less|html?|svg)$/i, inspectMotion),
   ]),
+  [charter, inspectCharter],
   [handoff, inspectHandoff],
 ]) {
   try {

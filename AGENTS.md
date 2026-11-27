@@ -1,6 +1,6 @@
 # 聚会三国杀 · 项目地图
 
-改代码前读 [当前交接](docs/handoff.md)（版本、提交与待验边界）、[玩家入口](README.md) 和 [产品底线](docs/product.md)。设计取舍查 [架构](docs/architecture.md)，专项研究查 [文档索引](docs/README.md)。当前对话中的用户要求优先。
+改代码前先读 [项目北极星](docs/charter.md)（第一性原理、明确不做与单向门初衷）、[当前交接](docs/handoff.md)（版本、提交与待验边界）、[玩家入口](README.md) 和 [产品底线](docs/product.md)。设计取舍查 [架构](docs/architecture.md)，专项研究查 [文档索引](docs/README.md)。当前对话中的用户要求优先。
 
 ## 正式打开入口
 
@@ -32,7 +32,7 @@
 
 ## 验证与交付
 
-- 快速检查共享层导入、系统减动效条件和交接页链接用 `npm run check:garden`。报错会列出违规文件、修复方式和重跑命令。
+- 快速检查共享层导入、系统减动效条件、北极星页和交接页链接用 `npm run check:garden`。报错会列出违规文件、修复方式和重跑命令。
 
 - 常规修改跑 `npm run check`。页面或房间流程变化加跑 `npm run test:browser`。技能故障按上游规则、选择重建、信息过滤及恢复路径排查，保留失败与通过证据，并检查同类路径。
 - “游戏可玩”至少需要引擎确认真实选将与发牌。大厅 AI 占席、WebSocket 消息和 mock 各自只证明该层行为。交付写明打开入口，区分源码单测、桌面 Edge、素材干跑、独立 Windows 包双击、实体手机和微信的实际覆盖。
